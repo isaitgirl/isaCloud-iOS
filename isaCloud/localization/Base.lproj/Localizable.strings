@@ -1,0 +1,7 @@
+/*
+ Textos próprios do isaCloud em inglês (Base, usado quando o iPhone está em inglês).
+ Mesclados por cima das traduções do Monal na fase de build "[isaCloud] Merge localizations".
+*/
+
+/* Calls settings: the isaCloud fallback only uses isaCloud's STUN server (no Monal TURN API) */
+"Calls: Allow TURN fallback to Monal-Servers" = "Calls: use isaCloud's STUN server when your server offers no STUN/TURN";

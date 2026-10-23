@@ -84,7 +84,17 @@
         [account send:versioniq];
         return;
     }
-    
+
+    //isaCloud: XEP-0202 entity time (senders are already restricted above to contacts with presence subscription, self and own server)
+    if([iqNode check:@"{urn:xmpp:time}time"])
+    {
+        XMPPIQ* timeiq = [[XMPPIQ alloc] initAsResponseTo:iqNode];
+        [timeiq setiqTo:iqNode.from];
+        [timeiq setEntityTime];
+        [account send:timeiq];
+        return;
+    }
+
     if([iqNode check:@"{http://jabber.org/protocol/disco#info}query"])
     {
         XMPPIQ* discoInfoResponse = [[XMPPIQ alloc] initAsResponseTo:iqNode];

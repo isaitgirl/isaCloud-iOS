@@ -13,6 +13,7 @@
 #import <monalxmpp/MLChannelContact.h>
 #import <monalxmpp/MLContact.h>
 #import <monalxmpp/MLMessage.h>
+#import <monalxmpp/MLImageManager.h>
 
 static NSMutableDictionary* _singletonCache;
 
@@ -20,6 +21,7 @@ static NSMutableDictionary* _singletonCache;
 {
     NSString* _ownOccupantId;
     UIImage* _avatar;
+    NSString* _avatarNick;      //isaCloud: nick the cached avatar was generated for
 }
 @property (nonatomic, assign) BOOL isSelf;
 @property (nonatomic) NSString* nick;
@@ -156,7 +158,13 @@ static NSMutableDictionary* _singletonCache;
 
 -(UIImage*) avatar
 {
-    return nil;
+    //isaCloud: initials on a XEP-0392 color (no real jid in channels, so the occupant jid room@service/nick is used as color input)
+    if(_avatar == nil || ![_avatarNick isEqualToString:self.nick])
+    {
+        _avatarNick = self.nick;
+        _avatar = [[MLImageManager sharedInstance] generateDummyIconWithName:self.nick andColorInput:[NSString stringWithFormat:@"%@/%@", self.mucContact.contactJid, nilDefault(self.nick, @"")]];
+    }
+    return _avatar;
 //     // return already cached image
 //     if(_avatar != nil)
 //         return _avatar;

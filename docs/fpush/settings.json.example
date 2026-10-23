@@ -1,0 +1,43 @@
+{
+  "component": {
+    "componentHostname": "push.isacloud.im",
+    "componentKey": "TROQUE_PELO_component_secret_DO_PROSODY",
+    "serverHostname": "prosody",
+    "serverPort": 5347
+  },
+  "pushModules": {
+    "monalProdiOS": {
+      "type": "apple",
+      "is_default_module": true,
+      "apns": {
+        "certFilePath": "/etc/fpush/isacloud-apns.p12",
+        "certPassword": "TROQUE_PELA_SENHA_DO_P12",
+        "topic": "br.com.isacloud.messenger",
+        "environment": "production"
+      },
+      "ratelimit": {
+        "enabled": true,
+        "ratelimitTime": "20s",
+        "ratelimitCleanupInterval": "300s"
+      }
+    },
+    "monalProdiOS-sandbox": {
+      "type": "apple",
+      "is_default_module": false,
+      "apns": {
+        "certFilePath": "/etc/fpush/isacloud-apns.p12",
+        "certPassword": "TROQUE_PELA_SENHA_DO_P12",
+        "topic": "br.com.isacloud.messenger",
+        "environment": "sandbox"
+      },
+      "ratelimit": {
+        "enabled": true,
+        "ratelimitTime": "20s",
+        "ratelimitCleanupInterval": "300s"
+      }
+    }
+  },
+  "timeout": {
+    "xmppconnectionError": "20s"
+  }
+}

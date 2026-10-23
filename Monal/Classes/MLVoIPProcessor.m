@@ -406,6 +406,14 @@ static NSMutableDictionary* _pendingCalls;
         //use own stun server as fallback
         [iceServers addObject:[[RTCIceServer alloc] initWithURLStrings:[HelperTools getFailoverStunServers]]];
         
+        //isaCloud: no fallback TURN credential API configured, use the fallback STUN servers only
+        if([HelperTools getFailoverTurnApiServer] == nil)
+        {
+            DDLogInfo(@"No fallback TURN API server configured, only using stun");
+            [self createWebRTCClientForCall:call usingICEServers:iceServers];
+            return;
+        }
+        
         // request turn credentials
         NSMutableURLRequest* urlRequest = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"/api/v1/challenge/new" relativeToURL:[HelperTools getFailoverTurnApiServer]]];
         if([[HelperTools defaultsDB] boolForKey: @"useDnssecForAllConnections"])

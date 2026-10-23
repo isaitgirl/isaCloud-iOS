@@ -156,7 +156,8 @@ static const int pingFreqencyMinutes = 5;       //about the same Conversations u
     else
         [self upgradeBoolUserSettingsIfUnset:@"useInlineSafari" toDefault:YES];
     
-    [self upgradeBoolUserSettingsIfUnset:@"hasCompletedOnboarding" toDefault:NO];
+    //isaCloud: skip the onboarding cards (welcome, features, privacy settings) and go straight to the WelcomeLogIn view
+    [self upgradeBoolUserSettingsIfUnset:@"hasCompletedOnboarding" toDefault:YES];
     
     [self upgradeBoolUserSettingsIfUnset:@"uploadImagesOriginal" toDefault:NO];
     

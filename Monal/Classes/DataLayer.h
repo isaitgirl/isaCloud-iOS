@@ -146,6 +146,10 @@ extern NSString* const kMessageTypeFiletransfer;
 -(void) updateMucTypeTo:(NSString*) type forRoom:(NSString*) room andAccount:(NSNumber*) accountID;
 -(NSString*) getMucTypeOfRoom:(NSString*) room andAccount:(NSNumber*) accountID;
 
+//isaCloud: days of MAM history to catch up on connect for public channels (0 = whole archive, default 7)
+-(NSInteger) mamCatchupDaysForMuc:(NSString*) room andAccount:(NSNumber*) accountID;
+-(void) setMamCatchupDays:(NSInteger) days forMuc:(NSString*) room andAccount:(NSNumber*) accountID;
+
 /**
  Calls with YES if contact  has already been added to the database for this account
  */

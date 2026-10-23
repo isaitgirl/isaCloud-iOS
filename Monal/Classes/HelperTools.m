@@ -808,7 +808,8 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
 #ifdef IS_ALPHA
     return @"alpha.push.monal-im.org";
 #else
-    return @"eu.prod.push.monal-im.org";
+    //isaCloud: own push appserver (fpush component), Monal's push servers only accept Monal's bundle id
+    return @"push.isacloud.im";
     /*
     if([[[NSLocale currentLocale] countryCode] isEqualToString:@"US"])
     {
@@ -825,11 +826,14 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
 +(NSDictionary<NSString*, NSString*>*) getAvailablePushServers
 {
     return @{
+#ifdef IS_ALPHA
         //@"us.prod.push.monal-im.org": @"US",
         @"eu.prod.push.monal-im.org": @"Europe",
         @"alpha.push.monal-im.org": @"Alpha/Debug (more Logging)",
-#ifdef IS_ALPHA
         @"disabled.push.monal-im.org": @"Disabled - Alpha Test",
+#else
+        //isaCloud: only our own push appserver
+        @"push.isacloud.im": @"isaCloud",
 #endif
     };
 }
@@ -841,8 +845,8 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
         @"stuns:alpha.turn.monal-im.org:443",
         @"stuns:alpha.turn.monal-im.org:3478",
 #else
-        @"stuns:eu.prod.turn.monal-im.org:443",
-        @"stuns:eu.prod.turn.monal-im.org:3478",
+        //isaCloud: own STUN server instead of Monal's
+        @"stun:stun.isacloud.im:3478",
 #endif
     ];
 }
@@ -984,15 +988,15 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     return queueThreadLabel;
 }
 
-+(NSURL*) getFailoverTurnApiServer
++(NSURL* _Nullable) getFailoverTurnApiServer
 {
-    NSString* turnApiServer;
 #ifdef IS_ALPHA
-    turnApiServer = @"https://alpha.turn.monal-im.org";
+    return [NSURL URLWithString:@"https://alpha.turn.monal-im.org"];
 #else
-    turnApiServer = @"https://eu.prod.turn.monal-im.org";
+    //isaCloud: Monal's TURN credential API only works for Monal's own builds (needs their API secret),
+    //so the fallback uses STUN only; the user's server announces TURN with temporary credentials anyway (XEP-0215)
+    return nil;
 #endif
-    return [NSURL URLWithString:turnApiServer];
 }
 
 +(BOOL) shouldProvideVoip
@@ -1086,6 +1090,14 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         containerUrl = [[NSFileManager defaultManager] containerURLForSecurityApplicationGroupIdentifier:kAppGroup];
+        //isaCloud: free (Personal Team) signing used by the .dev build (scripts/isacloud-dev-device.sh) has no app groups,
+        //use the process' own Application Support directory there (app and extensions won't share data in that build)
+        if(containerUrl == nil && [[[NSBundle mainBundle] bundleIdentifier] containsString:@".messenger.dev"])
+        {
+            containerUrl = [[[NSFileManager defaultManager] URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask] firstObject];
+            [[NSFileManager defaultManager] createDirectoryAtURL:containerUrl withIntermediateDirectories:YES attributes:nil error:nil];
+            DDLogWarn(@"No app group container available (.dev build), using app private directory: %@", containerUrl);
+        }
     });
     MLAssert(containerUrl != nil, @"Container URL should never be nil!");
     NSURL* retval = containerUrl;
@@ -2700,6 +2712,7 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
             @"jabber:x:conference",
             @"jabber:x:oob",
             @"urn:xmpp:ping",
+            @"urn:xmpp:time",       //isaCloud: XEP-0202
             @"urn:xmpp:eme:0",
             @"urn:xmpp:message-retract:1",
             @"urn:xmpp:message-correct:0",

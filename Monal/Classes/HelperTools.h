@@ -106,7 +106,7 @@ NSDictionary* _Nullable dictionaryComprehension(NSDictionary* _Nullable dict, id
 +(void) configureDefaultAudioSession;
 
 +(NSArray<NSString*>*) getFailoverStunServers;
-+(NSURL*) getFailoverTurnApiServer;
++(NSURL* _Nullable) getFailoverTurnApiServer;
 +(NSArray<MLXMLNode*>* _Nullable) sdp2xml:(NSString*) sdp withInitiator:(BOOL) initiator;
 +(NSString* _Nullable) xml2sdp:(MLXMLNode*) xml withInitiator:(BOOL) initiator;
 +(MLXMLNode* _Nullable) candidate2xml:(NSString*) candidate withMid:(NSString*) mid pwd:(NSString* _Nullable) pwd ufrag:(NSString* _Nullable) ufrag andInitiator:(BOOL) initiator;

@@ -307,6 +307,18 @@ NSString* const kiqErrorType = @"error";
     ] andData:nil]];
 }
 
+//isaCloud: XEP-0202 entity time (local timezone offset and current UTC time)
+-(void) setEntityTime
+{
+    NSDate* now = [NSDate date];
+    NSInteger offset = [[NSTimeZone localTimeZone] secondsFromGMTForDate:now];
+    NSString* tzo = [NSString stringWithFormat:@"%@%02ld:%02ld", offset < 0 ? @"-" : @"+", (long)(labs(offset) / 3600), (long)((labs(offset) % 3600) / 60)];
+    [self addChildNode:[[MLXMLNode alloc] initWithElement:@"time" andNamespace:@"urn:xmpp:time" withAttributes:@{} andChildren:@[
+        [[MLXMLNode alloc] initWithElement:@"tzo" andData:tzo],
+        [[MLXMLNode alloc] initWithElement:@"utc" andData:[HelperTools generateDateTimeString:now]],
+    ] andData:nil]];
+}
+
 -(void) setBlocked:(BOOL) blocked forJid:(NSString* _Nonnull) blockedJid
 {
     MLXMLNode* blockNode = [[MLXMLNode alloc] initWithElement:(blocked ? @"block" : @"unblock") andNamespace:@"urn:xmpp:blocking"];

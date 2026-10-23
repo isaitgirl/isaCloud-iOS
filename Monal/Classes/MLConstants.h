@@ -36,11 +36,13 @@ static const DDLogLevel ddLogLevel = LOG_LEVEL_STDOUT;
     #define kBackgroundRefreshingTask @"im.monal.alpha.refresh"
     #define kBackgroundURLSessionIdentifier @"im.monal.alpha.backgroundHttpFetch"
 #else
-    #define kAppGroup @"group.monal"
-    #define kMonalOpenURL [NSURL URLWithString:@"monalOpen://"]
-    #define kBackgroundProcessingTask @"im.monal.process"
-    #define kBackgroundRefreshingTask @"im.monal.refresh"
-    #define kBackgroundURLSessionIdentifier @"im.monal.backgroundHttpFetch"
+    //isaCloud: own identifiers, so isaCloud and Monal can be installed side by side
+    //the app group follows the ISACLOUD_BUNDLE_ID build setting (Info.plist key IsaCloudAppGroup), e.g. for the .dev build
+    #define kAppGroup ((NSString*)([[NSBundle mainBundle] objectForInfoDictionaryKey:@"IsaCloudAppGroup"] ?: @"group.br.com.isacloud.messenger"))
+    #define kMonalOpenURL [NSURL URLWithString:@"isacloudOpen://"]
+    #define kBackgroundProcessingTask @"br.com.isacloud.messenger.process"
+    #define kBackgroundRefreshingTask @"br.com.isacloud.messenger.refresh"
+    #define kBackgroundURLSessionIdentifier @"br.com.isacloud.messenger.backgroundHttpFetch"
 #endif
 
 #define kMonalKeychainName @"Monal"

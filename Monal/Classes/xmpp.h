@@ -220,6 +220,11 @@ typedef void (^monal_iq_handler_t)(XMPPIQ* _Nullable);
 -(void) getEntitySoftWareVersion:(NSString*) user;
 
 /**
+ isaCloud: query a contact resource's local time (XEP-0202), completion gets its timezone or nil (not supported, error or timeout)
+ */
+-(void) getEntityTime:(NSString*) fullJid withCompletion:(void (^)(NSTimeZone* _Nullable timezone)) completion;
+
+/**
  XEP-0191 blocking
  */
 -(void) setBlocked:(BOOL) blocked forJid:(NSString*) jid;

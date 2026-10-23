@@ -39,6 +39,8 @@ struct ContactDetails: View {
     @State private var success = false
     @State private var successCallback: monal_void_block_t?
     @StateObject private var overlay = LoadingOverlayState()
+    @State private var contactTimeZone: TimeZone? = nil     //isaCloud: contact's local time (XEP-0202)
+    @State private var mamCatchupDays = 7                   //isaCloud: history window of public channels on connect (0 = all)
     var delegate: SheetDismisserProtocol?
     private var account: xmpp
 
@@ -46,6 +48,45 @@ struct ContactDetails: View {
         self.delegate = delegate
         _contact = StateObject(wrappedValue: contact)
         self.account = contact.obj.account!
+    }
+
+    //isaCloud: history window of a public channel (7 days by default)
+    private func loadMamCatchupDays() {
+        guard contact.isMuc && contact.obj.mucType == kMucTypeChannel else {
+            return
+        }
+        mamCatchupDays = DataLayer.sharedInstance().mamCatchupDays(forMuc: contact.obj.contactJid, andAccount: contact.obj.accountID)
+    }
+
+    //isaCloud: ask every device of the contact for its local time (XEP-0202) and use the first answer
+    private func loadContactLocalTime() {
+        guard !contact.isSelf && !contact.isMuc else {
+            return
+        }
+        let jid = contact.obj.contactJid
+        for resource in DataLayer.sharedInstance().resources(for: contact.obj) {
+            account.getEntityTime("\(jid)/\(resource)") { timezone in
+                guard let timezone = timezone else {
+                    return
+                }
+                DispatchQueue.main.async {
+                    if self.contactTimeZone == nil {
+                        self.contactTimeZone = timezone
+                    }
+                }
+            }
+        }
+    }
+
+    //isaCloud: "15:49 (UTC−03:00)"
+    private func formatLocalTime(_ date: Date, in timeZone: TimeZone) -> String {
+        let formatter = DateFormatter()
+        formatter.timeZone = timeZone
+        formatter.dateStyle = .none
+        formatter.timeStyle = .short
+        let seconds = timeZone.secondsFromGMT(for: date)
+        let offset = String(format: "UTC%@%02d:%02d", seconds < 0 ? "\u{2212}" : "+", abs(seconds) / 3600, (abs(seconds) % 3600) / 60)
+        return "\(formatter.string(from: date)) (\(offset))"
     }
 
     private func updateRoleAndAffiliation() {
@@ -209,6 +250,13 @@ struct ContactDetails: View {
                             }
                         } else {
                             Text(String(format: NSLocalizedString("Last seen: %@", comment: ""), NSLocalizedString("unknown", comment: "")))
+                        }
+                        
+                        //isaCloud: contact's local time (XEP-0202), only shown if one of the contact's devices answered
+                        if let contactTimeZone = contactTimeZone {
+                            TimelineView(.everyMinute) { timeline in
+                                Text(String(format: NSLocalizedString("Local time: %@", comment: ""), formatLocalTime(timeline.date, in: contactTimeZone)))
+                            }
                         }
                     }
                     
@@ -460,6 +508,24 @@ struct ContactDetails: View {
                         }
                     }
                 }
+
+                //isaCloud: how much of the channel's history to catch up on connect
+                if contact.obj.isMuc && contact.obj.mucType == kMucTypeChannel {
+                    Picker(selection: $mamCatchupDays) {
+                        Text("7 days").tag(7)
+                        Text("1 month").tag(30)
+                        Text("All").tag(0)
+                    } label: {
+                        Text("Sync history on connect")
+                    }
+                    .pickerStyle(.menu)
+                    .onChange(of: mamCatchupDays) { _, newDays in
+                        DataLayer.sharedInstance().setMamCatchupDays(newDays, forMuc: contact.obj.contactJid, andAccount: contact.obj.accountID)
+                    }
+                    Text("Public channels only download the messages of this period when you connect. \"All\" downloads the whole history the server keeps, which can be slow on busy channels.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
             .listStyle(.plain)
 
@@ -646,7 +712,9 @@ struct ContactDetails: View {
             //omemo debug stuff, should be removed in a few months
             Section {
                 // only display omemo session reset button on 1:1 and private groups
-                if contactDetailsDefaultsDB.showAdvancedUI && (contact.obj.isMuc == false || (contact.isMuc && contact.mucType == kMucTypeGroup)) {
+                //isaCloud: always visible (not only with "Show advanced options in UI"), it is the way to recover
+                //a contact whose devices got marked as removed (e.g. "no device supporting encryption"); it still asks for confirmation
+                if (contact.obj.isMuc == false || (contact.isMuc && contact.mucType == kMucTypeGroup)) {
                     Button(action: {
                         showingResetOmemoSessionConfirmation = true
                     }) {
@@ -717,6 +785,8 @@ struct ContactDetails: View {
         }
         .onAppear {
             self.updateRoleAndAffiliation()
+            self.loadContactLocalTime()     //isaCloud
+            self.loadMamCatchupDays()       //isaCloud
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kMonalMucParticipantsAndMembersUpdated)).receive(on: RunLoop.main)) { notification in
             if let xmppAccount = notification.object as? xmpp, let notificationContact = notification.userInfo?["contact"] as? MLContact {

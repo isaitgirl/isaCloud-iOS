@@ -71,3 +71,16 @@ Monal/shareSheet-iOS/localization/external/*
 *.provisionprofile
 *.p12
 Monal/Classes/secrets.h
+
+# isaCloud: server secrets (TURN shared secret), never commit
+docs/stun/
+
+# isaCloud: fpush secrets (component secret, APNs certificate), never commit
+docs/fpush/settings.json
+docs/fpush/secrets/
+*.p12
+
+# isaCloud: local device builds (scripts/isacloud-dev-device.sh)
+/build/
+
+docs/screenshots/

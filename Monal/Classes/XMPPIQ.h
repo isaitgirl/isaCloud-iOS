@@ -105,6 +105,7 @@ removes a contact from the roster
  makes iq  with version element
  */
 -(void) setVersion;
+-(void) setEntityTime;
 
 /**
  sets up an iq that requests a http upload slot

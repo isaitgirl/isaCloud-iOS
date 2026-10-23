@@ -1,0 +1,39 @@
+# fpush: push appserver do isaCloud (push.isacloud.im), como componente XMPP do Prosody.
+# Veja o README.md desta pasta antes de subir.
+
+services:
+  fpush:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: isacloud/fpush:42359ca
+    container_name: fpush
+    restart: unless-stopped
+    init: true
+    environment:
+      RUST_LOG: info
+    volumes:
+      # configuração e certificado da Apple: nunca vão para o git
+      - ./settings.json:/etc/fpush/settings.json:ro
+      - ./secrets/isacloud-apns.p12:/etc/fpush/isacloud-apns.p12:ro
+    # nenhuma porta publicada: o fpush só conversa com o Prosody pela rede interna do Docker
+    # (a conexão de componente XEP-0114 não é criptografada)
+    networks:
+      - prosody
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  prosody:
+    # rede Docker já existente onde está o container do Prosody
+    # (descubra o nome com: docker inspect <container-do-prosody> --format '{{json .NetworkSettings.Networks}}')
+    name: ${PROSODY_NETWORK:-prosody}
+    external: true

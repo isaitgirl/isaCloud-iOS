@@ -959,3 +959,83 @@ class SwiftuiInterface : NSObject {
         return host!
     }
 }
+
+//isaCloud: hide the keyboard when tapping outside of text fields or when scrolling
+//use .dismissKeyboardOnTapOrScroll() on screens with forms (WelcomeLogIn, RegisterAccount)
+struct DismissKeyboardOnTapOrScroll: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .scrollDismissesKeyboard(.immediately)
+            .onAppear { KeyboardDismissTapHandler.shared.enable() }
+            .onDisappear { KeyboardDismissTapHandler.shared.disable() }
+    }
+}
+
+extension View {
+    func dismissKeyboardOnTapOrScroll() -> some View {
+        modifier(DismissKeyboardOnTapOrScroll())
+    }
+}
+
+//tap and pan recognizers on the key window, only active while at least one screen using the modifier above is visible
+//(nested screens like WelcomeLogIn -> RegisterAccount are counted, so the order of onAppear/onDisappear does not matter)
+private final class KeyboardDismissTapHandler: NSObject, UIGestureRecognizerDelegate {
+    static let shared = KeyboardDismissTapHandler()
+    private var users = 0
+    private weak var recognizer: UITapGestureRecognizer?
+    private weak var panRecognizer: UIPanGestureRecognizer?     //scrolling: .scrollDismissesKeyboard does not reach nested Forms
+
+    func enable() {
+        users += 1
+        if recognizer == nil, let window = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .flatMap({ $0.windows })
+            .first(where: { $0.isKeyWindow }) {
+            let tap = UITapGestureRecognizer(target: self, action: #selector(tapped(_:)))
+            tap.cancelsTouchesInView = false        //buttons and links keep working
+            tap.delegate = self
+            window.addGestureRecognizer(tap)
+            recognizer = tap
+
+            let pan = UIPanGestureRecognizer(target: self, action: #selector(panned(_:)))
+            pan.cancelsTouchesInView = false        //scroll views keep scrolling
+            pan.delegate = self
+            window.addGestureRecognizer(pan)
+            panRecognizer = pan
+        }
+        recognizer?.isEnabled = true
+        panRecognizer?.isEnabled = true
+    }
+
+    func disable() {
+        users = max(0, users - 1)
+        recognizer?.isEnabled = users > 0
+        panRecognizer?.isEnabled = users > 0
+    }
+
+    @objc private func tapped(_ sender: UITapGestureRecognizer) {
+        sender.view?.endEditing(true)
+    }
+
+    @objc private func panned(_ sender: UIPanGestureRecognizer) {
+        if sender.state == .began {
+            sender.view?.endEditing(true)
+        }
+    }
+
+    //touches on text inputs are ignored, so moving from one field to another does not close and reopen the keyboard
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        var view = touch.view
+        while let current = view {
+            if current is UITextField || current is UITextView {
+                return false
+            }
+            view = current.superview
+        }
+        return true
+    }
+
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        return true
+    }
+}

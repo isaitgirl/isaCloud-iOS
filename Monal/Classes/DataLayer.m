@@ -1293,6 +1293,22 @@ static NSDateFormatter* dbFormatter;
     }];
 }
 
+//isaCloud: history window for public channels, see DataLayer.h
+-(NSInteger) mamCatchupDaysForMuc:(NSString*) room andAccount:(NSNumber*) accountID
+{
+    NSNumber* days = [self.db idReadTransaction:^{
+        return [self.db executeScalar:@"SELECT mam_catchup_days FROM buddylist WHERE account_id=? AND buddy_name=?;" andArguments:@[accountID, room]];
+    }];
+    return days ? [days integerValue] : 7;
+}
+
+-(void) setMamCatchupDays:(NSInteger) days forMuc:(NSString*) room andAccount:(NSNumber*) accountID
+{
+    [self.db voidWriteTransaction:^{
+        [self.db executeNonQuery:@"UPDATE buddylist SET mam_catchup_days=? WHERE account_id=? AND buddy_name=?;" andArguments:@[@(days), accountID, room]];
+    }];
+}
+
 #pragma mark message Commands
 
 -(NSDictionary*) messageDataForHistoryID:(NSNumber*) historyID

@@ -4960,6 +4960,37 @@ static NSRegularExpression* fastTokenRemovalRegex;
     }
 }
 
+//isaCloud: XEP-0202 entity time
+-(void) getEntityTime:(NSString*) fullJid withCompletion:(void (^)(NSTimeZone* _Nullable timezone)) completion
+{
+    NSDictionary* split = [HelperTools splitJid:fullJid];
+    if(split[@"resource"] == nil || ![[DataLayer sharedInstance] checkCap:@"urn:xmpp:time" forUser:split[@"user"] andResource:split[@"resource"] onAccountID:self.accountID])
+    {
+        completion(nil);
+        return;
+    }
+    XMPPIQ* timeRequest = [[XMPPIQ alloc] initWithType:kiqGetType to:fullJid];
+    [timeRequest addChildNode:[[MLXMLNode alloc] initWithElement:@"time" andNamespace:@"urn:xmpp:time"]];
+    [self sendIq:timeRequest withResponseHandler:^(XMPPIQ* response) {
+        //tzo is "+hh:mm", "-hh:mm" or "Z" (XEP-0082)
+        NSString* tzo = [response findFirst:@"{urn:xmpp:time}time/tzo#"];
+        NSTimeZone* timezone = nil;
+        if([tzo isEqualToString:@"Z"])
+            timezone = [NSTimeZone timeZoneForSecondsFromGMT:0];
+        else if(tzo.length == 6 && ([tzo hasPrefix:@"+"] || [tzo hasPrefix:@"-"]) && [tzo characterAtIndex:3] == ':')
+        {
+            NSInteger seconds = [[tzo substringWithRange:NSMakeRange(1, 2)] integerValue] * 3600 + [[tzo substringWithRange:NSMakeRange(4, 2)] integerValue] * 60;
+            timezone = [NSTimeZone timeZoneForSecondsFromGMT:[tzo hasPrefix:@"-"] ? -seconds : seconds];
+        }
+        else
+            DDLogWarn(@"Invalid XEP-0202 tzo from %@: %@", fullJid, tzo);
+        completion(timezone);
+    } andErrorHandler:^(XMPPIQ* error) {
+        DDLogDebug(@"XEP-0202 time request to %@ failed: %@", fullJid, error);
+        completion(nil);
+    }];
+}
+
 #pragma mark HTTP upload
 
 -(void) requestHTTPSlotWithParams:(NSDictionary*) params andCompletion:(void(^)(NSString* url, NSError* error)) completion

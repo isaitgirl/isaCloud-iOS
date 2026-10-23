@@ -996,15 +996,11 @@ $$
                     //which is guaranteed to be unique (because monal uses uuids for outgoing messages)
                     NSString* lastStanzaId = [[DataLayer sharedInstance] lastStanzaIdForMuc:node.fromUser andAccount:_account.accountID];
                     [_account delayIncomingMessageStanzasForArchiveJid:node.fromUser];
-                    XMPPIQ* mamQuery = [[XMPPIQ alloc] initWithType:kiqSetType to:node.fromUser];
                     if(lastStanzaId)
-                    {
-                        DDLogInfo(@"Querying muc mam:2 archive after stanzaid '%@' for catchup", lastStanzaId);
-                        [mamQuery setMAMQueryAfter:lastStanzaId];
-                        [_account sendIq:mamQuery withHandler:$newHandler(self, handleCatchup, $BOOL(secondTry, NO))];
-                    }
+                        [self queryMamCatchupForMuc:node.fromUser afterStanzaId:lastStanzaId];
                     else
                     {
+                        XMPPIQ* mamQuery = [[XMPPIQ alloc] initWithType:kiqSetType to:node.fromUser];
                         DDLogInfo(@"Querying muc mam:2 archive for latest stanzaid to prime database");
                         [mamQuery setMAMQueryForLatestId];
                         [_account sendIq:mamQuery withHandler:$newHandler(self, handleMamResponseWithLatestId)];
@@ -1668,6 +1664,36 @@ $$instance_handler(handleMamResponseWithLatestId, account.mucProcessor, $$ID(xmp
     [_account mamFinishedFor:iqNode.fromUser];
 $$
 
+//isaCloud: public channels only catch up on the history window chosen in the channel details (default 7 days, 0 = whole archive)
+-(NSDate* _Nullable) mamCatchupWindowStartForMuc:(NSString*) room
+{
+    if([[[DataLayer sharedInstance] getMucTypeOfRoom:room andAccount:_account.accountID] isEqualToString:kMucTypeChannel] == NO)
+        return nil;
+    NSInteger days = [[DataLayer sharedInstance] mamCatchupDaysForMuc:room andAccount:_account.accountID];
+    if(days <= 0)
+        return nil;
+    return [NSDate dateWithTimeIntervalSinceNow:-(double)days * 24 * 60 * 60];
+}
+
+-(void) queryMamCatchupForMuc:(NSString*) room afterStanzaId:(NSString*) stanzaId
+{
+    XMPPIQ* mamQuery = [[XMPPIQ alloc] initWithType:kiqSetType to:room];
+    NSDate* windowStart = [self mamCatchupWindowStartForMuc:room];
+    MLMessage* latestMessage = windowStart ? [[DataLayer sharedInstance] lastMessageForContact:room forAccount:_account.accountID] : nil;
+    //if our newest message is older than the window, skip the gap and only fetch the window
+    if(windowStart && (latestMessage.timestamp == nil || [latestMessage.timestamp compare:windowStart] == NSOrderedAscending))
+    {
+        DDLogInfo(@"Querying muc mam:2 archive of %@ since %@ for catchup (history window)", room, windowStart);
+        [mamQuery setMAMQueryAfterTimestamp:windowStart];
+    }
+    else
+    {
+        DDLogInfo(@"Querying muc mam:2 archive after stanzaid '%@' for catchup", stanzaId);
+        [mamQuery setMAMQueryAfter:stanzaId];
+    }
+    [_account sendIq:mamQuery withHandler:$newHandler(self, handleCatchup, $BOOL(secondTry, NO))];
+}
+
 $$instance_handler(handleCatchup, account.mucProcessor, $$ID(xmpp*, account), $$ID(XMPPIQ*, iqNode), $$BOOL(secondTry))
     if([iqNode check:@"/<type=error>"])
     {
@@ -1679,9 +1705,14 @@ $$instance_handler(handleCatchup, account.mucProcessor, $$ID(xmpp*, account), $$
             //latestMessage can be nil, thus [latestMessage timestamp] will return nil and setMAMQueryAfterTimestamp:nil
             //will query the whole archive since dawn of time
             MLMessage* latestMessage = [[DataLayer sharedInstance] lastMessageForContact:iqNode.fromUser forAccount:_account.accountID];
-            DDLogInfo(@"Querying COMPLETE muc mam:2 archive at %@ after timestamp %@ for catchup", iqNode.fromUser, [latestMessage timestamp]);
+            //isaCloud: never query further back than the history window of a public channel
+            NSDate* start = [latestMessage timestamp];
+            NSDate* windowStart = [self mamCatchupWindowStartForMuc:iqNode.fromUser];
+            if(windowStart && (start == nil || [start compare:windowStart] == NSOrderedAscending))
+                start = windowStart;
+            DDLogInfo(@"Querying COMPLETE muc mam:2 archive at %@ after timestamp %@ for catchup", iqNode.fromUser, start);
             XMPPIQ* mamQuery = [[XMPPIQ alloc] initWithType:kiqSetType to:iqNode.fromUser];
-            [mamQuery setMAMQueryAfterTimestamp:[latestMessage timestamp]];
+            [mamQuery setMAMQueryAfterTimestamp:start];
             [_account sendIq:mamQuery withHandler:$newHandler(self, handleCatchup, $BOOL(secondTry, YES))];
         }
         else

@@ -178,17 +178,37 @@
 
 -(UIImage*) generateDummyIconForContact:(MLContact*) contact
 {
-    NSString* contactLetter;
-
+    NSString* name;
     if(contact.isSelf)
-    {
-        xmpp* account = contact.account;
-        contactLetter = [[[MLContact ownDisplayNameForAccount:account] substringToIndex:1] uppercaseString];
-    }
+        name = [MLContact ownDisplayNameForAccount:contact.account];
     else
-        contactLetter = [[[contact contactDisplayName] substringToIndex:1] uppercaseString];
+        name = [contact contactDisplayName];
+    return [self generateDummyIconWithName:name andColorInput:contact.contactJid];
+}
 
-    UIColor* background = [HelperTools generateColorFromJid:contact.contactJid];
+//isaCloud: one letter ("isa" -> "I") or two letters for names with several words ("Isadora Ribeiro" -> "IR")
++(NSString*) initialsForName:(NSString*) name
+{
+    NSMutableArray<NSString*>* words = [NSMutableArray new];
+    for(NSString* word in [name componentsSeparatedByCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]])
+        if(word.length > 0)
+            [words addObject:word];
+    if(words.count == 0)
+        return @"?";
+    //use composed character sequences to not split emojis or accented letters
+    NSString* (^firstCharacter)(NSString*) = ^NSString*(NSString* word) {
+        return [[word substringWithRange:[word rangeOfComposedCharacterSequenceAtIndex:0]] uppercaseString];
+    };
+    if(words.count == 1)
+        return firstCharacter(words.firstObject);
+    return [NSString stringWithFormat:@"%@%@", firstCharacter(words.firstObject), firstCharacter(words.lastObject)];
+}
+
+//isaCloud: circular avatar with the name's initials on a XEP-0392 color derived from colorInput (jid or occupant jid)
+-(UIImage*) generateDummyIconWithName:(NSString*) name andColorInput:(NSString*) colorInput
+{
+    NSString* contactLetters = [MLImageManager initialsForName:name];
+    UIColor* background = [HelperTools generateColorFromJid:colorInput];
     UIColor* foreground = [UIColor blackColor];
     if(![background isLightColor])
         foreground = [UIColor whiteColor];
@@ -203,20 +223,21 @@
         [background setFill];
         [context fillRect:renderer.format.bounds];
         
-        //draw letter in the middleof our image
+        //draw letters in the middle of our image (smaller font for two letters)
         NSMutableParagraphStyle* paragraphStyle = [[NSParagraphStyle defaultParagraphStyle] mutableCopy];
         paragraphStyle.alignment = NSTextAlignmentCenter;
+        double fontDivisor = [contactLetters length] > 1 ? 2.4 : 1.666;
         NSDictionary* attributes = @{
-            NSFontAttributeName: [[UIFont preferredFontForTextStyle:UIFontTextStyleLargeTitle] fontWithSize:(unsigned int)(drawRect.size.height / 1.666)],
+            NSFontAttributeName: [[UIFont preferredFontForTextStyle:UIFontTextStyleLargeTitle] fontWithSize:(unsigned int)(drawRect.size.height / fontDivisor)],
             NSForegroundColorAttributeName: foreground,
             NSParagraphStyleAttributeName: paragraphStyle
         };
-        CGSize textSize = [contactLetter sizeWithAttributes:attributes];
+        CGSize textSize = [contactLetters sizeWithAttributes:attributes];
         CGRect textRect = CGRectMake(floorf((float)(renderer.format.bounds.size.width - textSize.width) / 2),
                                     floorf((float)(renderer.format.bounds.size.height - textSize.height) / 2),
                                     textSize.width,
                                     textSize.height);
-        [contactLetter drawInRect:textRect withAttributes:attributes];
+        [contactLetters drawInRect:textRect withAttributes:attributes];
     }];
 }
 

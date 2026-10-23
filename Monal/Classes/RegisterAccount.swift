@@ -13,8 +13,10 @@ struct RegisterAccount: View {
     static private let credFaultyPattern = ".*@.*"
     static private let XMPPServer: [Dictionary<String, String>] = [
         ["XMPPServer": "Input", "TermsSite_default": ""],
-        ["XMPPServer": "conversations.im", "TermsSite_default": "https://account.conversations.im/privacy/"],
-        //["XMPPServer": "yax.im", "TermsSite_default": "https://yaxim.org/yax.im/"]
+        //isaCloud servers, in this exact order
+        ["XMPPServer": "isacloud.im", "TermsSite_default": "https://isacloud.com.br/politica-de-privacidade.html"],
+        ["XMPPServer": "xmpp.social.br", "TermsSite_default": "https://isacloud.com.br/politica-de-privacidade.html"],
+        ["XMPPServer": "voz.social.br", "TermsSite_default": "https://isacloud.com.br/politica-de-privacidade.html"],
     ]
 
     @State private var username: String = ""
@@ -24,7 +26,8 @@ struct RegisterAccount: View {
     @State private var completionHandler:((AnyObject?)->Void)?
 
     @State private var providedServer: String = ""
-    @State private var selectedServerIndex = Int.random(in: 1 ..< XMPPServer.count)
+    //isaCloud: preselect the first isaCloud server (isacloud.im) instead of a random one
+    @State private var selectedServerIndex = 1
 
     @State private var showAlert = false
     @State private var registerComplete = false
@@ -104,6 +107,21 @@ struct RegisterAccount: View {
     }
     
     private func showRegistrationAlert(alertMessage: String?) {
+        var alertMessage = alertMessage
+        //isaCloud: friendlier message for invite-only servers, instead of the raw (english) server error
+        //(prosody's mod_invites_register answers "not-acceptable (Registration on this server is through invitation only)")
+        if let message = alertMessage, message.range(of: "invitation only", options: .caseInsensitive) != nil {
+            alertMessage = NSLocalizedString("Could not register: this server only works with invitations", comment: "")
+        }
+        //prosody's mod_password_policy answers "not-acceptable (Password is too short (minimum 8 characters))"
+        else if let message = alertMessage, message.range(of: "Password is too short", options: .caseInsensitive) != nil {
+            if let match = message.range(of: #"minimum (\d+) characters"#, options: .regularExpression),
+               let minLength = message[match].split(separator: " ").dropFirst().first {
+                alertMessage = String(format: NSLocalizedString("Could not register: the password is too short, use at least %@ characters", comment: ""), String(minLength))
+            } else {
+                alertMessage = NSLocalizedString("Could not register: the password is too short", comment: "")
+            }
+        }
         alertPrompt.title = Text("Registration Error")
         alertPrompt.message = Text(alertMessage ?? NSLocalizedString("Could not register your username. Please check your code or change the username and try again.", comment: ""))
         hideLoadingOverlay(overlay)
@@ -414,7 +432,7 @@ struct RegisterAccount: View {
                                     }
                                 }))
                             }
-                            Text("The selectable XMPP servers are public servers which are not affiliated to Monal. This registration page is provided for convenience only.")
+                            Text("The selectable XMPP servers are public servers affiliated to isaCloud, but you can also type the server where you would like to create your account: conversations.im, for example")
                             .font(.system(size: 10))
                             .padding(.vertical, 8)
 
@@ -450,6 +468,7 @@ struct RegisterAccount: View {
                 }
             }
         }
+        .dismissKeyboardOnTapOrScroll()     //isaCloud
         .addLoadingOverlay(overlay)
         .navigationBarTitle(Text("Register"), displayMode:.large)
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kXMPPError)).receive(on: RunLoop.main)) { notification in

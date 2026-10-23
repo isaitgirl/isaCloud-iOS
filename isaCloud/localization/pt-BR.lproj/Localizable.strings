@@ -4,8 +4,47 @@
  As chaves daqui são mescladas por cima das traduções do Monal
  (Monal/localization/external) na fase de build
  "[isaCloud] Merge localizations" (scripts/isacloud-merge-localizations.sh).
- Se a mesma chave existir nos dois, vale a daqui.
+ Se a mesma chave existir nos dois, vale a daqui, inclusive sobre a troca
+ automática de "Monal" por "isaCloud" feita pelo mesmo script.
 */
 
 /* BoardingCards.swift: link da tela de boas-vindas */
 "Take me to 1-Click registration" = "Ir para o registro em 1 clique";
+
+/* Configurações de chamadas: no isaCloud o fallback usa só o STUN do isaCloud (stun.isacloud.im),
+   sem a API de TURN do Monal (ver HelperTools getFailoverStunServers/getFailoverTurnApiServer) */
+"Calls: Allow TURN fallback to Monal-Servers" = "Chamadas: usar o STUN do isaCloud quando o servidor não oferecer STUN/TURN";
+
+/* RegisterAccount.swift: texto abaixo do botão de registro */
+"The selectable XMPP servers are public servers affiliated to isaCloud, but you can also type the server where you would like to create your account: conversations.im, for example" = "Os servidores XMPP selecionáveis são servidores públicos afiliados ao isaCloud, mas você pode também digitar o servidor onde gostaria de criar conta: conversations.im, por exemplo";
+
+/* RegisterAccount.swift: título da tela de registro */
+"Register" = "Registre-se";
+
+/* Boas-vindas sem marcação de gênero (WelcomeLogIn.swift, BoardingCards.swift) */
+"Welcome" = "Boas-vindas";
+"Welcome to Monal !" = "Boas-vindas ao isaCloud !";
+
+/* RegisterAccount.swift: erro amigável quando o servidor só aceita registro por convite */
+"Could not register: this server only works with invitations" = "Não foi possível realizar o registro: este servidor funciona apenas com convites";
+
+/* RegisterAccount.swift: erro amigável quando a senha é menor que o mínimo da política do servidor */
+"Could not register: the password is too short, use at least %@ characters" = "Não foi possível realizar o registro: a senha é muito curta, use pelo menos %@ caracteres";
+"Could not register: the password is too short" = "Não foi possível realizar o registro: a senha é muito curta";
+
+/* ContactDetails.swift: hora local do contato (XEP-0202), abaixo de "Visto por último" */
+"Local time: %@" = "Horário local: %@";
+
+/* GeneralSettings.swift: opção de interface avançada (sem tradução no Monal) */
+"Show advanced options in UI" = "Mostrar opções avançadas na interface";
+"Show power-user options in settings and other parts of the user interface." = "Mostra opções de uso avançado nos ajustes e em outras partes da interface.";
+
+/* ContactDetails.swift: confirmação de "Redefinir sessão OMEMO" (a tradução do Monal é de outra versão da frase) */
+"Do you really want to reset the OMEMO session? You should only reset the session if you know what you are doing!" = "Deseja realmente redefinir a sessão OMEMO? Só redefina a sessão se souber o que está fazendo!";
+
+/* ContactDetails.swift: histórico ao conectar em canais públicos (janela de catchup MAM, padrão 7 dias) */
+"Sync history on connect" = "Histórico ao conectar";
+"7 days" = "7 dias";
+"1 month" = "1 mês";
+"All" = "Tudo";
+"Public channels only download the messages of this period when you connect. \"All\" downloads the whole history the server keeps, which can be slow on busy channels." = "Em canais públicos, ao conectar o app baixa apenas as mensagens deste período. \"Tudo\" baixa todo o histórico que o servidor guarda, o que pode demorar em canais movimentados.";

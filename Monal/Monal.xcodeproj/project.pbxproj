@@ -2689,8 +2689,8 @@
 				CLANG_WARN_STRICT_PROTOTYPES = YES_ERROR;
 				CLANG_WARN_VEXING_PARSE = YES_ERROR;
 				CLANG_WARN__EXIT_TIME_DESTRUCTORS = YES;
-				CODE_SIGN_ENTITLEMENTS = Monal.ios.entitlements;
-				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = Monal.ios.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "$(ISACLOUD_ENTITLEMENTS_DIR)Monal.ios.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)Monal.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Monal.macos.entitlements;
 				COMPILER_INDEX_STORE_ENABLE = YES;
 				CURRENT_PROJECT_VERSION = 0;
@@ -2726,7 +2726,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				OTHER_LDFLAGS = "$(inherited)";
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = G7YU7X7KRJ.SworIM;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ISACLOUD_BUNDLE_ID)";
 				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = "org.monal-im.prod.catalyst.monal";
 				PRODUCT_MODULE_NAME = Monal;
 				PRODUCT_NAME = Monal;
@@ -2753,7 +2753,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CODE_SIGN_ENTITLEMENTS = "";
-				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = NotificationService/NotificationService.ios.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)NotificationService/NotificationService.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = NotificationService/NotificationService.macos.entitlements;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 0;
@@ -2765,7 +2765,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = G7YU7X7KRJ.SworIM.notificationService;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ISACLOUD_BUNDLE_ID).notificationService";
 				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = "org.monal-im.prod.catalyst.monal.notificationService";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -2785,7 +2785,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CODE_SIGN_ENTITLEMENTS = "";
-				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = NotificationService/NotificationService.ios.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)NotificationService/NotificationService.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = NotificationService/NotificationService.macos.entitlements;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 0;
@@ -2797,7 +2797,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = G7YU7X7KRJ.SworIM.notificationService;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ISACLOUD_BUNDLE_ID).notificationService";
 				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = "org.monal-im.prod.catalyst.monal.notificationService";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -2817,7 +2817,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CODE_SIGN_ENTITLEMENTS = "";
-				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = NotificationService/NotificationService.ios.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)NotificationService/NotificationService.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = NotificationService/NotificationService.macos.entitlements;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 0;
@@ -2829,7 +2829,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = G7YU7X7KRJ.SworIM.notificationService;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ISACLOUD_BUNDLE_ID).notificationService";
 				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = "org.monal-im.prod.catalyst.monal.notificationService";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -2846,9 +2846,11 @@
 		2675EF5918B98C2D0059C5C3 /* AppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ISACLOUD_BUNDLE_ID = br.com.isacloud.messenger;
+				ISACLOUD_ENTITLEMENTS_DIR = "";
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = monalGreen;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = isaCloudPink;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -2886,7 +2888,7 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 0;
 				DEAD_CODE_STRIPPING = NO;
-				DEVELOPMENT_TEAM = S8D843U34Y;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_DYNAMIC_NO_PIC = NO;
@@ -2946,8 +2948,8 @@
 				CLANG_WARN_STRICT_PROTOTYPES = YES_ERROR;
 				CLANG_WARN_VEXING_PARSE = YES_ERROR;
 				CLANG_WARN__EXIT_TIME_DESTRUCTORS = YES;
-				CODE_SIGN_ENTITLEMENTS = Monal.ios.entitlements;
-				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = Monal.ios.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "$(ISACLOUD_ENTITLEMENTS_DIR)Monal.ios.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)Monal.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Monal.macos.entitlements;
 				COMPILER_INDEX_STORE_ENABLE = YES;
 				CURRENT_PROJECT_VERSION = 0;
@@ -2983,7 +2985,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				OTHER_LDFLAGS = "$(inherited)";
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = G7YU7X7KRJ.SworIM;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ISACLOUD_BUNDLE_ID)";
 				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = "org.monal-im.prod.catalyst.monal";
 				PRODUCT_MODULE_NAME = Monal;
 				PRODUCT_NAME = Monal;
@@ -3008,7 +3010,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 21E99538324C14220843F325 /* Pods-shareSheet.debug.xcconfig */;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = shareSheet.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "$(ISACLOUD_ENTITLEMENTS_DIR)shareSheet.entitlements";
 				CURRENT_PROJECT_VERSION = 0;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -3019,7 +3021,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = G7YU7X7KRJ.SworIM.shareSheet;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ISACLOUD_BUNDLE_ID).shareSheet";
 				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = "org.monal-im.prod.catalyst.monal.shareSheet";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRIP_INSTALLED_PRODUCT = NO;
@@ -3036,7 +3038,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 0EC0A5305E72C0F7F9E1CDEF /* Pods-shareSheet.adhoc.xcconfig */;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = shareSheet.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "$(ISACLOUD_ENTITLEMENTS_DIR)shareSheet.entitlements";
 				CURRENT_PROJECT_VERSION = 0;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -3047,7 +3049,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = G7YU7X7KRJ.SworIM.shareSheet;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ISACLOUD_BUNDLE_ID).shareSheet";
 				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = "org.monal-im.prod.catalyst.monal.shareSheet";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRIP_INSTALLED_PRODUCT = NO;
@@ -3064,7 +3066,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 061EF1BEDEE7A71FDF9AB402 /* Pods-shareSheet.appstore.xcconfig */;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = shareSheet.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "$(ISACLOUD_ENTITLEMENTS_DIR)shareSheet.entitlements";
 				CURRENT_PROJECT_VERSION = 0;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -3075,7 +3077,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = G7YU7X7KRJ.SworIM.shareSheet;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ISACLOUD_BUNDLE_ID).shareSheet";
 				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = "org.monal-im.prod.catalyst.monal.shareSheet";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRIP_INSTALLED_PRODUCT = NO;
@@ -3218,9 +3220,11 @@
 		26E74FBD17B06D2200FD91AE /* Adhoc */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ISACLOUD_BUNDLE_ID = br.com.isacloud.messenger;
+				ISACLOUD_ENTITLEMENTS_DIR = "";
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = monalGreen;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = isaCloudPink;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -3258,7 +3262,7 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 0;
 				DEAD_CODE_STRIPPING = NO;
-				DEVELOPMENT_TEAM = S8D843U34Y;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_DYNAMIC_NO_PIC = NO;
@@ -3321,8 +3325,8 @@
 				CLANG_WARN_STRICT_PROTOTYPES = YES_ERROR;
 				CLANG_WARN_VEXING_PARSE = YES_ERROR;
 				CLANG_WARN__EXIT_TIME_DESTRUCTORS = YES;
-				CODE_SIGN_ENTITLEMENTS = Monal.ios.entitlements;
-				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = Monal.ios.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "$(ISACLOUD_ENTITLEMENTS_DIR)Monal.ios.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)Monal.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Monal.macos.entitlements;
 				COMPILER_INDEX_STORE_ENABLE = YES;
 				CURRENT_PROJECT_VERSION = 0;
@@ -3359,7 +3363,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				OTHER_LDFLAGS = "$(inherited)";
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = G7YU7X7KRJ.SworIM;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ISACLOUD_BUNDLE_ID)";
 				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = "org.monal-im.prod.catalyst.monal";
 				PRODUCT_MODULE_NAME = Monal;
 				PRODUCT_NAME = Monal;
@@ -3383,9 +3387,11 @@
 		C01FCF4F08A954540054247B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ISACLOUD_BUNDLE_ID = br.com.isacloud.messenger;
+				ISACLOUD_ENTITLEMENTS_DIR = "";
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = monalGreen;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = isaCloudPink;
 				CLANG_ADDRESS_SANITIZER_CONTAINER_OVERFLOW = YES;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -3425,7 +3431,7 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 0;
 				DEAD_CODE_STRIPPING = NO;
-				DEVELOPMENT_TEAM = S8D843U34Y;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
@@ -3504,7 +3510,7 @@
 				);
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = G7YU7X7KRJ.SworIM.MonalXMPPUnitTests;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ISACLOUD_BUNDLE_ID).MonalXMPPUnitTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRIP_INSTALLED_PRODUCT = NO;
 				STRIP_SWIFT_SYMBOLS = NO;
@@ -3573,7 +3579,7 @@
 				);
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = G7YU7X7KRJ.SworIM.MonalXMPPUnitTests;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ISACLOUD_BUNDLE_ID).MonalXMPPUnitTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				STRIP_INSTALLED_PRODUCT = NO;
@@ -3645,7 +3651,7 @@
 				);
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = G7YU7X7KRJ.SworIM.MonalXMPPUnitTests;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ISACLOUD_BUNDLE_ID).MonalXMPPUnitTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				STRIP_INSTALLED_PRODUCT = NO;
@@ -3663,9 +3669,11 @@
 		C11C870B26A83C1D00B8DEA5 /* Beta */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ISACLOUD_BUNDLE_ID = br.com.isacloud.messenger;
+				ISACLOUD_ENTITLEMENTS_DIR = "";
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = monalGreen;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = isaCloudPink;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -3703,7 +3711,7 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 0;
 				DEAD_CODE_STRIPPING = NO;
-				DEVELOPMENT_TEAM = S8D843U34Y;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_DYNAMIC_NO_PIC = NO;
@@ -3768,8 +3776,8 @@
 				CLANG_WARN_STRICT_PROTOTYPES = YES_ERROR;
 				CLANG_WARN_VEXING_PARSE = YES_ERROR;
 				CLANG_WARN__EXIT_TIME_DESTRUCTORS = YES;
-				CODE_SIGN_ENTITLEMENTS = Monal.ios.entitlements;
-				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = Monal.ios.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "$(ISACLOUD_ENTITLEMENTS_DIR)Monal.ios.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)Monal.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Monal.macos.entitlements;
 				COMPILER_INDEX_STORE_ENABLE = YES;
 				CURRENT_PROJECT_VERSION = 0;
@@ -3805,7 +3813,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				OTHER_LDFLAGS = "$(inherited)";
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = G7YU7X7KRJ.SworIM;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ISACLOUD_BUNDLE_ID)";
 				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = "org.monal-im.prod.catalyst.monal";
 				PRODUCT_MODULE_NAME = Monal;
 				PRODUCT_NAME = Monal;
@@ -3830,7 +3838,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 6BCB9FB4EBEA3735D24A44DF /* Pods-shareSheet.beta.xcconfig */;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = shareSheet.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "$(ISACLOUD_ENTITLEMENTS_DIR)shareSheet.entitlements";
 				CURRENT_PROJECT_VERSION = 0;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -3841,7 +3849,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = G7YU7X7KRJ.SworIM.shareSheet;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ISACLOUD_BUNDLE_ID).shareSheet";
 				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = "org.monal-im.prod.catalyst.monal.shareSheet";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRIP_INSTALLED_PRODUCT = NO;
@@ -3860,7 +3868,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CODE_SIGN_ENTITLEMENTS = "";
-				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = NotificationService/NotificationService.ios.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)NotificationService/NotificationService.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = NotificationService/NotificationService.macos.entitlements;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 0;
@@ -3872,7 +3880,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = G7YU7X7KRJ.SworIM.notificationService;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ISACLOUD_BUNDLE_ID).notificationService";
 				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = "org.monal-im.prod.catalyst.monal.notificationService";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -3940,7 +3948,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = G7YU7X7KRJ.SworIM.MonalUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ISACLOUD_BUNDLE_ID).MonalUITests";
 				PRODUCT_NAME = MonalUITests;
 				STRIP_INSTALLED_PRODUCT = NO;
 				STRIP_SWIFT_SYMBOLS = NO;
@@ -4006,7 +4014,7 @@
 				);
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = G7YU7X7KRJ.SworIM.MonalXMPPUnitTests;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ISACLOUD_BUNDLE_ID).MonalXMPPUnitTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				STRIP_INSTALLED_PRODUCT = NO;
@@ -4033,7 +4041,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = G7YU7X7KRJ.SworIM.MonalUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ISACLOUD_BUNDLE_ID).MonalUITests";
 				PRODUCT_NAME = MonalUITests;
 				STRIP_INSTALLED_PRODUCT = NO;
 				STRIP_SWIFT_SYMBOLS = NO;
@@ -4053,7 +4061,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = G7YU7X7KRJ.SworIM.MonalUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ISACLOUD_BUNDLE_ID).MonalUITests";
 				PRODUCT_NAME = MonalUITests;
 				STRIP_INSTALLED_PRODUCT = NO;
 				STRIP_SWIFT_SYMBOLS = NO;
@@ -4074,7 +4082,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = G7YU7X7KRJ.SworIM.MonalUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ISACLOUD_BUNDLE_ID).MonalUITests";
 				PRODUCT_NAME = MonalUITests;
 				STRIP_INSTALLED_PRODUCT = NO;
 				STRIP_SWIFT_SYMBOLS = NO;
@@ -4086,9 +4094,11 @@
 		C1E1BCAE288BBAB00046AB47 /* Alpha */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ISACLOUD_BUNDLE_ID = br.com.isacloud.messenger;
+				ISACLOUD_ENTITLEMENTS_DIR = "";
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = monalGreen;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = isaCloudPink;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -4126,7 +4136,7 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 0;
 				DEAD_CODE_STRIPPING = NO;
-				DEVELOPMENT_TEAM = S8D843U34Y;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_DYNAMIC_NO_PIC = NO;
@@ -4202,7 +4212,7 @@
 				COMPILER_INDEX_STORE_ENABLE = YES;
 				CURRENT_PROJECT_VERSION = 0;
 				DEAD_CODE_STRIPPING = NO;
-				DEVELOPMENT_TEAM = S8D843U34Y;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_BITCODE = NO;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
 				ENABLE_PREVIEWS = YES;
@@ -4369,7 +4379,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = G7YU7X7KRJ.SworIM.MonalUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ISACLOUD_BUNDLE_ID).MonalUITests";
 				PRODUCT_NAME = MonalUITests;
 				STRIP_INSTALLED_PRODUCT = NO;
 				STRIP_SWIFT_SYMBOLS = NO;
@@ -4435,7 +4445,7 @@
 				);
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = G7YU7X7KRJ.SworIM.MonalXMPPUnitTests;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(ISACLOUD_BUNDLE_ID).MonalXMPPUnitTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				STRIP_INSTALLED_PRODUCT = NO;

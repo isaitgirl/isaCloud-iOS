@@ -4,8 +4,6 @@
 <dict>
 	<key>aps-environment</key>
 	<string>production</string>
-	<key>com.apple.developer.usernotifications.filtering</key>
-	<true/>
 	<key>com.apple.developer.kernel.increased-memory-limit</key>
 	<true/>
 	<key>com.apple.developer.usernotifications.communication</key>
@@ -14,7 +12,7 @@
 	<true/>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.monal</string>
+		<string>group.$(ISACLOUD_BUNDLE_ID)</string>
 	</array>
 	<key>com.apple.security.device.audio-input</key>
 	<true/>
@@ -32,7 +30,7 @@
 	<true/>
 	<key>keychain-access-groups</key>
 	<array>
-		<string>$(AppIdentifierPrefix)G7YU7X7KRJ.SworIM</string>
+		<string>$(AppIdentifierPrefix)$(ISACLOUD_BUNDLE_ID)</string>
 	</array>
 </dict>
 </plist>

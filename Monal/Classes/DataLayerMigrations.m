@@ -1159,7 +1159,12 @@
                     AND trustLevel!=1 \
             );"];
         }];
-        
+
+        //isaCloud: history window (in days, 0 = whole archive) used when catching up public channels on connect
+        [self updateDB:db withDataLayer:dataLayer toVersion:7.014 withBlock:^{
+            [db executeNonQuery:@"ALTER TABLE buddylist ADD COLUMN mam_catchup_days INTEGER DEFAULT 7;"];
+        }];
+
         
         
         

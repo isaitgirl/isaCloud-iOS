@@ -40,6 +40,9 @@
 -(UIImage* _Nullable) getIconForContact:(MLContact* _Nonnull) contact withCompletion:(void (^_Nullable)(UIImage *_Nullable))completion;
 -(UIImage* _Nullable) getIconForContact:(MLContact* _Nonnull) contact;
 +(UIImage* _Nonnull) circularImage:(UIImage* _Nonnull) image;
+//isaCloud: initials avatar with a XEP-0392 color
++(NSString* _Nonnull) initialsForName:(NSString* _Nullable) name;
+-(UIImage* _Nonnull) generateDummyIconWithName:(NSString* _Nullable) name andColorInput:(NSString* _Nonnull) colorInput;
 
 -(NSURL* _Nullable) getThumbnailURLOfMessage:(MLMessage* _Nonnull) message;
 -(NSURL* _Nullable) setThumbnailOfMessage:(MLMessage* _Nonnull) message withData:(NSData* _Nullable) data;

@@ -2,10 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>IsaCloudAppGroup</key>
+	<string>group.$(ISACLOUD_BUNDLE_ID)</string>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
-		<string>im.monal.process</string>
-		<string>im.monal.refresh</string>
+		<string>br.com.isacloud.messenger.process</string>
+		<string>br.com.isacloud.messenger.refresh</string>
 	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
