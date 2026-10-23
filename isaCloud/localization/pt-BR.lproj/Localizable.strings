@@ -1,0 +1,11 @@
+/*
+ Traduções próprias do isaCloud (pt-BR).
+
+ As chaves daqui são mescladas por cima das traduções do Monal
+ (Monal/localization/external) na fase de build
+ "[isaCloud] Merge localizations" (scripts/isacloud-merge-localizations.sh).
+ Se a mesma chave existir nos dois, vale a daqui.
+*/
+
+/* BoardingCards.swift: link da tela de boas-vindas */
+"Take me to 1-Click registration" = "Ir para o registro em 1 clique";

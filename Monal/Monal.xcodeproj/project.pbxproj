@@ -1672,6 +1672,7 @@
 				26AA70212146BBB900598605 /* Embed Foundation Extensions */,
 				261E542723A0A1D300394F59 /* Embed Frameworks */,
 				C19CC5E028E85527007AD33E /* Fix catalyst aps-enviromnent */,
+				00ECAB17EED643B191C9FDF0 /* [isaCloud] Merge localizations */,
 				E09BC3B194F91D0DE538C310 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
@@ -2019,6 +2020,25 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		00ECAB17EED643B191C9FDF0 /* [isaCloud] Merge localizations */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "[isaCloud] Merge localizations";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "bash \"${SRCROOT}/../scripts/isacloud-merge-localizations.sh\"\n";
+		};
 		0105BB524F492059A59FAB32 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
