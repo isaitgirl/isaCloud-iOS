@@ -365,7 +365,14 @@ static BOOL _dnssecWarningDisplayed;
 #if !TARGET_OS_MACCATALYST
     self.splitViewController.primaryBackgroundStyle = UISplitViewControllerBackgroundStyleSidebar;
 #endif
-    self.settingsButton.image = [UIImage systemImageNamed:@"gearshape.fill"];
+    // isaCloud: the profile button shows the app logo; it opens the account screen, where the user's account is listed first
+    UIImage* logo = [UIImage imageNamed:@"AppLogo"];
+    CGFloat logoHeight = 30 * logo.size.height / logo.size.width;
+    UIGraphicsImageRenderer* renderer = [[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(30, 30)];
+    UIImage* icon = [renderer imageWithActions:^(UIGraphicsImageRendererContext* context) {
+        [logo drawInRect:CGRectMake(0, (30 - logoHeight) / 2, 30, logoHeight)];
+    }];
+    self.settingsButton.image = [icon imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
     [self configureComposeButton];
 
     self.spinnerButton.customView = self.spinner;

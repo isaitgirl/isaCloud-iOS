@@ -84,10 +84,28 @@ struct ContactViewEntry: View {
     }
 }
 
+//isaCloud: filter of the segmented control under the search bar
+enum ContactsFilter: Int, CaseIterable, Identifiable {
+    case all, contacts, groups, channels
+    var id: Int { rawValue }
+    var title: LocalizedStringKey {
+        switch self {
+        case .all: return "Filter: all"
+        case .contacts: return "Filter: contacts"
+        case .groups: return "Filter: groups"
+        case .channels: return "Filter: channels"
+        }
+    }
+}
+
 struct ContactsView: View {
     @Environment(\.colorScheme) var colorScheme
     @ObservedObject private var contacts: Contacts
     @State private var searchText: String = ""
+    @State private var filter: ContactsFilter = .all
+    @State private var showingAddContact = false
+    @State private var showingCreateGroup = false
+    @State private var showingPublicChannels = false
     @State private var selectedContactForContactDetails: MLContact? = nil
     private let delegate: SheetDismisserProtocol
     private let dismissWithContact: (MLContact) -> ()
@@ -118,9 +136,17 @@ struct ContactsView: View {
             .sorted { ContactsView.sortingCriteria($0) < ContactsView.sortingCriteria($1) }
     }
 
+    private func matchesFilter(_ contact: MLContact) -> Bool {
+        switch filter {
+        case .all: return true
+        case .contacts: return !contact.isMuc
+        case .groups: return contact.isMuc && contact.mucType == kMucTypeGroup
+        case .channels: return contact.isMuc && contact.mucType == kMucTypeChannel
+        }
+    }
+
     private var searchResults: [MLContact] {
-        if searchText.isEmpty { return contactList }
-        return contactList.filter { searchMatchesContact(contact: $0, search: searchText) }
+        return contactList.filter { matchesFilter($0) && (searchText.isEmpty || searchMatchesContact(contact: $0, search: searchText)) }
     }
 
     private static func sortingCriteria(_ contact: MLContact) -> (String, String) {
@@ -143,6 +169,19 @@ struct ContactsView: View {
         }
         .animation(.default, value: contactList)
         .navigationTitle(Text("Contacts"))
+        .navigationBarTitleDisplayMode(.large)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            //isaCloud: one list for contacts, groups and channels, switched by this control
+            Picker("Filter", selection: $filter) {
+                ForEach(ContactsFilter.allCases) { option in
+                    Text(option.title).tag(option)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+            .background(.bar)
+        }
         .listStyle(.plain)
         .applyClosure { view in
             if contactList.isEmpty {
@@ -168,18 +207,54 @@ struct ContactsView: View {
             }
         }
         .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                NavigationLink(destination: CreateGroupMenu(delegate: SheetDismisserProtocol())) {
-                    Image(systemName: "person.3.fill")
-                }
-                .accessibilityLabel("Create contact group")
-
-                NavigationLink(destination: AddContactMenu(delegate: SheetDismisserProtocol(), dismissWithNewContact: dismissWithContact)) {
-                    Image(systemName: "person.fill.badge.plus")
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button {
+                        showingAddContact = true
+                    } label: {
+                        Label {
+                            Text("Add New Contact")
+                        } icon: {
+                            Image(systemName: "person.fill.badge.plus")
+                                .foregroundStyle(Color("isaCloudPink"))
+                        }
+                    }
+                    Button {
+                        showingCreateGroup = true
+                    } label: {
+                        Label {
+                            Text("Create contact group")
+                        } icon: {
+                            Image(systemName: "person.3.fill")
+                                .foregroundStyle(Color("isaCloudPink"))
+                        }
+                    }
+                    Button {
+                        showingPublicChannels = true
+                    } label: {
+                        Label {
+                            Text("Public channels")
+                        } icon: {
+                            Image(systemName: "number")
+                                .foregroundStyle(Color("isaCloudPink"))
+                        }
+                    }
+                } label: {
+                    Image(systemName: "plus")
                         .overlay { NumberlessBadge($contacts.requestCount) }
                 }
-                .accessibilityLabel(contacts.requestCount > 0 ? "Add contact (contact requests pending)" : "Add New Contact")
+                .tint(Color("isaCloudPink"))
+                .accessibilityLabel(contacts.requestCount > 0 ? "Add contact, group or channel (contact requests pending)" : "Add contact, group or channel")
             }
+        }
+        .navigationDestination(isPresented: $showingAddContact) {
+            AddContactMenu(delegate: SheetDismisserProtocol(), dismissWithNewContact: dismissWithContact)
+        }
+        .navigationDestination(isPresented: $showingCreateGroup) {
+            CreateGroupMenu(delegate: SheetDismisserProtocol())
+        }
+        .navigationDestination(isPresented: $showingPublicChannels) {
+            PublicChannelsView(dismissWithContact: dismissWithContact)
         }
         .sheet(item: $selectedContactForContactDetails) { selectedContact in
             AnyView(AddTopLevelNavigation(withDelegate: delegate, to: ContactDetails(delegate:delegate, contact:ObservableKVOWrapper<MLContact>(selectedContact))))

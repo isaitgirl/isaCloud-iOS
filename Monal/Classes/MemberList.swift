@@ -22,6 +22,8 @@ struct MemberList: View {
     @State private var roles: Dictionary<ObservableKVOWrapper<MLContact>, String>
     @State private var online: Dictionary<ObservableKVOWrapper<MLContact>, Bool>
     @State private var nicknames: Dictionary<ObservableKVOWrapper<MLContact>, String>
+    //isaCloud: changes when the hats of an occupant of this room change, so the pills are read again
+    @State private var hatsVersion = 0
     @State private var navigationActive: ObservableKVOWrapper<MLContact>?
     @State private var showAlert = false
     @State private var alertPrompt = AlertPrompt(dismissLabel: Text("Close"))
@@ -270,10 +272,15 @@ struct MemberList: View {
                         HStack {
                             HStack {
                                 ContactEntry(contact:contact.obj, fallback:nicknames[contact]) {
-                                    Text("Affiliation: \(mucAffiliationToString(affiliations[contact], roles[contact]))\(!(online[contact] ?? false) ? Text(" (offline)") : Text(""))")
-                                        //.foregroundColor(Color(UIColor.secondaryLabel))
-                                        .font(.footnote)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Affiliation: \(mucAffiliationToString(affiliations[contact], roles[contact]))\(!(online[contact] ?? false) ? Text(" (offline)") : Text(""))")
+                                            //.foregroundColor(Color(UIColor.secondaryLabel))
+                                            .font(.footnote)
+                                        //isaCloud: the hats of the participant, below its name
+                                        MucHatPills(hats: MucHatStore.hats(room: self.muc.contactJid, nick: nicknames[contact], accountID: self.muc.accountID))
+                                    }
                                 }
+                                .id(hatsVersion)
                                 Spacer()
                             }
                             .accessibilityLabel(Text("Open Profile of \(contact.contactDisplayName as String)"))
@@ -339,6 +346,11 @@ struct MemberList: View {
         .navigationBarTitle(self.muc.mucType == kMucTypeGroup ? Text("Group Members") : Text("Channel Participants"), displayMode: .inline)
         .onAppear {
             updateMemberlist()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kMonalMucHatsUpdated)).receive(on: RunLoop.main)) { notification in
+            if (notification.userInfo?["room"] as? String) == self.muc.contactJid {
+                hatsVersion += 1
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kMonalMucParticipantsAndMembersUpdated)).receive(on: RunLoop.main)) { notification in
             if let xmppAccount = notification.object as? xmpp, let contact = notification.userInfo?["contact"] as? MLContact {

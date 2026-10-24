@@ -8,6 +8,8 @@
 
 import FrameUp
 import ExyteChat
+import ExyteMediaPicker
+import CoreLocation
 typealias ExyteChatView = ExyteChat.ChatView
 
 
@@ -119,7 +121,12 @@ struct ChatView: View {
     @State private var isUploadingFile = false
     @State private var messageInsertionTimer: Timer?
     @State private var ownRole = kMucRoleNone
-    @State private var inputText = ""
+    @StateObject private var inputModel = ChatInputModel()
+    @State private var showMediaPicker = false
+    @State private var showGifPicker = false
+    @State private var showLocationPicker = false
+    @State private var showFileImporter = false
+    @State private var editSaveClosure: ((String) -> Void)?
     @State private var isTyping = false
     @State private var typingTimer: Timer?
 
@@ -456,8 +463,109 @@ struct ChatView: View {
         self.isUploadingFile = false
     }
 
+    /// isaCloud: the chat input bar (text, attachments, edit) rendered from inputModel
+    private func makeInputBar() -> ChatInputBar {
+        return ChatInputBar(
+            model: inputModel,
+            onSend: sendFromInputBar,
+            onSaveEdit: saveEditFromInputBar,
+            onCancelEdit: {
+                inputModel.cancelEdit()
+                editSaveClosure = nil
+            },
+            onAttachPhotos: { showMediaPicker = true },
+            onAttachFile: { showFileImporter = true },
+            onSearchGif: { showGifPicker = true },
+            onShareLocation: { showLocationPicker = true },
+            onRemoveAttachment: { inputModel.removeAttachment(at: $0) },
+            onSendRecording: { url in
+                Task { await uploadAndSendFile(url) }
+            }
+        )
+    }
+
+    /// isaCloud: sends what the input holds: attachments first, then the text (same order as before)
+    private func sendFromInputBar() {
+        guard let draft = inputModel.send() else {
+            return
+        }
+        if !draft.attachments.isEmpty {
+            Task {
+                for attachment in draft.attachments {
+                    await uploadAndSendFile(attachment.url)
+                }
+            }
+        }
+        if !draft.text.isEmpty {
+            guard let newMLMessage = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: draft.text, havingType: kMessageTypeText, toContact: self.contact.obj, isEncrypted: self.contact.isEncrypted, uploadInfo: nil) else {
+                return
+            }
+            messages.append(ChatViewMessage(newMLMessage))
+        }
+        sendChatState(isTyping: false)
+        // Clear the draft to show the newly sent message in active chats
+        DispatchQueue.global(qos: .userInitiated).async {
+            DataLayer.sharedInstance().saveMessageDraft(self.contact.contactJid, forAccount:self.account.accountID, withComment:"")
+        }
+    }
+
+    /// isaCloud: sends the place chosen on the map as a location message, as the other clients do
+    private func sendLocation(_ coordinate: CLLocationCoordinate2D) {
+        let messageText = ChatLocation.geoURI(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        guard let newMLMessage = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: messageText, havingType: kMessageTypeGeo, toContact: self.contact.obj, isEncrypted: self.contact.isEncrypted, uploadInfo: nil) else {
+            return
+        }
+        messages.append(ChatViewMessage(newMLMessage))
+    }
+
+    /// isaCloud: saves an edit of a sent message through the closure given by the message menu
+    private func saveEditFromInputBar() {
+        guard let saved = inputModel.saveEdit() else {
+            return
+        }
+        editSaveClosure?(saved.text)
+        editSaveClosure = nil
+    }
+
+    /// isaCloud: medias from the picker are copied to attachments; they are uploaded when sent
+    private func addMedias(_ medias: [Media]) {
+        Task { @MainActor in
+            for media in medias {
+                guard let url = await media.getURL() else {
+                    continue
+                }
+                let kind: ChatInputAttachment.Kind = media.type == .video ? .file : .image
+                inputModel.addAttachment(ChatInputAttachment(kind: kind, url: url))
+            }
+        }
+    }
+
+    /// isaCloud: picked files are copied to a temporary folder, because the security scoped URL is only valid for a moment
+    private func addFiles(_ result: Swift.Result<[URL], Error>) {
+        guard case .success(let urls) = result else {
+            return
+        }
+        for url in urls {
+            let accessed = url.startAccessingSecurityScopedResource()
+            defer {
+                if accessed {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+            do {
+                let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+                try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                let copy = folder.appendingPathComponent(url.lastPathComponent)
+                try FileManager.default.copyItem(at: url, to: copy)
+                inputModel.addAttachment(ChatInputAttachment(kind: .file, url: copy))
+            } catch {
+                DDLogError("Could not copy the picked file: \(error)")
+            }
+        }
+    }
+
     var body: some View {
-        ExyteChatView(messages: messages, chatType: .conversation, replyMode: .quote) { draft in
+        ExyteChatView(messages: messages, chatType: .conversation, replyMode: .quote, didSendMessage: { draft in
             if !draft.medias.isEmpty || draft.recording != nil || !draft.files.isEmpty {
                 Task {
                     if draft.recording != nil {
@@ -490,14 +598,24 @@ struct ChatView: View {
                 }
                 messages.append(ChatViewMessage(newMLMessage))
             }
-        } messageMenuAction: { (action: MessageAction, defaultActionClosure, message) in
+        }, messageBuilder: { params in
+            // GIFs are shown animated; the other messages keep the ExyteChat bubble
+            if let gif = params.message.attachments.first(where: { $0.mimeType == "image/gif" }) {
+                GifMessageBubble(url: gif.full, isCurrentUser: params.message.user.isCurrentUser)
+            } else {
+                params.defaultMessageView()
+            }
+        }, inputViewBuilder: { _ in
+            makeInputBar()
+        }, messageMenuAction: { (action: MessageAction, defaultActionClosure, message) in
             let mlMessage = (message as! ChatViewMessage).innerMessage.obj
             let messageDBId = mlMessage.messageDBId
             switch action {
                 case .copy:
                     defaultActionClosure(message, .copy)
                 case .edit:
-                    defaultActionClosure(message, .edit { editedText in
+                    inputModel.startEdit(of: mlMessage.messageId, text: mlMessage.messageText)
+                    editSaveClosure = { editedText in
                         Task { @MainActor in
                             self.account.sendMessage(editedText,
                                                      to: self.contact.obj,
@@ -523,7 +641,7 @@ struct ChatView: View {
                                 ]
                             )
                         }
-                    })
+                    }
                 case .retract:
                     self.account.retractMessage(mlMessage)
                 case .moderate:
@@ -583,7 +701,7 @@ struct ChatView: View {
                         )
                     }
             }
-        }
+        })
         /*
         .swipeActions(edge: .leading, performsFirstActionWithFullSwipe: true, items: [
             SwipeAction(action: { (message, defaultActionClosure) in
@@ -626,14 +744,13 @@ struct ChatView: View {
             DDLogDebug("Checking if we can react to: \(String(describing:mlMessage)) --> \(String(describing:retval))")
             return retval
         })
-        .setAvailableInputs([.text, .audio, .media, .file, .staticLocation])
         .autoFocusTextInputOnChatOpen(chatViewDefaultsDB.showKeyboardOnChatOpen)
         .showUsername(contact.isMuc)
         .tapAvatarClosure { user, _ in
-            inputText += "\(user.name), "
+            // mentions use only the nick: the verified emoji of the name is not part of it
+            inputModel.setText(inputModel.text + "\(ChatNameWithHats.nick(from: user.name)), ")
         }
         .linkPreviewsEnabled(chatViewDefaultsDB.showURLPreview)
-        .inputViewText($inputText)
         .checkFileSizeClosure { file in
             MLFiletransfer.checkMimeTypeAndSize(forHistoryID: Int(file.id)! as NSNumber)
         }
@@ -651,6 +768,24 @@ struct ChatView: View {
                     .init()
             )
         )
+        .sheet(isPresented: $showMediaPicker) {
+            MediaPicker(isPresented: $showMediaPicker, onChange: { medias in
+                addMedias(medias)
+            })
+        }
+        .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
+            addFiles(result)
+        }
+        .sheet(isPresented: $showLocationPicker) {
+            LocationPickerView(onSend: { coordinate in
+                sendLocation(coordinate)
+            })
+        }
+        .sheet(isPresented: $showGifPicker) {
+            GifPickerView(apiKey: GiphySearch.apiKey(from: Bundle.main.infoDictionary), onPick: { url in
+                inputModel.addAttachment(ChatInputAttachment(kind: .animatedGif, url: url))
+            })
+        }
         .sheet(item: $selectedContactForContactDetails) { selectedContact in
             AnyView(AddTopLevelNavigation(withDelegate:nil, to:ContactDetails(delegate:nil, contact:selectedContact)))
         }
@@ -872,7 +1007,7 @@ struct ChatView: View {
             checkOmemoSupport(withAlert:false)
             let messageDraft = DataLayer.sharedInstance().loadMessageDraft(self.contact.contactJid, forAccount:self.account.accountID)
             if let messageDraft, !messageDraft.isEmpty {
-                self.inputText = messageDraft
+                inputModel.setText(messageDraft)
             }
             loadHistory()
             if self.contact.obj.isMuc {
@@ -892,7 +1027,7 @@ struct ChatView: View {
             messageInsertionTimer?.invalidate()
             sendChatState(isTyping: false)
             DispatchQueue.global(qos: .userInitiated).async {
-                DataLayer.sharedInstance().saveMessageDraft(self.contact.contactJid, forAccount:self.account.accountID, withComment:self.inputText)
+                DataLayer.sharedInstance().saveMessageDraft(self.contact.contactJid, forAccount:self.account.accountID, withComment:self.inputModel.text)
                 // Update active chats to show the new draft
                 MLNotificationQueue.current().post(
                     name: Notification.Name(kMonalContactRefresh),
@@ -901,7 +1036,7 @@ struct ChatView: View {
                 )
             }
         }
-        .onChange(of: inputText) { oldValue, newValue in
+        .onChange(of: inputModel.text) { oldValue, newValue in
             // Don't send a typing notification if the only change is deletion of characters from the end.
             // This results in better UX, and avoids sending a typing notification after the automatic
             // clearing of the input text when sending a message.
@@ -989,7 +1124,7 @@ struct ChatView: View {
             DDLogVerbose("ChatView of chat \(contact.obj.contactJid) received \(notification.name.rawValue)")
             sendChatState(isTyping: false)
             DispatchQueue.global(qos: .userInitiated).async {
-                DataLayer.sharedInstance().saveMessageDraft(self.contact.contactJid, forAccount:self.account.accountID, withComment:self.inputText)
+                DataLayer.sharedInstance().saveMessageDraft(self.contact.contactJid, forAccount:self.account.accountID, withComment:self.inputModel.text)
                 // Update active chats to show the new draft
                 MLNotificationQueue.current().post(
                     name: Notification.Name(kMonalContactRefresh),
@@ -1200,7 +1335,12 @@ class ChatViewUser: ExyteChat.User {
     private var subscriptions: Set<AnyCancellable> = Set()
     override var name: String {
         get {
-            return innerContact.contactDisplayName ?? ""
+            let nick = innerContact.contactDisplayName ?? ""
+            // isaCloud: participants of a channel or group show their verified emoji next to the nick
+            guard let channel = innerContact.obj as? MLChannelContact else {
+                return nick
+            }
+            return ChatNameWithHats.displayName(nick: nick, hats: MucHatStore.hats(room: channel.mucContact.contactJid, nick: channel.nick, accountID: channel.mucContact.accountID))
         }
         set {}
     }
@@ -1222,6 +1362,19 @@ class ChatViewUser: ExyteChat.User {
                 self?.objectWillChange.send()
             }
             .store(in: &subscriptions)
+
+        // isaCloud: the hats of this participant change with its presences, so its name is read again then
+        if let channel = contact as? MLChannelContact {
+            let room = channel.mucContact.contactJid
+            NotificationCenter.default.publisher(for: NSNotification.Name(kMonalMucHatsUpdated))
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] notification in
+                    if (notification.userInfo?["room"] as? String) == room {
+                        self?.objectWillChange.send()
+                    }
+                }
+                .store(in: &subscriptions)
+        }
     }
     //our parent class forces us to implement this, but it should never be called!
     required init(from decoder: Decoder) throws {

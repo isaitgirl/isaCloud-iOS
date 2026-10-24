@@ -16,6 +16,9 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+//isaCloud: a room's occupants can have hats (XEP-0317); posted on the main thread when the hats of an occupant change, userInfo has "room"
+extern NSString* const kMonalMucHatsUpdated;
+
 @interface DataLayer : NSObject
 
 extern NSString* const kAccountID;
@@ -123,6 +126,9 @@ extern NSString* const kMessageTypeFiletransfer;
 -(NSArray*) getVoiceRequestsForRoom:(MLContact*) contact;
 -(NSDictionary* _Nullable) getParticipantForNick:(NSString*) nick inRoom:(NSString*) room forAccountID:(NSNumber*) accountID;
 -(NSDictionary* _Nullable) getParticipantForOccupant:(NSString*) occupant inRoom:(NSString*) room forAccountID:(NSNumber*) accountID;
+//isaCloud: hats of an occupant (dictionaries with "uri" and "title"), saved in the database and replaced by every presence of the occupant
+-(void) setMucHats:(NSArray<NSDictionary<NSString*, NSString*>*>*) hats forRoom:(NSString*) room nick:(NSString*) nick forAccountID:(NSNumber*) accountID;
+-(NSArray<NSDictionary<NSString*, NSString*>*>*) getMucHatsForRoom:(NSString*) room nick:(NSString*) nick forAccountID:(NSNumber*) accountID;
 -(NSArray<NSDictionary<NSString*, id>*>*) getMembersAndParticipantsOfMuc:(NSString*) room forAccountID:(NSNumber*) accountID;
 -(NSString* _Nullable) getOwnAffiliationInGroupOrChannel:(MLContact*) contact;
 -(NSString* _Nullable) getOwnRoleInGroupOrChannel:(MLContact*) contact;

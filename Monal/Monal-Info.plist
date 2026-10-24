@@ -152,5 +152,7 @@
 			</dict>
 		</dict>
 	</array>
+	<key>GiphyAPIKey</key>
+	<string>$(GIPHY_API_KEY)</string>
 </dict>
 </plist>

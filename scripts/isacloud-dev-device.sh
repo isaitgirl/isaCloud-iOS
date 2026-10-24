@@ -36,6 +36,13 @@ if [[ -z "$DEVICE_UDID" ]]; then
 fi
 echo "Building $BUNDLE_ID for device $DEVICE_UDID (team $TEAM_ID)..."
 
+# chave da busca de GIF (Giphy), guardada fora do repositório; sem ela a busca mostra que não está configurada
+GIPHY_KEY_FILE="$REPO_ROOT/isaCloud/local/giphy-api-key.txt"
+GIPHY_API_KEY=""
+if [[ -f "$GIPHY_KEY_FILE" ]]; then
+    GIPHY_API_KEY="$(tr -d '[:space:]' < "$GIPHY_KEY_FILE")"
+fi
+
 cd "$REPO_ROOT/Monal"
 xcodebuild -quiet \
     -workspace Monal.xcworkspace \
@@ -47,6 +54,7 @@ xcodebuild -quiet \
     -allowProvisioningDeviceRegistration \
     ISACLOUD_BUNDLE_ID="$BUNDLE_ID" \
     ISACLOUD_ENTITLEMENTS_DIR="../isaCloud/dev-entitlements/" \
+    GIPHY_API_KEY="$GIPHY_API_KEY" \
     DEVELOPMENT_TEAM="$TEAM_ID" \
     CODE_SIGN_STYLE=Automatic \
     CODE_SIGN_IDENTITY="Apple Development" \

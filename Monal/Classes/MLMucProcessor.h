@@ -27,6 +27,12 @@ NS_ASSUME_NONNULL_BEGIN
 
 //muc management methods
 -(NSString* _Nullable) generateMucJid;
+//isaCloud: public channels of the server's MUC service (XEP-0030 disco#items), completion gets NSArray of @{@"jid", @"name"} or NSNull on error
+-(void) queryPublicChannelsWithCompletion:(monal_id_block_t) completion;
+//isaCloud: occupant count of a room (muc#roominfo_occupants from disco#info), completion gets NSNumber or NSNull when the server does not publish it
+-(void) queryMemberCountOfRoom:(NSString*) room completion:(monal_id_block_t) completion;
+//isaCloud: avatar of a room (vcard-temp, not stored), completion gets NSData or NSNull
+-(void) queryAvatarOfRoom:(NSString*) room completion:(monal_id_block_t) completion;
 -(NSString* _Nullable) createGroup:(NSString*) room;
 -(void) destroyRoom:(NSString*) room;
 -(void) changeNameOfMuc:(NSString*) room to:(NSString*) name;

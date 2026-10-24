@@ -84,3 +84,6 @@ docs/fpush/secrets/
 /build/
 
 docs/screenshots/
+
+# isaCloud: chaves locais de desenvolvimento (nunca versionar)
+isaCloud/local/

@@ -12,6 +12,8 @@ struct ChannelMemberList: View {
     @State private var ownRole: String;
     @StateObject var channel: ObservableKVOWrapper<MLContact>
     @State private var participants: OrderedDictionary<String, [String:String]>
+    //isaCloud: changes when the hats of an occupant of this channel change, so the pills are read again
+    @State private var hatsVersion = 0
 
     init(mucContact: ObservableKVOWrapper<MLContact>) {
         account = mucContact.obj.account! as xmpp
@@ -52,18 +54,28 @@ struct ChannelMemberList: View {
             Section(header: Text("\(self.channel.contactDisplayName as String) (affiliation: \(mucAffiliationToString(ownAffiliation, ownRole)))")) {
                 ForEach(participants.keys, id: \.self) { participant_key in
                     ZStack(alignment: .topLeading) {
-                        HStack(alignment: .center) {
-                            Text(participant_key)
-                            Spacer()
-                            Text(mucAffiliationToString(participants[participant_key]?["affiliation"], participants[participant_key]?["role"]))
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(alignment: .center) {
+                                Text(participant_key)
+                                Spacer()
+                                Text(mucAffiliationToString(participants[participant_key]?["affiliation"], participants[participant_key]?["role"]))
+                            }
+                            //isaCloud: the hats of the participant, as pills below its nick
+                            MucHatPills(hats: MucHatStore.hats(room: channel.contactJid, nick: participant_key, accountID: account.accountID))
                         }
                     }
+                    .id(hatsVersion)
                 }
             }
         }
         .navigationBarTitle(Text("Channel Participants"), displayMode: .inline)
         .onAppear {
             updateParticipantList()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kMonalMucHatsUpdated)).receive(on: RunLoop.main)) { notification in
+            if (notification.userInfo?["room"] as? String) == channel.contactJid {
+                hatsVersion += 1
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kMonalMucParticipantsAndMembersUpdated)).receive(on: RunLoop.main)) { notification in
             if let xmppAccount = notification.object as? xmpp, let contact = notification.userInfo?["contact"] as? MLContact {

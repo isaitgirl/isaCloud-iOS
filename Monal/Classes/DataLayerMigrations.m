@@ -1164,6 +1164,16 @@
         [self updateDB:db withDataLayer:dataLayer toVersion:7.014 withBlock:^{
             [db executeNonQuery:@"ALTER TABLE buddylist ADD COLUMN mam_catchup_days INTEGER DEFAULT 7;"];
         }];
+        //isaCloud: hats of the occupants of the rooms (XEP-0317), as a JSON list; a room sends them only when it is joined
+        [self updateDB:db withDataLayer:dataLayer toVersion:7.015 withBlock:^{
+            [db executeNonQuery:@"CREATE TABLE IF NOT EXISTS muc_hats ( \
+                'account_id' INTEGER NOT NULL, \
+                'room' VARCHAR(255) NOT NULL, \
+                'room_nick' VARCHAR(255) NOT NULL, \
+                'hats' TEXT NOT NULL, \
+                PRIMARY KEY(account_id, room, room_nick) \
+            );"];
+        }];
 
         
         

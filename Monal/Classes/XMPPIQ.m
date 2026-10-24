@@ -133,6 +133,18 @@ NSString* const kiqErrorType = @"error";
     [self addChildNode:queryNode];
 }
 
+-(void) setDiscoItemNodeWithAfter:(NSString* _Nullable) after maxItems:(NSUInteger) maxItems
+{
+    NSMutableArray* setChildren = [NSMutableArray new];
+    [setChildren addObject:[[MLXMLNode alloc] initWithElement:@"max" andData:[NSString stringWithFormat:@"%lu", (unsigned long) maxItems]]];
+    if(after)
+        [setChildren addObject:[[MLXMLNode alloc] initWithElement:@"after" andData:after]];
+    MLXMLNode* queryNode = [[MLXMLNode alloc] initWithElement:@"query" andNamespace:@"http://jabber.org/protocol/disco#items" withAttributes:@{} andChildren:@[
+        [[MLXMLNode alloc] initWithElement:@"set" andNamespace:@"http://jabber.org/protocol/rsm" withAttributes:@{} andChildren:setChildren andData:nil]
+    ] andData:nil];
+    [self addChildNode:queryNode];
+}
+
 -(void) setDiscoInfoWithFeatures:(NSSet*) features identity:(MLXMLNode*) identity andNode:(NSString*) node
 {
     MLXMLNode* queryNode = [[MLXMLNode alloc] initWithElement:@"query" andNamespace:@"http://jabber.org/protocol/disco#info"];

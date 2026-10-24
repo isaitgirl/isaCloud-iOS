@@ -51,16 +51,24 @@
 
 static NSDictionary* _mandatoryGroupConfigOptions;
 static NSDictionary* _optionalGroupConfigOptions;
+//isaCloud: the MUC component of each server we run (account domain -> component); other servers keep the first one advertised
+static NSDictionary* _ownMucComponents;
 
 +(void) initialize
 {
+    _ownMucComponents = @{
+        @"isacloud.im": @"conference.isacloud.cc",
+        @"xmpp.social.br": @"canais.xmpp.social.br",
+        @"voz.social.br": @"canais.voz.social.br",
+    };
+    //isaCloud: persistentroom is optional, some servers do not offer it in the config form; we check persistence afterwards
     _mandatoryGroupConfigOptions = @{
-        @"muc#roomconfig_persistentroom": @"1",
         @"muc#roomconfig_membersonly": @"1",
         @"muc#roomconfig_whois": @"anyone",
         //TODO: mark mam as mandatory
     };
     _optionalGroupConfigOptions = @{
+        @"muc#roomconfig_persistentroom": @"1",
         @"muc#roomconfig_enablelogging": @"0",
         @"muc#roomconfig_changesubject": @"0",
         @"muc#roomconfig_allowinvites": @"0",
@@ -312,6 +320,19 @@ static NSDictionary* _optionalGroupConfigOptions;
 
 -(void) processPresence:(XMPPPresence*) presenceNode
 {
+    //isaCloud: hats of the occupant (XEP-0317); a presence without hats (e.g. when leaving) removes them
+    if(presenceNode.fromResource)
+    {
+        NSMutableArray<NSDictionary<NSString*, NSString*>*>* hats = [NSMutableArray new];
+        for(MLXMLNode* hat in [presenceNode find:@"{urn:xmpp:hats:0}hats/hat"])
+        {
+            NSString* uri = hat.attributes[@"uri"];
+            NSString* title = hat.attributes[@"title"];
+            [hats addObject:@{@"uri": uri != nil ? uri : @"", @"title": title != nil ? title : @""}];
+        }
+        [[DataLayer sharedInstance] setMucHats:hats forRoom:presenceNode.fromUser nick:presenceNode.fromResource forAccountID:_account.accountID];
+    }
+
     //check for nickname conflict while joining and retry with underscore added to the end
     if([self isJoining:presenceNode.fromUser] && [presenceNode findFirst:@"/<type=error>/error/{urn:ietf:params:xml:ns:xmpp-stanzas}conflict"])
     {
@@ -647,7 +668,7 @@ $$instance_handler(handleRoomConfigForm, account.mucProcessor, $$ID(xmpp*, accou
     {
         if([dataForm getField:option] == nil)
         {
-            DDLogError(@"Could not configure room '%@' to be a groupchat: config option '%@' not available!", roomJid, option);
+            DDLogError(@"Could not configure room '%@' to be a groupchat: config option '%@' not available! Form fields: %@", roomJid, option, [dataForm allKeys]);
             [self decrementNameChange:roomJid];
             if(deleteOnError)
             {
@@ -704,6 +725,30 @@ $$instance_handler(handleRoomConfigResult, account.mucProcessor, $$ID(xmpp*, acc
         return;
     }
     
+    //isaCloud: some servers do not make the room persistent even if we asked for it (or do not offer the option at all)
+    //--> check the disco features of the configured room and warn the user if it is not persistent
+    XMPPIQ* discoInfo = [[XMPPIQ alloc] initWithType:kiqGetType to:roomJid];
+    [discoInfo setDiscoInfoNode];
+    [account sendIq:discoInfo withResponseHandler:^(XMPPIQ* response) {
+        BOOL persistent = NO;
+        for(NSDictionary* feature in [response find:@"{http://jabber.org/protocol/disco#info}query/feature@@"])
+            if([feature[@"var"] isEqualToString:@"muc_persistent"])
+                persistent = YES;
+        if(!persistent)
+        {
+            DDLogWarn(@"Room '%@' was configured but the server does not report it as persistent", roomJid);
+            [HelperTools postError:[NSString stringWithFormat:NSLocalizedString(@"The server did not confirm that the group '%@' is permanent. It may disappear when everyone leaves.", @""), roomJid] withNode:nil andAccount:account andIsSevere:NO];
+        }
+        [self continueAfterRoomConfig:roomJid joinOnSuccess:joinOnSuccess];
+    } andErrorHandler:^(XMPPIQ* error) {
+        DDLogWarn(@"Could not check persistence of room '%@': %@", roomJid, [error findFirst:@"error"]);
+        [self continueAfterRoomConfig:roomJid joinOnSuccess:joinOnSuccess];
+    }];
+$$
+
+//isaCloud: last step of creating a group, after its configuration was submitted
+-(void) continueAfterRoomConfig:(NSString*) roomJid joinOnSuccess:(BOOL) joinOnSuccess
+{
     //don't call success handler if we are only "half-joined" (see comments below for what that means)
     if(joinOnSuccess)
     {
@@ -712,8 +757,9 @@ $$instance_handler(handleRoomConfigResult, account.mucProcessor, $$ID(xmpp*, acc
         [self join:roomJid];
     }
     else
-        [self callSuccessUIHandlerForMuc:iqNode.fromUser];
-$$
+        [self callSuccessUIHandlerForMuc:roomJid];
+}
+
 
 -(void) handleStatusCodes:(XMPPStanza*) node
 {
@@ -1058,20 +1104,136 @@ $$instance_handler(handleCreateTimeout, account.mucProcessor, $$ID(xmpp*, accoun
     [self handleError:[NSString stringWithFormat:NSLocalizedString(@"Could not create group '%@': timeout", @""), room] forMuc:room withNode:nil andIsSevere:YES];
 $$
 
--(NSString* _Nullable) generateMucJid
+//isaCloud: first MUC service of the server (gateways excluded)
+-(BOOL) isUsableMucService:(NSString*) jid
 {
-    NSString* mucServer = nil;
+    // Do not use gateways
+    return ![_account.connectionProperties.conferenceServers[jid] check:@"identity<category=gateway>"]
+        && [_account.connectionProperties.conferenceServers[jid] check:@"identity<category=conference>"]
+        && [_account.connectionProperties.conferenceServers[jid] check:@"identity<type=text>"];
+}
+
+-(NSString* _Nullable) mucServiceJid
+{
+    NSString* ownComponent = _ownMucComponents[[_account.connectionProperties.identity.domain lowercaseString]];
+    if(ownComponent != nil)
+        for(NSString* jid in _account.connectionProperties.conferenceServers)
+            if([jid isEqualToString:ownComponent] && [self isUsableMucService:jid])
+                return jid;
+    //not one of our servers: the first usable service advertised, like Monal does
+    for(NSString* jid in _account.connectionProperties.conferenceServers)
+        if([self isUsableMucService:jid])
+            return jid;
+    return nil;
+}
+
+//isaCloud: one MUC service, all of its pages (XEP-0059), appended to channels; completion gets NO when the service could not be queried
+-(void) fetchPublicChannelsOf:(NSString*) mucServer after:(NSString* _Nullable) after page:(NSUInteger) page intoChannels:(NSMutableArray*) channels completion:(void (^)(BOOL success)) completion
+{
+    static const NSUInteger pageSize = 50;
+    static const NSUInteger maxPages = 200;      //safety net against servers that never end their paging
+    XMPPIQ* discoItems = [[XMPPIQ alloc] initWithType:kiqGetType to:mucServer];
+    [discoItems setDiscoItemNodeWithAfter:after maxItems:pageSize];
+    [_account sendIq:discoItems withResponseHandler:^(XMPPIQ* response) {
+        NSArray* items = [response find:@"{http://jabber.org/protocol/disco#items}query/item@@"];
+        for(NSDictionary* item in items)
+            [channels addObject:@{
+                @"jid": item[@"jid"],
+                @"name": item[@"name"] ?: item[@"jid"]
+            }];
+        NSString* next = [response findFirst:@"{http://jabber.org/protocol/disco#items}query/{http://jabber.org/protocol/rsm}set/last#"];
+        //stop at the last page: no cursor, a short page, or the page cap
+        if(next == nil || [items count] < pageSize || page + 1 >= maxPages)
+            completion(YES);
+        else
+            [self fetchPublicChannelsOf:mucServer after:next page:page + 1 intoChannels:channels completion:completion];
+    } andErrorHandler:^(XMPPIQ* error) {
+        DDLogWarn(@"Public channel query to %@ failed: %@", mucServer, [error findFirst:@"error"]);
+        completion(NO);
+    }];
+}
+
+-(void) queryPublicChannelsWithCompletion:(monal_id_block_t) completion
+{
+    //query every MUC service the server advertises (gateways excluded) and merge the rooms they list
+    NSMutableArray* services = [NSMutableArray new];
     for(NSString* jid in _account.connectionProperties.conferenceServers)
     {
-        // Do not use gateways
         if(![_account.connectionProperties.conferenceServers[jid] check:@"identity<category=gateway>"]
           && [_account.connectionProperties.conferenceServers[jid] check:@"identity<category=conference>"]
           && [_account.connectionProperties.conferenceServers[jid] check:@"identity<type=text>"])
-        {
-            mucServer = jid;
-            break;
-        }
+            [services addObject:jid];
     }
+    DDLogInfo(@"Public channel query on MUC services: %@", services);
+    if([services count] == 0)
+    {
+        completion(NSNull.null);
+        return;
+    }
+    //all services are queried in parallel; the completion runs once, after the last one answered
+    dispatch_group_t group = dispatch_group_create();
+    NSObject* lock = [NSObject new];
+    __block NSUInteger failures = 0;
+    NSMutableArray* channels = [NSMutableArray new];
+    for(NSString* mucServer in services)
+    {
+        dispatch_group_enter(group);
+        NSMutableArray* serviceChannels = [NSMutableArray new];
+        [self fetchPublicChannelsOf:mucServer after:nil page:0 intoChannels:serviceChannels completion:^(BOOL success) {
+            @synchronized(lock) {
+                if(success)
+                    [channels addObjectsFromArray:serviceChannels];
+                else
+                    failures++;
+            }
+            dispatch_group_leave(group);
+        }];
+    }
+    dispatch_group_notify(group, dispatch_get_main_queue(), ^{
+        if(failures == [services count])
+            completion(NSNull.null);
+        else
+            completion(channels);
+    });
+}
+
+-(void) queryMemberCountOfRoom:(NSString*) room completion:(monal_id_block_t) completion
+{
+    XMPPIQ* discoInfo = [[XMPPIQ alloc] initWithType:kiqGetType to:room];
+    [discoInfo setDiscoInfoNode];
+    [_account sendIq:discoInfo withResponseHandler:^(XMPPIQ* response) {
+        for(MLXMLNode* field in [response find:@"{http://jabber.org/protocol/disco#info}query/{jabber:x:data}x/field"])
+        {
+            if([field.attributes[@"var"] isEqualToString:@"muc#roominfo_occupants"])
+            {
+                completion(@([[field findFirst:@"value#"] integerValue]));
+                return;
+            }
+        }
+        completion(NSNull.null);
+    } andErrorHandler:^(XMPPIQ* error) {
+        completion(NSNull.null);
+    }];
+}
+
+-(void) queryAvatarOfRoom:(NSString*) room completion:(monal_id_block_t) completion
+{
+    XMPPIQ* vcardQuery = [[XMPPIQ alloc] initWithType:kiqGetType to:room];
+    [vcardQuery setVcardQuery];
+    [_account sendIq:vcardQuery withResponseHandler:^(XMPPIQ* response) {
+        NSData* imageData = [response findFirst:@"{vcard-temp}vCard/PHOTO/BINVAL#|base64"];
+        if(imageData)
+            completion(imageData);
+        else
+            completion(NSNull.null);
+    } andErrorHandler:^(XMPPIQ* error) {
+        completion(NSNull.null);
+    }];
+}
+
+-(NSString* _Nullable) generateMucJid
+{
+    NSString* mucServer = [self mucServiceJid];
     if(mucServer == nil)
         return nil;
     NSString* node = [self generateSpeakableGroupNode];

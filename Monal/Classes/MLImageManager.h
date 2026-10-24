@@ -40,6 +40,8 @@
 -(UIImage* _Nullable) getIconForContact:(MLContact* _Nonnull) contact withCompletion:(void (^_Nullable)(UIImage *_Nullable))completion;
 -(UIImage* _Nullable) getIconForContact:(MLContact* _Nonnull) contact;
 +(UIImage* _Nonnull) circularImage:(UIImage* _Nonnull) image;
+//isaCloud: default avatar of a group (blue, people symbol) or a channel (pink, # symbol)
++(UIImage* _Nonnull) defaultMucIconForChannel:(BOOL) isChannel;
 //isaCloud: initials avatar with a XEP-0392 color
 +(NSString* _Nonnull) initialsForName:(NSString* _Nullable) name;
 -(UIImage* _Nonnull) generateDummyIconWithName:(NSString* _Nullable) name andColorInput:(NSString* _Nonnull) colorInput;

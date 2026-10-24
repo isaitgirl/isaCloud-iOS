@@ -29,7 +29,6 @@ enum kSettingSection {
 
 enum SettingsAccountRows {
     QuickSettingsRow,
-    AdvancedSettingsRow,
     SettingsAccountRowsCnt
 };
 
@@ -91,6 +90,14 @@ enum DummySettingsRows {
 {
     [super viewDidLoad];
     [self setupAccountsView];
+    // isaCloud: the first screen is titled with the app name, a little larger than the default inline title
+    self.navigationItem.title = @"isaCloud";
+    self.navigationItem.largeTitleDisplayMode = UINavigationItemLargeTitleDisplayModeNever;
+    UILabel* titleLabel = [UILabel new];
+    titleLabel.text = @"isaCloud";
+    titleLabel.font = [UIFont systemFontOfSize:20 weight:UIFontWeightSemibold];
+    [titleLabel sizeToFit];
+    self.navigationItem.titleView = titleLabel;
 
     [self.tableView registerNib:[UINib nibWithNibName:@"MLSwitchCell" bundle:[NSBundle mainBundle]] forCellReuseIdentifier:@"AccountCell"];
 
@@ -242,9 +249,6 @@ enum DummySettingsRows {
                     case QuickSettingsRow:
                         [cell initTapCell:NSLocalizedString(@"Add Account", @"")];
                         break;
-                    case AdvancedSettingsRow:
-                        [cell initTapCell:NSLocalizedString(@"Add Account (advanced)", @"")];
-                        break;
                     default:
                         unreachable();
                 }
@@ -321,11 +325,19 @@ enum DummySettingsRows {
     return cell;
 }
 
+//isaCloud: section headers are thinner than the system default; the accounts list has no header at all
+-(CGFloat) tableView:(UITableView*) tableView heightForHeaderInSection:(NSInteger) section
+{
+    if(section == kSettingSectionAccounts)
+        return CGFLOAT_MIN;
+    return 24;
+}
+
 -(NSString*) tableView:(UITableView*) tableView titleForHeaderInSection:(NSInteger) section
 {
     switch(section) {
         case kSettingSectionAccounts:
-            return nil;             //the account section does not need a heading (its the first one)
+            return nil;             //isaCloud: the accounts list starts directly, without a section heading
         case kSettingSectionApp:
             return NSLocalizedString(@"App", @"");
         case kSettingSectionSupport:
@@ -353,11 +365,6 @@ enum DummySettingsRows {
                     case QuickSettingsRow: {
                         UIViewController* loginView = [[SwiftuiInterface new] makeViewWithName:@"LogIn"];
                         [self showDetailViewController:loginView sender:self];
-                        break;
-                    }
-                    case AdvancedSettingsRow: {
-                        UIViewController* advancedLoginView = [[SwiftuiInterface new] makeViewWithName:@"AdvancedLogIn"];
-                        [self showDetailViewController:advancedLoginView sender:self];
                         break;
                     }
                     default:

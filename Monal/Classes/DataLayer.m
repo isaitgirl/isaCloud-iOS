@@ -25,6 +25,8 @@
 +(MLMessage* _Nullable) createDraftMessageFromDatabaseWithJid:(NSString*) jid andAccountID:(NSNumber*) accountID;
 @end
 
+NSString* const kMonalMucHatsUpdated = @"kMonalMucHatsUpdated";
+
 @interface DataLayer()
 @property (readonly, strong) MLSQLite* db;
 @end
@@ -1107,6 +1109,67 @@ static NSDateFormatter* dbFormatter;
         NSArray* result = [self.db executeReader:@"SELECT * FROM muc_participants WHERE account_id=? AND room=? AND room_nick=?;" andArguments:@[accountID, room, nick]];
         return result.count > 0 ? result[0] : nil;
     }];
+}
+
+//isaCloud: hats of the occupants (XEP-0317), saved in the database and cached in memory; the cache key is "account|room|nick"
+static NSMutableDictionary<NSString*, NSArray<NSDictionary<NSString*, NSString*>*>*>* _mucHatsCache;
+
+-(void) setMucHats:(NSArray<NSDictionary<NSString*, NSString*>*>*) hats forRoom:(NSString*) room nick:(NSString*) nick forAccountID:(NSNumber*) accountID
+{
+    if(!room || !nick || accountID == nil)
+        return;
+    NSString* cacheKey = [NSString stringWithFormat:@"%@|%@|%@", accountID, room, nick];
+    NSArray* previous = [self getMucHatsForRoom:room nick:nick forAccountID:accountID];
+    if([previous isEqualToArray:hats])
+        return;         //nothing changed, no need to write or to refresh the names
+    @synchronized(self) {
+        if(!_mucHatsCache)
+            _mucHatsCache = [NSMutableDictionary new];
+        _mucHatsCache[cacheKey] = hats;
+    }
+    NSString* text = nil;
+    if(hats.count > 0)
+    {
+        NSData* json = [NSJSONSerialization dataWithJSONObject:hats options:0 error:nil];
+        text = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding];
+    }
+    [self.db voidWriteTransaction:^{
+        if(text == nil)
+            [self.db executeNonQuery:@"DELETE FROM muc_hats WHERE account_id=? AND room=? AND room_nick=?;" andArguments:@[accountID, room, nick]];
+        else
+            [self.db executeNonQuery:@"INSERT INTO muc_hats ('account_id', 'room', 'room_nick', 'hats') VALUES(?, ?, ?, ?) ON CONFLICT DO UPDATE SET hats=?;" andArguments:@[accountID, room, nick, text, text]];
+    }];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [[NSNotificationCenter defaultCenter] postNotificationName:kMonalMucHatsUpdated object:nil userInfo:@{@"room": room}];
+    });
+}
+
+-(NSArray<NSDictionary<NSString*, NSString*>*>*) getMucHatsForRoom:(NSString*) room nick:(NSString*) nick forAccountID:(NSNumber*) accountID
+{
+    if(!room || !nick || accountID == nil)
+        return @[];
+    NSString* cacheKey = [NSString stringWithFormat:@"%@|%@|%@", accountID, room, nick];
+    @synchronized(self) {
+        NSArray* cached = _mucHatsCache[cacheKey];
+        if(cached)
+            return cached;
+    }
+    NSString* text = [self.db idReadTransaction:^{
+        return (NSString*)[self.db executeScalar:@"SELECT hats FROM muc_hats WHERE account_id=? AND room=? AND room_nick=?;" andArguments:@[accountID, room, nick]];
+    }];
+    NSArray* hats = @[];
+    if(text)
+    {
+        NSArray* decoded = [NSJSONSerialization JSONObjectWithData:[text dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil];
+        if([decoded isKindOfClass:[NSArray class]])
+            hats = decoded;
+    }
+    @synchronized(self) {
+        if(!_mucHatsCache)
+            _mucHatsCache = [NSMutableDictionary new];
+        _mucHatsCache[cacheKey] = hats;
+    }
+    return hats;
 }
 
 -(NSDictionary* _Nullable) getParticipantForOccupant:(NSString*) occupant inRoom:(NSString*) room forAccountID:(NSNumber*) accountID

@@ -37,6 +37,24 @@
 }
 
 //this mehod should *only* be used in the mainapp due to memory requirements for large images
+//isaCloud: colors of the isaCloud palette (isaCloudPink and isaCloudBlue asset colors); the framework cannot load them by name
++(UIImage*) defaultMucIconForChannel:(BOOL) isChannel
+{
+    CGFloat size = 256;
+    UIColor* background = isChannel ?
+        [UIColor colorWithRed:255.0/255.0 green:0.0/255.0 blue:111.0/255.0 alpha:1.0] :
+        [UIColor colorWithRed:23.0/255.0 green:128.0/255.0 blue:173.0/255.0 alpha:1.0];
+    UIImageSymbolConfiguration* config = [UIImageSymbolConfiguration configurationWithPointSize:size * 0.42 weight:UIImageSymbolWeightMedium];
+    UIImage* symbol = [[UIImage systemImageNamed:isChannel ? @"number" : @"person.3.fill" withConfiguration:config] imageWithTintColor:UIColor.whiteColor renderingMode:UIImageRenderingModeAlwaysOriginal];
+    UIGraphicsImageRenderer* renderer = [[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(size, size)];
+    return [renderer imageWithActions:^(UIGraphicsImageRendererContext* context) {
+        [background setFill];
+        [[UIBezierPath bezierPathWithOvalInRect:CGRectMake(0, 0, size, size)] fill];
+        CGSize symbolSize = symbol.size;
+        [symbol drawInRect:CGRectMake((size - symbolSize.width) / 2, (size - symbolSize.height) / 2, symbolSize.width, symbolSize.height)];
+    }];
+}
+
 +(UIImage*) circularImage:(UIImage*) image
 {
     return [[[UIGraphicsImageRenderer alloc] initWithSize:image.size] imageWithActions:^(UIGraphicsImageRendererContext* _Nonnull rendererContext) {
@@ -376,9 +394,9 @@
             if(contact.isMuc)
             {
                 if([kMucTypeChannel isEqualToString:contact.mucType])
-                    toreturn = [MLImageManager circularImage:[UIImage imageNamed:ACImageNameNoiconChannel inBundle:nil compatibleWithTraitCollection:nil]];
+                    toreturn = [MLImageManager defaultMucIconForChannel:YES];
                 else
-                    toreturn = [MLImageManager circularImage:[UIImage imageNamed:ACImageNameNoiconMuc inBundle:nil compatibleWithTraitCollection:nil]];
+                    toreturn = [MLImageManager defaultMucIconForChannel:NO];
             }
             else
                 toreturn = [self generateDummyIconForContact:contact];
@@ -387,9 +405,9 @@
         {
             UIImage* overlay = nil;
             if([kMucTypeChannel isEqualToString:contact.mucType])
-                overlay = [MLImageManager circularImage:[UIImage imageNamed:ACImageNameNoiconChannel inBundle:nil compatibleWithTraitCollection:nil]];
+                overlay = [MLImageManager defaultMucIconForChannel:YES];
             else
-                overlay = [MLImageManager circularImage:[UIImage imageNamed:ACImageNameNoiconMuc inBundle:nil compatibleWithTraitCollection:nil]];
+                overlay = [MLImageManager defaultMucIconForChannel:NO];
             if(overlay)
                 toreturn = [MLImageManager image:toreturn withMucOverlay:overlay];
         }

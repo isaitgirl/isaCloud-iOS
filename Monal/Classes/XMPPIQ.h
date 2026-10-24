@@ -80,6 +80,8 @@ FOUNDATION_EXPORT NSString* const kiqErrorType;
  sets up a disco info query node
  */
 -(void) setDiscoItemNode;
+//isaCloud: one page of disco#items with XEP-0059 paging (after: last item id of the previous page or nil)
+-(void) setDiscoItemNodeWithAfter:(NSString* _Nullable) after maxItems:(NSUInteger) maxItems;
 -(void) setAdhocDiscoNode;
 
 #pragma mark roster
