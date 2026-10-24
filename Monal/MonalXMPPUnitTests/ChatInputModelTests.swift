@@ -305,3 +305,31 @@ struct ChatInputRecordingTests {
         #expect(model.recordingElapsed == 4)
     }
 }
+
+struct MentionAutocompleteTests {
+
+    @Test("the query is the name after the @ that starts the last word")
+    func queryOfLastWord() {
+        #expect(MentionAutocomplete.query(in: "oi @li") == "li")
+        #expect(MentionAutocomplete.query(in: "@") == "")
+        #expect(MentionAutocomplete.query(in: "oi @li ") == nil)
+        #expect(MentionAutocomplete.query(in: "oi lu") == nil)
+        #expect(MentionAutocomplete.query(in: "") == nil)
+    }
+
+    @Test("suggestions ignore accent and case, names starting with the term come first, our own nick is left out")
+    func suggestions() {
+        let nicks = ["Lucas", "Júlia", "Cláudio", "Ana Lu", "poli"]
+        #expect(MentionAutocomplete.suggestions(for: "lu", nicks: nicks, ownNick: nil) == ["Lucas", "Ana Lu"])
+        #expect(MentionAutocomplete.suggestions(for: "JULIA", nicks: nicks, ownNick: nil) == ["Júlia"])
+        #expect(MentionAutocomplete.suggestions(for: "lu", nicks: nicks, ownNick: "Lucas") == ["Ana Lu"])
+        #expect(MentionAutocomplete.suggestions(for: "zz", nicks: nicks, ownNick: nil).isEmpty)
+        #expect(MentionAutocomplete.suggestions(for: "", nicks: nicks, ownNick: "poli") == ["Ana Lu", "Cláudio", "Júlia", "Lucas"])
+    }
+
+    @Test("the typed name is replaced by the nick and a space")
+    func replacing() {
+        #expect(MentionAutocomplete.replacing(query: "li", with: "Lucas", in: "oi @li") == "oi Lucas, ")
+        #expect(MentionAutocomplete.replacing(query: "", with: "Lucas", in: "@") == "Lucas, ")
+    }
+}

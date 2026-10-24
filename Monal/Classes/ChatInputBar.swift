@@ -15,11 +15,16 @@ struct ChatInputBar: View {
     var onCancelEdit: () -> Void
     var onAttachPhotos: () -> Void
     var onAttachFile: () -> Void
+    /// isaCloud: attaches the image on the clipboard; the item is only offered while the clipboard has one
+    var onPasteImage: () -> Void = {}
     var onSearchGif: () -> Void
     var onShareLocation: () -> Void
     var onRemoveAttachment: (Int) -> Void
     var onSendRecording: (URL) -> Void
+    /// isaCloud: the nicks offered for "@" in a group or channel (none in a 1:1 chat)
+    var mentionCandidates: () -> [String] = { [] }
     @State private var pressStart: Date?
+    @State private var showNoClipboardImage = false
     @State private var showMicrophoneDenied = false
 
     private var textBinding: Binding<String> {
@@ -33,6 +38,10 @@ struct ChatInputBar: View {
             }
             if !model.attachments.isEmpty {
                 attachmentsRow
+            }
+            sendingHint
+            if model.recording == nil {
+                mentionSuggestions
             }
             HStack(alignment: .bottom, spacing: 8) {
                 if model.edit == nil && model.recording == nil {
@@ -51,12 +60,65 @@ struct ChatInputBar: View {
         .background(.bar)
     }
 
+    /// isaCloud: while a "@" word is typed, the matching people of the group or channel; tapping one puts the nick in its place
+    @ViewBuilder
+    private var mentionSuggestions: some View {
+        if let query = MentionAutocomplete.query(in: model.text) {
+            let names = MentionAutocomplete.suggestions(for: query, nicks: mentionCandidates(), ownNick: nil)
+            if !names.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(names, id: \.self) { nick in
+                            Button {
+                                model.setText(MentionAutocomplete.replacing(query: query, with: nick, in: model.text))
+                            } label: {
+                                Text(nick)
+                                    .font(.subheadline)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color(uiColor: .secondarySystemBackground), in: Capsule())
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                }
+            }
+        }
+    }
+
+    /// isaCloud: while a file is uploaded to be sent, a hint above the input says so (the top spinner alone is easy to miss)
+    @ViewBuilder
+    private var sendingHint: some View {
+        if model.isUploading {
+            HStack(spacing: 8) {
+                ProgressView()
+                    .controlSize(.small)
+                Text("Sending...")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(Color(uiColor: .secondarySystemBackground), in: Capsule())
+        }
+    }
+
     private var attachMenu: some View {
         Menu {
             Button {
                 onAttachPhotos()
             } label: {
                 Label("Photos and videos", systemImage: "photo.on.rectangle")
+            }
+            //isaCloud: always offered; without an image on the clipboard it explains why nothing is attached
+            Button {
+                if UIPasteboard.general.hasImages {
+                    onPasteImage()
+                } else {
+                    showNoClipboardImage = true
+                }
+            } label: {
+                Label("Paste from clipboard", systemImage: "photo.on.rectangle")
             }
             Button {
                 onAttachFile()
@@ -79,6 +141,9 @@ struct ChatInputBar: View {
                 .foregroundStyle(Color("isaCloudPink"))
                 .frame(width: 36, height: 36)
                 .accessibilityLabel("attach")
+        }
+        .alert("No image on the clipboard", isPresented: $showNoClipboardImage) {
+            Button("OK", role: .cancel) {}
         }
     }
 

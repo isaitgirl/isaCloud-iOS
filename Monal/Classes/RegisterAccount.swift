@@ -11,13 +11,10 @@ import FrameUp
 struct RegisterAccount: View {
     static private let xmppFaultyPattern = ".+\\..{2,}$"
     static private let credFaultyPattern = ".*@.*"
+    //isaCloud servers, in the order of HelperTools isaCloudServerDomains (shared with the invitation links)
     static private let XMPPServer: [Dictionary<String, String>] = [
         ["XMPPServer": "Input", "TermsSite_default": ""],
-        //isaCloud servers, in this exact order
-        ["XMPPServer": "isacloud.im", "TermsSite_default": "https://isacloud.com.br/politica-de-privacidade.html"],
-        ["XMPPServer": "xmpp.social.br", "TermsSite_default": "https://isacloud.com.br/politica-de-privacidade.html"],
-        ["XMPPServer": "voz.social.br", "TermsSite_default": "https://isacloud.com.br/politica-de-privacidade.html"],
-    ]
+    ] + HelperTools.isaCloudServerDomains().map { ["XMPPServer": $0 as String, "TermsSite_default": "https://isacloud.com.br/politica-de-privacidade.html"] }
 
     @State private var username: String = ""
     @State private var password: String = ""

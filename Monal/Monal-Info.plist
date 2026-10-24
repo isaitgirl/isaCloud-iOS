@@ -14,7 +14,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>isaCloud</string>
+	<string>$(ISACLOUD_DISPLAY_NAME)</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -57,7 +57,7 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>isacloudOpen</string>
+				<string>$(ISACLOUD_OPEN_SCHEME:default=isacloudOpen)</string>
 			</array>
 		</dict>
 	</array>
@@ -154,5 +154,7 @@
 	</array>
 	<key>GiphyAPIKey</key>
 	<string>$(GIPHY_API_KEY)</string>
+	<key>IsaCloudOpenScheme</key>
+	<string>$(ISACLOUD_OPEN_SCHEME:default=isacloudOpen)</string>
 </dict>
 </plist>

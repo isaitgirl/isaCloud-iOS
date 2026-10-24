@@ -89,3 +89,16 @@
 "Accounts" = "Contas";
 "Contact-, Group- or Channel-Jid" = "Endereço do contato ou canal";
 "No pending contact requests" = "Nenhum pedido de contato pendente";
+"Type a message..." = "Escreva uma mensagem...";
+"Reply" = "Responder";
+"Moderate" = "Moderar";
+"Delete Locally" = "Excluir localmente";
+"Resend" = "Reenviar";
+"Retract" = "Excluir para todos";
+"Paste from clipboard" = "Colar da área de transferência";
+"No image on the clipboard" = "Nenhuma imagem na área de transferência";
+"No Results for \"%@\"" = "Nenhum resultado para \"%@\"";
+"Check the spelling or try a new search." = "Confira a grafia ou tente outra busca.";
+"There is no configured email account. Please email sysadmin@isacloud.cc ." = "Não há conta de e-mail configurada. Envie um e-mail para sysadmin@isacloud.cc .";
+"isaCloud was not able to send any of your attachments: %@" = "O isaCloud não conseguiu enviar nenhum dos seus anexos: %@";
+"isaCloud was not able to send some of your attachments: %@" = "O isaCloud não conseguiu enviar alguns dos seus anexos: %@";

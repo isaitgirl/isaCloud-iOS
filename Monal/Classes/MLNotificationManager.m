@@ -846,7 +846,7 @@ typedef NS_ENUM(NSUInteger, MLNotificationState) {
 {
     DDLogDebug(@"Building INPerson for self contact...");
     NSString* personHandleIdentifier = [NSString stringWithFormat:@"xmpp:%@", account.connectionProperties.identity.jid];
-    INPersonHandle* personHandle = [[INPersonHandle alloc] initWithValue:personHandleIdentifier type:INPersonHandleTypeUnknown label:@"Monal IM"];
+    INPersonHandle* personHandle = [[INPersonHandle alloc] initWithValue:personHandleIdentifier type:INPersonHandleTypeUnknown label:@"isaCloud"];
     NSPersonNameComponents* nameComponents = [NSPersonNameComponents new];
     nameComponents.nickname = [MLContact ownDisplayNameForAccount:account];
     MLContact* ownContact = account.contact;
@@ -883,7 +883,7 @@ typedef NS_ENUM(NSUInteger, MLNotificationState) {
         personHandleIdentifier = [NSString stringWithFormat:@"xmpp:%@", ((MLContact*)contact).contactJid];
     else if([contact isKindOfClass:[MLChannelContact class]])
         personHandleIdentifier = [NSString stringWithFormat:@"xmpp:%@, channel-nick: %@", ((MLChannelContact*)contact).mucContact.contactJid, ((MLChannelContact*)contact).nick];
-    INPersonHandle* personHandle = [[INPersonHandle alloc] initWithValue:personHandleIdentifier type:INPersonHandleTypeUnknown label:@"Monal IM"];
+    INPersonHandle* personHandle = [[INPersonHandle alloc] initWithValue:personHandleIdentifier type:INPersonHandleTypeUnknown label:@"isaCloud"];
     
     NSPersonNameComponents* nameComponents = [NSPersonNameComponents new];
     nameComponents.nickname = displayName;

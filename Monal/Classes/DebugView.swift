@@ -162,6 +162,8 @@ struct CrashTestingView: View {
 }
 
 struct ExtraSettingsView: View {
+    @State private var showClearedShareAlert = false
+    @State private var clearedShareItems = 0
     @ObservedObject var defaultDB = DebugDefaultDB()
 
     var body: some View {
@@ -200,6 +202,16 @@ struct ExtraSettingsView: View {
 
                     Button("Reset the state of all accounts") {
                         MLXMPPManager.sharedInstance().resetAllAccountStates()
+                    }
+
+                    Button("Clear share sheet queue") {
+                        clearedShareItems = Int(DataLayer.sharedInstance().clearShareSheetOutbox())
+                        showClearedShareAlert = true
+                    }
+                    .alert("Share sheet queue cleared", isPresented: $showClearedShareAlert) {
+                        Button("OK", role: .cancel) {}
+                    } message: {
+                        Text("\(clearedShareItems) items removed")
                     }
 
                     Button("Change app icon to christmas") {

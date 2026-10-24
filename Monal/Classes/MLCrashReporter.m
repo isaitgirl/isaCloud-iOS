@@ -140,7 +140,7 @@
     DDLogVerbose(@"Preparing MFMailComposeViewController...");
     MFMailComposeViewController* mailController = [[MFMailComposeViewController alloc] init];
     mailController.mailComposeDelegate = self;
-    [mailController setToRecipients:@[@"crash@monal-im.org"]];
+    [mailController setToRecipients:@[@"sysadmin@isacloud.cc"]];
     [mailController setSubject:@"Crash Reports"];
     [mailController setMessageBody:@"Please fill in your last actions that led to this crash:\n" isHTML:NO];
     int i = 1;

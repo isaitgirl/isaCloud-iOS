@@ -62,6 +62,21 @@ struct GiphySearchTests {
     }
 }
 
+struct GifReactionCountsTests {
+
+    @Test("reactions are counted per emoji, in the order they first appear")
+    func countsPerEmoji() {
+        let counts = GifReactionCounts.counts(of: ["❤️", "😂", "❤️", "❤️", "👍"])
+        #expect(counts.map { $0.emoji } == ["❤️", "😂", "👍"])
+        #expect(counts.map { $0.count } == [3, 1, 1])
+    }
+
+    @Test("no reactions gives no bubbles")
+    func noReactions() {
+        #expect(GifReactionCounts.counts(of: []).isEmpty)
+    }
+}
+
 struct GiphyTrendingTests {
 
     @Test("the trending list asks Giphy for the trending endpoint with the key and the rating")

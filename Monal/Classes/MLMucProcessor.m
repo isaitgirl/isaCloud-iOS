@@ -53,6 +53,8 @@ static NSDictionary* _mandatoryGroupConfigOptions;
 static NSDictionary* _optionalGroupConfigOptions;
 //isaCloud: the MUC component of each server we run (account domain -> component); other servers keep the first one advertised
 static NSDictionary* _ownMucComponents;
+//isaCloud: the guide channel of the server; it goes to the recent conversations every time it is joined
+static NSString* const kIsaCloudGuideRoom = @"guiaxmpp@conference.isacloud.cc";
 
 +(void) initialize
 {
@@ -1730,6 +1732,10 @@ $$instance_handler(handleDiscoResponse, account.mucProcessor, $$ID(xmpp*, accoun
     else
         DDLogDebug(@"Muc %@ is already configured to be of type '%@' ('%@')...", iqNode.fromUser, mucType, [[DataLayer sharedInstance] getMucTypeOfRoom:iqNode.fromUser andAccount:_account.accountID]);
     
+    //isaCloud: the guide channel comes back into the recent conversations on every join, even after being archived
+    if(join && [iqNode.fromUser isEqualToString:kIsaCloudGuideRoom])
+        [[DataLayer sharedInstance] addActiveBuddies:iqNode.fromUser forAccount:_account.accountID];
+
     if(!mucName || ![mucName length])
         mucName = @"";
     //only handle incoming name updates if they are not our own reflected changes

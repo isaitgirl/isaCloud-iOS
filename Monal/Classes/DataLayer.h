@@ -340,6 +340,8 @@ extern NSString* const kMessageTypeFiletransfer;
 -(void) addShareSheetPayload:(NSDictionary*) payload;
 -(NSArray*) getShareSheetPayload;
 -(void) deleteShareSheetPayloadWithId:(NSNumber*) payloadId;
+//isaCloud: removes every share sheet item still waiting to be sent (debug screen); returns how many were removed
+-(NSUInteger) clearShareSheetOutbox;
 
 -(NSNumber*) addIdleTimerWithTimeout:(NSNumber*) timeout andHandler:(MLHandler*) handler onAccountID:(NSNumber*) accountID;
 -(void) delIdleTimerWithId:(NSNumber* _Nullable) timerId;

@@ -40,7 +40,7 @@ struct ContactDetails: View {
     @State private var successCallback: monal_void_block_t?
     @StateObject private var overlay = LoadingOverlayState()
     @State private var contactTimeZone: TimeZone? = nil     //isaCloud: contact's local time (XEP-0202)
-    @State private var mamCatchupDays = 7                   //isaCloud: history window of public channels on connect (0 = all)
+    @State private var mamCatchupDays = 2                   //isaCloud: history window of public channels on connect (0 = all)
     var delegate: SheetDismisserProtocol?
     private var account: xmpp
 
@@ -512,6 +512,7 @@ struct ContactDetails: View {
                 //isaCloud: how much of the channel's history to catch up on connect
                 if contact.obj.isMuc && contact.obj.mucType == kMucTypeChannel {
                     Picker(selection: $mamCatchupDays) {
+                        Text("2 days").tag(2)
                         Text("7 days").tag(7)
                         Text("1 month").tag(30)
                         Text("All").tag(0)

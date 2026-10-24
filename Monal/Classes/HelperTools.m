@@ -803,6 +803,11 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     };
 }
 
++(NSArray<NSString*>*) isaCloudServerDomains
+{
+    return @[@"isacloud.im", @"xmpp.social.br", @"voz.social.br"];
+}
+
 +(NSString*) getSelectedPushServerBasedOnLocale
 {
 #ifdef IS_ALPHA
@@ -2980,9 +2985,9 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
 {
     u_int32_t i=arc4random();
 #if TARGET_OS_MACCATALYST
-    NSString* resource = [NSString stringWithFormat:@"Monal-macOS.%@", [self hexadecimalString:[NSData dataWithBytes: &i length: sizeof(i)]]];
+    NSString* resource = [NSString stringWithFormat:@"isaCloud-macOS.%@", [self hexadecimalString:[NSData dataWithBytes: &i length: sizeof(i)]]];
 #else
-    NSString* resource = [NSString stringWithFormat:@"Monal-iOS.%@", [self hexadecimalString:[NSData dataWithBytes: &i length: sizeof(i)]]];
+    NSString* resource = [NSString stringWithFormat:@"isaCloud-iOS.%@", [self hexadecimalString:[NSData dataWithBytes: &i length: sizeof(i)]]];
 #endif
     return resource;
 }
@@ -3013,7 +3018,7 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
         else if(type == MLVersionTypeLog)
             return _versionInfoCache[@(type)] = [NSString stringWithFormat:@"Version %@ (patch level %@), %@ on iOS/macOS %@", rawVersionString, [self patchLevel], [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"], [UIDevice currentDevice].systemVersion];
         else if(type==MLVersionTypeUserAgent)
-            return _versionInfoCache[@(type)] = [[HelperTools defaultsDB] boolForKey: @"allowVersionIQ"] ? [NSString stringWithFormat:@"Monal %@", rawVersionString] : @"Monal";
+            return _versionInfoCache[@(type)] = [[HelperTools defaultsDB] boolForKey: @"allowVersionIQ"] ? [NSString stringWithFormat:@"isaCloud %@", rawVersionString] : @"isaCloud";
         unreachable(@"unknown version type!");
     }
 }

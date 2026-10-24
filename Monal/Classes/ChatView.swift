@@ -118,7 +118,6 @@ struct ChatView: View {
     @State var queuedNewMessages: [ChatViewMessage] = []
     @State private var voiceRequests: [[String: AnyObject]] = []
     @State private var isLoadingMamHistory = false
-    @State private var isUploadingFile = false
     @State private var messageInsertionTimer: Timer?
     @State private var ownRole = kMucRoleNone
     @StateObject private var inputModel = ChatInputModel()
@@ -137,22 +136,24 @@ struct ChatView: View {
     }
 
     enum MessageAction: MessageMenuAction {
-        case copy, edit, retract, moderate, delete, resend
+        case copy, quote, edit, retract, moderate, delete, resend
 
         func title() -> String {
             switch self {
                 case .copy:
-                    "Copy"
+                    NSLocalizedString("Copy", comment: "message menu")
+                case .quote:
+                    NSLocalizedString("Reply", comment: "message menu: quote the message in the input")
                 case .edit:
-                    "Edit"
+                    NSLocalizedString("Edit", comment: "message menu")
                 case .retract:
-                    "Retract"
+                    NSLocalizedString("Retract", comment: "message menu")
                 case .moderate:
-                    "Moderate"
+                    NSLocalizedString("Moderate", comment: "message menu: moderator removes a message in a group or channel")
                 case .delete:
-                    "Delete Locally"
+                    NSLocalizedString("Delete Locally", comment: "message menu: removes the message from this device only")
                 case .resend:
-                    "Resend"
+                    NSLocalizedString("Resend", comment: "message menu: sends a message that failed again")
             }
         }
 
@@ -160,6 +161,8 @@ struct ChatView: View {
             switch self {
                 case .copy:
                     Image(systemName: "doc.on.doc")
+                case .quote:
+                    Image(systemName: "arrowshape.turn.up.left")
                 case .edit:
                     if #available(iOS 18.0, macCatalyst 18.0, *) {
                         Image(systemName: "bubble.and.pencil")
@@ -188,6 +191,7 @@ struct ChatView: View {
             var availableActions: [MessageAction] = []
             if message.hasText {
                 availableActions.append(.copy)
+                availableActions.append(.quote)
             }
 
             if !mlMessage.inbound && DataLayer.sharedInstance().checkLMCEligible(mlMessage.messageDBId, encrypted: mlMessage.encrypted || contact.isEncrypted, historyBaseID: nil) {
@@ -442,12 +446,12 @@ struct ChatView: View {
             DDLogError("Couldn't get file location in order to upload it!")
             return
         }
-        self.isUploadingFile = true
+        inputModel.isUploading = true
         do {
             let (url, mimeType, size) = try await MLFiletransfer.uploadFile(localFileURL, onAccount: self.account, withEncryption: self.contact.isEncrypted)
             await MainActor.run {
                 guard let newMLMessage = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: url, havingType: kMessageTypeFiletransfer, toContact: self.contact.obj, isEncrypted: self.contact.isEncrypted, uploadInfo: ["mimeType": mimeType, "size": size]) else {
-                    self.isUploadingFile = false
+                    inputModel.isUploading = false
                     return
                 }
                 messages.append(ChatViewMessage(newMLMessage))
@@ -460,7 +464,7 @@ struct ChatView: View {
                 dismissLabel: Text("Close")
             )
         }
-        self.isUploadingFile = false
+        inputModel.isUploading = false
     }
 
     /// isaCloud: the chat input bar (text, attachments, edit) rendered from inputModel
@@ -475,13 +479,27 @@ struct ChatView: View {
             },
             onAttachPhotos: { showMediaPicker = true },
             onAttachFile: { showFileImporter = true },
+            onPasteImage: pasteImageFromClipboard,
             onSearchGif: { showGifPicker = true },
             onShareLocation: { showLocationPicker = true },
             onRemoveAttachment: { inputModel.removeAttachment(at: $0) },
             onSendRecording: { url in
                 Task { await uploadAndSendFile(url) }
-            }
+            },
+            mentionCandidates: mentionNicks
         )
+    }
+
+    /// isaCloud: the nicks of the occupants online in this group or channel, without our own nick (for "@" suggestions)
+    private func mentionNicks() -> [String] {
+        guard contact.obj.isMuc else {
+            return []
+        }
+        let ownNick = DataLayer.sharedInstance().ownNickNameforMuc(contact.obj.contactJid, forAccount: account.accountID)
+        return DataLayer.sharedInstance().getMembersAndParticipants(ofMuc: contact.obj.contactJid, forAccountID: account.accountID)
+            .filter { ($0["online"] as? NSNumber)?.boolValue == true }
+            .compactMap { $0["room_nick"] as? String }
+            .filter { $0 != ownNick }
     }
 
     /// isaCloud: sends what the input holds: attachments first, then the text (same order as before)
@@ -538,6 +556,20 @@ struct ChatView: View {
                 inputModel.addAttachment(ChatInputAttachment(kind: kind, url: url))
             }
         }
+    }
+
+    /// isaCloud: the image on the clipboard becomes an image attachment, written to a temporary PNG like the picked photos
+    private func pasteImageFromClipboard() {
+        guard let image = UIPasteboard.general.image, let data = image.pngData() else {
+            return
+        }
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("paste-\(UUID().uuidString).png")
+        do {
+            try data.write(to: url)
+        } catch {
+            return
+        }
+        inputModel.addAttachment(ChatInputAttachment(kind: .image, url: url))
     }
 
     /// isaCloud: picked files are copied to a temporary folder, because the security scoped URL is only valid for a moment
@@ -601,7 +633,7 @@ struct ChatView: View {
         }, messageBuilder: { params in
             // GIFs are shown animated; the other messages keep the ExyteChat bubble
             if let gif = params.message.attachments.first(where: { $0.mimeType == "image/gif" }) {
-                GifMessageBubble(url: gif.full, isCurrentUser: params.message.user.isCurrentUser)
+                GifMessageBubble(url: gif.full, isCurrentUser: params.message.user.isCurrentUser, reactions: params.message.reactions)
             } else {
                 params.defaultMessageView()
             }
@@ -613,6 +645,9 @@ struct ChatView: View {
             switch action {
                 case .copy:
                     defaultActionClosure(message, .copy)
+                case .quote:
+                    // the author is only needed where several people write: groups and channels
+                    inputModel.quote(author: mlMessage.isMuc ? mlMessage.contactDisplayName : nil, text: mlMessage.messageText)
                 case .edit:
                     inputModel.startEdit(of: mlMessage.messageId, text: mlMessage.messageText)
                     editSaveClosure = { editedText in
@@ -763,6 +798,13 @@ struct ChatView: View {
         }
         .chatTheme(
             ChatTheme(
+                // isaCloud: the messages the user sends are pink, with black text
+                colors: ChatTheme.Colors(
+                    messageMyBG: IsaCloudBubbleColors.mine,
+                    messageMyText: IsaCloudBubbleColors.mineText,
+                    messageMyTimeText: IsaCloudBubbleColors.mineTime,
+                    sendButtonBackground: IsaCloudBubbleColors.mine
+                ),
                 images: self.backgroundImage != nil ?
                     .init(background: ChatTheme.Images.Background(Image(uiImage: self.backgroundImage!))) :
                     .init()
@@ -910,7 +952,7 @@ struct ChatView: View {
             
             ToolbarItemGroup(placement: .topBarTrailing) {
                 ProgressView()
-                    .opacity(isLoadingMamHistory || isUploadingFile ? 1 : 0)
+                    .opacity(isLoadingMamHistory || inputModel.isUploading ? 1 : 0)
 
                 if ownRole == kMucRoleVisitor {
                     Button {
@@ -1088,6 +1130,29 @@ struct ChatView: View {
             ChatViewHelpers.refreshCounter(for: self.contact.obj)
             voiceRequests = DataLayer.sharedInstance().getVoiceRequests(forRoom:contact.obj) as! [[String: AnyObject]]
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kMonalFiletransferInfoUpdated)).receive(on: RunLoop.main)) { notification in
+            //isaCloud: a received file gets its type and size after the message arrived; show it with them
+            guard let updated = notification.userInfo?["message"] as? MLMessage,
+                  updated.isEqual(self.contact.obj),
+                  let index = messages.firstIndex(where: { $0.innerMessage.obj.messageDBId == updated.messageDBId }) else {
+                return
+            }
+            messages[index] = ChatViewMessage(updated)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kMonalShareOutboxUpdate)).receive(on: RunLoop.main)) { notification in
+            //isaCloud: messages sent from the share sheet go through the outbox; show the sending state and the message here
+            guard let shared = notification.userInfo?["contact"] as? MLContact,
+                  shared.contactJid == contact.obj.contactJid,
+                  shared.accountID == contact.obj.accountID else {
+                return
+            }
+            if let uploading = notification.userInfo?["uploading"] as? NSNumber {
+                inputModel.isUploading = uploading.boolValue
+            }
+            if let message = notification.userInfo?["message"] as? MLMessage {
+                messages.append(ChatViewMessage(message))
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kMonalMucOwnAffiliationOrRoleChanged)).receive(on: RunLoop.main)) { notification in
             guard let mucContact = notification.userInfo?["contact"] as? MLContact else {
                 unreachable("kMonalMucOwnAffiliationOrRoleChanged notification without contact!")
@@ -1156,6 +1221,23 @@ class ChatViewMessage: ExyteChat.Message {
         get {
             // Keep outgoing links in the same color as outgoing text (white) for readability
             let linkColor: Color = self.user.isCurrentUser ? .white : .accentColor
+
+            // quoted lines ("> ...") are shown as a quote; the other lines as usual
+            if innerMessage.messageType == kMessageTypeText && QuoteFormatting.containsQuote(text) {
+                var result = AttributedString()
+                for (index, line) in QuoteFormatting.lines(of: text).enumerated() {
+                    if index > 0 {
+                        result.append(AttributedString("\n"))
+                    }
+                    if line.quoted {
+                        // same color as the text; the "│" bar is what marks it as a quote
+                        result.append(AttributedString("│ " + line.text))
+                    } else {
+                        result.append(line.text.linkify(linkColor: linkColor))
+                    }
+                }
+                return result
+            }
 
             if innerMessage.messageType == kMessageTypeGeo && !chatViewDefaultsDB.showGeoLocation {
                 // Link to OpenStreetMap as a fallback for geo messages when inline maps are disabled

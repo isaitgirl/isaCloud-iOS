@@ -39,7 +39,8 @@ static const DDLogLevel ddLogLevel = LOG_LEVEL_STDOUT;
     //isaCloud: own identifiers, so isaCloud and Monal can be installed side by side
     //the app group follows the ISACLOUD_BUNDLE_ID build setting (Info.plist key IsaCloudAppGroup), e.g. for the .dev build
     #define kAppGroup ((NSString*)([[NSBundle mainBundle] objectForInfoDictionaryKey:@"IsaCloudAppGroup"] ?: @"group.br.com.isacloud.messenger"))
-    #define kMonalOpenURL [NSURL URLWithString:@"isacloudOpen://"]
+    //isaCloud: the scheme is per build (isacloudOpenDev for the .dev build), so both apps do not claim the same link
+    #define kMonalOpenURL [NSURL URLWithString:[NSString stringWithFormat:@"%@://", (NSString*)([[NSBundle mainBundle] objectForInfoDictionaryKey:@"IsaCloudOpenScheme"] ?: @"isacloudOpen")]]
     #define kBackgroundProcessingTask @"br.com.isacloud.messenger.process"
     #define kBackgroundRefreshingTask @"br.com.isacloud.messenger.refresh"
     #define kBackgroundURLSessionIdentifier @"br.com.isacloud.messenger.backgroundHttpFetch"
@@ -192,6 +193,10 @@ static inline NSString* _Nonnull LocalizationNotNeeded(NSString* _Nonnull s)
 #define kMonalAccountStatusChanged @"kMonalAccountStatusChanged"
 
 #define kMonalRefresh @"kMonalRefresh"
+//isaCloud: the outbox of the share sheet; userInfo has contact and either uploading (NSNumber) or message (MLMessage) that was just sent
+#define kMonalShareOutboxUpdate @"kMonalShareOutboxUpdate"
+//isaCloud: the type and size of a file message became known; userInfo has the updated message
+#define kMonalFiletransferInfoUpdated @"kMonalFiletransferInfoUpdated"
 #define kMonalContactRefresh @"kMonalContactRefresh"
 #define kMonalXmppUserSoftWareVersionRefresh @"kMonalXmppUserSoftWareVersionRefresh"
 #define kMonalBlockListRefresh @"kMonalBlockListRefresh"

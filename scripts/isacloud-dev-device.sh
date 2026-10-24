@@ -53,6 +53,8 @@ xcodebuild -quiet \
     -allowProvisioningUpdates \
     -allowProvisioningDeviceRegistration \
     ISACLOUD_BUNDLE_ID="$BUNDLE_ID" \
+    ISACLOUD_DISPLAY_NAME="isaCloud.dev" \
+    ISACLOUD_OPEN_SCHEME="isacloudOpenDev" \
     ISACLOUD_ENTITLEMENTS_DIR="../isaCloud/dev-entitlements/" \
     GIPHY_API_KEY="$GIPHY_API_KEY" \
     DEVELOPMENT_TEAM="$TEAM_ID" \
@@ -61,7 +63,7 @@ xcodebuild -quiet \
     PROVISIONING_PROFILE_SPECIFIER= \
     build
 
-APP="$DERIVED_DATA/Build/Products/Debug-iphoneos/Monal.app"
+APP="$DERIVED_DATA/Build/Products/Debug-iphoneos/isaCloud.app"
 echo "Installing $APP..."
 xcrun devicectl device install app --device "$DEVICE_UDID" "$APP"
 echo "Launching $BUNDLE_ID..."

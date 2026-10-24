@@ -101,6 +101,8 @@ NSDictionary* _Nullable dictionaryComprehension(NSDictionary* _Nullable dict, id
 
 +(NSDictionary<NSString*, NSString*>*) getInvalidPushServers;
 +(NSString*) getSelectedPushServerBasedOnLocale;
+//isaCloud: the servers of the isaCloud network, in the order shown when creating an account
++(NSArray<NSString*>*) isaCloudServerDomains;
 +(NSDictionary<NSString*, NSString*>*) getAvailablePushServers;
 
 +(void) configureDefaultAudioSession;

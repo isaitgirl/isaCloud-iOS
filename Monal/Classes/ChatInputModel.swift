@@ -51,6 +51,8 @@ struct ChatInputDraft: Equatable {
 
 final class ChatInputModel: ObservableObject {
     @Published private(set) var text: String
+    /// isaCloud: a file is being uploaded to be sent; the input shows a hint while it is
+    @Published var isUploading = false
     @Published private(set) var reply: ChatInputReply?
     @Published private(set) var edit: ChatInputEdit?
     @Published private(set) var attachments: [ChatInputAttachment] = []
@@ -167,6 +169,15 @@ final class ChatInputModel: ObservableObject {
         text = newText
     }
 
+    /// starts a reply by quoting a message: the quote line goes in front of the text, and the answer is written after it
+    func quote(author: String?, text: String) {
+        guard edit == nil else {
+            return
+        }
+        let line = QuoteFormatting.quoteLine(author: author, text: text)
+        self.text = self.text.isEmpty ? line + "\n" : line + "\n" + self.text
+    }
+
     func startReply(to messageId: String, previewText: String) {
         // replying while editing is not allowed: editing wins
         guard edit == nil else {
@@ -231,5 +242,46 @@ final class ChatInputModel: ObservableObject {
         self.edit = nil
         text = ""
         return result
+    }
+}
+
+/// isaCloud: "@" suggestions while a mention is typed in a group or channel. The mention is plain text ("nick "),
+/// so the other clients read it as before; no protocol change.
+enum MentionAutocomplete {
+    static let maxSuggestions = 8
+
+    /// the name typed after the "@" that starts the last word, nil when the last word is not a mention being typed
+    static func query(in text: String) -> String? {
+        guard let word = text.components(separatedBy: .whitespacesAndNewlines).last, word.hasPrefix("@") else {
+            return nil
+        }
+        return String(word.dropFirst())
+    }
+
+    /// the nicks containing the typed name (no accent or case difference), names starting with it first, without our own nick;
+    /// a bare "@" offers everyone
+    static func suggestions(for query: String, nicks: [String], ownNick: String?) -> [String] {
+        let term = fold(query)
+        let matching = Set(nicks.filter { $0 != ownNick && (term.isEmpty || fold($0).contains(term)) })
+        return matching
+            .sorted { lhs, rhs in
+                let lhsStarts = fold(lhs).hasPrefix(term)
+                let rhsStarts = fold(rhs).hasPrefix(term)
+                if lhsStarts != rhsStarts {
+                    return lhsStarts
+                }
+                return lhs.localizedCaseInsensitiveCompare(rhs) == .orderedAscending
+            }
+            .prefix(maxSuggestions)
+            .map { $0 }
+    }
+
+    /// the text with the "@name" at its end replaced by the nick and a comma, as the tap on an avatar does
+    static func replacing(query: String, with nick: String, in text: String) -> String {
+        return String(text.dropLast(query.count + 1)) + nick + ", "
+    }
+
+    private static func fold(_ string: String) -> String {
+        return string.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
     }
 }

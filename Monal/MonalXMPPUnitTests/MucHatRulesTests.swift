@@ -23,6 +23,16 @@ struct MucHatRulesTests {
         }
     }
 
+    @Test("the known hats of the channels never share a colour")
+    func knownHatsDiffer() {
+        let verified = MucHat.paletteIndex(forTitle: "Verificado 🛡️")
+        let olympus = MucHat.paletteIndex(forTitle: "Deusa do Olimpo")
+        let ceo = MucHat.paletteIndex(forTitle: "CEO")
+        #expect(verified != olympus)
+        #expect(verified != ceo)
+        #expect(olympus != ceo)
+    }
+
     @Test("only the hat titled Verificado makes the user verified")
     func verified() {
         let verified = MucHat(uri: "https://example.org/verified", title: "Verificado")

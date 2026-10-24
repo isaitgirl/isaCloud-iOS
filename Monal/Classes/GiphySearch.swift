@@ -16,6 +16,21 @@ struct GiphyGif: Equatable {
     let originalURL: URL
 }
 
+/// the reactions of a GIF message, grouped by emoji in the order they first appear, with how many of each
+enum GifReactionCounts {
+    static func counts(of emojis: [String]) -> [(emoji: String, count: Int)] {
+        var order: [String] = []
+        var counts: [String: Int] = [:]
+        for emoji in emojis {
+            if counts[emoji] == nil {
+                order.append(emoji)
+            }
+            counts[emoji, default: 0] += 1
+        }
+        return order.map { (emoji: $0, count: counts[$0] ?? 0) }
+    }
+}
+
 enum GiphySearchError: Error, Equatable {
     case missingKey
     case badResponse

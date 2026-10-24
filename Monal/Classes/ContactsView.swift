@@ -169,7 +169,7 @@ struct ContactsView: View {
         }
         .animation(.default, value: contactList)
         .navigationTitle(Text("Contacts"))
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline) //isaCloud: inline, like the title of the home screen
         .safeAreaInset(edge: .top, spacing: 0) {
             //isaCloud: one list for contacts, groups and channels, switched by this control
             Picker("Filter", selection: $filter) {
@@ -187,7 +187,7 @@ struct ContactsView: View {
             if contactList.isEmpty {
                 view
             } else {
-                view.searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .automatic))
+                view.searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always))
             }
         }
         .autocorrectionDisabled()

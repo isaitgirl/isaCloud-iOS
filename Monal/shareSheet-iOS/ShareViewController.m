@@ -57,8 +57,10 @@
 {
     [super viewDidLoad];
     [self.navigationController.navigationBar setTintColor:UIColor.systemBackgroundColor];
-    [self.navigationController.navigationBar setBackgroundColor:[UIColor colorNamed:ACColorNameMonalGreen]];
-    self.navigationController.navigationItem.title = NSLocalizedString(@"Monal", @"");
+    //isaCloud: the isaCloud pink, with a white title, like the rest of the app
+    [self.navigationController.navigationBar setBackgroundColor:[UIColor colorNamed:@"isaCloudPink"]];
+    [self.navigationController.navigationBar setTitleTextAttributes:@{NSForegroundColorAttributeName: UIColor.whiteColor}];
+    self.navigationController.navigationItem.title = NSLocalizedString(@"isaCloud", @"");
     
     DDLogInfo(@"Extension context: %@", self.extensionContext);
     DDLogDebug(@"Raw extension context intent: %@", self.extensionContext.intent);
@@ -339,9 +341,9 @@
                 return resolve(saved);
             
             //build alert message
-            NSString* message = [NSString stringWithFormat:NSLocalizedString(@"Monal was not able to send any of your attachments: %@", @""), errorTexts];
+            NSString* message = [NSString stringWithFormat:NSLocalizedString(@"isaCloud was not able to send any of your attachments: %@", @""), errorTexts];
             if(saved.unsignedIntValue > 0)
-                message = [NSString stringWithFormat:NSLocalizedString(@"Monal was not able to send some of your attachments: %@", @""), errorTexts];
+                message = [NSString stringWithFormat:NSLocalizedString(@"isaCloud was not able to send some of your attachments: %@", @""), errorTexts];
             
             UIAlertController* unknownItemWarning = [UIAlertController alertControllerWithTitle:NSLocalizedString(@"Could not send", @"")
                                                                         message:message preferredStyle:UIAlertControllerStyleAlert];

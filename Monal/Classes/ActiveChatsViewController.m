@@ -92,7 +92,7 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
 */
 
 
-@interface ActiveChatsViewController() {
+@interface ActiveChatsViewController() <UISearchResultsUpdating> {
     int _startedOrientation;
     double _portraitTop;
     double _landscapeTop;
@@ -101,6 +101,7 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
     dispatch_semaphore_t _blockQueueSemaphore;
 }
 @property (atomic, strong) NSMutableArray* unpinnedContacts;
+@property (nonatomic, strong) ChatListSearch* chatListSearch;
 @property (atomic, strong) NSMutableArray* pinnedContacts;
 @end
 
@@ -294,6 +295,34 @@ static BOOL _dnssecWarningDisplayed;
 
 #pragma mark view lifecycle
 
+//isaCloud: the avatar of the first connected account, round, on the profile button; a default icon while there is none
+-(void) updateAccountAvatar
+{
+    //the avatar notification can arrive on a background thread; the button may only be changed on the main thread
+    if(![NSThread isMainThread])
+    {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self updateAccountAvatar];
+        });
+        return;
+    }
+    UIImage* avatar = nil;
+    if(MLXMPPManager.sharedInstance.connectedXMPP.count > 0)
+    {
+        xmpp* account = MLXMPPManager.sharedInstance.connectedXMPP.firstObject;
+        MLContact* ownContact = [MLContact createContactFromJid:account.connectionProperties.identity.jid andAccountID:account.accountID];
+        avatar = [[MLImageManager sharedInstance] getIconForContact:ownContact];
+    }
+    if(!avatar)
+        avatar = [UIImage imageNamed:ACImageNameNoicon];
+    CGFloat size = 30;
+    UIGraphicsImageRenderer* renderer = [[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(size, size)];
+    UIImage* icon = [renderer imageWithActions:^(UIGraphicsImageRendererContext* context) {
+        [avatar drawInRect:CGRectMake(0, 0, size, size)];
+    }];
+    self.settingsButton.image = [[MLImageManager circularImage:icon] imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
+}
+
 -(void) configureComposeButton
 {
     //don't replace an existing customView: this makes UIKit rebuild all bar button items
@@ -342,6 +371,22 @@ static BOOL _dnssecWarningDisplayed;
     self.chatListTable.delegate = self;
     self.chatListTable.dataSource = self;
     
+    //isaCloud: the search bar finds contacts, groups and channels by name; choosing one opens its chat
+    __weak typeof(self) weakSelf = self;
+    self.chatListSearch = [[ChatListSearch alloc] initOnSelect:^(MLContact* contact) {
+        [weakSelf.navigationItem.searchController setActive:NO];
+        //the search results are still being dismissed; the chat is pushed once they are gone
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.4 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [weakSelf presentChatWithContact:contact];
+        });
+    }];
+    UISearchController* searchController = [[UISearchController alloc] initWithSearchResultsController:self.chatListSearch.resultsController];
+    searchController.searchResultsUpdater = self;
+    searchController.obscuresBackgroundDuringPresentation = NO;
+    self.navigationItem.searchController = searchController;
+    self.navigationItem.hidesSearchBarWhenScrolling = NO;
+    self.definesPresentationContext = YES;
+
     self.view = self.chatListTable;
     
     self.sizeClass = [SizeClassWrapper new];
@@ -365,14 +410,8 @@ static BOOL _dnssecWarningDisplayed;
 #if !TARGET_OS_MACCATALYST
     self.splitViewController.primaryBackgroundStyle = UISplitViewControllerBackgroundStyleSidebar;
 #endif
-    // isaCloud: the profile button shows the app logo; it opens the account screen, where the user's account is listed first
-    UIImage* logo = [UIImage imageNamed:@"AppLogo"];
-    CGFloat logoHeight = 30 * logo.size.height / logo.size.width;
-    UIGraphicsImageRenderer* renderer = [[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(30, 30)];
-    UIImage* icon = [renderer imageWithActions:^(UIGraphicsImageRendererContext* context) {
-        [logo drawInRect:CGRectMake(0, (30 - logoHeight) / 2, 30, logoHeight)];
-    }];
-    self.settingsButton.image = [icon imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
+    // isaCloud: the profile button shows the account's own avatar, round; it opens the account screen
+    [self updateAccountAvatar];
     [self configureComposeButton];
 
     self.spinnerButton.customView = self.spinner;
@@ -478,6 +517,9 @@ static BOOL _dnssecWarningDisplayed;
 {
     MLContact* contact = [notification.userInfo objectForKey:@"contact"];
     DDLogInfo(@"Refreshing contact %@ at %@: unread=%lu", contact.contactJid, contact.accountID, (unsigned long)contact.unreadCount);
+    //isaCloud: the account's own avatar may have changed, here or in another app using the same account
+    if(contact.isSelf)
+        [self updateAccountAvatar];
     
     //update red dot
     dispatch_async(dispatch_get_main_queue(), ^{
@@ -1044,6 +1086,11 @@ static BOOL _dnssecWarningDisplayed;
         callViewController.modalPresentationStyle = UIModalPresentationFullScreen;
         [self presentViewController:callViewController animated:NO completion:^{}];
     }];
+}
+
+-(void) updateSearchResultsForSearchController:(UISearchController*) searchController
+{
+    [self.chatListSearch updateWithQuery:searchController.searchBar.text ?: @""];
 }
 
 -(void) presentChatWithContact:(MLContact*) contact

@@ -241,7 +241,7 @@ static NSRegularExpression* fastTokenRemovalRegex;
 #else
         @"type": @"phone",
 #endif
-        @"name": @"Monal",
+        @"name": @"isaCloud",
     } andChildren:@[] andData:nil];
     _capsFeatures = [HelperTools getOwnFeatureSet];
     NSString* client = [NSString stringWithFormat:@"%@/%@//%@", [_capsIdentity findFirst:@"/@category"], [_capsIdentity findFirst:@"/@type"], [_capsIdentity findFirst:@"/@name"]];
@@ -3450,9 +3450,9 @@ static NSRegularExpression* fastTokenRemovalRegex;
                 
                 [sasl2InlinedElements addObject:[[MLXMLNode alloc] initWithElement:@"bind" andNamespace:@"urn:xmpp:bind:0" withAttributes:@{} andChildren:@[
 #if TARGET_OS_MACCATALYST
-                    [[MLXMLNode alloc] initWithElement:@"tag" andData: @"Monal-macOS"],
+                    [[MLXMLNode alloc] initWithElement:@"tag" andData: @"isaCloud-macOS"],
 #else
-                    [[MLXMLNode alloc] initWithElement:@"tag" andData: @"Monal-iOS"],
+                    [[MLXMLNode alloc] initWithElement:@"tag" andData: @"isaCloud-iOS"],
 #endif
                     //inline carbons enable into bind2 if possible
                     nilWrapper(
@@ -5252,6 +5252,20 @@ static NSRegularExpression* fastTokenRemovalRegex;
 
 #pragma mark - account management
 
+//isaCloud: without a landing URL from the server, an account of the isaCloud network gets the invitation page of its own domain
+//(same token); any other server gets the xmpp: invitation link itself, which the receiver can open in an XMPP app
+-(NSString*) invitationLandingForUri:(NSString*) uri
+{
+    NSString* domain = self.connectionProperties.identity.domain;
+    NSString* token = nil;
+    NSRange range = [uri rangeOfString:@"preauth="];
+    if(range.location != NSNotFound)
+        token = [[[uri substringFromIndex:NSMaxRange(range)] componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@";&"]] firstObject];
+    if(domain != nil && token != nil && [[HelperTools isaCloudServerDomains] containsObject:domain])
+        return [NSString stringWithFormat:@"https://%@/register?t=%@", domain, token];
+    return uri;
+}
+
 -(void) createInvitationWithCompletion:(monal_id_block_t) completion
 {
     XMPPIQ* iq = [[XMPPIQ alloc] initWithType:kiqSetType to:self.connectionProperties.identity.domain];
@@ -5274,7 +5288,7 @@ static NSRegularExpression* fastTokenRemovalRegex;
         if([@"completed" isEqualToString:status] && uri != nil)
         {
             if(landing == nil)
-                landing = [NSString stringWithFormat:@"https://invite.monal-im.org/#%@", uri];
+                landing = [self invitationLandingForUri:uri];
             completion(@{
                 @"success": @YES,
                 @"uri": uri,

@@ -1010,7 +1010,7 @@ static NSDateFormatter* dbFormatter;
         encrypt = [[HelperTools defaultsDB] boolForKey:@"OMEMODefaultOn"];
 #endif// DISABLE_OMEMO
         
-        return [self.db executeNonQuery:@"INSERT INTO buddylist ('account_id', 'buddy_name', 'muc', 'muc_nick', 'encrypt') VALUES(?, ?, 1, ?, ?) ON CONFLICT(account_id, buddy_name) DO UPDATE SET muc=1, muc_nick=?;" andArguments:@[accountID, room, mucNick ? mucNick : @"", @(encrypt), mucNick ? mucNick : @""]];
+        return [self.db executeNonQuery:@"INSERT INTO buddylist ('account_id', 'buddy_name', 'muc', 'muc_nick', 'encrypt', 'mam_catchup_days') VALUES(?, ?, 1, ?, ?, 2) ON CONFLICT(account_id, buddy_name) DO UPDATE SET muc=1, muc_nick=?;" andArguments:@[accountID, room, mucNick ? mucNick : @"", @(encrypt), mucNick ? mucNick : @""]];
     }];
 }
 
@@ -1614,13 +1614,18 @@ static NSMutableDictionary<NSString*, NSArray<NSDictionary<NSString*, NSString*>
 {
     if(historyId == nil)
         return;
+    __block MLMessage* updatedMessage = nil;
     [self.db voidWriteTransaction:^{
         MLMessage* message = [MLMessage createMessageFromHistoryID:historyId];
         MLAssert([message.messageType isEqualToString:kMessageTypeFiletransfer], @"Can't set mimeType and size of a message that isn't a file transfer!", @{@"historyId": historyId});
         DDLogVerbose(@"Setting mime type '%@' and size %@ for history id %@", mimeType, size, historyId);
         NSString* query = @"UPDATE filetransfer_info SET mime_type=?, size=? WHERE message_history_id=?;";
         [self.db executeNonQuery:query andArguments:@[mimeType, size, historyId]];
+        updatedMessage = [MLMessage createMessageFromHistoryID:historyId];
     }];
+    //isaCloud: the file is known now (type and size), so an open chat can show it without leaving it
+    if(updatedMessage != nil)
+        [[NSNotificationCenter defaultCenter] postNotificationName:kMonalFiletransferInfoUpdated object:nil userInfo:@{@"message": updatedMessage}];
 }
 
 -(void) clearMessages:(NSNumber*) accountID
@@ -2317,6 +2322,15 @@ static NSMutableDictionary<NSString*, NSArray<NSDictionary<NSString*, NSString*>
     [self.db voidWriteTransaction:^{
         [self.db executeNonQuery:@"DELETE FROM sharesheet_outbox WHERE id=?;" andArguments:@[payloadId]];
     }];
+}
+
+-(NSUInteger) clearShareSheetOutbox
+{
+    return [((NSNumber*)[self.db idWriteTransaction:^{
+        NSNumber* count = (NSNumber*)[self.db executeScalar:@"SELECT COUNT(*) FROM sharesheet_outbox;"];
+        [self.db executeNonQuery:@"DELETE FROM sharesheet_outbox;"];
+        return count;
+    }]) unsignedIntegerValue];
 }
 
 #pragma mark mute and block

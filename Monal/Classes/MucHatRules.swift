@@ -17,8 +17,20 @@ struct MucHat: Hashable {
     /// the colours of the hat pills; a hat always gets the same one for the same title
     static let paletteSize = 6
 
-    /// index in the palette for a hat title. The hash is fixed (not Swift's randomised hashValue), so it is the same on every launch
+    /// the hats the isaCloud channels use get their own colours, so they never look the same
+    /// (palette: 0 blue, 1 orange, 2 green, 3 purple, 4 teal, 5 pink)
+    static let knownPaletteIndex: [(prefix: String, index: Int)] = [
+        (prefix: "Verificado", index: 4),
+        (prefix: "Deusa do Olimpo", index: 3),
+        (prefix: "CEO", index: 1),
+    ]
+
+    /// index in the palette for a hat title. Known hats have fixed colours; the others use a hash of the title,
+    /// which is fixed (not Swift's randomised hashValue), so it is the same on every launch
     static func paletteIndex(forTitle title: String) -> Int {
+        if let known = knownPaletteIndex.first(where: { title.hasPrefix($0.prefix) }) {
+            return known.index
+        }
         var hash: UInt32 = 5381
         for byte in title.utf8 {
             hash = hash &* 33 &+ UInt32(byte)

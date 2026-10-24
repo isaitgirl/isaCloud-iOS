@@ -6,6 +6,7 @@
 //  sent GIF animated. Both use FLAnimatedImage, the same library as the older chat cells.
 //
 
+import ExyteChat
 import FLAnimatedImage
 import SwiftUI
 
@@ -83,10 +84,12 @@ private struct AnimatedGifRepresentable: UIViewRepresentable {
     }
 }
 
-/// a GIF sent in the chat: plays twice, then stays still until it is tapped
+/// a GIF sent in the chat: plays twice, then stays still until it is tapped. Its reactions are drawn over the top edge,
+/// on the same side as the other messages do (left for the own messages, right for the others).
 struct GifMessageBubble: View {
     let url: URL
     let isCurrentUser: Bool
+    let reactions: [Reaction]
     @State private var replayToken = 0
 
     var body: some View {
@@ -97,9 +100,74 @@ struct GifMessageBubble: View {
             .onTapGesture {
                 replayToken += 1
             }
+            .overlay(alignment: isCurrentUser ? .topLeading : .topTrailing) {
+                GifReactionsView(reactions: reactionItems)
+                    .offset(x: isCurrentUser ? -8 : 8, y: -10)
+            }
+            .padding(.top, 12)
             .frame(maxWidth: .infinity, alignment: isCurrentUser ? .trailing : .leading)
             .padding(.horizontal, 12)
             .padding(.vertical, 2)
+    }
+
+    /// each emoji reaction with whether the current user sent it
+    private var reactionItems: [(emoji: String, isMine: Bool)] {
+        return reactions.compactMap { reaction in
+            if case .emoji(let emoji) = reaction.type {
+                return (emoji: emoji, isMine: reaction.user.isCurrentUser)
+            }
+            return nil
+        }
+    }
+}
+
+/// colours of the messages the current user sends: the isaCloud pink with white text
+enum IsaCloudBubbleColors {
+    static let mine = Color("isaCloudPink")
+    static let mineText = Color.white
+    static let mineTime = Color.white.opacity(0.85)
+}
+
+/// the reaction bubbles of a GIF, drawn like the ones of the other messages: a circle with the emoji, overlapping each other.
+/// When more than one person reacted with the same emoji, a small circle with the count sits on the bubble.
+struct GifReactionsView: View {
+    let reactions: [(emoji: String, isMine: Bool)]
+
+    var body: some View {
+        HStack(spacing: -6) {
+            ForEach(groups, id: \.emoji) { item in
+                Text(verbatim: item.emoji)
+                    .font(.body)
+                    .padding(6)
+                    .background(
+                        ZStack {
+                            // the same colours as the reactions of the other messages: mine or the other person's
+                            Circle()
+                                .fill(item.isMine ? IsaCloudBubbleColors.mine : ChatTheme().colors.messageFriendBG)
+                            Circle()
+                                .stroke(Color(uiColor: .systemBackground), lineWidth: 2)
+                        }
+                    )
+                    .overlay(alignment: .bottomTrailing) {
+                        if item.count > 1 {
+                            Text(verbatim: "\(item.count)")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(Color(uiColor: .systemBackground))
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                                .background(Circle().fill(Color(uiColor: .label)))
+                                .offset(x: 4, y: 4)
+                        }
+                    }
+            }
+        }
+    }
+
+    /// one bubble per emoji; it is mine when I reacted with that emoji
+    private var groups: [(emoji: String, count: Int, isMine: Bool)] {
+        return GifReactionCounts.counts(of: reactions.map { $0.emoji }).map { item in
+            (emoji: item.emoji, count: item.count, isMine: reactions.contains { $0.emoji == item.emoji && $0.isMine })
+        }
     }
 }
 

@@ -189,14 +189,14 @@ enum DummySettingsRows {
         UINavigationController* nav = (UINavigationController*) segue.destinationViewController;
         MLWebViewController* web = (MLWebViewController*) nav.topViewController;
 
-        [web initViewWithUrl:[NSURL URLWithString:@"https://monal-im.org/about"]];
+        [web initViewWithUrl:[NSURL URLWithString:@"https://isacloud.com.br"]];
     }
     else if([segue.identifier isEqualToString:@"showPrivacy"])
     {
         UINavigationController* nav = (UINavigationController*) segue.destinationViewController;
         MLWebViewController* web = (MLWebViewController*) nav.topViewController;
 
-        [web initViewWithUrl:[NSURL URLWithString:@"https://monal-im.org/privacy"]];
+        [web initViewWithUrl:[NSURL URLWithString:@"https://isacloud.com.br/politica-de-privacidade.html"]];
     }
     else if([segue.identifier isEqualToString:@"showBug"])
     {
@@ -210,7 +210,7 @@ enum DummySettingsRows {
         UINavigationController* nav = (UINavigationController*) segue.destinationViewController;
         MLWebViewController* web = (MLWebViewController*) nav.topViewController;
 
-        [web initViewWithUrl:[NSURL URLWithString:@"https://github.com/monal-im/Monal/wiki/FAQ---Frequently-Asked-Questions"]];
+        [web initViewWithUrl:[NSURL URLWithString:@"https://isacloud.com.br/faq.html"]];
     }
     else if([segue.identifier isEqualToString:@"editXMPP"])
     {
@@ -494,12 +494,12 @@ enum DummySettingsRows {
     if([MFMailComposeViewController canSendMail]) {
         MFMailComposeViewController* composeVC = [MFMailComposeViewController new];
         composeVC.mailComposeDelegate = self;
-        [composeVC setToRecipients:@[@"info@monal-im.org"]];
+        [composeVC setToRecipients:@[@"sysadmin@isacloud.cc"]];
         [self presentViewController:composeVC animated:YES completion:nil];
     }
     else
     {
-        UIAlertController* messageAlert = [UIAlertController alertControllerWithTitle:NSLocalizedString(@"Error", @"") message:NSLocalizedString(@"There is no configured email account. Please email info@monal-im.org .", @"") preferredStyle:UIAlertControllerStyleAlert];
+        UIAlertController* messageAlert = [UIAlertController alertControllerWithTitle:NSLocalizedString(@"Error", @"") message:NSLocalizedString(@"There is no configured email account. Please email sysadmin@isacloud.cc .", @"") preferredStyle:UIAlertControllerStyleAlert];
         UIAlertAction* closeAction = [UIAlertAction actionWithTitle:NSLocalizedString(@"Close", @"") style:UIAlertActionStyleCancel handler:^(UIAlertAction* action __unused) {
         }];
         [messageAlert addAction:closeAction];

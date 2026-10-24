@@ -52,5 +52,7 @@
 		<key>NSExtensionPrincipalClass</key>
 		<string>ShareViewController</string>
 	</dict>
+	<key>IsaCloudOpenScheme</key>
+	<string>$(ISACLOUD_OPEN_SCHEME:default=isacloudOpen)</string>
 </dict>
 </plist>

@@ -1039,3 +1039,61 @@ private final class KeyboardDismissTapHandler: NSObject, UIGestureRecognizerDele
         return true
     }
 }
+
+/// isaCloud: the names found by the search bar of the home screen (contacts, groups and channels)
+final class ChatListSearchModel : ObservableObject {
+    @Published var query = ""
+    @Published var results: [MLContact] = []
+
+    func update(query: String) {
+        self.query = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        results = self.query.isEmpty ? [] : (DataLayer.sharedInstance().searchContacts(with: self.query) as? [MLContact] ?? [])
+    }
+}
+
+struct ChatListSearchResults : View {
+    @ObservedObject var model: ChatListSearchModel
+    let onSelect: (MLContact) -> Void
+
+    var body: some View {
+        if model.query.isEmpty {
+            EmptyView()
+        } else if model.results.isEmpty {
+            ContentUnavailableShimView.search(text: model.query)
+        } else {
+            List(Array(model.results.enumerated()), id: \.offset) { _, contact in
+                Button {
+                    onSelect(contact)
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(contact.contactDisplayNameWithoutSelfnotesPrefix)
+                        Text(contact.contactJid)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .listStyle(.plain)
+        }
+    }
+}
+
+/// isaCloud: the results view of the home screen's search controller, used by ActiveChatsViewController
+@objc
+class ChatListSearch : NSObject {
+    private let model: ChatListSearchModel
+    @objc let resultsController: UIViewController
+
+    @objc
+    init(onSelect: @escaping (MLContact) -> Void) {
+        let model = ChatListSearchModel()
+        self.model = model
+        resultsController = UIHostingController(rootView: ChatListSearchResults(model: model, onSelect: onSelect))
+        super.init()
+    }
+
+    @objc
+    func update(query: String) {
+        model.update(query: query)
+    }
+}

@@ -1936,6 +1936,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                     [self.activeChats.currentChatView scrollToBottomAnimated:NO];
                     [self.activeChats.currentChatView hideUploadHUD];
                 }
+                [[MLNotificationQueue currentQueue] postNotificationName:kMonalShareOutboxUpdate object:nil userInfo:@{@"contact": contact, @"uploading": @NO}];
                 //send next item (if there is one left)
                 [self sendAllOutboxes];
             };
@@ -1964,6 +1965,8 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                     else
                         DDLogInfo(@"SHARESHEET_SEND_DATA success=NO, account=%@", account.accountID);
 
+                    if(newMLMessage)
+                        [[MLNotificationQueue currentQueue] postNotificationName:kMonalShareOutboxUpdate object:nil userInfo:@{@"contact": contact, @"message": newMLMessage}];
                     cleanup(payload);
                 }
                 else
@@ -1971,6 +1974,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                     //the payload type is either "image", "file", "contact" or "audiovisual"
                     DDLogInfo(@"Got %@ upload: %@", payload[@"type"], payload[@"data"]);
                     [self.activeChats.currentChatView showUploadHUD];
+                    [[MLNotificationQueue currentQueue] postNotificationName:kMonalShareOutboxUpdate object:nil userInfo:@{@"contact": contact, @"uploading": @YES}];
                     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
                         $call(payload[@"data"], $ID(account), $BOOL(encrypted), $ID(completion, (^(NSString* url, NSString* mimeType, NSNumber* size, NSError* error) {
                             dispatch_async(dispatch_get_main_queue(), ^{
@@ -1993,6 +1997,8 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                                     else
                                         DDLogInfo(@"SHARESHEET_SEND_DATA success=NO, account=%@", account.accountID);
 
+                                    if(newMLMessage)
+                                        [[MLNotificationQueue currentQueue] postNotificationName:kMonalShareOutboxUpdate object:nil userInfo:@{@"contact": contact, @"message": newMLMessage}];
                                     cleanup(payload);
                                 }
                             });

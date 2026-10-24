@@ -309,7 +309,7 @@ NSString* const kiqErrorType = @"error";
 {
     NSOperatingSystemVersion osVersion = [[NSProcessInfo processInfo] operatingSystemVersion];
     [self addChildNode:[[MLXMLNode alloc] initWithElement:@"query" andNamespace:@"jabber:iq:version" withAttributes:@{} andChildren:@[
-        [[MLXMLNode alloc] initWithElement:@"name" andData:@"Monal"],
+        [[MLXMLNode alloc] initWithElement:@"name" andData:@"isaCloud"],
 #if TARGET_OS_MACCATALYST
         [[MLXMLNode alloc] initWithElement:@"os" andData:[NSString stringWithFormat:@"macOS %lu", osVersion.majorVersion]],
 #else
