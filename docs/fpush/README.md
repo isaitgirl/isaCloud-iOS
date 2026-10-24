@@ -56,6 +56,20 @@ docker compose logs -f fpush
 - `componentKey` é o mesmo valor de `component_secret` no Prosody.
 - No Prosody, `prosodyctl shell` → `server:list_components()` (ou o log) deve mostrar o componente `push.isacloud.im` conectado.
 
+## Problemas já vistos (e como resolver)
+
+- **Prosody: "options that should be in the global section"**: as opções globais (`s2s_require_encryption`, `limits`, `statistics`, `log`, `pidfile`, `trusted_proxies`, etc.) ficaram abaixo do bloco `Component "push.isacloud.im"`. O Prosody lê tudo abaixo de um `Component` como pertencente a ele. Solução: o bloco `Component` vai sempre por último no arquivo, depois de todas as opções globais e dos `VirtualHost`.
+- **fpush: `unsupported ... RC2-40-CBC`**: o `.p12` exportado pelo Keychain usa a cifra antiga RC2-40, que o OpenSSL 3 do fpush não aceita. Solução: reconverter o arquivo com `openssl 3` (`-legacy` na leitura), mantendo a mesma senha do `settings.json`:
+  ```bash
+  openssl pkcs12 -legacy -in isacloud-apns.p12 -nodes -out apns-decrypted.tmp
+  openssl pkcs12 -export -in apns-decrypted.tmp -out isacloud-apns-new.p12
+  rm apns-decrypted.tmp
+  mv isacloud-apns-new.p12 isacloud-apns.p12
+  ```
+  Depois, confira com `openssl pkcs12 -info -in isacloud-apns.p12 -noout`. O `rm` é obrigatório: o temporário tem a chave privada sem criptografia.
+- **fpush parado em "Opening connection to prosody"**: a conexão de componente não foi aceita. Confira no log do Prosody (`External component successfully authenticated` é o sinal de sucesso), se o `componentKey` do `settings.json` é igual ao `component_secret` do Prosody, e se o fpush e o Prosody estão na mesma rede Docker (`docker network inspect prosody`).
+- **Push não chega no TestFlight**: o log do Prosody deve mostrar `Push notifications enabled for ...`. Para testar, o app precisa estar em segundo plano e outra conta precisa mandar mensagem. O log do fpush (`docker compose logs -f fpush`) mostra o envio e o resultado do APNs.
+
 ## Segredos
 
 `settings.json` e `secrets/` estão no `.gitignore` do repositório. Nunca faça commit deles.
