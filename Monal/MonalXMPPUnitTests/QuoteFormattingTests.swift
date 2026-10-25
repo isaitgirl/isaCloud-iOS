@@ -5,8 +5,8 @@
 //  Quotes in messages: how a quote line is written, shortened, recognised, and started from the input bar.
 //
 
+import Foundation
 import Testing
-import UIKit
 
 struct QuoteFormattingTests {
 
@@ -26,25 +26,6 @@ struct QuoteFormattingTests {
         let long = String(repeating: "a", count: QuoteFormatting.maxQuoteLength + 20)
         let line = QuoteFormatting.quoteLine(author: "Lu", text: long)
         #expect(line == "> Lu: " + String(repeating: "a", count: QuoteFormatting.maxQuoteLength) + "…")
-    }
-
-    @Test("a long quoted text is broken into lines that fit the width, without losing words")
-    func wrapsToWidth() {
-        let text = "Quem puder verificar o estado de funcionalidade do TSE e informações sobre a situação eleitoral"
-        let width: CGFloat = 200
-        let font = UIFont.preferredFont(forTextStyle: .body)
-        let lines = QuoteFormatting.wrapped(text, maxWidth: width, font: font)
-        #expect(lines.count > 1)
-        #expect(lines.joined(separator: " ") == text)
-        for line in lines {
-            #expect((line as NSString).size(withAttributes: [.font: font]).width <= width)
-        }
-    }
-
-    @Test("a short quoted text stays one line, an empty one stays empty")
-    func wrapsShortText() {
-        #expect(QuoteFormatting.wrapped("oi", maxWidth: 200) == ["oi"])
-        #expect(QuoteFormatting.wrapped("", maxWidth: 200) == [""])
     }
 
     @Test("only lines starting with a quote marker and a space are quotes")

@@ -7,7 +7,6 @@
 //
 
 import Foundation
-import UIKit
 
 enum QuoteFormatting {
     /// longest quoted text; the rest is cut with an ellipsis
@@ -55,48 +54,6 @@ enum QuoteFormatting {
         return body.components(separatedBy: "\n").map { line in
             isQuoteLine(line) ? (quoted: true, text: String(line.dropFirst(2))) : (quoted: false, text: line)
         }
-    }
-
-    /// the width of a message bubble's text; a bubble is about 60% of the screen wide
-    static func bubbleTextWidth() -> CGFloat {
-        let screen = UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.screen }.first
-        return (screen?.bounds.width ?? 390) * 0.6
-    }
-
-    /// a quoted text broken into the lines it takes in a bubble, so that the quote bar can be put on every one of them
-    /// (a text view only knows the line breaks it makes itself); words are never split, except when one is wider than a line
-    static func wrapped(_ text: String, maxWidth: CGFloat, font: UIFont = .preferredFont(forTextStyle: .body)) -> [String] {
-        func width(_ s: String) -> CGFloat {
-            return (s as NSString).size(withAttributes: [.font: font]).width
-        }
-        var lines: [String] = []
-        var current = ""
-        for word in text.split(separator: " ", omittingEmptySubsequences: true).map(String.init) {
-            let candidate = current.isEmpty ? word : current + " " + word
-            if width(candidate) <= maxWidth {
-                current = candidate
-                continue
-            }
-            if !current.isEmpty {
-                lines.append(current)
-            }
-            current = ""
-            //a word wider than a line is cut at the line width
-            var rest = word
-            while width(rest) > maxWidth && rest.count > 1 {
-                var cut = rest.count - 1
-                while cut > 1 && width(String(rest.prefix(cut))) > maxWidth {
-                    cut -= 1
-                }
-                lines.append(String(rest.prefix(cut)))
-                rest = String(rest.dropFirst(cut))
-            }
-            current = rest
-        }
-        if !current.isEmpty || lines.isEmpty {
-            lines.append(current)
-        }
-        return lines
     }
 }
 

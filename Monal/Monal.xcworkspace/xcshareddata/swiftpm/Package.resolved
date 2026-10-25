@@ -15,8 +15,8 @@
         "repositoryURL": "https://github.com/exyte/AnchoredPopup.git",
         "state": {
           "branch": null,
-          "revision": "38fb24117f24df91bb79f1d63c8992678456c646",
-          "version": "1.2.3"
+          "revision": "f93c51e75ff4e5242328ac24c8fb12f1f1e84eda",
+          "version": "1.3.1"
         }
       },
       {
@@ -48,10 +48,10 @@
       },
       {
         "package": "Chat",
-        "repositoryURL": "https://github.com/monal-im/ExyteChat",
+        "repositoryURL": "https://github.com/isaitgirl/ExyteChat",
         "state": {
-          "branch": "main",
-          "revision": "88dba857eb5eccb365fd9fb241af849687128308",
+          "branch": "isaCloud",
+          "revision": "5991fc7980e8e8b06b62bf056ce87ff60985fad4",
           "version": null
         }
       },

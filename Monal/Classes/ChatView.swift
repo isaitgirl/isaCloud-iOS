@@ -856,9 +856,12 @@ struct ChatView: View {
                     messageMyTimeText: IsaCloudBubbleColors.mineTime,
                     sendButtonBackground: IsaCloudBubbleColors.mine
                 ),
+                //isaCloud: ExyteChat draws nothing for a message that reached the server (its "sent" image is empty), so the
+                //message had no icon between the clock and the delivery confirmation: it gets a dotted check in a circle, while the
+                //hollow check in a circle (delivered to the device) and the filled one (read) keep the library's icons
                 images: self.backgroundImage != nil ?
-                    .init(background: ChatTheme.Images.Background(Image(uiImage: self.backgroundImage!))) :
-                    .init()
+                    .init(sent: Image(uiImage: IsaCloudStatusIcons.sentToServer), background: ChatTheme.Images.Background(Image(uiImage: self.backgroundImage!))) :
+                    .init(sent: Image(uiImage: IsaCloudStatusIcons.sentToServer))
             )
         )
         .sheet(isPresented: $showMediaPicker) {
@@ -1282,22 +1285,26 @@ class ChatViewMessage: ExyteChat.Message {
             // Keep outgoing links in the same color as outgoing text (white) for readability
             let linkColor: Color = self.user.isCurrentUser ? .white : .accentColor
 
-            // quoted lines ("> ...") are shown as a quote; the other lines as usual
+            // quoted lines ("> ...") are marked as a quote: ExyteChat draws them with one bar on their left (see
+            // AttributedString+Quote.swift in our ExyteChat fork); the other lines are shown as usual
             if innerMessage.messageType == kMessageTypeText && QuoteFormatting.containsQuote(text) {
                 var result = AttributedString()
+                var previousWasQuote = false
                 for (index, line) in QuoteFormatting.lines(of: text).enumerated() {
                     if index > 0 {
-                        result.append(AttributedString("\n"))
+                        // the line break between two quoted lines belongs to the quote, so they make one quote and not two
+                        var lineBreak = AttributedString("\n")
+                        lineBreak.quote = previousWasQuote && line.quoted
+                        result.append(lineBreak)
                     }
                     if line.quoted {
-                        // same color as the text; the "│" bar is what marks it as a quote. A long line is broken here the way
-                        // the bubble would break it, so every line of the quote gets its bar
-                        let barWidth = ("│ " as NSString).size(withAttributes: [.font: UIFont.preferredFont(forTextStyle: .body)]).width
-                        let quoteLines = QuoteFormatting.wrapped(line.text, maxWidth: QuoteFormatting.bubbleTextWidth() - barWidth)
-                        result.append(AttributedString(quoteLines.map { "│ " + $0 }.joined(separator: "\n")))
+                        var quoted = AttributedString(line.text)
+                        quoted.quote = true
+                        result.append(quoted)
                     } else {
                         result.append(line.text.linkify(linkColor: linkColor))
                     }
+                    previousWasQuote = line.quoted
                 }
                 return result
             }

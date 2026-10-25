@@ -357,3 +357,34 @@ struct GifPickerView: View {
         }
     }
 }
+
+/// isaCloud: the status icon of a message the server confirmed: a gray hollow circle with a gray check inside, to sit between the
+/// clock (sending, also gray) and the check in a pink hollow circle (delivered): same shape as "delivered", gray instead of pink.
+/// It is drawn here because ExyteChat's own icon for this state is empty, and stretched by ExyteChat to a small square (see
+/// statusViewWidth in our fork).
+/// The gray is baked into the image (original rendering), because the chat would tint a template image with the pink of our messages.
+enum IsaCloudStatusIcons {
+    static let sentToServer: UIImage = {
+        let side: CGFloat = 60
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: side, height: side))
+        let image = renderer.image { context in
+            let cg = context.cgContext
+            cg.setStrokeColor(UIColor.systemGray.cgColor)
+            cg.setLineCap(.round)
+            cg.setLineJoin(.round)
+
+            // the hollow circle
+            let lineWidth: CGFloat = 4.5
+            cg.setLineWidth(lineWidth)
+            cg.strokeEllipse(in: CGRect(x: lineWidth / 2 + 1, y: lineWidth / 2 + 1, width: side - lineWidth - 2, height: side - lineWidth - 2))
+
+            // the check
+            cg.setLineWidth(5)
+            cg.move(to: CGPoint(x: side * 0.28, y: side * 0.52))
+            cg.addLine(to: CGPoint(x: side * 0.43, y: side * 0.67))
+            cg.addLine(to: CGPoint(x: side * 0.73, y: side * 0.35))
+            cg.strokePath()
+        }
+        return image.withRenderingMode(.alwaysOriginal)
+    }()
+}
