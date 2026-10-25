@@ -1065,6 +1065,8 @@ static NSRegularExpression* fastTokenRemovalRegex;
             [self resetAuthPipelining];
             
             //clear all reconnection handlers
+            
+            NSArray* handlers = nil;
             @synchronized(self->_reconnectionHandlers) {
                 handlers = [self->_reconnectionHandlers copy];
                 [self->_reconnectionHandlers removeAllObjects];
@@ -1200,12 +1202,13 @@ static NSRegularExpression* fastTokenRemovalRegex;
                     [self resetAuthPipelining];
                     
                     //clear all reconnection handlers
+                    NSArray* handlers = nil;
                     @synchronized(self->_reconnectionHandlers) {
-                        NSArray* handlers = [self->_reconnectionHandlers copy];
+                        handlers = [self->_reconnectionHandlers copy];
                         [self->_reconnectionHandlers removeAllObjects];
-                        for(MLHandler* handler in handlers)
-                            $invalidate(handler, $ID(account, self));
                     }
+                    for(MLHandler* handler in handlers)
+                        $invalidate(handler, $ID(account, self));
 
                     //persist these changes
                     [self persistState];
