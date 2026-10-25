@@ -1007,7 +1007,7 @@ $$
             dispatch_async(dispatch_get_main_queue(), ^{
                 [[MLNotificationQueue currentQueue] postNotificationName:kMonalMessageFiletransferUpdateNotice object:account userInfo:@{
                     @"message": msg,
-                    @"progress": @((double)totalBytesWritten / expectedSize.longLongValue),
+                    @"progress": @((double)totalBytesWritten / (double)expectedSize.longLongValue),
                 }];
             });
     }
@@ -1029,7 +1029,7 @@ $$
             dispatch_async(dispatch_get_main_queue(), ^{
                 [[MLNotificationQueue currentQueue] postNotificationName:kMonalMessageFiletransferUpdateNotice object:account userInfo:@{
                     @"message": msg,
-                    @"progress": @((double)totalBytesSent / totalBytesExpectedToSend),
+                    @"progress": @((double)totalBytesSent / (double)totalBytesExpectedToSend),
                 }];
             });
     }
