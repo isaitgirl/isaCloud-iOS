@@ -116,6 +116,7 @@ struct ChatView: View {
     @State private var backgroundImage: UIImage? = UIImage(systemName: "circle")
     @State var messages: [ChatViewMessage] = []
     @State var queuedNewMessages: [ChatViewMessage] = []
+    @State private var mucPersonCount = 0      //isaCloud: members of a group / participants of a channel, shown under the name
     @State private var voiceRequests: [[String: AnyObject]] = []
     @State private var isLoadingMamHistory = false
     @State private var messageInsertionTimer: Timer?
@@ -596,6 +597,13 @@ struct ChatView: View {
         }
     }
 
+    private var encryptionButtonDisabled: Bool {
+        //disable encryption button on unsupported muc types
+        (contact.isMuc && contact.mucType != kMucTypeGroup) ||
+        //disable encryption button for special jids
+        HelperTools.isContactBlacklistedForEncryption(contact.obj)
+    }
+
     var body: some View {
         ExyteChatView(messages: messages, chatType: .conversation, replyMode: .quote, didSendMessage: { draft in
             if !draft.medias.isEmpty || draft.recording != nil || !draft.files.isEmpty {
@@ -932,6 +940,11 @@ struct ChatView: View {
                                         Text("Typing...")
                                             .font(.footnote)
                                             .foregroundColor(Color(hex: "AFB3B8"))
+                                    } else if contact.isMuc && mucPersonCount > 0 {
+                                        //isaCloud: how many people are in the group or channel
+                                        Text(mucPersonCountLabel(isGroup: contact.obj.mucType == kMucTypeGroup, count: mucPersonCount))
+                                            .font(.footnote)
+                                            .foregroundColor(Color(hex: "AFB3B8"))
                                     } else if let lastInteractionDate:Date = contact.lastInteractionTime {
                                         TimelineView(.periodic(from: lastInteractionDate, by: 60.0)) { _ in
                                             Text(HelperTools.formatLastInteraction(contact.lastInteractionTime))
@@ -951,8 +964,10 @@ struct ChatView: View {
             }
             
             ToolbarItemGroup(placement: .topBarTrailing) {
-                ProgressView()
-                    .opacity(isLoadingMamHistory || inputModel.isUploading ? 1 : 0)
+                //isaCloud: only present while loading; an invisible item still made the iOS 26+ glass bubble wider
+                if isLoadingMamHistory || inputModel.isUploading {
+                    ProgressView()
+                }
 
                 if ownRole == kMucRoleVisitor {
                     Button {
@@ -961,6 +976,7 @@ struct ChatView: View {
                         }
                     } label: {
                         Image(systemName: "lightbulb")
+                            .foregroundStyle(Color("isaCloudPink"))
                     }
                 }
                 
@@ -969,6 +985,7 @@ struct ChatView: View {
                         //TODO: open sheet with voice requests
                     } label: {
                         Image(systemName: "questionmark.bubble")
+                            .foregroundStyle(Color("isaCloudPink"))
                     }
                 }
                 
@@ -998,8 +1015,10 @@ struct ChatView: View {
                     } label: {
                         if (voipProcessor.activeCalls as [MLCall]).contains(where:{ $0.isEqual(to:contact.obj) }) {
                             Image(systemName: "phone.connection.fill")
+                                .foregroundStyle(Color("isaCloudPink"))
                         } else {
                             Image(systemName: "phone.fill")
+                                .foregroundStyle(Color("isaCloudPink"))
                         }
                     }
                 }
@@ -1025,17 +1044,14 @@ struct ChatView: View {
                         Label {
                             Text("Messages are NOT encrypted")
                         } icon: {
+                            //isaCloud: red only while the button works; where encryption is not possible (public channels) it stays gray
                             Image(systemName: "lock.open.fill")
-                                .foregroundColor(.red)
+                                .foregroundColor(encryptionButtonDisabled ? nil : .red)
                         }
                     }
                 }
-                .disabled(
-                    //disable encryption button on unsupported muc types
-                    (contact.isMuc && contact.mucType != kMucTypeGroup) ||
-                    //disable encryption button for special jids
-                    HelperTools.isContactBlacklistedForEncryption(contact.obj)
-                )
+                .tint(Color("isaCloudPink"))
+                .disabled(encryptionButtonDisabled)
             }
         }
         .toolbarRole(.editor)       //make sure to never show the title of the previous view in the back bar button
@@ -1045,6 +1061,7 @@ struct ChatView: View {
         .onAppear {
             MLNotificationManager.sharedInstance().currentContact = self.contact.obj
             loadChatBackground()
+            mucPersonCount = countMucPersons(of: contact, ownJid: account.connectionProperties.identity.jid)    //isaCloud
 
             checkOmemoSupport(withAlert:false)
             let messageDraft = DataLayer.sharedInstance().loadMessageDraft(self.contact.contactJid, forAccount:self.account.accountID)
@@ -1117,14 +1134,30 @@ struct ChatView: View {
                 queuedNewMessages.append(ChatViewMessage(message))
                 if messageInsertionTimer == nil {
                     messageInsertionTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: false) { _ in
-                        messages.append(contentsOf: queuedNewMessages)
+                        //isaCloud: a message of a day not shown yet and one of a day already shown must not reach the list in the same
+                        //table update (ExyteChat numbers the sections wrong then and UIKit throws), so the first ones go in a little later
+                        let calendar = Calendar.current
+                        let shownDays = Set(messages.map { calendar.startOfDay(for: $0.createdAt) })
+                        let batch = ChatMessageBatching.split(queuedNewMessages, shownDays: shownDays) { calendar.startOfDay(for: $0.createdAt) }
                         queuedNewMessages.removeAll(keepingCapacity: true)
                         messageInsertionTimer = nil
+                        messages.append(contentsOf: batch.shownDays.isEmpty ? batch.newDays : batch.shownDays)
+                        if !batch.shownDays.isEmpty && !batch.newDays.isEmpty {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                messages.append(contentsOf: batch.newDays)
+                            }
+                        }
                     }
                     messageInsertionTimer?.tolerance = 0.04
                 }
             }
             ChatViewHelpers.refreshCounter(for: self.contact.obj)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kMonalMucParticipantsAndMembersUpdated)).receive(on: RunLoop.main)) { notification in
+            //isaCloud: keep the number under the name current
+            if let notificationContact = notification.userInfo?["contact"] as? MLContact, notificationContact == contact.obj {
+                mucPersonCount = countMucPersons(of: contact, ownJid: account.connectionProperties.identity.jid)
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kMonalRefresh)).receive(on: RunLoop.main)) { notification in
             ChatViewHelpers.refreshCounter(for: self.contact.obj)
@@ -1230,8 +1263,11 @@ class ChatViewMessage: ExyteChat.Message {
                         result.append(AttributedString("\n"))
                     }
                     if line.quoted {
-                        // same color as the text; the "│" bar is what marks it as a quote
-                        result.append(AttributedString("│ " + line.text))
+                        // same color as the text; the "│" bar is what marks it as a quote. A long line is broken here the way
+                        // the bubble would break it, so every line of the quote gets its bar
+                        let barWidth = ("│ " as NSString).size(withAttributes: [.font: UIFont.preferredFont(forTextStyle: .body)]).width
+                        let quoteLines = QuoteFormatting.wrapped(line.text, maxWidth: QuoteFormatting.bubbleTextWidth() - barWidth)
+                        result.append(AttributedString(quoteLines.map { "│ " + $0 }.joined(separator: "\n")))
                     } else {
                         result.append(line.text.linkify(linkColor: linkColor))
                     }

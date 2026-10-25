@@ -95,7 +95,8 @@ static volatile int _ownLockFD;
     if(lock == 0)
     {
         flock(fd, LOCK_UN);
-        [self sleep:0.050];
+        //isaCloud: a short pause that does not spin the main run loop (spinning it during launch runs the view queue too early)
+        [NSThread sleepForTimeInterval:0.050];
         lock = flock(fd, LOCK_EX | LOCK_NB);
     }
     close(fd);
@@ -145,7 +146,8 @@ static volatile int _ownLockFD;
     //we have to spin the runloop instead of simply sleeping to not get killed for unresponsiveness
     if(was_called_in_mainthread)
         while([timeout timeIntervalSinceNow] > 0)
-            [main_runloop runMode:[main_runloop currentMode] beforeDate:timeout];
+            //isaCloud: during launch with scenes the main run loop has no current mode yet (nil would throw), so use the default mode
+            [main_runloop runMode:([main_runloop currentMode] ?: NSDefaultRunLoopMode) beforeDate:timeout];
     else
         [NSThread sleepForTimeInterval:time];
 }

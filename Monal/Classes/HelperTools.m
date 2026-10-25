@@ -2577,7 +2577,12 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     //watch the mainthread for hangs and log them in the hang observer below (but not in the appex)
     //ios killing the app due to the hang should hopefully also be reported as crash report,
     //even though KSCrashMonitorTypeTermination is turned off
-    if(![self isAppExtension])
+    //isaCloud: not on iOS 27+: writing the hang report crashes there (KSCrash reads the objc class data of the main thread's objects,
+    //which faults with a pointer authentication failure), so the first slow moment of the main thread killed the app at launch
+    BOOL watchdogSupported = YES;
+    if(@available(iOS 27.0, *))
+        watchdogSupported = NO;
+    if(![self isAppExtension] && watchdogSupported)
         config.monitors |= KSCrashMonitorTypeWatchdog;
     config.enableHangReporting = NO;        //don't report recovered hangs as crash reports, logging them is enough
     //don't try to debug zombies if not in debug mode

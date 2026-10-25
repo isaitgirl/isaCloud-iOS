@@ -7,23 +7,38 @@
 //
 
 import Foundation
+import UIKit
 
 enum QuoteFormatting {
     /// longest quoted text; the rest is cut with an ellipsis
     static let maxQuoteLength = 160
 
-    /// the quote line that starts a reply: "> author: text" in groups and channels, "> text" in 1:1 chats (no author),
-    /// with the text flattened to one line
+    /// the quote that starts a reply: every line of the original message is a quote line ("> text"), so the quote bar
+    /// shows on each of them; in groups and channels the author comes first on the first line ("> author: text")
     static func quoteLine(author: String?, text: String) -> String {
-        let flat = text.components(separatedBy: .newlines)
+        var lines = text.components(separatedBy: .newlines)
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
-            .joined(separator: " ")
-        let shortened = flat.count > maxQuoteLength ? String(flat.prefix(maxQuoteLength)) + "…" : flat
-        guard let author, !author.isEmpty else {
-            return "> \(shortened)"
+        if let author, !author.isEmpty {
+            lines = ["\(author): " + (lines.first ?? "")] + lines.dropFirst()
         }
-        return "> \(author): \(shortened)"
+        //only the text is limited, the author is not counted
+        let prefixLength = (author?.isEmpty == false) ? author!.count + 2 : 0
+        var budget = maxQuoteLength + prefixLength
+        var quoted: [String] = []
+        for line in lines {
+            if budget <= 0 {
+                quoted[quoted.count - 1] += "…"
+                break
+            }
+            if line.count > budget {
+                quoted.append("> " + String(line.prefix(budget)) + "…")
+                break
+            }
+            quoted.append("> " + line)
+            budget -= line.count
+        }
+        return quoted.isEmpty ? "> " : quoted.joined(separator: "\n")
     }
 
     static func isQuoteLine(_ line: String) -> Bool {
@@ -40,5 +55,65 @@ enum QuoteFormatting {
         return body.components(separatedBy: "\n").map { line in
             isQuoteLine(line) ? (quoted: true, text: String(line.dropFirst(2))) : (quoted: false, text: line)
         }
+    }
+
+    /// the width of a message bubble's text; a bubble is about 60% of the screen wide
+    static func bubbleTextWidth() -> CGFloat {
+        let screen = UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.screen }.first
+        return (screen?.bounds.width ?? 390) * 0.6
+    }
+
+    /// a quoted text broken into the lines it takes in a bubble, so that the quote bar can be put on every one of them
+    /// (a text view only knows the line breaks it makes itself); words are never split, except when one is wider than a line
+    static func wrapped(_ text: String, maxWidth: CGFloat, font: UIFont = .preferredFont(forTextStyle: .body)) -> [String] {
+        func width(_ s: String) -> CGFloat {
+            return (s as NSString).size(withAttributes: [.font: font]).width
+        }
+        var lines: [String] = []
+        var current = ""
+        for word in text.split(separator: " ", omittingEmptySubsequences: true).map(String.init) {
+            let candidate = current.isEmpty ? word : current + " " + word
+            if width(candidate) <= maxWidth {
+                current = candidate
+                continue
+            }
+            if !current.isEmpty {
+                lines.append(current)
+            }
+            current = ""
+            //a word wider than a line is cut at the line width
+            var rest = word
+            while width(rest) > maxWidth && rest.count > 1 {
+                var cut = rest.count - 1
+                while cut > 1 && width(String(rest.prefix(cut))) > maxWidth {
+                    cut -= 1
+                }
+                lines.append(String(rest.prefix(cut)))
+                rest = String(rest.dropFirst(cut))
+            }
+            current = rest
+        }
+        if !current.isEmpty || lines.isEmpty {
+            lines.append(current)
+        }
+        return lines
+    }
+}
+
+//isaCloud: kept in this file because it is one of the few chat helpers that are also compiled into the unit tests
+/// isaCloud: ExyteChat applies a new day section and rows added to another day in one table update with wrong section numbers.
+/// A batch of new messages is therefore split: the messages of days already shown, and the messages opening days not shown yet.
+enum ChatMessageBatching {
+    static func split<T>(_ incoming: [T], shownDays: Set<Date>, day: (T) -> Date) -> (shownDays: [T], newDays: [T]) {
+        var shown: [T] = []
+        var new: [T] = []
+        for message in incoming {
+            if shownDays.contains(day(message)) {
+                shown.append(message)
+            } else {
+                new.append(message)
+            }
+        }
+        return (shown, new)
     }
 }

@@ -2774,7 +2774,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)Monal.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Monal.macos.entitlements;
 				COMPILER_INDEX_STORE_ENABLE = YES;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				DEAD_CODE_STRIPPING = NO;
 				ENABLE_BITCODE = NO;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
@@ -2837,7 +2837,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)NotificationService/NotificationService.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = NotificationService/NotificationService.macos.entitlements;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
 				INFOPLIST_FILE = NotificationService/Info.plist;
@@ -2869,7 +2869,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)NotificationService/NotificationService.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = NotificationService/NotificationService.macos.entitlements;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
 				INFOPLIST_FILE = NotificationService/Info.plist;
@@ -2901,7 +2901,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)NotificationService/NotificationService.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = NotificationService/NotificationService.macos.entitlements;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
 				INFOPLIST_FILE = NotificationService/Info.plist;
@@ -2967,7 +2967,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				DEAD_CODE_STRIPPING = NO;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -3034,7 +3034,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)Monal.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Monal.macos.entitlements;
 				COMPILER_INDEX_STORE_ENABLE = YES;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				DEAD_CODE_STRIPPING = NO;
 				ENABLE_BITCODE = NO;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
@@ -3093,7 +3093,7 @@
 			baseConfigurationReference = 21E99538324C14220843F325 /* Pods-shareSheet.debug.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "$(ISACLOUD_ENTITLEMENTS_DIR)shareSheet.entitlements";
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
@@ -3121,7 +3121,7 @@
 			baseConfigurationReference = 0EC0A5305E72C0F7F9E1CDEF /* Pods-shareSheet.adhoc.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "$(ISACLOUD_ENTITLEMENTS_DIR)shareSheet.entitlements";
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
@@ -3149,7 +3149,7 @@
 			baseConfigurationReference = 061EF1BEDEE7A71FDF9AB402 /* Pods-shareSheet.appstore.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "$(ISACLOUD_ENTITLEMENTS_DIR)shareSheet.entitlements";
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
@@ -3178,7 +3178,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				DEAD_CODE_STRIPPING = NO;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = "";
@@ -3221,7 +3221,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				DEAD_CODE_STRIPPING = NO;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = "";
@@ -3263,7 +3263,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				DEAD_CODE_STRIPPING = NO;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = "";
@@ -3342,7 +3342,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				DEAD_CODE_STRIPPING = NO;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -3412,7 +3412,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)Monal.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Monal.macos.entitlements;
 				COMPILER_INDEX_STORE_ENABLE = YES;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				DEAD_CODE_STRIPPING = NO;
 				ENABLE_BITCODE = NO;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
@@ -3512,7 +3512,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				DEAD_CODE_STRIPPING = NO;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -3792,7 +3792,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				DEAD_CODE_STRIPPING = NO;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -3864,7 +3864,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)Monal.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Monal.macos.entitlements;
 				COMPILER_INDEX_STORE_ENABLE = YES;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				DEAD_CODE_STRIPPING = NO;
 				ENABLE_BITCODE = NO;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
@@ -3923,7 +3923,7 @@
 			baseConfigurationReference = 6BCB9FB4EBEA3735D24A44DF /* Pods-shareSheet.beta.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "$(ISACLOUD_ENTITLEMENTS_DIR)shareSheet.entitlements";
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
@@ -3955,7 +3955,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)NotificationService/NotificationService.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = NotificationService/NotificationService.macos.entitlements;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
 				INFOPLIST_FILE = NotificationService/Info.plist;
@@ -3984,7 +3984,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				DEAD_CODE_STRIPPING = NO;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = "";
@@ -4218,7 +4218,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				DEAD_CODE_STRIPPING = NO;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -4295,7 +4295,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMPILER_INDEX_STORE_ENABLE = YES;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				DEAD_CODE_STRIPPING = NO;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_BITCODE = NO;
@@ -4357,7 +4357,7 @@
 			baseConfigurationReference = 6015D382ABCE0D788029D7A3 /* Pods-shareSheet.alpha.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Alpha.shareSheet.entitlements;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
@@ -4388,7 +4388,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = NotificationService/Alpha.NotificationService.ios.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = NotificationService/Alpha.NotificationService.macos.entitlements;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
 				INFOPLIST_FILE = NotificationService/Alpha.Info.plist;
@@ -4416,7 +4416,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 9;
 				DEAD_CODE_STRIPPING = NO;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = "";

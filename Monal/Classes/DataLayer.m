@@ -1610,6 +1610,16 @@ static NSMutableDictionary<NSString*, NSArray<NSDictionary<NSString*, NSString*>
     }];
 }
 
+-(void) ensureFiletransferInfoForHistoryId:(NSNumber*) historyId
+{
+    if(historyId == nil)
+        return;
+    [self.db voidWriteTransaction:^{
+        //only inserts if the message exists and has no row yet (the primary key makes the second insert a no-op)
+        [self.db executeNonQuery:@"INSERT OR IGNORE INTO filetransfer_info (message_history_id) SELECT message_history_id FROM message_history WHERE message_history_id=? AND messageType=?;" andArguments:@[historyId, kMessageTypeFiletransfer]];
+    }];
+}
+
 -(void) setFiletransferInfoForHistoryId:(NSNumber*) historyId withMimeType:(NSString*) mimeType andSize:(NSNumber*) size
 {
     if(historyId == nil)

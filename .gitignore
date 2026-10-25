@@ -87,3 +87,6 @@ docs/screenshots/
 
 # isaCloud: chaves locais de desenvolvimento (nunca versionar)
 isaCloud/local/
+
+# Prosody config of the isaCloud server: holds secrets (component, TURN, API tokens)
+docs/prosody.cfg.lua

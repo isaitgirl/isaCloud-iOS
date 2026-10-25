@@ -40,6 +40,7 @@ struct ContactDetails: View {
     @State private var successCallback: monal_void_block_t?
     @StateObject private var overlay = LoadingOverlayState()
     @State private var contactTimeZone: TimeZone? = nil     //isaCloud: contact's local time (XEP-0202)
+    @State private var mucPersonCount = 0                   //isaCloud: members of a group / participants of a channel, shown next to the list button
     @State private var mamCatchupDays = 2                   //isaCloud: history window of public channels on connect (0 = all)
     var delegate: SheetDismisserProtocol?
     private var account: xmpp
@@ -48,6 +49,14 @@ struct ContactDetails: View {
         self.delegate = delegate
         _contact = StateObject(wrappedValue: contact)
         self.account = contact.obj.account!
+    }
+
+    private func loadMucPersonCount() {
+        mucPersonCount = isaCloudMucPersonCount()
+    }
+
+    private func isaCloudMucPersonCount() -> Int {
+        return countMucPersons(of: contact, ownJid: account.connectionProperties.identity.jid)
     }
 
     //isaCloud: history window of a public channel (7 days by default)
@@ -495,16 +504,16 @@ struct ContactDetails: View {
                 
                 if contact.obj.isMuc && contact.obj.mucType == kMucTypeGroup {
                     NavigationLink(destination: LazyClosureView(MemberList(mucContact:contact))) {
-                        Text("Group Members")
+                        Text(verbatim: "\(NSLocalizedString("Group Members", comment: "")) (\(mucPersonCount))")
                     }
                 } else if contact.obj.isMuc && contact.obj.mucType == kMucTypeChannel {
                     if [kMucAffiliationOwner, kMucAffiliationAdmin].contains(ownAffiliation) {
                         NavigationLink(destination: LazyClosureView(MemberList(mucContact:contact))) {
-                            Text("Channel Participants")
+                            Text(verbatim: "\(NSLocalizedString("Channel Participants", comment: "")) (\(mucPersonCount))")
                         }
                     } else {
                         NavigationLink(destination: LazyClosureView(ChannelMemberList(mucContact:contact))) {
-                            Text("Channel Participants")
+                            Text(verbatim: "\(NSLocalizedString("Channel Participants", comment: "")) (\(mucPersonCount))")
                         }
                     }
                 }
@@ -523,7 +532,7 @@ struct ContactDetails: View {
                     .onChange(of: mamCatchupDays) { _, newDays in
                         DataLayer.sharedInstance().setMamCatchupDays(newDays, forMuc: contact.obj.contactJid, andAccount: contact.obj.accountID)
                     }
-                    Text("Public channels only download the messages of this period when you connect. \"All\" downloads the whole history the server keeps, which can be slow on busy channels.")
+                    Text("Public channels only download the messages of this period when you connect. \"All\" downloads the whole history the server keeps, which can be slow on busy channels. A change applies the next time the app reconnects to the channel.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -788,12 +797,14 @@ struct ContactDetails: View {
             self.updateRoleAndAffiliation()
             self.loadContactLocalTime()     //isaCloud
             self.loadMamCatchupDays()       //isaCloud
+            self.loadMucPersonCount()       //isaCloud
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kMonalMucParticipantsAndMembersUpdated)).receive(on: RunLoop.main)) { notification in
             if let xmppAccount = notification.object as? xmpp, let notificationContact = notification.userInfo?["contact"] as? MLContact {
                 DDLogVerbose("Got muc participants/members update from account \(xmppAccount)...")
                 if notificationContact == contact {
                     self.updateRoleAndAffiliation()
+                    self.loadMucPersonCount()       //isaCloud
                 }
             }
         }

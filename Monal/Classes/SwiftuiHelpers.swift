@@ -79,6 +79,33 @@ func getContactList(viewContact: (ObservableKVOWrapper<MLContact>?)) -> OrderedS
     }
 }
 
+//isaCloud: the number the lists behind "Group Members" / "Channel Participants" show (the channel list leaves out ourselves)
+func countMucPersons(of contact: ObservableKVOWrapper<MLContact>, ownJid: String) -> Int {
+    guard contact.isMuc else {
+        return 0
+    }
+    if contact.obj.mucType == kMucTypeGroup {
+        //exactly the list of the group members screen (it merges entries of the same contact)
+        return getContactList(viewContact: contact).count
+    }
+    var nicks = Set<String>()
+    for memberInfo in Array(DataLayer.sharedInstance().getMembersAndParticipants(ofMuc: contact.obj.contactJid, forAccountID: contact.obj.accountID)) {
+        let jid = memberInfo["participant_jid"] as? String ?? memberInfo["member_jid"] as? String
+        if let nick = memberInfo["room_nick"] as? String, jid != ownJid {
+            nicks.insert(nick)
+        }
+    }
+    return nicks.count
+}
+
+//isaCloud: "X members" for a group, "X participants" for a channel
+func mucPersonCountLabel(isGroup: Bool, count: Int) -> String {
+    if isGroup {
+        return count == 1 ? NSLocalizedString("1 member", comment: "") : String(format: NSLocalizedString("%d members", comment: ""), count)
+    }
+    return count == 1 ? NSLocalizedString("1 participant", comment: "") : String(format: NSLocalizedString("%d participants", comment: ""), count)
+}
+
 func promisifyMucAction(account: xmpp, mucJid: String, action: @escaping () throws -> Void) -> Promise<monal_void_block_t?> {
     return Promise<monal_void_block_t?> { seal in
         DispatchQueue.global(qos: .background).async {
@@ -1095,5 +1122,61 @@ class ChatListSearch : NSObject {
     @objc
     func update(query: String) {
         model.update(query: query)
+    }
+}
+
+/// isaCloud: scene lifecycle (required on iOS 27). The window is still owned by the app delegate, so the scene only hands it over.
+class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+    var window: UIWindow?
+    //isaCloud: with scenes, UIKit no longer calls the app delegate's lifecycle methods; they are forwarded from here
+    private var hasEnteredForeground = false
+    private var appDelegate: UIApplicationDelegate? {
+        return UIApplication.shared.delegate
+    }
+
+    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
+        guard let windowScene = scene as? UIWindowScene else {
+            return
+        }
+        if window == nil {
+            window = windowScene.windows.first
+        }
+        (UIApplication.shared.delegate as? MonalAppDelegate)?.window = window
+        for context in connectionOptions.urlContexts {
+            _ = appDelegate?.application?(UIApplication.shared, open: context.url, options: [:])
+        }
+        for activity in connectionOptions.userActivities {
+            _ = appDelegate?.application?(UIApplication.shared, continue: activity, restorationHandler: { _ in })
+        }
+    }
+
+    func sceneDidBecomeActive(_ scene: UIScene) {
+        appDelegate?.applicationDidBecomeActive?(UIApplication.shared)
+    }
+
+    func sceneWillEnterForeground(_ scene: UIScene) {
+        //the app state is "background" while a scene launches, so the first foreground has to be handled, too (otherwise the accounts stay in the background state and never connect)
+        guard hasEnteredForeground else {
+            //launch: everything else was set up by didFinishLaunching, only the flags have to learn that we are in the foreground
+            //(unfreezing the accounts here waits for their receive queues, which can be busy for a long time and froze the app)
+            hasEnteredForeground = true
+            MLXMPPManager.sharedInstance().nowForegroundedAtLaunch()
+            return
+        }
+        appDelegate?.applicationWillEnterForeground?(UIApplication.shared)
+    }
+
+    func sceneDidEnterBackground(_ scene: UIScene) {
+        appDelegate?.applicationDidEnterBackground?(UIApplication.shared)
+    }
+
+    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        for context in URLContexts {
+            _ = appDelegate?.application?(UIApplication.shared, open: context.url, options: [:])
+        }
+    }
+
+    func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
+        _ = appDelegate?.application?(UIApplication.shared, continue: userActivity, restorationHandler: { _ in })
     }
 }

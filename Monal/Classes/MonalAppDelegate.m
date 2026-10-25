@@ -539,7 +539,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
     else
     {
         //hide spinner
-        [self.activeChats.spinner stopAnimating];
+        [self.activeChats setSyncIndicatorVisible:NO];
     }
     
     //report pending crashes
@@ -1307,10 +1307,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
 {
     //show/hide spinner (dispatch *async* to main queue to allow for ui changes)
     dispatch_async(dispatch_get_main_queue(), ^{
-        if(([[MLXMPPManager sharedInstance] allAccountsIdle] && [MLFiletransfer isIdle]))
-            [self.activeChats.spinner stopAnimating];
-        else
-            [self.activeChats.spinner startAnimating];
+        [self.activeChats setSyncIndicatorVisible:!([[MLXMPPManager sharedInstance] allAccountsIdle] && [MLFiletransfer isIdle])];
     });
 }
 

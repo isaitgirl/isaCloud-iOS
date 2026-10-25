@@ -316,11 +316,30 @@ static BOOL _dnssecWarningDisplayed;
     if(!avatar)
         avatar = [UIImage imageNamed:ACImageNameNoicon];
     CGFloat size = 30;
+    //isaCloud: the glass bubble of iOS 26+ is bigger than the old bar button, a 30pt avatar looks lost in it
+    if(@available(iOS 26.0, *))
+        size = 40;
     UIGraphicsImageRenderer* renderer = [[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(size, size)];
     UIImage* icon = [renderer imageWithActions:^(UIGraphicsImageRendererContext* context) {
         [avatar drawInRect:CGRectMake(0, 0, size, size)];
     }];
     self.settingsButton.image = [[MLImageManager circularImage:icon] imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
+}
+
+-(void) setSyncIndicatorVisible:(BOOL) visible
+{
+    NSMutableArray* right = [NSMutableArray arrayWithArray:self.navigationItem.rightBarButtonItems ?: @[]];
+    NSMutableArray* left = [NSMutableArray arrayWithArray:self.navigationItem.leftBarButtonItems ?: @[]];
+    [right removeObject:self.spinnerButton];
+    [left removeObject:self.spinnerButton];
+    if(visible && self.spinnerButton != nil)
+        [right addObject:self.spinnerButton];
+    self.navigationItem.rightBarButtonItems = right;
+    self.navigationItem.leftBarButtonItems = left;
+    if(visible)
+        [self.spinner startAnimating];
+    else
+        [self.spinner stopAnimating];
 }
 
 -(void) configureComposeButton
@@ -385,6 +404,8 @@ static BOOL _dnssecWarningDisplayed;
     searchController.obscuresBackgroundDuringPresentation = NO;
     self.navigationItem.searchController = searchController;
     self.navigationItem.hidesSearchBarWhenScrolling = NO;
+    //isaCloud: keep the bar under the title; iOS 26+ otherwise moves it next to the title as a search button
+    self.navigationItem.preferredSearchBarPlacement = UINavigationItemSearchBarPlacementStacked;
     self.definesPresentationContext = YES;
 
     self.view = self.chatListTable;
@@ -415,6 +436,7 @@ static BOOL _dnssecWarningDisplayed;
     [self configureComposeButton];
 
     self.spinnerButton.customView = self.spinner;
+    [self setSyncIndicatorVisible:NO];
     self.spinnerButton.isAccessibilityElement = YES;
     self.spinnerButton.accessibilityLabel = NSLocalizedString(@"Syncing", @"Accessibility label for the network/sync activity indicator shown in the chats toolbar when XMPP accounts or file transfers are active");
     

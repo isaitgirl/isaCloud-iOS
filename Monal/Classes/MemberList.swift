@@ -77,12 +77,14 @@ struct MemberList: View {
         //sort our member list
         memberList.sort {
             (
+                ($0.isSelf ? 0 : 1),        //isaCloud: ourselves first
                 (online[$0]! ? 0 : 1),
                 mucAffiliationToInt(affiliations[$0]),
                 mucRoleToInt(roles[$0]),
                 (contactNames[$0]!.lowercased()),
                 ($0.contactJid as String)
             ) < (
+                ($1.isSelf ? 0 : 1),
                 (online[$1]! ? 0 : 1),
                 mucAffiliationToInt(affiliations[$1]),
                 mucRoleToInt(roles[$1]),
@@ -268,12 +270,13 @@ struct MemberList: View {
                 }
                 
                 ForEach(memberList, id:\.self) { contact in
-                    if !contact.isSelf {
+                    //isaCloud: we are shown, too (first); the row of ourselves has no profile link, no affiliation picker and no removal
+                    Group {
                         HStack {
                             HStack {
-                                ContactEntry(contact:contact.obj, fallback:nicknames[contact]) {
+                                ContactEntry(contact:contact.obj, selfnotesPrefix:false, fallback:nicknames[contact]) {
                                     VStack(alignment: .leading, spacing: 4) {
-                                        Text("Affiliation: \(mucAffiliationToString(affiliations[contact], roles[contact]))\(!(online[contact] ?? false) ? Text(" (offline)") : Text(""))")
+                                        Text("Affiliation: \(mucAffiliationToString(affiliations[contact], roles[contact]))\(!(online[contact] ?? false) && !contact.isSelf ? Text(" (offline)") : Text(""))")
                                             //.foregroundColor(Color(UIColor.secondaryLabel))
                                             .font(.footnote)
                                         //isaCloud: the hats of the participant, below its name
@@ -286,25 +289,29 @@ struct MemberList: View {
                             .accessibilityLabel(Text("Open Profile of \(contact.contactDisplayName as String)"))
                             //invisible navigation link that can be triggered programmatically
                             .background(
-                                NavigationLink(destination: LazyClosureView(ContactDetails(delegate:nil, contact:contact)), tag:contact, selection:$navigationActive) { EmptyView() }
-                                    .opacity(0)
+                                Group {
+                                    if !contact.isSelf {
+                                        NavigationLink(destination: LazyClosureView(ContactDetails(delegate:nil, contact:contact)), tag:contact, selection:$navigationActive) { EmptyView() }
+                                            .opacity(0)
+                                    }
+                                }
                             )
                             
-                            if ownAffiliation == kMucAffiliationOwner || ownAffiliation == kMucAffiliationAdmin {
+                            if !contact.isSelf && (ownAffiliation == kMucAffiliationOwner || ownAffiliation == kMucAffiliationAdmin) {
                                 makePickerView(contact:contact)
                                     .fixedSize()
                                     .offset(x:8, y:0)
                             }
                         }
                         .applyClosure { view in
-                            if !(online[contact] ?? false) {
+                            if !(online[contact] ?? false) && !contact.isSelf {
                                 view.opacity(0.5)
                             } else {
                                 view
                             }
                         }
                         .applyClosure { view in
-                            if ownUserHasAffiliationToRemove(contact: contact) {
+                            if !contact.isSelf && ownUserHasAffiliationToRemove(contact: contact) {
                                 view.swipeActions(allowsFullSwipe: false) {
                                     Button("Delete") {
                                         showActionSheet(title: Text("Remove \(mucAffiliationToString(affiliations[contact], roles[contact]))?"), description: self.muc.mucType == kMucTypeGroup ? Text("Do you want to remove that user from this group? That user won't be able to enter it again until added back to the group.") : Text("Do you want to remove that user from this channel? That user will be able to enter it again if you don't block them.")) {

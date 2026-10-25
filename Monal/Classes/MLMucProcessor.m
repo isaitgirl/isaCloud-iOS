@@ -1191,11 +1191,23 @@ $$
             dispatch_group_leave(group);
         }];
     }
+    //isaCloud: reported only once, either when all services answered or when the timeout hits (a server that never answers must not leave the list loading forever)
+    __block BOOL reported = NO;
+    void (^report)(id) = ^(id result) {
+        if(reported)
+            return;
+        reported = YES;
+        completion(result);
+    };
     dispatch_group_notify(group, dispatch_get_main_queue(), ^{
         if(failures == [services count])
-            completion(NSNull.null);
+            report(NSNull.null);
         else
-            completion(channels);
+            report(channels);
+    });
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 20 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+        DDLogWarn(@"Public channel query timed out, services: %@", services);
+        report(NSNull.null);
     });
 }
 

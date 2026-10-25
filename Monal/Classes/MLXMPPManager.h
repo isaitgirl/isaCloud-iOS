@@ -144,6 +144,8 @@ NS_ASSUME_NONNULL_BEGIN
  sets client state on server as active
  */
 -(void) nowForegrounded;
+//isaCloud: at launch the app state is "background" until the scene connects; only the flags change, the accounts are not touched (they are connected by the launch code)
+-(void) nowForegroundedAtLaunch;
 
 /**
  fetch entity software version

@@ -230,6 +230,8 @@ extern NSString* const kMessageTypeFiletransfer;
 -(void) setMessageHistoryId:(NSNumber*) historyId messageType:(NSString*) messageType;
 
 -(NSDictionary*) getFiletransferInfoForHistoryId:(NSNumber*) historyId;
+//isaCloud: makes sure the filetransfer_info row of a filetransfer message exists (an empty one, mime type and size are filled in later)
+-(void) ensureFiletransferInfoForHistoryId:(NSNumber*) historyId;
 -(void) setFiletransferInfoForHistoryId:(NSNumber*) historyId withMimeType:(NSString*) mimeType andSize:(NSNumber*) size;
 
 -(void) clearMessages:(NSNumber*) accountID;

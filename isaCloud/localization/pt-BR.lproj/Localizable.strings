@@ -43,11 +43,12 @@
 "Do you really want to reset the OMEMO session? You should only reset the session if you know what you are doing!" = "Deseja realmente redefinir a sessão OMEMO? Só redefina a sessão se souber o que está fazendo!";
 
 /* ContactDetails.swift: histórico ao conectar em canais públicos (janela de catchup MAM, padrão 7 dias) */
-"Sync history on connect" = "Histórico ao conectar";
-"7 days" = "7 dias";
-"1 month" = "1 mês";
+"Sync history on connect" = "Histórico ao Conectar";
+"2 days" = "2 Dias";
+"7 days" = "7 Dias";
+"1 month" = "1 Mês";
 "All" = "Tudo";
-"Public channels only download the messages of this period when you connect. \"All\" downloads the whole history the server keeps, which can be slow on busy channels." = "Em canais públicos, ao conectar o app baixa apenas as mensagens deste período. \"Tudo\" baixa todo o histórico que o servidor guarda, o que pode demorar em canais movimentados.";
+"Public channels only download the messages of this period when you connect. \"All\" downloads the whole history the server keeps, which can be slow on busy channels. A change applies the next time the app reconnects to the channel." = "Em canais públicos, ao conectar o app baixa apenas as mensagens deste período. \"Tudo\" baixa todo o histórico que o servidor guarda, o que pode demorar em canais movimentados. Uma mudança vale na próxima vez que o app se reconectar ao canal.";
 
 /* PublicChannelsView.swift e ContactsView.swift: canais públicos do servidor */
 "Public channels of your server will appear here." = "Os canais públicos do seu servidor aparecerão aqui.";
@@ -102,3 +103,25 @@
 "There is no configured email account. Please email sysadmin@isacloud.cc ." = "Não há conta de e-mail configurada. Envie um e-mail para sysadmin@isacloud.cc .";
 "isaCloud was not able to send any of your attachments: %@" = "O isaCloud não conseguiu enviar nenhum dos seus anexos: %@";
 "isaCloud was not able to send some of your attachments: %@" = "O isaCloud não conseguiu enviar alguns dos seus anexos: %@";
+"Clear share sheet queue" = "Limpar a fila de compartilhamento";
+"Share sheet queue cleared" = "Fila de compartilhamento limpa";
+"%lld items removed" = "%lld itens removidos";
+"Pin Chat" = "Fixar Conversa";
+"Shared Media" = "Mídia Compartilhada";
+"Shared Files" = "Arquivos Compartilhados";
+"Open account settings" = "Abrir configurações da conta";
+"Invalid file data" = "Dados do arquivo inválidos";
+"Notifications disabled" = "Notificações Desativadas";
+"Contact is muted" = "Contato Está Silenciado";
+"Contact is not muted" = "Contato Não Está Silenciado";
+"Notify only when mentioned" = "Notificar Apenas Quando Mencionado";
+"Notify on all messages" = "Notificar em Todas as Mensagens";
+"Messages are encrypted" = "Mensagens Criptografadas";
+"Messages are NOT encrypted" = "Mensagens Não Estão Criptografadas";
+"Group subject:" = "Assunto do Grupo:";
+"Channel subject:" = "Assunto do Canal:";
+"Rename Group" = "Renomear Grupo";
+"Rename Channel" = "Renomear Canal";
+"Rename Contact" = "Renomear Contato";
+"1 participant" = "1 participante";
+"%d participants" = "%d participantes";

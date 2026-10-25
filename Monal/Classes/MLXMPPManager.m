@@ -463,6 +463,13 @@ static const int pingFreqencyMinutes = 5;       //about the same Conversations u
         [xmppAccount setClientInactive];
 }
 
+-(void) nowForegroundedAtLaunch
+{
+    DDLogInfo(@"App now foregrounded (launch), only updating flags...");
+    _isBackgrounded = NO;
+    _isNotInFocus = NO;
+}
+
 -(void) nowForegrounded
 {
     DDLogInfo(@"App now foregrounded...");

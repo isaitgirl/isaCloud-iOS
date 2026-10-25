@@ -63,6 +63,14 @@ static NSMutableDictionary* _singletonCache;
                 [_singletonCache removeObjectForKey:cacheKey];
         }
         NSDictionary* dic = [[DataLayer sharedInstance] getFiletransferInfoForHistoryId:message.messageDBId];
+        //isaCloud: a missing row crashed the app when opening a chat (seen on iOS 18 with a channel's history, historyId -171);
+        //the row is created empty and filled in later, like for a file transfer that was never checked
+        if(dic == nil)
+        {
+            DDLogError(@"Missing filetransfer_info row for filetransfer message %@, creating it...", message.messageDBId);
+            [[DataLayer sharedInstance] ensureFiletransferInfoForHistoryId:message.messageDBId];
+            dic = [[DataLayer sharedInstance] getFiletransferInfoForHistoryId:message.messageDBId];
+        }
         // dic shouldn't be nil unless there's an implementation error.
         MLAssert(dic != nil, @"A row in the filetransfer_info db table MUST exist for a filetransfer message!", @{@"historyId": message.messageDBId});
         fileInfo = [MLFiletransferInfo new];

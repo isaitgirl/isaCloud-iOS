@@ -2,6 +2,39 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 9) — 25/10/2026
+
+### Corrigido
+- Crash ao abrir um canal cujo histórico tem arquivo recebido sem o registro de informações do arquivo no banco (visto no build 8, iOS 18.7, ao abrir um canal de pets). O registro agora é criado vazio na hora, em vez de derrubar o app. A causa de o registro faltar não foi determinada.
+
+## 0.0.1 (build 8) — 25/10/2026
+
+Reúne também o que entrou nos builds 6 e 7. O build 7 pode travar ou cair ao abrir no iOS 27 com muita coisa para sincronizar; use o 8.
+
+### Adicionado
+- Número de membros (grupos) e de participantes (canais) ao lado de "Membros do Grupo" e "Participantes do Canal" nos detalhes, e em fonte pequena abaixo do nome no topo do chat.
+- Na lista de membros do grupo, a sua própria conta aparece primeiro (sem link de perfil, seletor de afiliação nem remoção).
+- Aviso no seletor de histórico do canal: a mudança vale na próxima vez que o app se reconectar ao canal.
+
+### Alterado
+- Avatar da conta na tela inicial maior (40 pt) no iOS 26 ou mais novo.
+- Barra superior do chat no iOS 26 ou mais novo: o indicador de carregamento só ocupa espaço enquanto carrega (a bolha de vidro deixou de ficar larga), cadeado e telefone voltam ao rosa do isaCloud, e o cadeado aberto de canais públicos fica cinza (vermelho só onde o botão funciona).
+- Citações em respostas: cada linha da mensagem original vira uma linha de citação, e linhas longas quebram com a barra `│` em cada linha visual.
+- Textos dos detalhes de grupo, canal e contato em Title Case, com traduções em português: "Fixar Conversa", "Mídia Compartilhada", "Arquivos Compartilhados", "2 Dias", "Histórico ao Conectar", "Notificar Apenas Quando Mencionado" e outros.
+- Notificações: canais em "só menções" deixam de notificar toda mensagem (um nome vazio casava com qualquer texto).
+
+### Corrigido
+- iOS 27: o app abre (ciclo de vida por cenas), conecta a conta e atualiza as conversas; a tela inicial recupera o layout (busca abaixo do título, sem bolha vazia).
+- Lista de canais públicos que ficava carregando para sempre (a conta não conectava; também ganhou limite de 20 s e mensagem de erro).
+- Crash ao abrir no iOS 27 causado pelo vigia de travamento do coletor de crashes; o vigia fica desligado no iOS 27 ou mais novo.
+- Travamento ao abrir o app enquanto as contas sincronizam: o aviso de "primeiro plano" no início não espera mais as filas.
+- Crash ao sincronizar quando o botão de carregamento da barra saía da tela.
+- Chat aberto recebendo, no mesmo momento, mensagens de um dia novo e de um dia já exibido (causava erro de atualização da lista); a mistura agora entra em duas etapas. Ainda não reproduzido em teste, então é uma correção por hipótese.
+
+### Conhecido
+- Barra de citação por linha (e não uma única barra vertical): ver o roadmap, em "Por avaliar".
+- Notificações "New Message / New Message?" no app de produção: dependem da entitlement de push filtering, pedida à Apple (ver "Pendências" no `CLAUDE.md`).
+
 ## 0.0.1 (build 5) — 24/10/2026
 
 ### Adicionado
@@ -32,4 +65,5 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 - Travamento na sincronização inicial de canais grandes: ver a seção "Pendências técnicas" do roadmap.
 
 ## Builds anteriores (TestFlight)
+- Build 6 e 7: ver o início da seção do build 8.
 - Build 1 a 4: primeiros envios ao App Store Connect, com as funções de caixa de mensagem, GIF, hats, busca de canais e compartilhamento em desenvolvimento.
