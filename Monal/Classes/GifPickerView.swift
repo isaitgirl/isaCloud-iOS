@@ -88,11 +88,46 @@ private struct AnimatedGifRepresentable: UIViewRepresentable {
 /// on the same side as the other messages do (left for the own messages, right for the others).
 struct GifMessageBubble: View {
     let url: URL
+    @ObservedObject var user: ExyteChat.User
     let isCurrentUser: Bool
     let reactions: [Reaction]
+    /// groups and channels: who sent the GIF is shown, like for the other messages (avatar on the last message of a sender's group, name above)
+    var showSender: Bool = false
+    var isLastOfSenderGroup: Bool = true
     @State private var replayToken = 0
+    @Environment(\.chatTheme) private var theme
+
+    private static let avatarSize: CGFloat = 32
 
     var body: some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            if showSender && !isCurrentUser {
+                avatar
+            }
+            if showSender && !isCurrentUser {
+                //like the other messages of others in a group or channel: a gray bubble with the name above the picture
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(user.name)
+                        .font(.caption.weight(.bold))
+                        .lineLimit(1)
+                        .padding(.horizontal, 12)
+                        .padding(.top, 8)
+                    gif
+                        .padding(.horizontal, 6)
+                        .padding(.bottom, 6)
+                }
+                .background(RoundedRectangle(cornerRadius: 14).fill(theme.colors.messageFriendBG))
+            } else {
+                gif
+            }
+        }
+        .padding(.top, 12)
+        .frame(maxWidth: .infinity, alignment: isCurrentUser ? .trailing : .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 2)
+    }
+
+    private var gif: some View {
         AnimatedGifView(url: url, loops: 2, replayToken: replayToken)
             .frame(width: 220, height: 220)
             .clipShape(RoundedRectangle(cornerRadius: 14))
@@ -104,10 +139,20 @@ struct GifMessageBubble: View {
                 GifReactionsView(reactions: reactionItems)
                     .offset(x: isCurrentUser ? -8 : 8, y: -10)
             }
-            .padding(.top, 12)
-            .frame(maxWidth: .infinity, alignment: isCurrentUser ? .trailing : .leading)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 2)
+    }
+
+    /// the sender's picture beside the last GIF of a group of messages, an empty space beside the others (they line up with the bubbles)
+    @ViewBuilder
+    private var avatar: some View {
+        if isLastOfSenderGroup, let image = user.avatarImage {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(width: Self.avatarSize, height: Self.avatarSize)
+                .clipShape(Circle())
+        } else {
+            Color.clear.frame(width: Self.avatarSize, height: Self.avatarSize)
+        }
     }
 
     /// each emoji reaction with whether the current user sent it

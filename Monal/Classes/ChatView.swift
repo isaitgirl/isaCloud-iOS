@@ -677,7 +677,14 @@ struct ChatView: View {
         }, messageBuilder: { params in
             // GIFs are shown animated; the other messages keep the ExyteChat bubble
             if let gif = params.message.attachments.first(where: { $0.mimeType == "image/gif" }) {
-                GifMessageBubble(url: gif.full, isCurrentUser: params.message.user.isCurrentUser, reactions: params.message.reactions)
+                GifMessageBubble(
+                    url: gif.full,
+                    user: params.message.user,
+                    isCurrentUser: params.message.user.isCurrentUser,
+                    reactions: params.message.reactions,
+                    showSender: contact.isMuc,
+                    isLastOfSenderGroup: params.positionInGroup == .single || params.positionInGroup == .last
+                )
             } else {
                 params.defaultMessageView()
             }
