@@ -15,6 +15,7 @@
 @_exported import monalxmpp
 @_exported import Combine
 import PhotosUI
+import UniformTypeIdentifiers
 import FLAnimatedImage
 import CropViewController
 import SafariServices
@@ -362,6 +363,82 @@ struct GIFViewer: UIViewRepresentable {
             let height = proposal.height
         else { return nil }
         return CGSize(width: width, height: height)
+    }
+}
+
+/// isaCloud: the system photo picker for chat attachments (photos and videos, any number). It replaces ExyteMediaPicker, whose grid
+/// does not scroll on iOS 27 (the drag selection gesture steals the scroll gesture), and it needs no access to the photo library.
+struct SystemMediaPicker: UIViewControllerRepresentable {
+    @Binding var isPresented: Bool
+    let onPicked: ([(url: URL, isVideo: Bool)]) -> Void
+
+    func makeUIViewController(context: Context) -> PHPickerViewController {
+        var config = PHPickerConfiguration(photoLibrary: .shared())
+        config.filter = .any(of: [.images, .videos])
+        config.selectionLimit = 0       //no limit
+        config.preferredAssetRepresentationMode = .current      //send the original file, like before
+        let picker = PHPickerViewController(configuration: config)
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(isPresented: $isPresented, onPicked: onPicked)
+    }
+
+    final class Coordinator: NSObject, PHPickerViewControllerDelegate {
+        @Binding var isPresented: Bool
+        let onPicked: ([(url: URL, isVideo: Bool)]) -> Void
+
+        init(isPresented: Binding<Bool>, onPicked: @escaping ([(url: URL, isVideo: Bool)]) -> Void) {
+            _isPresented = isPresented
+            self.onPicked = onPicked
+        }
+
+        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+            isPresented = false
+            guard !results.isEmpty else {
+                return
+            }
+            let lock = NSLock()
+            let group = DispatchGroup()
+            var picked: [Int: (url: URL, isVideo: Bool)] = [:]
+            for (index, result) in results.enumerated() {
+                let provider = result.itemProvider
+                let isVideo = provider.hasItemConformingToTypeIdentifier(UTType.movie.identifier)
+                let typeIdentifier = isVideo ? UTType.movie.identifier : UTType.image.identifier
+                group.enter()
+                provider.loadFileRepresentation(forTypeIdentifier: typeIdentifier) { url, error in
+                    defer { group.leave() }
+                    guard let url else {
+                        DDLogError("Could not load the picked media: \(String(describing: error))")
+                        return
+                    }
+                    //the system deletes this file as soon as the closure returns: keep a copy of it
+                    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+                    let copy = directory.appendingPathComponent(url.lastPathComponent)
+                    do {
+                        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+                        try FileManager.default.copyItem(at: url, to: copy)
+                    } catch {
+                        DDLogError("Could not copy the picked media: \(error)")
+                        return
+                    }
+                    lock.lock()
+                    picked[index] = (url: copy, isVideo: isVideo)
+                    lock.unlock()
+                }
+            }
+            group.notify(queue: .main) { [onPicked] in
+                lock.lock()
+                let ordered = picked.keys.sorted().compactMap { picked[$0] }
+                lock.unlock()
+                onPicked(ordered)
+            }
+        }
     }
 }
 

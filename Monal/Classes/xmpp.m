@@ -5177,7 +5177,27 @@ static NSRegularExpression* fastTokenRemovalRegex;
 
 -(AnyPromise*) checkJidType:(NSString*) jid
 {
-    return [AnyPromise promiseWithResolverBlock:^(PMKResolver resolve) {
+    return [AnyPromise promiseWithResolverBlock:^(PMKResolver rawResolve) {
+        //isaCloud: a disco#info to the bare jid of an online contact is delivered to that person's client by the server. If that client never answers
+        //(many ignore requests of strangers) the app waited forever on "Adding...". A muc always answers fast, so no answer means "account".
+        __block BOOL resolved = NO;
+        NSObject* resolveLock = [NSObject new];
+        PMKResolver resolve = ^(id result) {
+            @synchronized(resolveLock) {
+                if(resolved)
+                    return;
+                resolved = YES;
+            }
+            rawResolve(result);
+        };
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 10 * NSEC_PER_SEC), dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            @synchronized(resolveLock) {
+                if(resolved)
+                    return;
+            }
+            DDLogWarn(@"checkJidType of %@ got no answer within 10 seconds, assuming it is an account", jid);
+            resolve(@"account");
+        });
         XMPPIQ* discoInfo = [[XMPPIQ alloc] initWithType:kiqGetType];
         [discoInfo setiqTo:jid];
         [discoInfo setDiscoInfoNode];

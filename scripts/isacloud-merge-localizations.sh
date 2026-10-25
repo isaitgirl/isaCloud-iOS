@@ -53,8 +53,12 @@ for override in sorted(glob.glob(os.path.join(overrides_dir, "*.lproj", "*.strin
     lproj = os.path.basename(os.path.dirname(override))
     target = os.path.join(resources_dir, lproj, os.path.basename(override))
     if not os.path.exists(target):
-        print("warning: %s/%s not found in the app bundle (language not shipped by Monal?), skipping %s" % (lproj, os.path.basename(override), override))
-        continue
+        # Monal ships no InfoPlist.strings: create it for the languages of the bundle (translations of the permission texts)
+        if os.path.basename(override) == "InfoPlist.strings" and os.path.isdir(os.path.dirname(target)):
+            save(target, {})
+        else:
+            print("warning: %s/%s not found in the app bundle (language not shipped by Monal?), skipping %s" % (lproj, os.path.basename(override), override))
+            continue
     strings = load(target)
     own = load(override)
     strings.update(own)

@@ -380,6 +380,47 @@ struct ChatView: View {
         }
     }
 
+    /// isaCloud: new messages reach the list in batches (see the ExyteChat issue below)
+    private func enqueueNewMessages(_ newMessages: [ChatViewMessage]) {
+        // Insert new messages in batches to work around https://github.com/exyte/Chat/issues/223
+        queuedNewMessages.append(contentsOf: newMessages)
+        if messageInsertionTimer == nil {
+            messageInsertionTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: false) { _ in
+                //isaCloud: a message of a day not shown yet and one of a day already shown must not reach the list in the same
+                //table update (ExyteChat numbers the sections wrong then and UIKit throws), so the first ones go in a little later
+                let calendar = Calendar.current
+                let shownDays = Set(messages.map { calendar.startOfDay(for: $0.createdAt) })
+                let batch = ChatMessageBatching.split(queuedNewMessages, shownDays: shownDays) { calendar.startOfDay(for: $0.createdAt) }
+                queuedNewMessages.removeAll(keepingCapacity: true)
+                messageInsertionTimer = nil
+                messages.append(contentsOf: batch.shownDays.isEmpty ? batch.newDays : batch.shownDays)
+                if !batch.shownDays.isEmpty && !batch.newDays.isEmpty {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        messages.append(contentsOf: batch.newDays)
+                    }
+                }
+            }
+            messageInsertionTimer?.tolerance = 0.04
+        }
+    }
+
+    /// isaCloud: messages that were written to the database without this view hearing about them: the notification extension
+    /// (another process) saves the messages of a push while the app is in the background, so coming back to a chat that was left
+    /// open showed the old state. Called when the app comes back to the foreground.
+    private func loadMissedMessages() {
+        guard !isLoadingMamHistory else {
+            return
+        }
+        var knownIds = Set(messages.map { $0.innerMessage.obj.messageDBId })
+        knownIds.formUnion(queuedNewMessages.map { $0.innerMessage.obj.messageDBId })
+        let latest = DataLayer.sharedInstance().messages(forContact: contact.contactJid, forAccount: contact.accountID) as? [MLMessage] ?? []
+        let missed = latest.filter { !knownIds.contains($0.messageDBId) }
+        if !missed.isEmpty {
+            DDLogVerbose("Adding \(missed.count) messages that were saved while the chat view was not updating")
+            enqueueNewMessages(missed.map { ChatViewMessage($0) })
+        }
+    }
+
     private func loadHistory() {
         guard !self.isLoadingMamHistory else {
             DDLogDebug("Not going to load more history because a backscrolling mam query is ongoing for this chat")
@@ -547,15 +588,10 @@ struct ChatView: View {
     }
 
     /// isaCloud: medias from the picker are copied to attachments; they are uploaded when sent
-    private func addMedias(_ medias: [Media]) {
-        Task { @MainActor in
-            for media in medias {
-                guard let url = await media.getURL() else {
-                    continue
-                }
-                let kind: ChatInputAttachment.Kind = media.type == .video ? .file : .image
-                inputModel.addAttachment(ChatInputAttachment(kind: kind, url: url))
-            }
+    private func addPickedMedias(_ medias: [(url: URL, isVideo: Bool)]) {
+        for media in medias {
+            let kind: ChatInputAttachment.Kind = media.isVideo ? .file : .image
+            inputModel.addAttachment(ChatInputAttachment(kind: kind, url: media.url))
         }
     }
 
@@ -819,8 +855,9 @@ struct ChatView: View {
             )
         )
         .sheet(isPresented: $showMediaPicker) {
-            MediaPicker(isPresented: $showMediaPicker, onChange: { medias in
-                addMedias(medias)
+            //isaCloud: the system picker (see SystemMediaPicker)
+            SystemMediaPicker(isPresented: $showMediaPicker, onPicked: { medias in
+                addPickedMedias(medias)
             })
         }
         .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
@@ -1131,25 +1168,7 @@ struct ChatView: View {
             if message.isEqual(self.contact.obj) {
                 // Don't insert based on delay timestamp because that would make it possible to fake history entries.
                 // Insert new messages in batches to work around https://github.com/exyte/Chat/issues/223
-                queuedNewMessages.append(ChatViewMessage(message))
-                if messageInsertionTimer == nil {
-                    messageInsertionTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: false) { _ in
-                        //isaCloud: a message of a day not shown yet and one of a day already shown must not reach the list in the same
-                        //table update (ExyteChat numbers the sections wrong then and UIKit throws), so the first ones go in a little later
-                        let calendar = Calendar.current
-                        let shownDays = Set(messages.map { calendar.startOfDay(for: $0.createdAt) })
-                        let batch = ChatMessageBatching.split(queuedNewMessages, shownDays: shownDays) { calendar.startOfDay(for: $0.createdAt) }
-                        queuedNewMessages.removeAll(keepingCapacity: true)
-                        messageInsertionTimer = nil
-                        messages.append(contentsOf: batch.shownDays.isEmpty ? batch.newDays : batch.shownDays)
-                        if !batch.shownDays.isEmpty && !batch.newDays.isEmpty {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                messages.append(contentsOf: batch.newDays)
-                            }
-                        }
-                    }
-                    messageInsertionTimer?.tolerance = 0.04
-                }
+                enqueueNewMessages([ChatViewMessage(message)])
             }
             ChatViewHelpers.refreshCounter(for: self.contact.obj)
         }
@@ -1160,6 +1179,7 @@ struct ChatView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kMonalRefresh)).receive(on: RunLoop.main)) { notification in
+            loadMissedMessages()        //isaCloud
             ChatViewHelpers.refreshCounter(for: self.contact.obj)
             voiceRequests = DataLayer.sharedInstance().getVoiceRequests(forRoom:contact.obj) as! [[String: AnyObject]]
         }

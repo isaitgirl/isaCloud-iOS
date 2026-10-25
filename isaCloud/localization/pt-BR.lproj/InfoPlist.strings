@@ -1,0 +1,7 @@
+/* Texts of the permission dialogs (the English texts are in Monal-Info.plist) */
+"NSPhotoLibraryUsageDescription" = "O isaCloud permite enviar fotos para os destinatários de uma conversa.";
+"NSPhotoLibraryAddUsageDescription" = "O isaCloud permite salvar as fotos recebidas nas conversas.";
+"NSCameraUsageDescription" = "O isaCloud permite tirar fotos e enviá-las em uma conversa.";
+"NSLocationUsageDescription" = "O isaCloud usa a sua localização quando você envia uma mensagem de localização em uma conversa.";
+"NSLocationWhenInUseUsageDescription" = "O isaCloud usa a sua localização quando você envia uma mensagem de localização em uma conversa.";
+"NSMicrophoneUsageDescription" = "O isaCloud usa o microfone para transmitir a sua voz em mensagens de áudio e chamadas.";
