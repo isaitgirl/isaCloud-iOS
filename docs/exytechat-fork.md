@@ -18,6 +18,15 @@ Cada mudança é pequena, comentada com "isaCloud:" no código e vive num commit
 
 1. **Ícones de status maiores** (`MessageView.swift`): `statusViewWidth` de 10 para 16 pt, mantendo o ícone alinhado pela base do balão. Esse valor também entra nas contas de largura do balão.
 2. **Citação com uma barra só** (`Extensions/AttributedString+Quote.swift`, `MessageTextView.swift`, `MessageView.swift`): o app marca o texto citado com o atributo `quote` (`texto.quote = true`) e o balão desenha cada citação como um bloco com uma barra vertical contínua à esquerda. Mensagens com citação sempre põem a hora embaixo do texto.
+3. **Modal de quem reagiu** (`Model/ReactionGroup.swift`, `Views/MessageView/ReactionDetailsSheet.swift`, `MessageReactionView.swift`, `ChatViewModel.swift`, `ChatView.swift`, `ChatBuilderParameters.swift`, `ChatMessageView.swift`, `ChatLocalization.swift`): as reações do balão são agrupadas por emoji (um círculo por emoji, com selo de contagem quando mais de uma pessoa reagiu) e tocar nelas abre uma modal com a lista de quem reagiu, com filtro por emoji. Balões próprios do app (como o dos GIFs) abrem a mesma modal por `MessageBuilderParameters.showReactionDetailsClosure`. No app, `shouldShowOverviewFor` devolve `false`, porque a modal substitui a lista que aparecia no topo do toque longo. Testes em `Tests/ExyteChatTests/ReactionGroupTests.swift`.
+
+## Fluxo de branches e PRs
+
+- Toda mudança, no app e na biblioteca, nasce em um branch novo criado **a partir de `isaCloud`** (por exemplo `feature/reaction-details-sheet`) e volta por **PR do branch novo para `isaCloud`** do mesmo repositório. Nunca para `develop` (app) nem para `monal-im`.
+- Todo PR tem a `isaitgirl` como revisora e responsável e traz **prints de antes e depois** das mudanças visíveis, feitos só com dados de teste (contas e conversas de teste, nunca conversas reais, porque as imagens ficam públicas). As capturas seguem a convenção de `CLAUDE.md` e entram no branch do PR (a pasta `docs/screenshots/` está no `.gitignore`, então use `git add -f`).
+- Mudança que depende da biblioteca tem um PR par em cada repositório. O PR do app só pode ser mesclado depois do PR do ExyteChat, porque o app usa o branch `isaCloud` da biblioteca.
+- Quem não tem permissão de escrita no `isaitgirl/ExyteChat` trabalha num fork próprio e abre o PR do fork para o `isaCloud` dela.
+- Prints de reações e outros emojis: só em simulador sem o defeito de emoji (ver `docs/troubleshooting.md`, iOS 26.4 ou mais novo, ou 27.x).
 
 ## Como acompanhar o Monal e o ExyteChat
 

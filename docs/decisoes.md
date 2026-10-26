@@ -10,6 +10,12 @@ Registro do **porquê** das escolhas feitas no fork, para quem abrir uma sessão
 - **Alternativas descartadas:** (a) trocar `│` por caractere de bloco (testado: barras grossas e ainda segmentadas); (b) balão próprio via `messageBuilder` para toda mensagem com citação (1 a 2 dias e risco de regressão: reproduzir avatar, nome, hora, status, reações, links, menu e swipe); (c) esperar a XEP-0461 do Monal (sem previsão).
 - **Regras:** mudanças pequenas, comentadas com "isaCloud:" e em commits separados, para o rebase ser fácil. Se o upstream trouxer o recurso, descartar o nosso commit.
 
+### Modal de quem reagiu (25 e 26/10/2026)
+- **Decisão:** tocar nas reações de um balão abre uma modal com a lista de quem reagiu e com qual emoji, com filtro por emoji (como nos apps de mensagem mais usados), e o balão agrupa as reações por emoji, com contagem. A lista que aparecia no topo ao segurar a mensagem foi removida.
+- **Por quê:** o balão mostrava um círculo por reação (duas pessoas com ❤️ davam dois corações) e a lista do toque longo tinha layout ruim e só aparecia segurando a mensagem. Tudo isso é desenhado pelo ExyteChat, então a mudança é a nº 3 do fork (`docs/exytechat-fork.md`), com um PR par no app.
+- **Fora do escopo:** remover a própria reação pela modal (continua sendo pelo seletor de emoji do toque longo).
+- **Prints:** só em simuladores sem o defeito de emoji dos runtimes iOS 26.1 e 26.3.1 (ver `docs/troubleshooting.md`).
+
 ### Visibilidade da foto da conta (25/10/2026)
 - **O que é:** chave "Foto Visível para Todos" em Editar Conta. Desligada (padrão) = só contatos (PEP `pubsub#access_model` = `presence`); ligada = qualquer pessoa (`open`), como no Conversations.
 - **Onde vale:** só nos nós de avatar (`urn:xmpp:avatar:data` e `urn:xmpp:avatar:metadata`). O nick (nome de exibição, `http://jabber.org/protocol/nick`) continua em `presence`, por decisão da Isadora.
