@@ -118,6 +118,7 @@
 "Notify on all messages" = "Notificar em Todas as Mensagens";
 "Messages are encrypted" = "Mensagens Criptografadas";
 "Messages are NOT encrypted" = "Mensagens Não Estão Criptografadas";
+"Messages are encrypted in transit" = "Mensagens criptografadas em trânsito";
 "Group subject:" = "Assunto do Grupo:";
 "Channel subject:" = "Assunto do Canal:";
 "Rename Group" = "Renomear Grupo";

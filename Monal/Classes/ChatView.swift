@@ -106,6 +106,7 @@ struct ChatView: View {
     @State private var selectedContactForContactDetails: ObservableKVOWrapper<MLContact>?
     @State private var alertPrompt: AlertPrompt?
     @State private var confirmationPrompt: ConfirmationPrompt?
+    @State private var showDisableEncryptionDialog = false        //isaCloud: anchored to the lock button, see the toolbar
     @StateObject private var overlay = LoadingOverlayState()
     @State private var moderationReason = "Spam"
     @State private var isEditingReason = false
@@ -226,27 +227,10 @@ struct ChatView: View {
     }
     
     private func showShouldDisableEncryptionConfirmation(_ show: Bool) {
-        if show {
-            DDLogVerbose("Showing should disable encryption confirmation...")
-            confirmationPrompt = ConfirmationPrompt(
-                title: Text("Disable encryption?"),
-                message: Text("Do you really want to disable encryption for this contact?"),
-                buttons: [
-                    .cancel(
-                        Text("No, keep encryption activated"),
-                        action: { }
-                    ),
-                    .destructive(
-                        Text("Yes, deactivate encryption"),
-                        action: {
-                            contact.obj.toggleEncryption(false)
-                        }
-                    )
-                ]
-            )
-        } else {
-            confirmationPrompt = nil
-        }
+        //isaCloud: a dialog attached to the lock button itself instead of the root action sheet: on iOS 26+ the root one
+        //came up as a popover on the navigation bar, cut down to one line
+        DDLogVerbose("Showing should disable encryption confirmation: \(show)")
+        showDisableEncryptionDialog = show
     }
     
     private func checkOmemoSupport(withAlert showWarning: Bool) {
@@ -638,6 +622,47 @@ struct ChatView: View {
         (contact.isMuc && contact.mucType != kMucTypeGroup) ||
         //disable encryption button for special jids
         HelperTools.isContactBlacklistedForEncryption(contact.obj)
+    }
+
+    //isaCloud: group (end to end) and channel (in transit): the lock only tells the state, no action and no glass bubble to tap
+    private var encryptionIndicator: some View {
+        Group {
+            if contact.mucType == kMucTypeGroup {
+                Image(systemName: contact.isEncrypted ? "lock.fill" : "lock.open.fill")
+                    .foregroundColor(contact.isEncrypted ? Color("isaCloudPink") : .red)
+                    .accessibilityLabel(contact.isEncrypted ? Text("Messages are encrypted") : Text("Messages are NOT encrypted"))
+            } else {
+                //arrows to both sides with a small lock: encrypted on its way to the server and back
+                Image(systemName: "arrow.left.arrow.right")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(Color("isaCloudPink"))
+                    .overlay(alignment: .bottomTrailing) {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(Color("isaCloudPink"))
+                            .padding(1.5)
+                            .background(Circle().fill(Color(UIColor.systemBackground)))
+                            .offset(x: 5, y: 6)
+                    }
+                    .accessibilityLabel(Text("Messages are encrypted in transit"))
+            }
+        }
+        //a tap on the empty bar makes the chat scroll to its first message: swallow it, the lock has no action
+        .frame(minWidth: 36, minHeight: 36)
+        .contentShape(Rectangle())
+        .onTapGesture { }
+    }
+    
+    @ToolbarContentBuilder
+    private var encryptionIndicatorToolbarItem: some ToolbarContent {
+        if contact.isMuc {
+            if #available(iOS 26.0, *) {
+                ToolbarItem(placement: .topBarTrailing) { encryptionIndicator }
+                    .sharedBackgroundVisibility(.hidden)
+            } else {
+                ToolbarItem(placement: .topBarTrailing) { encryptionIndicator }
+            }
+        }
     }
 
     var body: some View {
@@ -1076,36 +1101,48 @@ struct ChatView: View {
                     }
                 }
                 
-                Button {
-                    guard !HelperTools.isContactBlacklistedForEncryption(contact.obj) else {
-                        return
-                    }
-                    if contact.isEncrypted {
-                        DDLogVerbose("Showing should disable encryption confirmation...")
-                        showShouldDisableEncryptionConfirmation(true)
-                    } else {
-                        showCannotEncryptAlert(!contact.obj.toggleEncryption(true))
-                    }
-                } label: {
-                    if contact.isEncrypted {
-                        Label {
-                            Text("Messages are encrypted")
-                        } icon: {
-                            Image(systemName: "lock.fill")
+                //isaCloud: groups and channels only show the state, without an action (the encryption of a group is changed in its details)
+                if !contact.isMuc {
+                    Button {
+                        guard !HelperTools.isContactBlacklistedForEncryption(contact.obj) else {
+                            return
                         }
-                    } else {
-                        Label {
-                            Text("Messages are NOT encrypted")
-                        } icon: {
-                            //isaCloud: red only while the button works; where encryption is not possible (public channels) it stays gray
-                            Image(systemName: "lock.open.fill")
-                                .foregroundColor(encryptionButtonDisabled ? nil : .red)
+                        if contact.isEncrypted {
+                            DDLogVerbose("Showing should disable encryption confirmation...")
+                            showShouldDisableEncryptionConfirmation(true)
+                        } else {
+                            showCannotEncryptAlert(!contact.obj.toggleEncryption(true))
                         }
+                    } label: {
+                        if contact.isEncrypted {
+                            Label {
+                                Text("Messages are encrypted")
+                            } icon: {
+                                Image(systemName: "lock.fill")
+                            }
+                        } else {
+                            Label {
+                                Text("Messages are NOT encrypted")
+                            } icon: {
+                                //isaCloud: red only while the button works; where encryption is not possible (public channels) it stays gray
+                                Image(systemName: "lock.open.fill")
+                                    .foregroundColor(encryptionButtonDisabled ? nil : .red)
+                            }
+                        }
+                    }
+                    .tint(Color("isaCloudPink"))
+                    .disabled(encryptionButtonDisabled)
+                    .confirmationDialog(Text("Disable encryption?"), isPresented: $showDisableEncryptionDialog, titleVisibility: .visible) {
+                        Button("No, keep encryption activated", role: .cancel) { }
+                        Button("Yes, deactivate encryption", role: .destructive) {
+                            contact.obj.toggleEncryption(false)
+                        }
+                    } message: {
+                        Text("Do you really want to disable encryption for this contact?")
                     }
                 }
-                .tint(Color("isaCloudPink"))
-                .disabled(encryptionButtonDisabled)
             }
+            encryptionIndicatorToolbarItem
         }
         .toolbarRole(.editor)       //make sure to never show the title of the previous view in the back bar button
         .canContainExternalLinks()
