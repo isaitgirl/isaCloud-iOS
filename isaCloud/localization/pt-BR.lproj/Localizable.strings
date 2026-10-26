@@ -127,3 +127,15 @@
 "%d participants" = "%d participantes";
 
 "Avatar Visible to Everyone" = "Foto Visível para Todos";
+
+"Nickname" = "Apelido";
+"Use the Account Name" = "Usar o Nome da Conta";
+"Only this group/channel sees this nickname. Your account name does not change." = "Só este grupo ou canal vê este apelido. O nome da sua conta não muda.";
+"This nickname is not valid" = "Este apelido não é válido";
+"This nickname is already used in this group/channel" = "Este apelido já está em uso neste grupo ou canal";
+"This nickname is reserved or the group/channel does not allow changing it" = "Este apelido é reservado ou o grupo ou canal não permite trocar";
+"Could not change nickname" = "Não foi possível trocar o apelido";
+"The group/channel is still being entered, please try again in a moment" = "O grupo ou canal ainda está sendo acessado, tente de novo em instantes";
+"The nickname is already being changed, please wait" = "O apelido já está sendo trocado, aguarde";
+"The group/channel did not answer, the nickname was not changed" = "O grupo ou canal não respondeu, o apelido não foi trocado";
+"Save" = "Salvar";
