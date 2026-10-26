@@ -40,6 +40,8 @@
     NSMutableSet* _destroying;
     NSMutableSet* _firstJoin;
     NSMutableDictionary* _changingName;
+    NSMutableSet* _nickBookmarkPending;     //isaCloud: rooms whose new nick is not in the remote bookmark yet (memory only)
+    NSMutableDictionary* _changingNick;     //isaCloud: room --> @{nick, oldNick, token} of a nick change waiting for the answer of the service (memory only, never saved)
     NSDate* _lastPing;
     NSMutableSet* _noUpdateBookmarks;
     //these won't be persisted because it is only for the ui
@@ -94,6 +96,8 @@ static NSString* const kIsaCloudGuideRoom = @"guiaxmpp@conference.isacloud.cc";
     _destroying = [NSMutableSet new];
     _firstJoin = [NSMutableSet new];
     _changingName = [NSMutableDictionary new];
+    _changingNick = [NSMutableDictionary new];
+    _nickBookmarkPending = [NSMutableSet new];
     _uiHandler = [NSMutableDictionary new];
     _lastPing = [NSDate date];
     _noUpdateBookmarks = [NSMutableSet new];
@@ -181,6 +185,8 @@ static NSString* const kIsaCloudGuideRoom = @"guiaxmpp@conference.isacloud.cc";
             _roomFeatures = [NSMutableDictionary new];
             _destroying = [NSMutableSet new];
             _changingName = [NSMutableDictionary new];
+            _changingNick = [NSMutableDictionary new];
+            _nickBookmarkPending = [NSMutableSet new];
             
             //make sure all idle timers get invalidated properly
             NSDictionary* joiningCopy = [_joining copy];
@@ -334,6 +340,10 @@ static NSString* const kIsaCloudGuideRoom = @"guiaxmpp@conference.isacloud.cc";
         }
         [[DataLayer sharedInstance] setMucHats:hats forRoom:presenceNode.fromUser nick:presenceNode.fromResource forAccountID:_account.accountID];
     }
+
+    //isaCloud: answers to a nick change we asked for (an error presence MUST be handled here: below it would delete the room from favorites and bookmarks)
+    if([self handleNickChangePresence:presenceNode])
+        return;
 
     //check for nickname conflict while joining and retry with underscore added to the end
     if([self isJoining:presenceNode.fromUser] && [presenceNode findFirst:@"/<type=error>/error/{urn:ietf:params:xml:ns:xmpp-stanzas}conflict"])
@@ -794,6 +804,9 @@ $$
                     }
                     break;
                 }
+                //isaCloud: the occupant (a session of ours, or somebody else) changed the nick: nothing to do here, the participants are updated by the presence handling
+                case 303:
+                    break;
                 //banned from room
                 case 301:
                 {
@@ -1780,6 +1793,211 @@ $$instance_handler(handleDiscoResponse, account.mucProcessor, $$ID(xmpp*, accoun
         [self sendJoinPresenceFor:iqNode.fromUser];
     }
 $$
+
++(NSString* _Nullable) validatedNick:(NSString*) nick
+{
+    NSString* trimmed = [nick stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    if(trimmed.length == 0 || trimmed.length > 100)
+        return nil;
+    if([trimmed rangeOfString:@"/"].location != NSNotFound || [trimmed rangeOfString:@"@"].location != NSNotFound)
+        return nil;
+    if([trimmed rangeOfCharacterFromSet:[NSCharacterSet controlCharacterSet]].location != NSNotFound)
+        return nil;
+    return trimmed;
+}
+
+-(void) saveOwnNick:(NSString*) nick forMuc:(NSString*) room
+{
+    //both tables: ownNickNameforMuc: reads buddylist first, joins after a reconnect read muc_favorites
+    [[DataLayer sharedInstance] updateOwnNickName:nick forMuc:room forAccount:_account.accountID];
+    [[DataLayer sharedInstance] addMucFavorite:room forAccountID:_account.accountID andMucNick:nick];
+    [[MLNotificationQueue currentQueue] postNotificationName:kMonalContactRefresh object:_account userInfo:@{
+        @"contact": [MLContact createContactFromJid:room andAccountID:_account.accountID]
+    }];
+}
+
+-(void) changeNickOfMuc:(NSString*) room to:(NSString*) requestedNick
+{
+    NSString* nick = [[self class] validatedNick:requestedNick];
+    if(nick == nil)
+    {
+        [self handleError:NSLocalizedString(@"This nickname is not valid", @"") forMuc:room withNode:nil andIsSevere:NO];
+        return;
+    }
+    NSString* oldNick = [[DataLayer sharedInstance] ownNickNameforMuc:room forAccount:_account.accountID];
+    if(oldNick == nil || [oldNick isEqualToString:nick])
+    {
+        DDLogInfo(@"Not changing nick of muc %@: unchanged or unknown (%@ --> %@)", room, oldNick, nick);
+        [self callSuccessUIHandlerForMuc:room];
+        return;
+    }
+    if([self isJoining:room] || [self isCreating:room])
+    {
+        [self handleError:NSLocalizedString(@"The group/channel is still being entered, please try again in a moment", @"") forMuc:room withNode:nil andIsSevere:NO];
+        return;
+    }
+    //not entered (e.g. offline): the next join uses the new nick
+    if(![self isJoined:room])
+    {
+        DDLogInfo(@"Muc %@ is not joined, saving nick '%@' for the next join...", room, nick);
+        [self saveOwnNick:nick forMuc:room];
+        [self publishNickBookmarkForMuc:room];
+        [self callSuccessUIHandlerForMuc:room];
+        return;
+    }
+    
+    if(![self startNickChangeOfMuc:room from:oldNick to:nick adopt:NO])
+        [self handleError:NSLocalizedString(@"The nickname is already being changed, please wait", @"") forMuc:room withNode:nil andIsSevere:NO];
+}
+
+-(void) adoptNick:(NSString*) nick forMuc:(NSString*) room
+{
+    NSString* oldNick = [[DataLayer sharedInstance] ownNickNameforMuc:room forAccount:_account.accountID];
+    if(nick.length == 0 || [nick isEqualToString:oldNick])
+        return;
+    if(![self isJoined:room])
+    {
+        //not entered (or just entering): the next join uses the nick of the bookmark
+        DDLogInfo(@"Adopting nick '%@' of muc %@ from its bookmark without a presence (not joined)", nick, room);
+        [self saveOwnNick:nick forMuc:room];
+        return;
+    }
+    DDLogInfo(@"Adopting nick '%@' of muc %@ from its bookmark (was '%@')...", nick, room, oldNick);
+    if(![self startNickChangeOfMuc:room from:oldNick to:nick adopt:YES])
+        DDLogInfo(@"Not adopting nick of muc %@: a nick change is already running", room);
+}
+
+//returns NO if a nick change of this room is running already
+-(BOOL) startNickChangeOfMuc:(NSString*) room from:(NSString*) oldNick to:(NSString*) nick adopt:(BOOL) adopt
+{
+    NSUUID* token = [NSUUID UUID];
+    @synchronized(_stateLockObject) {
+        if(_changingNick[room] != nil)
+            return NO;
+        _changingNick[room] = @{@"nick": nick, @"oldNick": oldNick ?: @"", @"token": token, @"adopt": @(adopt)};
+    }
+    
+    //a plain presence to the room with the new nick (no muc <x/>: this is NOT a join), with the avatar hash like all our presences
+    DDLogInfo(@"Changing nick of muc %@ from '%@' to '%@'...", room, oldNick, nick);
+    XMPPPresence* presence = [[XMPPPresence alloc] initWithHash:_account.capsHash];
+    presence.attributes[@"to"] = [NSString stringWithFormat:@"%@/%@", room, nick];
+    [_account send:presence];
+    
+    //no idle timer in the database on purpose (a timer left behind by a crash is what makes handleJoinTimeout assert): memory only
+    __weak __typeof__(self) weakSelf = self;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 20 * NSEC_PER_SEC), dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+        [weakSelf nickChangeTimedOutForMuc:room withToken:token];
+    });
+    return YES;
+}
+
+-(void) nickChangeTimedOutForMuc:(NSString*) room withToken:(NSUUID*) token
+{
+    NSDictionary* pendingChange;
+    @synchronized(_stateLockObject) {
+        if(_changingNick[room] == nil || ![_changingNick[room][@"token"] isEqual:token])
+            return;     //answered in the meantime
+        pendingChange = _changingNick[room];
+        [_changingNick removeObjectForKey:room];
+    }
+    DDLogWarn(@"Nick change of muc %@ timed out", room);
+    if([pendingChange[@"adopt"] boolValue])
+        return;
+    [self handleError:NSLocalizedString(@"The group/channel did not answer, the nickname was not changed", @"") forMuc:room withNode:nil andIsSevere:NO];
+}
+
+-(void) publishNickBookmarkForMuc:(NSString*) room
+{
+    room = [room lowercaseString];
+    @synchronized(_stateLockObject) {
+        [_nickBookmarkPending addObject:room];
+    }
+    DDLogInfo(@"Fetching the bookmark item of muc %@ to update its nick...", room);
+    [_account.pubsub fetchNode:@"urn:xmpp:bookmarks:1" from:_account.connectionProperties.identity.jid withItemsList:@[room] andHandler:$newHandler(MLPubSubProcessor, nickBookmarkFetched, $ID(room))];
+}
+
+-(BOOL) isNickBookmarkPendingForMuc:(NSString*) room
+{
+    @synchronized(_stateLockObject) {
+        return [_nickBookmarkPending containsObject:[room lowercaseString]];
+    }
+}
+
+-(void) finishNickBookmarkForMuc:(NSString*) room
+{
+    @synchronized(_stateLockObject) {
+        [_nickBookmarkPending removeObject:[room lowercaseString]];
+    }
+}
+
+-(void) setOwnNickOfMuc:(NSString*) room inBookmarkItem:(MLXMLNode*) item
+{
+    NSString* nick = [[DataLayer sharedInstance] ownNickNameforMuc:room forAccount:_account.accountID];
+    if(nick == nil)
+        return;
+    if(![item check:@"{urn:xmpp:bookmarks:1}conference/nick"])
+        [[item findFirst:@"{urn:xmpp:bookmarks:1}conference"] addChildNode:[[MLXMLNode alloc] initWithElement:@"nick"]];
+    ((MLXMLNode*)[item findFirst:@"{urn:xmpp:bookmarks:1}conference/nick"]).data = nick;
+}
+
+//returns YES if the presence was the error answer to our nick change and must not be processed any further
+-(BOOL) handleNickChangePresence:(XMPPPresence*) presenceNode
+{
+    NSString* room = presenceNode.fromUser;
+    NSDictionary* pending;
+    @synchronized(_stateLockObject) {
+        pending = _changingNick[room];
+    }
+    if(pending == nil)
+        return NO;
+    
+    if([presenceNode check:@"/<type=error>"])
+    {
+        //errors come from room/new-nick
+        if(presenceNode.fromResource != nil && ![presenceNode.fromResource isEqualToString:pending[@"nick"]])
+            return NO;
+        @synchronized(_stateLockObject) {
+            [_changingNick removeObjectForKey:room];
+        }
+        //the known errors have their own text, the others show the text of the service
+        BOOL knownError = YES;
+        NSString* description = NSLocalizedString(@"Could not change nickname", @"");
+        if([presenceNode check:@"/<type=error>/error/{urn:ietf:params:xml:ns:xmpp-stanzas}conflict"])
+            description = NSLocalizedString(@"This nickname is already used in this group/channel", @"");
+        else if([presenceNode check:@"/<type=error>/error/{urn:ietf:params:xml:ns:xmpp-stanzas}not-acceptable"])
+            description = NSLocalizedString(@"This nickname is reserved or the group/channel does not allow changing it", @"");
+        else if([presenceNode check:@"/<type=error>/error/{urn:ietf:params:xml:ns:xmpp-stanzas}jid-malformed"])
+            description = NSLocalizedString(@"This nickname is not valid", @"");
+        else
+            knownError = NO;
+        DDLogWarn(@"Nick change of muc %@ to '%@' failed: %@", room, pending[@"nick"], [presenceNode findFirst:@"error"]);
+        //adopted nicks have no ui waiting: keep the old nick (nothing was saved) and only log
+        if([pending[@"adopt"] boolValue])
+            return YES;
+        [self handleError:description forMuc:room withNode:(knownError ? nil : presenceNode) andIsSevere:NO];
+        return YES;
+    }
+    
+    //our own presence with the new nick (the service may have changed the nick we asked for, status 210: the nick of the service wins)
+    if(![presenceNode check:@"/<type=unavailable>"] &&
+        [presenceNode check:@"{http://jabber.org/protocol/muc#user}x/status<code=110>"] &&
+        presenceNode.fromResource != nil && ![presenceNode.fromResource isEqualToString:pending[@"oldNick"]])
+    {
+        @synchronized(_stateLockObject) {
+            [_changingNick removeObjectForKey:room];
+        }
+        DDLogInfo(@"Nick change of muc %@ confirmed: '%@' --> '%@'", room, pending[@"oldNick"], presenceNode.fromResource);
+        [self saveOwnNick:presenceNode.fromResource forMuc:room];
+        if(![pending[@"adopt"] boolValue])
+        {
+            //ORDER: database first, bookmark second (the push of our own bookmark publish must find the new nick in the database already)
+            [self publishNickBookmarkForMuc:room];
+            [self callSuccessUIHandlerForMuc:room];
+        }
+        //let the normal presence handling run: it updates the participants list
+    }
+    return NO;
+}
 
 //isaCloud: the service adds the avatar hash (XEP-0153) to every presence we send, but joined rooms only see it with a new presence
 -(void) sendPresenceToJoinedMucs

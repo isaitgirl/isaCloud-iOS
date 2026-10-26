@@ -6,7 +6,8 @@ O chat do app (balões, lista de mensagens) é a biblioteca ExyteChat. O Monal u
 exyte/Chat  →  monal-im/ExyteChat (main)  →  isaitgirl/ExyteChat (branch isaCloud)
 ```
 
-- Repositório: `https://github.com/isaitgirl/ExyteChat`, branch **`isaCloud`** (é o que o projeto usa).
+- Repositório: `https://github.com/isaitgirl/ExyteChat`, branch **`isaCloud`** (é a única branch que o projeto usa; nunca a `main`, que acompanha o `monal-im/ExyteChat`).
+- Revisão em uso: **`60e5f56`** (26/10/2026). Ela fica fixada em `Monal/Monal.xcworkspace/xcshareddata/swiftpm/Package.resolved`; o `project.pbxproj` só diz `branch = isaCloud`. **Depois de cada commit novo no fork é preciso atualizar essa revisão** (e fazer o push antes), senão o TestFlight compila a versão antiga.
 - Clone de trabalho: `~/projects/swift/ExyteChat`, com os remotos `origin` (nosso fork) e `upstream` (`monal-im/ExyteChat`).
 - O projeto referencia o pacote em `Monal/Monal.xcodeproj/project.pbxproj` (`repositoryURL` e `branch`) e `Monal.xcworkspace`/`Package.resolved` fixa a revisão.
 
@@ -18,7 +19,8 @@ Cada mudança é pequena, comentada com "isaCloud:" no código e vive num commit
 
 1. **Ícones de status maiores** (`MessageView.swift`): `statusViewWidth` de 10 para 16 pt, mantendo o ícone alinhado pela base do balão. Esse valor também entra nas contas de largura do balão.
 2. **Citação com uma barra só** (`Extensions/AttributedString+Quote.swift`, `MessageTextView.swift`, `MessageView.swift`): o app marca o texto citado com o atributo `quote` (`texto.quote = true`) e o balão desenha cada citação como um bloco com uma barra vertical contínua à esquerda. Mensagens com citação sempre põem a hora embaixo do texto.
-3. **Modal de quem reagiu** (`Model/ReactionGroup.swift`, `Views/MessageView/ReactionDetailsSheet.swift`, `MessageReactionView.swift`, `ChatViewModel.swift`, `ChatView.swift`, `ChatBuilderParameters.swift`, `ChatMessageView.swift`, `ChatLocalization.swift`): as reações do balão são agrupadas por emoji (um círculo por emoji, com selo de contagem quando mais de uma pessoa reagiu) e tocar nelas abre uma modal com a lista de quem reagiu, com filtro por emoji. Balões próprios do app (como o dos GIFs) abrem a mesma modal por `MessageBuilderParameters.showReactionDetailsClosure`. No app, `shouldShowOverviewFor` devolve `false`, porque a modal substitui a lista que aparecia no topo do toque longo. Testes em `Tests/ExyteChatTests/ReactionGroupTests.swift`.
+3. **Menu da mensagem abre mais cedo** (`Views/UIList.swift`): o toque longo passa de 0,5 s (padrão do SwiftUI, sentido como ~0,6 s na lista) para `minimumDuration: 0.3`. A animação do menu não precisa de mudança na biblioteca: o app chama `.messageMenuAnimationDuration(0.15)` (padrão da biblioteca: 0,3 s) em `ChatView.swift`. Os GIFs, que o app desenha por conta própria, usam os mesmos 0,3 s em `GifMessageBubble`.
+4. **Modal de quem reagiu** (`Model/ReactionGroup.swift`, `Views/MessageView/ReactionDetailsSheet.swift`, `MessageReactionView.swift`, `ChatViewModel.swift`, `ChatView.swift`, `ChatBuilderParameters.swift`, `ChatMessageView.swift`, `ChatLocalization.swift`): as reações do balão são agrupadas por emoji (um círculo por emoji, com selo de contagem quando mais de uma pessoa reagiu) e tocar nelas abre uma modal com a lista de quem reagiu, com filtro por emoji. Balões próprios do app (como o dos GIFs) abrem a mesma modal por `MessageBuilderParameters.showReactionDetailsClosure`. No app, `shouldShowOverviewFor` devolve `false`, porque a modal substitui a lista que aparecia no topo do toque longo. Testes em `Tests/ExyteChatTests/ReactionGroupTests.swift`.
 
 ## Fluxo de branches e PRs
 

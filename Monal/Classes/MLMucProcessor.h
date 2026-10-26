@@ -12,6 +12,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @class XMPPPresence;
 @class XMPPMessage;
+@class MLXMLNode;
 @class xmpp;
 
 @interface MLMucProcessor : NSObject
@@ -41,6 +42,24 @@ NS_ASSUME_NONNULL_BEGIN
 -(AnyPromise*) publishAvatar:(UIImage* _Nullable) image forMuc:(NSString*) room;
 -(AnyPromise*) setAffiliation:(NSString*) affiliation ofUser:(NSString*) jid inMuc:(NSString*) roomJid;
 -(void) inviteUser:(NSString*) jid inMuc:(NSString*) roomJid;
+
+//isaCloud: nick of this account in ONE group or channel (XEP-0045 7.6), independent of the display name of the account.
+//The result goes to the ui handler of the room (see addUIHandler:forMuc:): success, or an error with the reason of the service.
+//Joined room: the nick is saved only after the service confirmed it. Not joined: saved and used by the next join.
+-(void) changeNickOfMuc:(NSString*) room to:(NSString*) nick;
+//isaCloud: the nick of a room is part of its bookmark (XEP-0402 <nick/>): without it the next bookmarks fetch after a reconnect would bring the old nick back.
+//Only the item of this ONE room is fetched and published again (never the whole list) and the other bookmark updates carry the local nick meanwhile.
+-(void) updateBookmarks;
+//isaCloud: another device (or client) changed the nick of this room in the bookmark: follow it, WITHOUT the "joining" state of a normal join.
+//Joined room: same nick change as changeNickOfMuc:to:, but silent (no ui handler, no bookmark publish: the bookmark already has it).
+-(void) adoptNick:(NSString*) nick forMuc:(NSString*) room;
+-(void) publishNickBookmarkForMuc:(NSString*) room;
+-(BOOL) isNickBookmarkPendingForMuc:(NSString*) room;
+-(void) finishNickBookmarkForMuc:(NSString*) room;
+//sets <nick/> of a bookmark item to the nick we have in the database for this room
+-(void) setOwnNickOfMuc:(NSString*) room inBookmarkItem:(MLXMLNode*) item;
+//isaCloud: trimmed nick if it can be used in a room (not empty, no '/' or '@', no control characters, at most 100 characters), nil otherwise
++(NSString* _Nullable) validatedNick:(NSString*) nick;
 
 //isaCloud: directed presence to all joined rooms (e.g. to publish a new avatar hash)
 -(void) sendPresenceToJoinedMucs;

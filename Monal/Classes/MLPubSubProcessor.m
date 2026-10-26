@@ -296,14 +296,9 @@ $$class_handler(bookmarks2Handler, $$ID(xmpp*, account), $$ID(NSString*, jid), $
                     {
                         DDLogInfo(@"Updating muc '%@' nick on account %@ in database to nick provided by bookmarks: '%@'...", room, account.accountID, nick);
                         
-                        //update muc nickname in database
-                        [[DataLayer sharedInstance] updateOwnNickName:nick forMuc:room forAccount:account.accountID];
-                        [[DataLayer sharedInstance] addMucFavorite:room forAccountID:account.accountID andMucNick:nick];        //this will upate the already existing favorites entry
-                        
-                        //rejoin the muc (e.g. change nick)
-                        //we don't have to do a full disco because we are sure this is a real muc and we are joined already
-                        //(only real mucs are part of our local favorites list and this list is joined automatically)
-                        [account.mucProcessor sendJoinPresenceFor:room];
+                        //isaCloud: follow the new nick with a nick change presence (it updates both database tables after the service confirmed it).
+                        //The original code saved the nick here and sent a join presence, which puts a joined room into the "joining" state again.
+                        [account.mucProcessor adoptNick:nick forMuc:room];
                     }
                 }
                 //...that changed notification settings
@@ -488,6 +483,10 @@ $$class_handler(handleBookmarks2FetchResult, $$ID(xmpp*, account), $$BOOL(succes
                 [notifyOptions addChildNode:newSettingNode];
             }
 
+            //isaCloud: the nick of this room was just changed and is not in the remote bookmark yet: do not publish the old one back over it
+            if([account.mucProcessor isNickBookmarkPendingForMuc:room])
+                [account.mucProcessor setOwnNickOfMuc:room inBookmarkItem:item];
+            
             //publish this bookmark item again
             [account.pubsub publishItem:item onNode:@"urn:xmpp:bookmarks:1" withConfigOptions:@{
                 @"pubsub#persist_items": @"true",
@@ -550,6 +549,57 @@ $$class_handler(handleBookmarks2FetchResult, $$ID(xmpp*, account), $$BOOL(succes
         DDLogInfo(@"Removing muc '%@' on account %@ from bookmarks...", room, account.accountID);
         [account.pubsub retractItemWithId:room onNode:@"urn:xmpp:bookmarks:1" andHandler:$newHandler(self, bookmarks2Retracted, $ID(room))];
     }
+$$
+
+//isaCloud: result of fetching the ONE bookmark item of a room whose nick changed
+$$class_handler(nickBookmarkFetched, $$ID(xmpp*, account), $$ID(NSString*, room), $$BOOL(success), $_ID(XMPPIQ*, errorIq), $_ID(NSString*, errorReason), $_ID((NSDictionary<NSString*, MLXMLNode*>*), data))
+    NSString* bookmarkedRoom = [room lowercaseString];
+    MLXMLNode* item = nil;
+    if(success)
+    {
+        for(NSString* itemId in data)
+            if([[itemId lowercaseString] isEqualToString:bookmarkedRoom])
+                item = data[itemId];
+    }
+    else if(![errorIq check:@"error/{urn:xmpp:stanzas}item-not-found"] && ![errorIq check:@"error/{urn:ietf:params:xml:ns:xmpp-stanzas}item-not-found"])
+    {
+        DDLogWarn(@"Could not fetch the bookmark of muc '%@' to update its nick!", room);
+        [account.mucProcessor finishNickBookmarkForMuc:room];
+        [self handleErrorWithDescription:[NSString stringWithFormat:NSLocalizedString(@"Failed to save bookmark for Group/Channel: %@", @""), room] andAccount:account andErrorIq:errorIq andErrorReason:errorReason andIsSevere:NO];
+        return;
+    }
+    
+    if(item == nil || ![item check:@"{urn:xmpp:bookmarks:1}conference"])
+    {
+        //no bookmark for this room yet: the normal update creates it (using the nick of the database, the room stays pending until then)
+        DDLogInfo(@"No bookmark item for muc '%@' yet, using the normal bookmarks update to add it...", room);
+        [account.mucProcessor finishNickBookmarkForMuc:room];
+        [account.mucProcessor updateBookmarks];
+        return;
+    }
+    
+    //publish only this item, with the nick we have now
+    [account.mucProcessor setOwnNickOfMuc:room inBookmarkItem:item];
+    NSString* max_items = @"255";       //fallback for servers not supporting "max"
+    if(account.connectionProperties.supportsPubSubMax)
+        max_items = @"max";
+    DDLogInfo(@"Publishing the bookmark of muc '%@' with its new nick...", room);
+    [account.pubsub publishItem:item onNode:@"urn:xmpp:bookmarks:1" withConfigOptions:@{
+        @"pubsub#persist_items": @"true",
+        @"pubsub#access_model": @"whitelist",
+        @"pubsub#max_items": max_items,
+    } andHandler:$newHandler(self, nickBookmarkPublished, $ID(room))];
+$$
+
+$$class_handler(nickBookmarkPublished, $$ID(xmpp*, account), $$ID(NSString*, room), $$BOOL(success), $_ID(XMPPIQ*, errorIq), $_ID(NSString*, errorReason))
+    [account.mucProcessor finishNickBookmarkForMuc:room];
+    if(!success)
+    {
+        DDLogWarn(@"Could not publish the new nick of muc '%@' in its bookmark!", room);
+        [self handleErrorWithDescription:[NSString stringWithFormat:NSLocalizedString(@"Failed to save bookmark for Group/Channel: %@", @""), room] andAccount:account andErrorIq:errorIq andErrorReason:errorReason andIsSevere:NO];
+        return;
+    }
+    DDLogDebug(@"Published the new nick of muc '%@' in its bookmark", room);
 $$
 
 $$class_handler(bookmarks2Published, $$ID(xmpp*, account), $$ID(NSString*, room), $$BOOL(success), $_ID(XMPPIQ*, errorIq), $_ID(NSString*, errorReason))

@@ -50,8 +50,8 @@
         "package": "Chat",
         "repositoryURL": "https://github.com/isaitgirl/ExyteChat",
         "state": {
-          "branch": "feature/reaction-details-sheet",
-          "revision": "8875eabc691e96ececfef6898ab761ae73c7be4c",
+          "branch": "isaCloud",
+          "revision": "60e5f567669bd01cd832aeda8b27b433cdfa5696",
           "version": null
         }
       },

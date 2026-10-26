@@ -459,6 +459,18 @@ struct ContactDetails: View {
                     .addClearButton(isEditing: isEditingNickname, text: $contact.nickNameView)
                 }
                 
+                //isaCloud: nickname of this account in this group or channel only (the display name of the account does not change)
+                if contact.isMuc {
+                    NavigationLink(destination: LazyClosureView(MucNickEditView(account: account, mucJid: contact.contactJid as String))) {
+                        HStack {
+                            Text("Display Name")
+                            Spacer()
+                            Text(verbatim: DataLayer.sharedInstance().ownNickNameforMuc(contact.contactJid as String, forAccount: account.accountID) ?? "")
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+
                 Toggle(isOn: Binding(get: {
                     contact.isPinned
                 }, set: {
@@ -818,5 +830,78 @@ struct ContactDetails_Previews: PreviewProvider {
         ContactDetails(delegate:nil, contact:ObservableKVOWrapper<MLContact>(MLContact.makeDummyContact(2)))
         ContactDetails(delegate:nil, contact:ObservableKVOWrapper<MLContact>(MLContact.makeDummyContact(3)))
         ContactDetails(delegate:nil, contact:ObservableKVOWrapper<MLContact>(MLContact.makeDummyContact(4)))
+    }
+}
+
+
+//isaCloud: edit the nickname of this account in ONE group or channel. The display name of the account is not touched.
+struct MucNickEditView: View {
+    let account: xmpp
+    let mucJid: String
+    @Environment(\.dismiss) private var dismiss
+    @State private var nick: String = ""
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+
+    private var accountNick: String {
+        return MLContact.ownDisplayName(forAccount: account)
+    }
+
+    var body: some View {
+        Form {
+            Section(footer: Text("Only this group/channel sees this nickname. Your account name does not change.")) {
+                TextField("Nickname", text: $nick)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    .disabled(isSaving)
+                if nick != accountNick {
+                    //a shortcut, not an action: small and plain so that "Save" stays the main button
+                    Button {
+                        nick = accountNick
+                    } label: {
+                        Text("Use the Account Name")
+                            .font(.footnote)
+                            .foregroundColor(.primary)
+                    }
+                    .disabled(isSaving)
+                }
+            }
+            if let errorMessage = errorMessage {
+                Section {
+                    Text(errorMessage).foregroundColor(.red)
+                }
+            }
+            Section {
+                Button(action: save) {
+                    if isSaving {
+                        ProgressView()
+                    } else {
+                        Text("Save")
+                    }
+                }
+                .disabled(isSaving || MLMucProcessor.validatedNick(nick) == nil)
+            }
+        }
+        .navigationTitle(Text("Display Name"))
+        .onAppear {
+            nick = DataLayer.sharedInstance().ownNickNameforMuc(mucJid, forAccount: account.accountID) ?? accountNick
+        }
+    }
+
+    private func save() {
+        errorMessage = nil
+        isSaving = true
+        let jid = mucJid
+        let newNick = nick
+        promisifyMucAction(account: account, mucJid: jid) {
+            self.account.mucProcessor.changeNick(ofMuc: jid, to: newNick)
+        }.done { _ in
+            isSaving = false
+            dismiss()
+        }.catch { error in
+            isSaving = false
+            //the muc processor rejects with the text of the error as a String
+            errorMessage = (error as? String) ?? error.localizedDescription
+        }
     }
 }

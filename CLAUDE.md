@@ -28,7 +28,7 @@ Fork do Monal (cliente XMPP para iOS) com a marca e os ajustes do isaCloud. Bran
 
 ## ExyteChat (fork)
 
-- O chat usa um fork nosso do ExyteChat (`isaitgirl/ExyteChat`, branch `isaCloud`, clone em `~/projects/swift/ExyteChat`). Mudanças na biblioteca ficam lá, pequenas, comentadas e em commits separados. Rotina de atualização e o que o fork muda: `docs/exytechat-fork.md`.
+- O chat usa um fork nosso do ExyteChat (`isaitgirl/ExyteChat`, branch `isaCloud`, clone em `~/projects/swift/ExyteChat`). Mudanças na biblioteca ficam lá, pequenas, comentadas e em commits separados. Depois de cada commit no fork: push na branch `isaCloud` e atualizar a revisão em `Monal/Monal.xcworkspace/xcshareddata/swiftpm/Package.resolved` (senão o TestFlight compila a versão antiga). Rotina de atualização, a revisão atual e o que o fork muda: `docs/exytechat-fork.md`.
 - Toda mudança nasce em um branch novo criado a partir de `isaCloud` e volta por PR do branch novo para `isaCloud` (nunca para `develop`), no app e na biblioteca. Todo PR tem a `isaitgirl` como revisora e responsável e traz prints de antes e depois das mudanças visíveis, feitos só com dados de teste. Detalhes em `docs/exytechat-fork.md`.
 
 ## Decisões e pendências
