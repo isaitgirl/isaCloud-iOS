@@ -42,6 +42,7 @@ enum kSettingsAccountRows {
     SettingsEnabledRow,
     SettingsDisplayNameRow,
     SettingsStatusMessageRow,
+    SettingsAvatarPublicRow,    //isaCloud: avatar visible to everybody (PEP access model open) instead of only contacts
     SettingsServerDetailsRow,
     SettingsAccountRowsCnt
 };
@@ -109,6 +110,8 @@ enum DummySettingsRows {
 @property (nonatomic, strong) UIImageView *userAvatarImageView;
 @property (nonatomic, strong) UIImage *selectedAvatarImage;
 @property (nonatomic) BOOL avatarChanged;
+@property (nonatomic) BOOL avatarPublic;
+@property (nonatomic) BOOL avatarVisibilityChanged;
 @property (nonatomic) BOOL rosterNameChanged;
 @property (nonatomic) BOOL statusMessageChanged;
 @property (nonatomic) BOOL passwordChanged;
@@ -156,6 +159,8 @@ enum DummySettingsRows {
     self.avatarChanged = NO;
     self.rosterNameChanged = NO;
     self.statusMessageChanged = NO;
+    self.avatarVisibilityChanged = NO;
+    self.avatarPublic = self.editMode && [[HelperTools defaultsDB] boolForKey:[xmpp avatarPublicDefaultsKeyForAccountID:self.accountID]];
     
     //default strings used for edit and new mode
     self.sectionDictionary = [NSMutableDictionary new];
@@ -235,6 +240,19 @@ enum DummySettingsRows {
 {
     [super viewWillAppear:animated];
     DDLogVerbose(@"xmpp edit view will appear");
+    
+    //isaCloud: the visibility lives on the server (not on this device): show what is set there, unless the user already touched the switch
+    xmpp* account = self.editMode ? [[MLXMPPManager sharedInstance] getEnabledAccountForID:self.accountID] : nil;
+    if(account != nil && account.accountState >= kStateBound)
+        [account fetchAvatarVisibilityWithCompletion:^(id result) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if(self.avatarVisibilityChanged || ![result isKindOfClass:[NSNumber class]] || [result boolValue] == self.avatarPublic)
+                    return;
+                self.avatarPublic = [result boolValue];
+                [[HelperTools defaultsDB] setBool:self.avatarPublic forKey:[xmpp avatarPublicDefaultsKeyForAccountID:self.accountID]];
+                [self.tableView reloadData];
+            });
+        }];
 }
 
 -(void) viewWillDisappear:(BOOL) animated
@@ -363,6 +381,7 @@ enum DummySettingsRows {
                 if(accountID != nil)
                 {
                     self.accountID = accountID;
+                    [[HelperTools defaultsDB] setBool:self.avatarPublic forKey:[xmpp avatarPublicDefaultsKeyForAccountID:self.accountID]];
                     @synchronized(kSAMKeychainErrorDomain) {
                         [SAMKeychain setAccessibilityType:kSecAttrAccessibleAfterFirstUnlock];
                         [SAMKeychain setPassword:self.password forService:kMonalKeychainName account:self.accountID.stringValue];
@@ -425,8 +444,20 @@ enum DummySettingsRows {
                 [account publishStatusMessage:self.statusMessage];
             if(self.rosterNameChanged)
                 [account publishRosterName:self.rosterName];
+            if(self.avatarVisibilityChanged)
+                [[HelperTools defaultsDB] setBool:self.avatarPublic forKey:[xmpp avatarPublicDefaultsKeyForAccountID:self.accountID]];
             if(self.avatarChanged)
-                [account publishAvatar:self.selectedAvatarImage];
+                [account publishAvatar:self.selectedAvatarImage];       //uses the chosen visibility, too
+            else if(self.avatarVisibilityChanged)
+            {
+                //isaCloud: publish the image again with the new visibility (this also creates the nodes, if they did not exist, and sends new presences);
+                //without a local image only the nodes get reconfigured
+                MLContact* ownContact = [MLContact createContactFromJid:self.jid andAccountID:self.accountID];
+                if([[MLImageManager sharedInstance] hasIconForContact:ownContact])
+                    [account publishAvatar:[[MLImageManager sharedInstance] getIconForContact:ownContact]];
+                else
+                    [account applyAvatarVisibility];
+            }
         }
         //trigger view updates to make sure enabled/disabled account state propagates to all ui elements
         [[MLNotificationQueue currentQueue] postNotificationName:kMonalRefresh object:nil userInfo:nil];
@@ -631,6 +662,10 @@ enum DummySettingsRows {
             }
             case SettingsStatusMessageRow: {
                 [thecell initCell:NSLocalizedString(@"Status Message", @"") withTextField:self.statusMessage andPlaceholder:NSLocalizedString(@"Your status", @"") andTag:6];
+                break;
+            }
+            case SettingsAvatarPublicRow: {
+                [thecell initCell:NSLocalizedString(@"Avatar Visible to Everyone", @"") withToggle:self.avatarPublic andTag:4];
                 break;
             }
             case SettingsServerDetailsRow: {
@@ -988,6 +1023,11 @@ enum DummySettingsRows {
         case 2: {
             self.directTLS = toggle.on;
             self.detailsChanged = YES;
+            break;
+        }
+        case 4: {
+            self.avatarPublic = toggle.on;
+            self.avatarVisibilityChanged = YES;
             break;
         }
         case 3: {

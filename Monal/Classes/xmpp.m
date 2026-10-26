@@ -6273,7 +6273,7 @@ static NSRegularExpression* fastTokenRemovalRegex;
                 ] andData:nil]
             onNode:@"urn:xmpp:avatar:metadata" withConfigOptions:@{
                 @"pubsub#persist_items": @"true",
-                @"pubsub#access_model": @"presence"
+                @"pubsub#access_model": [self avatarAccessModel]        //isaCloud: chosen visibility
             } andHandler:$newHandler(MLPubSubProcessor, avatarDeleted)];
         }
         else
@@ -6291,10 +6291,51 @@ static NSRegularExpression* fastTokenRemovalRegex;
             
             [self.pubsub publishItem:item onNode:@"urn:xmpp:avatar:data" withConfigOptions:@{
                 @"pubsub#persist_items": @"true",
-                @"pubsub#access_model": @"presence"
+                @"pubsub#access_model": [self avatarAccessModel]        //isaCloud: chosen visibility
             } andHandler:$newHandler(MLPubSubProcessor, avatarDataPublished, $ID(imageHash), $UINTEGER(imageBytesLen, imageData.length))];
         }
     });
+}
+
+//isaCloud: avatar visibility. The nick (display name) node keeps "presence" in any case.
++(NSString*) avatarPublicDefaultsKeyForAccountID:(NSNumber*) accountID
+{
+    return [NSString stringWithFormat:@"avatarPublic.%@", accountID];
+}
+
+-(NSString*) avatarAccessModel
+{
+    BOOL everybody = [[HelperTools defaultsDB] boolForKey:[[self class] avatarPublicDefaultsKeyForAccountID:self.accountID]];
+    return everybody ? @"open" : @"presence";
+}
+
+-(void) applyAvatarVisibility
+{
+    //publishing with another access model would also reconfigure the nodes (see the precondition handling in MLPubSub), but only together
+    //with a new image: this changes the nodes alone. An account without avatar has no nodes: the server answers with an error that
+    //we ignore (nil handler), and the choice is used the next time an avatar is published.
+    NSString* accessModel = [self avatarAccessModel];
+    DDLogInfo(@"Setting the access model of the avatar nodes to '%@'", accessModel);
+    for(NSString* node in @[@"urn:xmpp:avatar:metadata", @"urn:xmpp:avatar:data"])
+        [self.pubsub configureNode:node withConfigOptions:@{@"pubsub#access_model": accessModel} andHandler:nil];
+}
+
+//isaCloud: reads the access model of the avatar nodes from the server, completion gets @YES (open), @NO (anything else) or NSNull (unknown: no avatar yet, error)
+-(void) fetchAvatarVisibilityWithCompletion:(monal_id_block_t) completion
+{
+    XMPPIQ* query = [[XMPPIQ alloc] initWithType:kiqGetType];
+    [query addChildNode:[[MLXMLNode alloc] initWithElement:@"pubsub" andNamespace:@"http://jabber.org/protocol/pubsub#owner" withAttributes:@{} andChildren:@[
+        [[MLXMLNode alloc] initWithElement:@"configure" withAttributes:@{@"node": @"urn:xmpp:avatar:metadata"} andChildren:@[] andData:nil]
+    ] andData:nil]];
+    [self sendIq:query withResponseHandler:^(XMPPIQ* response) {
+        XMPPDataForm* form = [response findFirst:@"{http://jabber.org/protocol/pubsub#owner}pubsub/configure/\\{http://jabber.org/protocol/pubsub#node_config}form\\"];
+        NSString* model = form[@"pubsub#access_model"];
+        DDLogInfo(@"Access model of the avatar metadata node: %@", model);
+        completion(model != nil ? @([model isEqualToString:@"open"]) : (id)NSNull.null);
+    } andErrorHandler:^(XMPPIQ* error) {
+        DDLogWarn(@"Could not read the access model of the avatar metadata node: %@", error);
+        completion(NSNull.null);
+    }];
 }
 
 -(void) publishStatusMessage:(NSString*) message

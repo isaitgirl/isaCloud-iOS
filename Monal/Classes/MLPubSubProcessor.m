@@ -617,6 +617,8 @@ $$class_handler(avatarDeleted, $$ID(xmpp*, account), $$BOOL(success), $_ID(XMPPI
         return;
     }
     DDLogDebug(@"Removed avatar from pep");
+    [account sendPresence];
+    [account.mucProcessor sendPresenceToJoinedMucs];
 $$
 
 $$class_handler(avatarMetadataPublished, $$ID(xmpp*, account), $$BOOL(success), $_ID(XMPPIQ*, errorIq), $_ID(NSString*, errorReason))
@@ -627,6 +629,10 @@ $$class_handler(avatarMetadataPublished, $$ID(xmpp*, account), $$BOOL(success), 
         return;
     }
     DDLogDebug(@"Published avatar metadata to pep");
+    
+    //isaCloud: the service adds the new avatar hash (XEP-0153) to our presences: send them again, to rooms, too
+    [account sendPresence];
+    [account.mucProcessor sendPresenceToJoinedMucs];
 $$
 
 $$class_handler(avatarDataPublished, $$ID(xmpp*, account), $$BOOL(success), $_ID(XMPPIQ*, errorIq), $_ID(NSString*, errorReason), $$ID(NSString*, imageHash), $$UINTEGER(imageBytesLen))
@@ -652,7 +658,7 @@ $$class_handler(avatarDataPublished, $$ID(xmpp*, account), $$BOOL(success), $_ID
         ] andData:nil]
     onNode:@"urn:xmpp:avatar:metadata" withConfigOptions:@{
         @"pubsub#persist_items": @"true",
-        @"pubsub#access_model": @"presence"
+        @"pubsub#access_model": [account avatarAccessModel]        //isaCloud: chosen visibility
     } andHandler:$newHandler(self, avatarMetadataPublished)];
 $$
 

@@ -679,11 +679,12 @@ struct ChatView: View {
             if let gif = params.message.attachments.first(where: { $0.mimeType == "image/gif" }) {
                 GifMessageBubble(
                     url: gif.full,
+                    message: params.message,
                     user: params.message.user,
                     isCurrentUser: params.message.user.isCurrentUser,
-                    reactions: params.message.reactions,
                     showSender: contact.isMuc,
-                    isLastOfSenderGroup: params.positionInGroup == .single || params.positionInGroup == .last
+                    isLastOfSenderGroup: params.positionInGroup == .single || params.positionInGroup == .last,
+                    showContextMenu: params.showContextMenuClosure
                 )
             } else {
                 params.defaultMessageView()

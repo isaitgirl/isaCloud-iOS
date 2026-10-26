@@ -84,41 +84,57 @@ private struct AnimatedGifRepresentable: UIViewRepresentable {
     }
 }
 
-/// a GIF sent in the chat: plays twice, then stays still until it is tapped. Its reactions are drawn over the top edge,
-/// on the same side as the other messages do (left for the own messages, right for the others).
+/// a GIF sent in the chat: plays twice, then stays still until it is tapped. Around it the same things the other messages have: the sender's
+/// avatar beside it, the time (with the lock of an encrypted message) below it, the delivery status icon beside it (own messages), the
+/// reactions over its top edge, on the same side as the other messages do (left for the own messages, right for the others), and the
+/// message menu (with the reactions to choose from) on a long press.
 struct GifMessageBubble: View {
     let url: URL
+    @ObservedObject var message: ExyteChat.Message
     @ObservedObject var user: ExyteChat.User
     let isCurrentUser: Bool
-    let reactions: [Reaction]
-    /// groups and channels: who sent the GIF is shown, like for the other messages (avatar on the last message of a sender's group, name above)
+    /// groups and channels: who sent the GIF is also shown above the picture, in a gray bubble like the text messages of others
     var showSender: Bool = false
+    /// the avatar is drawn beside the last message of a sender's group, an empty space beside the others (they line up with the bubbles)
     var isLastOfSenderGroup: Bool = true
+    /// opens the message menu (reactions, reply, copy...)
+    var showContextMenu: () -> Void = {}
     @State private var replayToken = 0
     @Environment(\.chatTheme) private var theme
 
     private static let avatarSize: CGFloat = 32
+    //the same width the ExyteChat message view reserves for the status icon
+    private static let statusSize: CGFloat = 16
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 8) {
-            if showSender && !isCurrentUser {
+            if !isCurrentUser {
                 avatar
             }
-            if showSender && !isCurrentUser {
-                //like the other messages of others in a group or channel: a gray bubble with the name above the picture
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(user.name)
-                        .font(.caption.weight(.bold))
-                        .lineLimit(1)
-                        .padding(.horizontal, 12)
-                        .padding(.top, 8)
+            VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 2) {
+                if showSender && !isCurrentUser {
+                    //like the other messages of others in a group or channel: a gray bubble with the name above the picture
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(user.name)
+                            .font(.caption.weight(.bold))
+                            .lineLimit(1)
+                            .padding(.horizontal, 12)
+                            .padding(.top, 8)
+                        gif
+                            .padding(.horizontal, 6)
+                            .padding(.bottom, 6)
+                    }
+                    .background(RoundedRectangle(cornerRadius: 14).fill(theme.colors.messageFriendBG))
+                } else {
                     gif
-                        .padding(.horizontal, 6)
-                        .padding(.bottom, 6)
                 }
-                .background(RoundedRectangle(cornerRadius: 14).fill(theme.colors.messageFriendBG))
-            } else {
-                gif
+                timeView
+            }
+            if isCurrentUser, let status = message.status {
+                statusIcon(status)
+                    .frame(width: Self.statusSize, height: Self.statusSize)
+                    //the status icon lines up with the time, not with the bottom of the picture
+                    .padding(.bottom, 1)
             }
         }
         .padding(.top, 12)
@@ -135,13 +151,55 @@ struct GifMessageBubble: View {
             .onTapGesture {
                 replayToken += 1
             }
+            .onLongPressGesture {
+                showContextMenu()
+            }
             .overlay(alignment: isCurrentUser ? .topLeading : .topTrailing) {
                 GifReactionsView(reactions: reactionItems)
                     .offset(x: isCurrentUser ? -8 : 8, y: -10)
             }
     }
 
-    /// the sender's picture beside the last GIF of a group of messages, an empty space beside the others (they line up with the bubbles)
+    /// the time of the message, with the lock when it was encrypted (OMEMO), like under the photos
+    private var timeView: some View {
+        HStack(spacing: 4) {
+            if message.encrypted {
+                Image(systemName: "lock.fill")
+            }
+            Text(message.createdAt, style: .time)
+        }
+        .font(.system(size: 11))
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 4)
+    }
+
+    /// the same icons as the other messages (see `IsaCloudStatusIcons` and the chat theme)
+    @ViewBuilder
+    private func statusIcon(_ status: ExyteChat.Message.Status) -> some View {
+        switch status {
+        case .sending:
+            theme.images.message.sending
+                .resizable()
+                .foregroundColor(theme.colors.statusGray)
+        case .sent:
+            theme.images.message.sent
+                .resizable()
+                .foregroundColor(theme.colors.messageMyBG)
+        case .received:
+            theme.images.message.received
+                .resizable()
+                .foregroundColor(theme.colors.messageMyBG)
+        case .readBy:
+            theme.images.message.read
+                .resizable()
+                .foregroundColor(theme.colors.messageMyBG)
+        case .error:
+            theme.images.message.error
+                .resizable()
+                .foregroundColor(theme.colors.statusError)
+        }
+    }
+
     @ViewBuilder
     private var avatar: some View {
         if isLastOfSenderGroup, let image = user.avatarImage {
@@ -157,7 +215,7 @@ struct GifMessageBubble: View {
 
     /// each emoji reaction with whether the current user sent it
     private var reactionItems: [(emoji: String, isMine: Bool)] {
-        return reactions.compactMap { reaction in
+        return message.reactions.compactMap { reaction in
             if case .emoji(let emoji) = reaction.type {
                 return (emoji: emoji, isMine: reaction.user.isCurrentUser)
             }

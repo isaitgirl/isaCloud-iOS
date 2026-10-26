@@ -1781,6 +1781,21 @@ $$instance_handler(handleDiscoResponse, account.mucProcessor, $$ID(xmpp*, accoun
     }
 $$
 
+//isaCloud: the service adds the avatar hash (XEP-0153) to every presence we send, but joined rooms only see it with a new presence
+-(void) sendPresenceToJoinedMucs
+{
+    for(NSString* room in [[DataLayer sharedInstance] listMucsForAccount:_account.accountID])
+    {
+        NSString* nick = [[DataLayer sharedInstance] ownNickNameforMuc:room forAccount:_account.accountID];
+        if(nick == nil || ![self isJoined:room])
+            continue;
+        DDLogInfo(@"Sending updated presence to muc %@ as '%@'...", room, nick);
+        XMPPPresence* presence = [[XMPPPresence alloc] initWithHash:_account.capsHash];
+        presence.attributes[@"to"] = [NSString stringWithFormat:@"%@/%@", room, nick];
+        [_account send:presence];
+    }
+}
+
 -(void) sendJoinPresenceFor:(NSString*) room
 {
     NSString* nick = [[DataLayer sharedInstance] ownNickNameforMuc:room forAccount:_account.accountID];

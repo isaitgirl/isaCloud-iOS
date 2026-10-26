@@ -251,6 +251,14 @@ typedef void (^monal_iq_handler_t)(XMPPIQ* _Nullable);
 -(void) initSession;
 -(void) sendDisplayMarkerForMessages:(NSArray<MLMessage*>*) unread;
 -(void) publishAvatar:(UIImage*) image;
+-(void) sendPresence;       //isaCloud: also used after publishing the avatar
+//isaCloud: who may see the avatar of this account: the key of the shared defaults holds YES for "everybody" (access model "open"),
+//NO or missing for "only the contacts" (access model "presence", the default). It is changed in the account settings (XMPPEdit).
++(NSString*) avatarPublicDefaultsKeyForAccountID:(NSNumber*) accountID;
+-(NSString*) avatarAccessModel;
+//isaCloud: puts the avatar nodes of the server in line with the chosen visibility, without publishing the image again
+-(void) applyAvatarVisibility;
+-(void) fetchAvatarVisibilityWithCompletion:(monal_id_block_t) completion;
 -(void) publishStatusMessage:(NSString*) message;
 -(void) delayIncomingMessageStanzasForArchiveJid:(NSString*) archiveJid;
 

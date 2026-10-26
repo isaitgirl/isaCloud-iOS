@@ -10,6 +10,8 @@ exyte/Chat  →  monal-im/ExyteChat (main)  →  isaitgirl/ExyteChat (branch isa
 - Clone de trabalho: `~/projects/swift/ExyteChat`, com os remotos `origin` (nosso fork) e `upstream` (`monal-im/ExyteChat`).
 - O projeto referencia o pacote em `Monal/Monal.xcodeproj/project.pbxproj` (`repositoryURL` e `branch`) e `Monal.xcworkspace`/`Package.resolved` fixa a revisão.
 
+O motivo da decisão (e as alternativas descartadas) está em `docs/decisoes.md`.
+
 ## O que o fork muda (só isto)
 
 Cada mudança é pequena, comentada com "isaCloud:" no código e vive num commit próprio, para o rebase ser fácil.

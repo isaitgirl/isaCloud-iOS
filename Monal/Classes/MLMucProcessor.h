@@ -42,6 +42,8 @@ NS_ASSUME_NONNULL_BEGIN
 -(AnyPromise*) setAffiliation:(NSString*) affiliation ofUser:(NSString*) jid inMuc:(NSString*) roomJid;
 -(void) inviteUser:(NSString*) jid inMuc:(NSString*) roomJid;
 
+//isaCloud: directed presence to all joined rooms (e.g. to publish a new avatar hash)
+-(void) sendPresenceToJoinedMucs;
 -(void) pingAllMucs;
 -(void) ping:(NSString*) roomJid;
 -(BOOL) checkIfStillBookmarked:(NSString*) room;
