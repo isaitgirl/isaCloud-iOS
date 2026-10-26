@@ -170,9 +170,7 @@ struct AddContactMenu: View {
             }
             else
             {
-                if DataLayer.sharedInstance().allContactRequests().count > 0 {
-                    ContactRequestsMenu()
-                }
+                //isaCloud: the pending contact requests are shown at the top of the contacts list (ContactsView), not here
                 
                 Section(header:Text("Contact and Group/Channel Jids are usually in the format: name@domain.tld")) {
                     if enabledAccounts.count > 1 {
@@ -236,12 +234,6 @@ struct AddContactMenu: View {
                         }
                         .disabled(toAddEmpty || toAddInvalid)
                         .buttonStyle(MonalProminentButtonStyle())
-                    }
-                }
-                
-                if DataLayer.sharedInstance().allContactRequests().count == 0 {
-                    Section {
-                        ContactRequestsMenu()
                     }
                 }
             }

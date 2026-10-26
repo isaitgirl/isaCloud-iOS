@@ -84,6 +84,58 @@ struct ContactViewEntry: View {
     }
 }
 
+//isaCloud: one pending contact request: who it is and what to do with it
+struct ContactRequestRow: View {
+    let contact: MLContact
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ContactEntry(contact: contact)
+            HStack(spacing: 8) {
+                //accepting does not leave this screen, so several requests can be answered in a row
+                Button {
+                    MLXMPPManager.sharedInstance().add(contact)
+                } label: {
+                    Text("Accept").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color("isaCloudPink"))
+
+                Button {
+                    MLXMPPManager.sharedInstance().remove(contact)
+                } label: {
+                    Text("Decline").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .tint(Color("isaCloudPink"))
+
+                Menu {
+                    Button {
+                        let appDelegate = UIApplication.shared.delegate as! MonalAppDelegate
+                        appDelegate.openChat(of: contact)
+                    } label: {
+                        Label("Open Conversation", systemImage: "text.bubble")
+                    }
+                    Button(role: .destructive) {
+                        // deny the request and block the contact
+                        MLXMPPManager.sharedInstance().remove(contact)
+                        MLXMPPManager.sharedInstance().block(true, contact: contact)
+                    } label: {
+                        Label("Decline and Block", systemImage: "person.crop.circle.badge.xmark")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .font(.title2)
+                        .frame(width: 36, height: 32)
+                }
+                .tint(Color("isaCloudPink"))
+                .accessibilityLabel("More options")
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
 //isaCloud: filter of the segmented control under the search bar
 enum ContactsFilter: Int, CaseIterable, Identifiable {
     case all, contacts, groups, channels
@@ -145,6 +197,11 @@ struct ContactsView: View {
         }
     }
 
+    //isaCloud: requests are shown for "all" and "contacts", and not while searching
+    private var showRequests: Bool {
+        return !contacts.requests.isEmpty && searchText.isEmpty && (filter == .all || filter == .contacts)
+    }
+
     private var searchResults: [MLContact] {
         return contactList.filter { matchesFilter($0) && (searchText.isEmpty || searchMatchesContact(contact: $0, search: searchText)) }
     }
@@ -163,6 +220,20 @@ struct ContactsView: View {
 
     var body: some View {
         List {
+            //isaCloud: the contact requests are at the top of the list, where they cannot be missed
+            if showRequests {
+                Section {
+                    ForEach(contacts.requests, id: \.self) { request in
+                        ContactRequestRow(contact: request)
+                    }
+                } header: {
+                    Text("Contact requests (\(contacts.requests.count))")
+                } footer: {
+                    Text("Allowing someone to add you as a contact lets them see your profile picture and when you are online.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
             ForEach(searchResults, id: \.self) { contact in
                 ContactViewEntry(contact: contact, selectedContactForContactDetails: $selectedContactForContactDetails, dismissWithContact: dismissWithContact)
             }
@@ -194,12 +265,12 @@ struct ContactsView: View {
         .textInputAutocapitalization(.never)
         .keyboardType(.emailAddress)
         .overlay {
-            if contactList.isEmpty {
+            if contactList.isEmpty && contacts.requests.isEmpty {
                 ZStack {
                     Color.contacts
                     ContentUnavailableShimView("You need friends for this ride", image: colorScheme == .dark ? .friendsDark : .friends, description: Text("Add new contacts with the + button above. Your friends will pop up here when they can talk"))
                 }
-            } else if searchResults.isEmpty {
+            } else if searchResults.isEmpty && !showRequests {
                 ZStack {
                     Color.contacts
                     ContentUnavailableShimView.search(text:searchText)
@@ -240,11 +311,11 @@ struct ContactsView: View {
                         }
                     }
                 } label: {
+                    //isaCloud: no badge here: the pending contact requests are at the top of this list
                     Image(systemName: "plus")
-                        .overlay { NumberlessBadge($contacts.requestCount) }
                 }
                 .tint(Color("isaCloudPink"))
-                .accessibilityLabel(contacts.requestCount > 0 ? "Add contact, group or channel (contact requests pending)" : "Add contact, group or channel")
+                .accessibilityLabel("Add contact, group or channel")
             }
         }
         .navigationDestination(isPresented: $showingAddContact) {
@@ -265,11 +336,14 @@ struct ContactsView: View {
 class Contacts: ObservableObject {
     @Published var contacts: Set<MLContact>
     @Published var requestCount: Int
+    @Published var requests: [MLContact]       //isaCloud: the pending contact requests, shown at the top of the list
     private var subscriptions: Set<AnyCancellable> = Set()
 
     init() {
         self.contacts = Set(DataLayer.sharedInstance().contactList())
-        self.requestCount = DataLayer.sharedInstance().allContactRequests().count
+        let requests = DataLayer.sharedInstance().allContactRequests() as! [MLContact]
+        self.requests = requests
+        self.requestCount = requests.count
         subscriptions = [
             NotificationCenter.default.publisher(for: NSNotification.Name(kMonalContactRefresh))
                 .receive(on: DispatchQueue.main)
@@ -282,6 +356,8 @@ class Contacts: ObservableObject {
     
     private func refreshContacts() {
         self.contacts = Set(DataLayer.sharedInstance().contactList())
-        self.requestCount = DataLayer.sharedInstance().allContactRequests().count
+        let requests = DataLayer.sharedInstance().allContactRequests() as! [MLContact]
+        self.requests = requests
+        self.requestCount = requests.count
     }
 }

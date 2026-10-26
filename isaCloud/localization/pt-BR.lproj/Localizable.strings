@@ -142,3 +142,10 @@
 "The nickname is already being changed, please wait" = "O apelido já está sendo trocado, aguarde";
 "The group/channel did not answer, the nickname was not changed" = "O grupo ou canal não respondeu, o apelido não foi trocado";
 "Save" = "Salvar";
+
+"Contact requests (%lld)" = "Pedidos de contato (%lld)";
+"Accept" = "Aceitar";
+"Decline" = "Recusar";
+"Decline and Block" = "Recusar e Bloquear";
+"Open Conversation" = "Abrir Conversa";
+"More options" = "Mais opções";

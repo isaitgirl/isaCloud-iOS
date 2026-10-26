@@ -50,12 +50,13 @@ xcodebuild -exportArchive -archivePath /Users/isadora/projects/swift/isaCloud-iO
 
 Quando termina sem erro, o build aparece no App Store Connect depois de processado (alguns minutos, às vezes meia hora).
 
-## 4. Liberar para os testadores internos
+## 4. Depois do envio: nada a liberar
 
-1. Abra App Store Connect → Apps → isaCloud → TestFlight.
-2. Espere o build aparecer em **Builds** com o status de pronto para testar. Se houver um aviso de conformidade de exportação, responda conforme o uso de criptografia do app (confira antes de responder, pois o texto da pergunta muda de versão para versão do App Store Connect).
-3. Em **Testadores internos**, abra o grupo e adicione o build novo.
-4. Os testadores internos recebem o aviso no app TestFlight.
+Os testadores são **internos**: o build fica disponível no app TestFlight assim que o App Store Connect termina de processar (alguns minutos, às vezes meia hora). Não é preciso adicionar o build a um grupo nem liberar nada.
+
+- Para acompanhar: App Store Connect → Apps → isaCloud → TestFlight → **Builds** (status "Processando" até ficar pronto).
+- Se aparecer um aviso de conformidade de exportação, responda conforme o uso de criptografia do app (confira antes de responder, pois o texto da pergunta muda de versão para versão do App Store Connect).
+- A Apple manda e-mail se o binário for rejeitado.
 
 ## Problemas já vistos
 

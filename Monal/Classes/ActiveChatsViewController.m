@@ -316,9 +316,15 @@ static BOOL _dnssecWarningDisplayed;
     if(!avatar)
         avatar = [UIImage imageNamed:ACImageNameNoicon];
     CGFloat size = 30;
-    //isaCloud: the glass bubble of iOS 26+ is bigger than the old bar button, a 30pt avatar looks lost in it
+    //isaCloud: on iOS 26+ the system draws a glass bubble around a bar button with a fixed padding, and a 40pt avatar looks lost in it.
+    //Without the bubble the round avatar is the button itself and fills all of its space.
     if(@available(iOS 26.0, *))
-        size = 40;
+    {
+        size = 44;
+        //only when it changes: setting it again makes UIKit rebuild the bar button items
+        if(!self.settingsButton.hidesSharedBackground)
+            self.settingsButton.hidesSharedBackground = YES;
+    }
     UIGraphicsImageRenderer* renderer = [[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(size, size)];
     UIImage* icon = [renderer imageWithActions:^(UIGraphicsImageRendererContext* context) {
         [avatar drawInRect:CGRectMake(0, 0, size, size)];
@@ -357,11 +363,16 @@ static BOOL _dnssecWarningDisplayed;
     }
     
     //replace the image
-    UIImage* image = [[UIImage systemImageNamed:@"person.2.fill"] imageWithTintColor:UIColor.tintColor];
-    BOOL hasContactRequests = [[DataLayer sharedInstance] allContactRequests].count > 0;
-    ((UIImageView*)self.composeButton.customView).image = hasContactRequests ? [HelperTools imageWithNotificationBadgeForImage:image] : image;
+    //isaCloud: a bit bigger than the default size of the symbol (it looked small next to the avatar button); the glass bubble of iOS 26+ is bigger, too
+    CGFloat symbolSize = 23;
+    if(@available(iOS 26.0, *))
+        symbolSize = 25;
+    UIImage* image = [[UIImage systemImageNamed:@"person.2.fill" withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:symbolSize weight:UIImageSymbolWeightRegular]] imageWithTintColor:UIColor.tintColor];
+    //isaCloud: the badge shows how many contact requests are waiting
+    NSUInteger contactRequestCount = [[DataLayer sharedInstance] allContactRequests].count;
+    ((UIImageView*)self.composeButton.customView).image = [HelperTools imageWithNotificationCount:(NSInteger)contactRequestCount forImage:image];
     
-    if([[DataLayer sharedInstance] allContactRequests].count > 0)
+    if(contactRequestCount > 0)
         [self.composeButton setAccessibilityLabel:NSLocalizedString(@"Open contact list (contact requests pending)", @"")];
     else
         [self.composeButton setAccessibilityLabel:NSLocalizedString(@"Open contact list", @"")];

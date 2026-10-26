@@ -97,6 +97,8 @@ NSDictionary* _Nullable dictionaryComprehension(NSDictionary* _Nullable dict, id
 +(void) postError:(NSString*) description withNode:(XMPPStanza* _Nullable) node andAccount:(xmpp*) account andIsSevere:(BOOL) isSevere;
 //isaCloud: an error of something that runs in the background and does not stop the app from being used (e.g. a group that cannot be entered right now):
 //it is logged and posted like the others, but marked "quiet": no banner and no notification
+//isaCloud: the image with a round badge on its top right corner that shows a number ("9+" from ten on); no badge for 0. The size of the image is the same for any count
++(UIImage*) imageWithNotificationCount:(NSInteger) count forImage:(UIImage*) image;
 +(void) postQuietError:(NSString*) description withNode:(XMPPStanza* _Nullable) node andAccount:(xmpp*) account;
 +(NSString*) extractXMPPError:(XMPPStanza* _Nullable) stanza withDescription:(NSString* _Nullable) description;
 +(NSError*) getNSErrorFrom:(XMPPStanza* _Nullable) stanza withDescription:(NSString*) description;

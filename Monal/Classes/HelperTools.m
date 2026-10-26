@@ -1767,6 +1767,36 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     }];
 }
 
++(UIImage*) imageWithNotificationCount:(NSInteger) count forImage:(UIImage*) image
+{
+    //The canvas always has the same size, with or without badge: the bar button keeps the size of its first image, and a bigger image
+    //(the badge sticks out of the icon) would make iOS shrink the whole icon.
+    CGFloat badgeHeight = 16;
+    //the room for the badge is shared by both sides, so the icon itself is centered in the image (and in the button)
+    CGFloat marginX = 6;
+    CGFloat marginY = 4;
+    CGSize canvas = CGSizeMake(image.size.width + marginX, image.size.height + marginY);
+    UIGraphicsImageRendererFormat* format = [UIGraphicsImageRendererFormat new];
+    format.scale = image.scale;
+    return [[[UIGraphicsImageRenderer alloc] initWithSize:canvas format:format] imageWithActions:^(UIGraphicsImageRendererContext* _Nonnull rendererContext __unused) {
+        [image drawInRect:CGRectMake(marginX / 2, marginY / 2, image.size.width, image.size.height)];
+        if(count <= 0)
+            return;
+        NSString* text = count > 9 ? @"9+" : [NSString stringWithFormat:@"%ld", (long)count];
+        UIFont* font = [UIFont systemFontOfSize:11 weight:UIFontWeightBold];
+        NSDictionary* attributes = @{NSFontAttributeName: font, NSForegroundColorAttributeName: UIColor.whiteColor};
+        CGSize textSize = [text sizeWithAttributes:attributes];
+        CGFloat badgeWidth = MAX(badgeHeight, ceil(textSize.width) + 8);
+        CGRect badgeRect = CGRectMake(canvas.width - badgeWidth, 0, badgeWidth, badgeHeight);
+        //black badge with white number (the red one did not contrast with the pink icon), with a thin white ring so it also stands out in dark mode
+        [UIColor.whiteColor setFill];
+        [[UIBezierPath bezierPathWithRoundedRect:CGRectInset(badgeRect, -1.5, -1.5) cornerRadius:(badgeHeight + 3) / 2] fill];
+        [UIColor.blackColor setFill];
+        [[UIBezierPath bezierPathWithRoundedRect:badgeRect cornerRadius:badgeHeight / 2] fill];
+        [text drawAtPoint:CGPointMake(CGRectGetMidX(badgeRect) - textSize.width / 2, CGRectGetMidY(badgeRect) - textSize.height / 2) withAttributes:attributes];
+    }];
+}
+
 +(UIImageView*) buttonWithNotificationBadgeForImage:(UIImage*) image hasNotification:(bool) hasNotification withTapHandler:(UITapGestureRecognizer*) handler
 {
     UIImageView* result;
