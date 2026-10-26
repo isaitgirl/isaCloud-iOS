@@ -446,18 +446,14 @@ enum DummySettingsRows {
                 [account publishRosterName:self.rosterName];
             if(self.avatarVisibilityChanged)
                 [[HelperTools defaultsDB] setBool:self.avatarPublic forKey:[xmpp avatarPublicDefaultsKeyForAccountID:self.accountID]];
+            //isaCloud: change the access model of the avatar nodes FIRST (two small requests, processed by the server in order),
+            //then publish the new image, if there is one: publishing an image with another access model than the node has makes the server
+            //answer "precondition not met" and the app would upload the whole image a second time. A visibility change alone does not upload
+            //the image at all. (Some servers limit the traffic of a client to a few kB/s: every upload of a photo takes about 15 seconds there.)
+            if(self.avatarVisibilityChanged)
+                [account applyAvatarVisibility];
             if(self.avatarChanged)
                 [account publishAvatar:self.selectedAvatarImage];       //uses the chosen visibility, too
-            else if(self.avatarVisibilityChanged)
-            {
-                //isaCloud: publish the image again with the new visibility (this also creates the nodes, if they did not exist, and sends new presences);
-                //without a local image only the nodes get reconfigured
-                MLContact* ownContact = [MLContact createContactFromJid:self.jid andAccountID:self.accountID];
-                if([[MLImageManager sharedInstance] hasIconForContact:ownContact])
-                    [account publishAvatar:[[MLImageManager sharedInstance] getIconForContact:ownContact]];
-                else
-                    [account applyAvatarVisibility];
-            }
         }
         //trigger view updates to make sure enabled/disabled account state propagates to all ui elements
         [[MLNotificationQueue currentQueue] postNotificationName:kMonalRefresh object:nil userInfo:nil];

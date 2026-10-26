@@ -892,8 +892,16 @@ static BOOL _dnssecWarningDisplayed;
     {
         NSNumber* accountID = accountDict[kAccountID];
         xmpp* account = [[MLXMPPManager sharedInstance] getEnabledAccountForID:accountID];
+        //isaCloud: on iOS 27 this runs before the account objects exist when the app is opened while the notification extension is still
+        //running: willFinishLaunching waits for the extension in a nested run loop, UIKit builds the first screen in that time (viewDidLoad
+        //ends up here), and didFinishLaunching, which creates the accounts, has not run yet. The original code threw an exception here and
+        //crashed the app on launch. The warnings are only skipped for now: they are checked again when the catchup of the account is done
+        //(kMonalFinishedCatchup, see viewDidLoad).
         if(!account)
-            @throw [NSException exceptionWithName:@"RuntimeException" reason:@"Connected xmpp* object for accountID is nil!" userInfo:accountDict];
+        {
+            DDLogWarn(@"Not checking the warnings of account %@ now: xmpp* object does not exist yet, waiting for the catchup...", accountID);
+            continue;
+        }
         
         prependToViewQueue((^(PMKResolver resolve) {
             if(![_mamWarningDisplayed containsObject:accountID] && account.accountState >= kStateInitStarted && account.connectionProperties.accountDiscoDone)

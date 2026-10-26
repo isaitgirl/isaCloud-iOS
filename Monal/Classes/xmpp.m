@@ -6312,12 +6312,12 @@ static NSRegularExpression* fastTokenRemovalRegex;
 -(void) applyAvatarVisibility
 {
     //publishing with another access model would also reconfigure the nodes (see the precondition handling in MLPubSub), but only together
-    //with a new image: this changes the nodes alone. An account without avatar has no nodes: the server answers with an error that
-    //we ignore (nil handler), and the choice is used the next time an avatar is published.
+    //with a new image, and the image would be uploaded twice: this changes the nodes alone, with two small requests.
     NSString* accessModel = [self avatarAccessModel];
     DDLogInfo(@"Setting the access model of the avatar nodes to '%@'", accessModel);
-    for(NSString* node in @[@"urn:xmpp:avatar:metadata", @"urn:xmpp:avatar:data"])
-        [self.pubsub configureNode:node withConfigOptions:@{@"pubsub#access_model": accessModel} andHandler:nil];
+    //the metadata node tells if there is an avatar on the server: if it is not there, the handler publishes the image we have (this creates the nodes)
+    [self.pubsub configureNode:@"urn:xmpp:avatar:metadata" withConfigOptions:@{@"pubsub#access_model": accessModel} andHandler:$newHandler(MLPubSubProcessor, avatarVisibilityApplied)];
+    [self.pubsub configureNode:@"urn:xmpp:avatar:data" withConfigOptions:@{@"pubsub#access_model": accessModel} andHandler:nil];
 }
 
 //isaCloud: reads the access model of the avatar nodes from the server, completion gets @YES (open), @NO (anything else) or NSNull (unknown: no avatar yet, error)

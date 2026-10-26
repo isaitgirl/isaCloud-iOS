@@ -33,7 +33,7 @@ Fork do Monal (cliente XMPP para iOS) com a marca e os ajustes do isaCloud. Bran
 
 ## Decisões e pendências
 
-- O porquê das decisões de projeto e o que está pendente de conferência (inclui o código temporário de medição de envio, que não deve ser commitado): `docs/decisoes.md`. Ao tomar uma decisão nova ou deixar algo pendente, registre lá.
+- **Decisões** (o porquê das escolhas de projeto, de código e do fork, e o que foi descartado): `docs/decisoes.md`. **Funcionalidades e pendências** (feito, em andamento, a fazer, bugs conhecidos): `ROADMAP.md`. Ao tomar uma decisão nova, registre no `docs/decisoes.md` **e** numa linha do roadmap; resultados de teste e pendências ficam só no roadmap. O código temporário de medição, quando existir, não deve ser commitado.
 
 ## Troubleshooting
 

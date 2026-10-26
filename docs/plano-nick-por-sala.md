@@ -1,6 +1,6 @@
 # Plano: apelido (nick) por grupo e canal
 
-Status: **implementado em 26/10/2026 nos 3 passos abaixo (passos 1 a 3 testados nos simuladores; falta iPhone, grupo privado e a rotina de 4 a 5).** O resultado e as lições estão em `docs/decisoes.md` ("Apelido por grupo e canal"). O texto abaixo é o plano original. Meta: a pessoa escolhe um nick diferente em cada grupo ou canal, sem mexer no nome de exibição da conta (o `nick` do PEP, `rosterName`). Contexto da tentativa anterior, revertida: `docs/decisoes.md` ("Nick por sala: tentado e revertido").
+Status: **implementado em 26/10/2026 nos 3 passos abaixo (passos 1 a 3 testados nos simuladores, no iPhone, em canal público e em grupo privado).** O resultado e as lições estão em `docs/decisoes.md` ("Apelido por grupo e canal"). O texto abaixo é o plano original. Meta: a pessoa escolhe um nick diferente em cada grupo ou canal, sem mexer no nome de exibição da conta (o `nick` do PEP, `rosterName`). Contexto da tentativa anterior, revertida: `docs/decisoes.md` ("Nick por sala: tentado e revertido").
 
 ## 1. O que já existe (e o que isso muda na conta)
 

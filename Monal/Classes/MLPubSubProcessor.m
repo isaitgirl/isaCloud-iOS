@@ -627,6 +627,24 @@ $$class_handler(bookmarks2Retracted, $$ID(xmpp*, account), $$ID(NSString*, room)
     DDLogDebug(@"Retracted bookmark for muc '%@' from pep", room);
 $$
 
+//isaCloud: result of changing the access model of the avatar metadata node (xmpp applyAvatarVisibility)
+$$class_handler(avatarVisibilityApplied, $$ID(xmpp*, account), $$BOOL(success), $_ID(XMPPIQ*, errorIq))
+    if(success)
+        return;
+    if(![errorIq check:@"error/{urn:ietf:params:xml:ns:xmpp-stanzas}item-not-found"])
+    {
+        DDLogWarn(@"Could not change the access model of the avatar node: %@", errorIq);
+        return;
+    }
+    //no avatar on the server yet: publish the one we have locally, if any (with the access model chosen), which creates the nodes
+    MLContact* ownContact = [MLContact createContactFromJid:account.connectionProperties.identity.jid andAccountID:account.accountID];
+    if([[MLImageManager sharedInstance] hasIconForContact:ownContact])
+    {
+        DDLogInfo(@"No avatar nodes on the server, publishing the local avatar with the chosen visibility...");
+        [account publishAvatar:[[MLImageManager sharedInstance] getIconForContact:ownContact]];
+    }
+$$
+
 $$class_handler(rosterNamePublished, $$ID(xmpp*, account), $$BOOL(success), $_ID(XMPPIQ*, errorIq), $_ID(NSString*, errorReason))
     if(!success)
     {
