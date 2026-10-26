@@ -99,6 +99,8 @@ struct GifMessageBubble: View {
     var isLastOfSenderGroup: Bool = true
     /// opens the message menu (reactions, reply, copy...)
     var showContextMenu: () -> Void = {}
+    /// called when the reactions are tapped, to show who reacted with what
+    var onReactionsTap: () -> Void = {}
     @State private var replayToken = 0
     @Environment(\.chatTheme) private var theme
 
@@ -156,6 +158,8 @@ struct GifMessageBubble: View {
             }
             .overlay(alignment: isCurrentUser ? .topLeading : .topTrailing) {
                 GifReactionsView(reactions: reactionItems)
+                    .contentShape(Rectangle())
+                    .onTapGesture(perform: onReactionsTap)
                     .offset(x: isCurrentUser ? -8 : 8, y: -10)
             }
     }

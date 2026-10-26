@@ -684,7 +684,8 @@ struct ChatView: View {
                     isCurrentUser: params.message.user.isCurrentUser,
                     showSender: contact.isMuc,
                     isLastOfSenderGroup: params.positionInGroup == .single || params.positionInGroup == .last,
-                    showContextMenu: params.showContextMenuClosure
+                    showContextMenu: params.showContextMenuClosure,
+                    onReactionsTap: params.showReactionDetailsClosure
                 )
             } else {
                 params.defaultMessageView()
@@ -830,6 +831,9 @@ struct ChatView: View {
                 (mlMessage.stanzaId != nil && self.account.mucProcessor.getRoomFeatures(forMuc:mlMessage.chatContact.contactJid).contains("urn:xmpp:occupant-id:0"))
             DDLogDebug("Checking if we can react to: \(String(describing:mlMessage)) --> \(String(describing:retval))")
             return retval
+        }, shouldShowOverviewFor: { _ in
+            // who reacted with what is shown by tapping the reactions of a message, not above the long press menu
+            false
         })
         .autoFocusTextInputOnChatOpen(chatViewDefaultsDB.showKeyboardOnChatOpen)
         .showUsername(contact.isMuc)

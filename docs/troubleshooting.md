@@ -123,6 +123,31 @@ Capturas de tela: ver as regras de nome e pasta em `CLAUDE.md` (`docs/screenshot
 
 Crashes do simulador ficam em `~/Library/Logs/DiagnosticReports/isaCloud-*.ips` (o mesmo leitor da seção 1 serve).
 
+### Emojis aparecem como `[?]` no simulador
+
+Sintoma: reações, o seletor de reações e qualquer emoji aparecem como uma caixinha com `?`, até no Safari do simulador. No iPhone de verdade aparecem normalmente.
+
+Causa: defeito da Apple nos runtimes de simulador **iOS 26.1 e 26.3.1** (build `23D8133`): a fonte de emoji existe, mas não é usada. Não é do app nem do ExyteChat. Relatos e confirmações: issue 56183 do React Native (`facebook/react-native`). Confirmado aqui em 25 e 26/10/2026: os runtimes iOS 26.4 e 27.1 mostram os emojis, o 26.3.1 não.
+
+Solução: usar um runtime que não tenha o defeito (iOS 26.4 ou mais novo, ou o 27.x).
+
+```bash
+# ver o que o Xcode oferece e baixar (cerca de 8 GB)
+xcodebuild -downloadPlatform iOS -buildVersion 26.4
+
+# criar um iPhone nesse runtime e ligar
+xcrun simctl create "iPhone 17 Pro (26.4)" com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro com.apple.CoreSimulator.SimRuntime.iOS-26-4
+```
+
+Teste rápido de emoji, sem abrir o app: servir uma página HTML com emojis no Mac e abrir no Safari do simulador (`xcrun simctl openurl <udid> http://127.0.0.1:<porta>/emoji.html`; URLs `data:` não abrem).
+
+Prints de reações devem ser feitos num runtime sem o defeito. Depois de confirmar, apague o runtime com defeito e os aparelhos dele (cada runtime ocupa cerca de 8 GB):
+
+```bash
+xcrun simctl delete <udid-do-aparelho>
+xcrun simctl runtime delete <id-do-runtime>   # o id aparece em: xcrun simctl runtime list
+```
+
 ## 6. Logs do app
 
 Os logs do app (DDLog) **não** aparecem no `log stream` do sistema. O que aparece:
