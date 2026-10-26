@@ -95,6 +95,9 @@ NSDictionary* _Nullable dictionaryComprehension(NSDictionary* _Nullable dict, id
 +(void) __attribute__((noreturn)) throwExceptionWithName:(NSString*) name reason:(NSString*) reason userInfo:(NSDictionary* _Nullable) userInfo;
 +(void) postError:(NSString*) description withNode:(XMPPStanza* _Nullable) node andAccount:(xmpp*) account andIsSevere:(BOOL) isSevere andDisableAccount:(BOOL) disableAccount;
 +(void) postError:(NSString*) description withNode:(XMPPStanza* _Nullable) node andAccount:(xmpp*) account andIsSevere:(BOOL) isSevere;
+//isaCloud: an error of something that runs in the background and does not stop the app from being used (e.g. a group that cannot be entered right now):
+//it is logged and posted like the others, but marked "quiet": no banner and no notification
++(void) postQuietError:(NSString*) description withNode:(XMPPStanza* _Nullable) node andAccount:(xmpp*) account;
 +(NSString*) extractXMPPError:(XMPPStanza* _Nullable) stanza withDescription:(NSString* _Nullable) description;
 +(NSError*) getNSErrorFrom:(XMPPStanza* _Nullable) stanza withDescription:(NSString*) description;
 +(void) showErrorOnAlpha:(NSString*) description withNode:(XMPPStanza* _Nullable) node andAccount:(xmpp* _Nullable) account andFile:(char*) file andLine:(int) line andFunc:(char*) func;

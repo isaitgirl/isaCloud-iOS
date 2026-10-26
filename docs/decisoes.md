@@ -50,6 +50,11 @@ Plano e raciocínio completos: `docs/plano-nick-por-sala.md`.
 - Seletor de fotos do chat: o do sistema (`PHPicker`), porque o do ExyteMediaPicker não rola no iOS 27.
 - Seletores das telas de ajustes: margem direita de 26 pt em `MLSwitchCell.xib` (no iOS 27 o conteúdo da célula passa da borda visível; 26 pt ficou bom nos dois sistemas). É uma mudança de uma linha num xib do Monal: pode conflitar em merge.
 
+## Avisos de erro: o que vira banner (26/10/2026)
+- **Decisão:** só impede o uso → banner (e, se grave, notificação). Falha de fundo que não impede nada (sala de outro servidor que não responde, entrada temporariamente impossível) vira erro "quiet": só log, sem banner e sem notificação (`HelperTools postQuietError:`, `MLMucProcessor handleBackgroundError:`). Avisos não graves repetidos da mesma conta: no máximo um a cada 10 minutos (`showConnectionStatus:`, `MonalAppDelegate.m`). Se uma tela espera pela sala (UI handler), ela continua recebendo o erro.
+- **Por quê:** o banner amarelo/vermelho de dez segundos aparecia mesmo para falhas inofensivas e repetidas a cada ping; o timeout de entrada era grave e gerava até notificação com som fora do app.
+- **Fica para depois (nice to have):** a lista "Avisos do Sistema (n)" em Configurações (ver o roadmap, linha 54).
+
 ## Código do Monal que não alteramos sem validar (26/10/2026)
 - **Exceção feita:** `showWarningsIfNeeded` (`ActiveChatsViewController.m`) pula a conta em vez de lançar exceção quando o objeto `xmpp*` ainda não existe, porque o app caía na abertura no iOS 27 (a tela inicial é montada durante a espera pela extensão de notificações, antes de `didFinishLaunching` criar as contas). Os avisos são checados de novo no fim do catchup. Mudança de poucas linhas, com comentário "isaCloud:".
 - `handleJoinTimeout` (asserção "Spurious idle timer firing!"), `DumpMemoryGraph` (`MLDelayedDealloc.m`, só em Debug) e a asserção ao remover conta (`MLMessage handleGlobalRefresh:`) são arquivos do Monal: só mexemos com validação da Isadora, por causa do merge. O TestFlight (Release) não tem o despejo de memória. Detalhes e correções possíveis: linha "Corrigir no Monal" em "Por avaliar" no roadmap.

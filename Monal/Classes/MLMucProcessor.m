@@ -372,8 +372,8 @@ static NSString* const kIsaCloudGuideRoom = @"guiaxmpp@conference.isacloud.cc";
         //this will also keep the buddy list entry
         //--> allow users to read the last messages before the muc got broken
         
-        //only display an error banner, no notification (this is only temporary)
-        [self handleError:[NSString stringWithFormat:NSLocalizedString(@"Temporary failure to enter Group/Channel: %@", @""), presenceNode.fromUser] forMuc:presenceNode.fromUser withNode:presenceNode andIsSevere:NO];
+        //isaCloud: this is only temporary and does not stop the app from being used: no banner and no notification (only the log)
+        [self handleBackgroundError:[NSString stringWithFormat:NSLocalizedString(@"Temporary failure to enter Group/Channel: %@", @""), presenceNode.fromUser] forMuc:presenceNode.fromUser withNode:presenceNode];
         return;
     }
     else if([presenceNode check:@"/<type=error>"] && ([self isJoining:presenceNode.fromUser] || [self isJoined:presenceNode.fromUser]))
@@ -2034,7 +2034,8 @@ $$
 }
 
 $$instance_handler(handleJoinTimeout, account.mucProcessor, $$ID(xmpp*, account), $$ID(NSString*, room), $$ID(NSNumber*, timerId))
-    [self handleError:[NSString stringWithFormat:NSLocalizedString(@"Could not join group/channel '%@': timeout", @""), room] forMuc:room withNode:nil andIsSevere:YES];
+    //isaCloud: a room that does not answer (e.g. a server of another domain that is down) does not stop anything else: no red banner and no notification with sound
+    [self handleBackgroundError:[NSString stringWithFormat:NSLocalizedString(@"Could not join group/channel '%@': timeout", @""), room] forMuc:room withNode:nil];
     
     //don't remove the muc, this could be a temporary (network induced) error, but mark it as not joining anymore
     @synchronized(_stateLockObject) {
@@ -2223,6 +2224,16 @@ $$instance_handler(fetchAvatarAgain, account.mucProcessor, $$ID(xmpp*, account),
     else
         [self fetchAvatarForRoom:jid];
 $$
+
+//isaCloud: like handleError:..., but for errors of things that run in the background: a ui that waits for this room still gets the error,
+//otherwise it is only logged (no banner, no notification)
+-(void) handleBackgroundError:(NSString*) description forMuc:(NSString*) room withNode:(XMPPStanza* _Nullable) node
+{
+    if([self getUIHandlerForMuc:room] != nil)
+        [self handleError:description forMuc:room withNode:node andIsSevere:NO];
+    else
+        [HelperTools postQuietError:description withNode:node andAccount:_account];
+}
 
 -(void) handleError:(NSString*) description forMuc:(NSString*) room withNode:(XMPPStanza*) node andIsSevere:(BOOL) isSevere
 {

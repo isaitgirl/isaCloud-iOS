@@ -684,6 +684,15 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     [[MLNotificationQueue currentQueue] postNotificationName:kXMPPError object:account userInfo:@{@"message": message, @"isSevere":@(isSevere)}];
 }
 
++(void) postQuietError:(NSString*) description withNode:(XMPPStanza* _Nullable) node andAccount:(xmpp*) account
+{
+    NSString* message = description;
+    if(node)
+        message = [HelperTools extractXMPPError:node withDescription:description];
+    DDLogWarn(@"Quiet error (no banner): %@", message);
+    [[MLNotificationQueue currentQueue] postNotificationName:kXMPPError object:account userInfo:@{@"message": message, @"isSevere":@NO, @"isQuiet":@YES}];
+}
+
 +(void) showErrorOnAlpha:(NSString*) description withNode:(XMPPStanza* _Nullable) node andAccount:(xmpp* _Nullable) account andFile:(char*) file andLine:(int) line andFunc:(char*) func
 {
     NSString* fileStr = [self sanitizeFilePath:file];

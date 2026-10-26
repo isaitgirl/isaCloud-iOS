@@ -1177,6 +1177,31 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
 {
     //this will show an error banner but only if our app is foregrounded
     DDLogWarn(@"Got xmpp error %@", notification);
+    //isaCloud: quiet errors (see +[HelperTools postQuietError:...]) never show a banner
+    if([notification.userInfo[@"isQuiet"] boolValue])
+    {
+        DDLogWarn(@"Not showing error banner: quiet error");
+        return;
+    }
+    //isaCloud: the same minor error of the same account is shown at most once every 10 minutes (a failing retry would repeat it forever)
+    if(![notification.userInfo[@"isSevere"] boolValue])
+    {
+        static NSMutableDictionary* lastShown;
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
+            lastShown = [NSMutableDictionary new];
+        });
+        NSString* key = [NSString stringWithFormat:@"%@|%@", ((xmpp*)notification.object).accountID, notification.userInfo[@"message"]];
+        @synchronized(lastShown) {
+            NSDate* last = lastShown[key];
+            if(last != nil && [[NSDate date] timeIntervalSinceDate:last] < 600)
+            {
+                DDLogWarn(@"Not showing error banner: shown less than 10 minutes ago");
+                return;
+            }
+            lastShown[key] = [NSDate date];
+        }
+    }
     if(![HelperTools isNotInFocus])
     {
         dispatch_async(dispatch_get_main_queue(), ^{
