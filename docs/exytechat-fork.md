@@ -7,7 +7,7 @@ exyte/Chat  →  monal-im/ExyteChat (main)  →  isaitgirl/ExyteChat (branch isa
 ```
 
 - Repositório: `https://github.com/isaitgirl/ExyteChat`, branch **`isaCloud`** (é a única branch que o projeto usa; nunca a `main`, que acompanha o `monal-im/ExyteChat`).
-- Revisão em uso: **`5eeaa16`** (26/10/2026, commit do PR da modal por pessoa; se o PR for mesclado com squash, atualizar para o commit mesclado). Ela fica fixada em `Monal/Monal.xcworkspace/xcshareddata/swiftpm/Package.resolved`; o `project.pbxproj` só diz `branch = isaCloud`. **Depois de cada commit novo no fork é preciso atualizar essa revisão** (e fazer o push antes), senão o TestFlight compila a versão antiga.
+- Revisão em uso: **`3b4801b`** (26/10/2026, modal de reações por pessoa; o PR do fork foi mesclado com rebase, por isso o SHA é o do `isaCloud` do fork, e não o do commit original `5eeaa16`). Ela fica fixada em `Monal/Monal.xcworkspace/xcshareddata/swiftpm/Package.resolved`; o `project.pbxproj` só diz `branch = isaCloud`. **Depois de cada commit novo no fork é preciso atualizar essa revisão** (e fazer o push antes), senão o TestFlight compila a versão antiga.
 - Clone de trabalho: `~/projects/swift/ExyteChat`, com os remotos `origin` (nosso fork) e `upstream` (`monal-im/ExyteChat`).
 - O projeto referencia o pacote em `Monal/Monal.xcodeproj/project.pbxproj` (`repositoryURL` e `branch`) e `Monal.xcworkspace`/`Package.resolved` fixa a revisão.
 
