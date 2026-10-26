@@ -54,6 +54,10 @@ Plano e raciocínio completos: `docs/plano-nick-por-sala.md`.
 - **Decisão:** os pedidos ficam **no topo da lista da tela de Contatos**, entre os filtros e os contatos, e o ícone de Contatos mostra um selo **preto com o número em branco** ("9+" a partir de dez; o vermelho não contrastava com os bonequinhos rosa). O box de pedidos **saiu da tela "Adicionar contato"**. Aceitar ou recusar **não sai da tela** (no Monal, aceitar abria a conversa), para responder vários pedidos seguidos; abrir a conversa ficou no menu "…". O "+" da tela de Contatos **não tem bolinha**, por decisão da Isadora.
 - **Alternativas descartadas:** o box entre a busca e os filtros (faixa fixa no topo, com altura variável e espaço permanente) e uma bolinha sem número.
 
+## Várias contas: como aparecem (26/10/2026)
+- **Decisão:** a lista de contas mostra o **avatar no lugar do check** (conta desativada: avatar esmaecido com marca de pausa, para não perder a informação que o check dava); o botão do avatar na tela principal mostra **até dois avatares sobrepostos** (a primeira conta da lista na frente) e um selo preto "+N" para as demais. Só contas ativadas, na ordem da lista de Configurações.
+- **Descartado:** um ícone genérico de "várias contas" (perde o avatar) e a foto de uma conta só com uma bolinha de contagem.
+
 ## Avisos de erro: o que vira banner (26/10/2026)
 - **Decisão:** só impede o uso → banner (e, se grave, notificação). Falha de fundo que não impede nada (sala de outro servidor que não responde, entrada temporariamente impossível) vira erro "quiet": só log, sem banner e sem notificação (`HelperTools postQuietError:`, `MLMucProcessor handleBackgroundError:`). Avisos não graves repetidos da mesma conta: no máximo um a cada 10 minutos (`showConnectionStatus:`, `MonalAppDelegate.m`). Se uma tela espera pela sala (UI handler), ela continua recebendo o erro.
 - **Por quê:** o banner amarelo/vermelho de dez segundos aparecia mesmo para falhas inofensivas e repetidas a cada ping; o timeout de entrada era grave e gerava até notificação com som fora do app.

@@ -10,6 +10,8 @@
 #import <monalxmpp/DataLayer.h>
 #import <monalxmpp/MLXMPPManager.h>
 #import <monalxmpp/HelperTools.h>
+#import <monalxmpp/MLImageManager.h>
+#import <monalxmpp/MLContact.h>
 #import "GeneratedAssetSymbols.h"
 
 @interface AccountListController ()
@@ -91,9 +93,15 @@
 
     UIImageView* accessory = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 30, 30)];
 
+    //isaCloud: the avatar of the account instead of the check mark: a disabled account has a faded avatar with a "paused" mark
+    //(the check mark used to tell enabled from disabled)
+    UIImage* accountAvatar = [[MLImageManager sharedInstance] getIconForContact:[MLContact createContactFromJid:[NSString stringWithFormat:@"%@@%@", account[@"username"], account[@"domain"]] andAccountID:account[@"account_id"]]];
+    if(accountAvatar == nil)
+        accountAvatar = [UIImage imageNamed:ACImageNameNoicon];
+    cell.imageView.image = [[HelperTools roundAvatar:accountAvatar diameter:38 disabled:![[account objectForKey:@"enabled"] boolValue]] imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
+
     if([[account objectForKey:@"enabled"] boolValue] == YES)
     {
-        cell.imageView.image = [UIImage systemImageNamed:@"checkmark.circle"];
         if([[MLXMPPManager sharedInstance] isAccountForIdConnected:[[self.accountList objectAtIndex:accNo] objectForKey:@"account_id"]])
         {
             accessory.image = [UIImage imageNamed:ACImageNameConnected];
@@ -107,7 +115,6 @@
     }
     else
     {
-        cell.imageView.image = [UIImage systemImageNamed:@"circle"];
         accessory.image = nil;
         cell.accessoryView = accessory;
     }

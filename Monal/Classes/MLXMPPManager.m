@@ -870,6 +870,8 @@ static const int pingFreqencyMinutes = 5;       //about the same Conversations u
             [SAMKeychain setPassword:password forService:kMonalKeychainName account:accountID.stringValue];
         }
         [self connectAccount:accountID];
+        //isaCloud: the new account has to show up on the avatar button of the chats right away, not only when its avatar arrives
+        [[MLNotificationQueue currentQueue] postNotificationName:kMonalRefresh object:nil userInfo:nil];
     }
 }
 

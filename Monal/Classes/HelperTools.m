@@ -1797,6 +1797,69 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     }];
 }
 
++(UIImage*) imageWithOverlappedAvatars:(NSArray<UIImage*>*) avatars extraCount:(NSInteger) extraCount diameter:(CGFloat) diameter ringColor:(UIColor*) ringColor
+{
+    NSUInteger count = MIN(avatars.count, 2);
+    if(count == 0)
+        return nil;
+    CGFloat step = diameter * 0.6;
+    CGFloat ring = 2;
+    CGSize canvas = CGSizeMake(diameter + step * (CGFloat)(count - 1), diameter);
+    UIGraphicsImageRendererFormat* format = [UIGraphicsImageRendererFormat new];
+    format.scale = [UIScreen mainScreen].scale;
+    return [[[UIGraphicsImageRenderer alloc] initWithSize:canvas format:format] imageWithActions:^(UIGraphicsImageRendererContext* _Nonnull rendererContext __unused) {
+        //the last one is drawn first (it ends up behind), the first one is drawn last (in front)
+        for(NSInteger i = (NSInteger)count - 1; i >= 0; i--)
+        {
+            CGRect rect = CGRectMake(step * (CGFloat)i, 0, diameter, diameter);
+            if(i == 0 && count > 1)
+            {
+                //ring around the avatar in front, so it stands out from the one behind it
+                [ringColor setFill];
+                [[UIBezierPath bezierPathWithOvalInRect:rect] fill];
+                rect = CGRectInset(rect, ring, ring);
+            }
+            CGContextSaveGState(rendererContext.CGContext);
+            [[UIBezierPath bezierPathWithOvalInRect:rect] addClip];
+            [avatars[i] drawInRect:rect];
+            CGContextRestoreGState(rendererContext.CGContext);
+        }
+        if(extraCount > 0)
+        {
+            NSString* text = [NSString stringWithFormat:@"+%ld", (long)extraCount];
+            NSDictionary* attributes = @{NSFontAttributeName: [UIFont systemFontOfSize:11 weight:UIFontWeightBold], NSForegroundColorAttributeName: UIColor.whiteColor};
+            CGSize textSize = [text sizeWithAttributes:attributes];
+            CGFloat badgeHeight = 16;
+            CGFloat badgeWidth = MAX(badgeHeight, ceil(textSize.width) + 8);
+            CGRect badgeRect = CGRectMake(canvas.width - badgeWidth, canvas.height - badgeHeight, badgeWidth, badgeHeight);
+            [ringColor setFill];
+            [[UIBezierPath bezierPathWithRoundedRect:CGRectInset(badgeRect, -1.5, -1.5) cornerRadius:(badgeHeight + 3) / 2] fill];
+            [UIColor.blackColor setFill];
+            [[UIBezierPath bezierPathWithRoundedRect:badgeRect cornerRadius:badgeHeight / 2] fill];
+            [text drawAtPoint:CGPointMake(CGRectGetMidX(badgeRect) - textSize.width / 2, CGRectGetMidY(badgeRect) - textSize.height / 2) withAttributes:attributes];
+        }
+    }];
+}
+
++(UIImage*) roundAvatar:(UIImage*) avatar diameter:(CGFloat) diameter disabled:(BOOL) disabled
+{
+    UIGraphicsImageRendererFormat* format = [UIGraphicsImageRendererFormat new];
+    format.scale = [UIScreen mainScreen].scale;
+    return [[[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(diameter, diameter) format:format] imageWithActions:^(UIGraphicsImageRendererContext* _Nonnull rendererContext) {
+        CGRect rect = CGRectMake(0, 0, diameter, diameter);
+        CGContextSaveGState(rendererContext.CGContext);
+        [[UIBezierPath bezierPathWithOvalInRect:rect] addClip];
+        [avatar drawInRect:rect blendMode:kCGBlendModeNormal alpha:disabled ? 0.35 : 1.0];
+        CGContextRestoreGState(rendererContext.CGContext);
+        if(disabled)
+        {
+            UIImage* mark = [[UIImage systemImageNamed:@"pause.circle.fill" withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:diameter * 0.4 weight:UIImageSymbolWeightBold]] imageWithTintColor:UIColor.grayColor renderingMode:UIImageRenderingModeAlwaysOriginal];
+            CGFloat markSize = diameter * 0.42;
+            [mark drawInRect:CGRectMake(diameter - markSize, diameter - markSize, markSize, markSize)];
+        }
+    }];
+}
+
 +(UIImageView*) buttonWithNotificationBadgeForImage:(UIImage*) image hasNotification:(bool) hasNotification withTapHandler:(UITapGestureRecognizer*) handler
 {
     UIImageView* result;

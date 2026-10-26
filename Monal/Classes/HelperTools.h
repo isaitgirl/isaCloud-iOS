@@ -99,6 +99,11 @@ NSDictionary* _Nullable dictionaryComprehension(NSDictionary* _Nullable dict, id
 //it is logged and posted like the others, but marked "quiet": no banner and no notification
 //isaCloud: the image with a round badge on its top right corner that shows a number ("9+" from ten on); no badge for 0. The size of the image is the same for any count
 +(UIImage*) imageWithNotificationCount:(NSInteger) count forImage:(UIImage*) image;
+//isaCloud: round avatars of several accounts overlapped, the first one in front (at the left) with a ring around it, the next ones behind to the right;
+//extraCount > 0 adds a black "+N" badge at the bottom right corner (accounts that did not fit)
++(UIImage*) imageWithOverlappedAvatars:(NSArray<UIImage*>*) avatars extraCount:(NSInteger) extraCount diameter:(CGFloat) diameter ringColor:(UIColor*) ringColor;
+//isaCloud: the avatar as a circle; a disabled account is faded and has a small "paused" mark at the bottom right corner
++(UIImage*) roundAvatar:(UIImage*) avatar diameter:(CGFloat) diameter disabled:(BOOL) disabled;
 +(void) postQuietError:(NSString*) description withNode:(XMPPStanza* _Nullable) node andAccount:(xmpp*) account;
 +(NSString*) extractXMPPError:(XMPPStanza* _Nullable) stanza withDescription:(NSString* _Nullable) description;
 +(NSError*) getNSErrorFrom:(XMPPStanza* _Nullable) stanza withDescription:(NSString*) description;

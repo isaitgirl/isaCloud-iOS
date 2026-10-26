@@ -97,6 +97,7 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
     double _portraitTop;
     double _landscapeTop;
     BOOL _loginAlreadyAutodisplayed;
+    NSString* _accountAvatarSignature;      //isaCloud: what the profile button shows now, to not set the same image again
     NSMutableArray* _blockQueue;
     dispatch_semaphore_t _blockQueueSemaphore;
 }
@@ -295,7 +296,8 @@ static BOOL _dnssecWarningDisplayed;
 
 #pragma mark view lifecycle
 
-//isaCloud: the avatar of the first connected account, round, on the profile button; a default icon while there is none
+//isaCloud: the avatars of the enabled accounts on the profile button: one round avatar, or two overlapped ones (the first account of the list in front)
+//and a "+N" badge when there are more; a default icon while there is none
 -(void) updateAccountAvatar
 {
     //the avatar notification can arrive on a background thread; the button may only be changed on the main thread
@@ -306,30 +308,46 @@ static BOOL _dnssecWarningDisplayed;
         });
         return;
     }
-    UIImage* avatar = nil;
-    if(MLXMPPManager.sharedInstance.connectedXMPP.count > 0)
+    //same order as the account list of the settings, so the account in front does not change from one launch to the next
+    NSMutableArray<UIImage*>* avatars = [NSMutableArray new];
+    NSMutableString* signature = [NSMutableString new];
+    for(NSDictionary* accountDict in [[DataLayer sharedInstance] accountList])
     {
-        xmpp* account = MLXMPPManager.sharedInstance.connectedXMPP.firstObject;
-        MLContact* ownContact = [MLContact createContactFromJid:account.connectionProperties.identity.jid andAccountID:account.accountID];
-        avatar = [[MLImageManager sharedInstance] getIconForContact:ownContact];
+        if(![accountDict[@"enabled"] boolValue])
+            continue;
+        NSString* jid = [(NSString*)accountDict[@"domain"] length] > 0 ? [NSString stringWithFormat:@"%@@%@", accountDict[@"username"], accountDict[@"domain"]] : accountDict[@"username"];
+        MLContact* ownContact = [MLContact createContactFromJid:jid andAccountID:accountDict[@"account_id"]];
+        UIImage* avatar = [[MLImageManager sharedInstance] getIconForContact:ownContact];
+        [avatars addObject:avatar ?: [UIImage imageNamed:ACImageNameNoicon]];
+        [signature appendFormat:@"%@:%@;", accountDict[@"account_id"], accountDict[@"iconhash"] ?: @""];
     }
-    if(!avatar)
-        avatar = [UIImage imageNamed:ACImageNameNoicon];
+    //setting the image again makes UIKit rebuild the bar button items: only when something changed
+    [signature appendFormat:@"%d", (int)self.traitCollection.userInterfaceStyle];
+    if([signature isEqualToString:_accountAvatarSignature] && self.settingsButton.image != nil)
+        return;
+    _accountAvatarSignature = [signature copy];
+    
     CGFloat size = 30;
     //isaCloud: on iOS 26+ the system draws a glass bubble around a bar button with a fixed padding, and a 40pt avatar looks lost in it.
     //Without the bubble the round avatar is the button itself and fills all of its space.
     if(@available(iOS 26.0, *))
     {
         size = 44;
-        //only when it changes: setting it again makes UIKit rebuild the bar button items
         if(!self.settingsButton.hidesSharedBackground)
             self.settingsButton.hidesSharedBackground = YES;
     }
-    UIGraphicsImageRenderer* renderer = [[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(size, size)];
-    UIImage* icon = [renderer imageWithActions:^(UIGraphicsImageRendererContext* context) {
-        [avatar drawInRect:CGRectMake(0, 0, size, size)];
-    }];
-    self.settingsButton.image = [[MLImageManager circularImage:icon] imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
+    UIImage* icon;
+    if(avatars.count <= 1)
+    {
+        UIImage* avatar = avatars.firstObject ?: [UIImage imageNamed:ACImageNameNoicon];
+        icon = [HelperTools roundAvatar:avatar diameter:size disabled:NO];
+    }
+    else
+    {
+        //two overlapped avatars take a bit less height than a single one, to keep the button not much wider
+        icon = [HelperTools imageWithOverlappedAvatars:@[avatars[0], avatars[1]] extraCount:(NSInteger)avatars.count - 2 diameter:size - 4 ringColor:[UIColor systemBackgroundColor]];
+    }
+    self.settingsButton.image = [icon imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
 }
 
 -(void) setSyncIndicatorVisible:(BOOL) visible
@@ -597,6 +615,8 @@ static BOOL _dnssecWarningDisplayed;
     // filter notifcations from within this class
     if([notification.object isKindOfClass:[ActiveChatsViewController class]])
         return;
+    //isaCloud: an account may have been enabled or disabled
+    [self updateAccountAvatar];
     [self refresh];
 }
 
