@@ -1841,6 +1841,16 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     }];
 }
 
++(NSString* _Nullable) accountJidToShowForAccountID:(NSNumber*) accountID
+{
+    if([[DataLayer sharedInstance] enabledAccountCnts].intValue < 2)
+        return nil;
+    NSDictionary* account = [[DataLayer sharedInstance] detailsForAccount:accountID];
+    if(account == nil || [(NSString*)account[@"username"] length] == 0)
+        return nil;
+    return [(NSString*)account[@"domain"] length] > 0 ? [NSString stringWithFormat:@"%@@%@", account[@"username"], account[@"domain"]] : account[@"username"];
+}
+
 +(UIImage*) roundAvatar:(UIImage*) avatar diameter:(CGFloat) diameter disabled:(BOOL) disabled
 {
     UIGraphicsImageRendererFormat* format = [UIGraphicsImageRendererFormat new];

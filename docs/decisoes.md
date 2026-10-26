@@ -56,6 +56,7 @@ Plano e raciocínio completos: `docs/plano-nick-por-sala.md`.
 
 ## Várias contas: como aparecem (26/10/2026)
 - **Decisão:** a lista de contas mostra o **avatar no lugar do check** (conta desativada: avatar esmaecido com marca de pausa, para não perder a informação que o check dava); o botão do avatar na tela principal mostra **até dois avatares sobrepostos** (a primeira conta da lista na frente) e um selo preto "+N" para as demais. Só contas ativadas, na ordem da lista de Configurações.
+- **De qual conta é cada conversa:** o JID da conta aparece **logo abaixo do nome** (conversas e Contatos), em cinza e menor, sempre que há 2 ou mais contas ativadas, mesmo que o contato não se repita; a última mensagem fica um pouco mais abaixo. Escolhido pela simplicidade, depois de comparar com selo de mini-avatar no avatar, filtro pelo botão do perfil, cor por conta (Cheogram) e JID só nos casos repetidos. A linha é criada em código em `MLContactCell` (sem mexer no xib do Monal) e a altura da linha passa de 60 para 74 pt com várias contas. O selo e o filtro ficam como ideias para depois.
 - **Descartado:** um ícone genérico de "várias contas" (perde o avatar) e a foto de uma conta só com uma bolinha de contagem.
 
 ## Avisos de erro: o que vira banner (26/10/2026)

@@ -48,7 +48,7 @@ struct ContactViewEntry: View {
             Text("").frame(maxWidth: 0)
             Button(action: { dismissWithContact(contact) }) {
                 HStack {
-                    ContactEntry(contact: contact)
+                    ContactEntry(contact: contact).showingAccount(of: contact)
                     Spacer()
                     Button {
                         selectedContactForContactDetails = contact
@@ -90,7 +90,7 @@ struct ContactRequestRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            ContactEntry(contact: contact)
+            ContactEntry(contact: contact).showingAccount(of: contact)
             HStack(spacing: 8) {
                 //accepting does not leave this screen, so several requests can be answered in a row
                 Button {

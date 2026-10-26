@@ -13,6 +13,8 @@ struct ContactEntry<AdditionalContent: View>: View {
     @ScaledMetric(relativeTo:.body) private var size40px: CGFloat = 40
     
     @StateObject var contact: ObservableKVOWrapper<MLContact>
+    //isaCloud: the jid of the account this contact belongs to, shown under the contact's own jid (nil: not shown)
+    private var accountJid: String? = nil
     
     init(contact:MLContact, selfnotesPrefix: Bool = true, fallback: String? = nil) where AdditionalContent == EmptyView {
         self.init(contact:contact, selfnotesPrefix:selfnotesPrefix, fallback:fallback, additionalContent:{ EmptyView() })
@@ -66,9 +68,24 @@ struct ContactEntry<AdditionalContent: View>: View {
                     Text(contact.contactJid as String)
                         .foregroundColor(Color(UIColor.secondaryLabel))
                         .font(.footnote)
+                    if let accountJid = accountJid {
+                        HStack(spacing: 3) {
+                            Image(systemName: "person.crop.circle")
+                            Text(accountJid)
+                        }
+                        .foregroundColor(Color(UIColor.secondaryLabel))
+                        .font(.caption)
+                    }
                 }
             }
         }
+    }
+    
+    //isaCloud: with more than one account enabled, the contacts list tells which account each contact belongs to
+    func showingAccount(of contact: MLContact) -> Self {
+        var copy = self
+        copy.accountJid = HelperTools.accountJidToShow(forAccountID: contact.accountID)
+        return copy
     }
 }
 

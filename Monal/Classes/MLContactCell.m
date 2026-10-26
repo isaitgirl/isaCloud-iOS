@@ -24,10 +24,52 @@
 @end
 
 @implementation MLContactCell
+{
+    //isaCloud: the jid of the account this chat belongs to, under the name, while more than one account is enabled
+    UILabel* _accountJid;
+    NSLayoutConstraint* _statusTopConstraint;
+}
 
 -(void) awakeFromNib
 {
     [super awakeFromNib];
+    
+    //isaCloud: created in code to not touch the xib; the status label is moved down by its top constraint when the line is shown
+    _accountJid = [UILabel new];
+    _accountJid.translatesAutoresizingMaskIntoConstraints = NO;
+    _accountJid.font = [UIFont systemFontOfSize:12];
+    //a bit darker than the last message preview (light gray, set by the chat list), in light and dark mode
+    _accountJid.textColor = [UIColor colorWithDynamicProvider:^UIColor*(UITraitCollection* traits) {
+        return [UIColor colorWithWhite:traits.userInterfaceStyle == UIUserInterfaceStyleDark ? 0.55 : 0.4 alpha:1.0];
+    }];
+    _accountJid.lineBreakMode = NSLineBreakByTruncatingMiddle;
+    _accountJid.hidden = YES;
+    [self.contentView addSubview:_accountJid];
+    [NSLayoutConstraint activateConstraints:@[
+        [_accountJid.leadingAnchor constraintEqualToAnchor:self.displayName.leadingAnchor],
+        [_accountJid.trailingAnchor constraintEqualToAnchor:self.displayName.trailingAnchor],
+        [_accountJid.topAnchor constraintEqualToAnchor:self.displayName.bottomAnchor constant:1],
+    ]];
+    for(NSLayoutConstraint* constraint in self.contentView.constraints)
+        if(constraint.firstItem == self.statusText && constraint.firstAttribute == NSLayoutAttributeTop)
+            _statusTopConstraint = constraint;
+}
+
+-(void) showAccountJid:(NSString* _Nullable) accountJid
+{
+    if(accountJid.length == 0)
+    {
+        _accountJid.hidden = YES;
+        _statusTopConstraint.constant = 2;
+        return;
+    }
+    //the line sits next to the name; the last message keeps a bit more distance, below it
+    _accountJid.text = accountJid;
+    _accountJid.hidden = NO;
+    _statusTopConstraint.constant = 19;
+    //without a last message the name is centered: use the top aligned one to leave room for the line
+    self.centeredDisplayName.hidden = YES;
+    self.displayName.hidden = NO;
 }
 
 -(void) initCell:(MLContact*) contact withLastMessage:(MLMessage* _Nullable) lastMessage

@@ -97,6 +97,7 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
     double _portraitTop;
     double _landscapeTop;
     BOOL _loginAlreadyAutodisplayed;
+    NSDictionary<NSNumber*, NSString*>* _accountJids;      //isaCloud: account id -> jid, only while more than one account is enabled (shown under the names)
     NSString* _accountAvatarSignature;      //isaCloud: what the profile button shows now, to not set the same image again
     NSMutableArray* _blockQueue;
     dispatch_semaphore_t _blockQueueSemaphore;
@@ -311,16 +312,20 @@ static BOOL _dnssecWarningDisplayed;
     //same order as the account list of the settings, so the account in front does not change from one launch to the next
     NSMutableArray<UIImage*>* avatars = [NSMutableArray new];
     NSMutableString* signature = [NSMutableString new];
+    NSMutableDictionary<NSNumber*, NSString*>* accountJids = [NSMutableDictionary new];
     for(NSDictionary* accountDict in [[DataLayer sharedInstance] accountList])
     {
         if(![accountDict[@"enabled"] boolValue])
             continue;
         NSString* jid = [(NSString*)accountDict[@"domain"] length] > 0 ? [NSString stringWithFormat:@"%@@%@", accountDict[@"username"], accountDict[@"domain"]] : accountDict[@"username"];
+        accountJids[accountDict[@"account_id"]] = jid;
         MLContact* ownContact = [MLContact createContactFromJid:jid andAccountID:accountDict[@"account_id"]];
         UIImage* avatar = [[MLImageManager sharedInstance] getIconForContact:ownContact];
         [avatars addObject:avatar ?: [UIImage imageNamed:ACImageNameNoicon]];
         [signature appendFormat:@"%@:%@;", accountDict[@"account_id"], accountDict[@"iconhash"] ?: @""];
     }
+    //the chat list names the account under each chat while there is more than one
+    _accountJids = accountJids.count > 1 ? [accountJids copy] : nil;
     //setting the image again makes UIKit rebuild the bar button items: only when something changed
     [signature appendFormat:@"%d", (int)self.traitCollection.userInterfaceStyle];
     if([signature isEqualToString:_accountAvatarSignature] && self.settingsButton.image != nil)
@@ -1329,6 +1334,7 @@ static BOOL _dnssecWarningDisplayed;
     MLMessage* messageRow = [[DataLayer sharedInstance] lastMessageForContact:chatContact.contactJid forAccount:chatContact.accountID];
 
     [cell initCell:chatContact withLastMessage:messageRow];
+    [cell showAccountJid:_accountJids[chatContact.accountID]];
 
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
     
@@ -1352,7 +1358,8 @@ static BOOL _dnssecWarningDisplayed;
 
 -(CGFloat) tableView:(UITableView*) tableView heightForRowAtIndexPath:(NSIndexPath*) indexPath
 {
-    return 60.0f;
+    //isaCloud: room for the account's jid under the name while there is more than one account
+    return _accountJids != nil ? 74.0f : 60.0f;
 }
 
 -(NSString*) tableView:(UITableView*) tableView titleForDeleteConfirmationButtonForRowAtIndexPath:(NSIndexPath*) indexPath

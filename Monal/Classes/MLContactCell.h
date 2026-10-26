@@ -25,5 +25,7 @@
 @property (nonatomic, assign) BOOL isPinned;
 
 -(void) initCell:(MLContact* _Nonnull) contact withLastMessage:(MLMessage* _Nullable) lastMessage;
+//isaCloud: with more than one account, the account's jid under the name (nil hides the line)
+-(void) showAccountJid:(NSString* _Nullable) accountJid;
 
 @end

@@ -104,6 +104,8 @@ NSDictionary* _Nullable dictionaryComprehension(NSDictionary* _Nullable dict, id
 +(UIImage*) imageWithOverlappedAvatars:(NSArray<UIImage*>*) avatars extraCount:(NSInteger) extraCount diameter:(CGFloat) diameter ringColor:(UIColor*) ringColor;
 //isaCloud: the avatar as a circle; a disabled account is faded and has a small "paused" mark at the bottom right corner
 +(UIImage*) roundAvatar:(UIImage*) avatar diameter:(CGFloat) diameter disabled:(BOOL) disabled;
+//isaCloud: the jid of the account, to tell the chats and contacts of each account apart; nil while only one account is enabled
++(NSString* _Nullable) accountJidToShowForAccountID:(NSNumber*) accountID;
 +(void) postQuietError:(NSString*) description withNode:(XMPPStanza* _Nullable) node andAccount:(xmpp*) account;
 +(NSString*) extractXMPPError:(XMPPStanza* _Nullable) stanza withDescription:(NSString* _Nullable) description;
 +(NSError*) getNSErrorFrom:(XMPPStanza* _Nullable) stanza withDescription:(NSString*) description;
