@@ -4703,7 +4703,7 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/isaitgirl/ExyteChat";
 			requirement = {
-				branch = isaCloud;
+				branch = "feature/reaction-details-sheet";
 				kind = branch;
 			};
 		};
