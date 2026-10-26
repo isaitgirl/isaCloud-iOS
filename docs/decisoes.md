@@ -14,7 +14,7 @@ Registro do **porquê** das escolhas feitas no fork: decisões de produto, de c�
 ## Modal de quem reagiu (25 e 26/10/2026, do Jejê)
 - **Decisão:** tocar nas reações de um balão abre uma modal com a lista de quem reagiu e com qual emoji, com filtro por emoji, e o balão agrupa as reações por emoji, com contagem. A lista que aparecia no topo ao segurar a mensagem foi removida.
 - **Por quê:** o balão mostrava um círculo por reação (duas pessoas com ❤️ davam dois corações) e a lista do toque longo tinha layout ruim e só aparecia segurando a mensagem. É desenhado pelo ExyteChat, então é a mudança nº 4 do fork, com um PR par no app.
-- **Fora do escopo:** remover a própria reação pela modal (continua sendo pelo seletor de emoji do toque longo).
+- **Reagir pela própria modal (26/10/2026):** a modal tem uma linha por pessoa (um fulano com dois emojis não aparece duas vezes), em ordem alfabética, e a linha "Você" é sempre a primeira, mesmo sem reações. Nela, tocar num emoji remove a reação e o "+" abre o teclado de emojis do sistema para adicionar. Descartamos a faixa de emojis no topo e o flutuante de emojis. O teclado vem de um campo de texto invisível que pede o teclado de emojis (o iOS não tem API para abri-lo direto); se o teclado de emojis estiver desativado nos ajustes, cai no teclado normal. Não testado no iOS 18 nem em iPhone real.
 - **Prints:** só em simuladores sem o defeito de emoji dos runtimes iOS 26.1 e 26.3.1 (ver `docs/troubleshooting.md`).
 
 ## Menu da mensagem mais rápido (26/10/2026)
