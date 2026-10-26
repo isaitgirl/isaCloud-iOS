@@ -65,9 +65,12 @@ struct ContactEntry<AdditionalContent: View>: View {
                         }
                     }
                     additionalContent()
-                    Text(contact.contactJid as String)
-                        .foregroundColor(Color(UIColor.secondaryLabel))
-                        .font(.footnote)
+                    //isaCloud: the address of a private group is a random string, meaningless to people: it is only shown in the group's details
+                    if !(contact.isMuc && contact.mucType == kMucTypeGroup) {
+                        Text(contact.contactJid as String)
+                            .foregroundColor(Color(UIColor.secondaryLabel))
+                            .font(.footnote)
+                    }
                     if let accountJid = accountJid {
                         HStack(spacing: 3) {
                             Image(systemName: "person.crop.circle")

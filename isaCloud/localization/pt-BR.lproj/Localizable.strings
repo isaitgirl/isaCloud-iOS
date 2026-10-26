@@ -67,8 +67,9 @@
 "Filter: contacts" = "Contatos";
 "Filter: groups" = "Grupos";
 "Filter: channels" = "Canais";
-"Add New Contact" = "Adicionar novo contato";
-"Create contact group" = "Criar grupo de contatos";
+"Add New Contact" = "Adicionar contato";
+"Create contact group" = "Criar grupo";
+"List channels" = "Listar canais";
 "Release to send" = "Solte para enviar";
 "Delete recording" = "Apagar gravação";
 "Pause recording" = "Pausar gravação";

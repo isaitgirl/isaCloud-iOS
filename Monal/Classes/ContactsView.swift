@@ -304,7 +304,7 @@ struct ContactsView: View {
                         showingPublicChannels = true
                     } label: {
                         Label {
-                            Text("Public channels")
+                            Text("List channels")
                         } icon: {
                             Image(systemName: "number")
                                 .foregroundStyle(Color("isaCloudPink"))
