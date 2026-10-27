@@ -28,6 +28,11 @@ Fork do Monal (cliente XMPP para iOS) com a marca e os ajustes do isaCloud. Bran
 - Dados sensíveis ou pessoais (UDID de aparelhos, números de pedidos da Apple, contas de teste, caminhos de segredos) ficam em `isaCloud/local/NOTAS-LOCAIS.md`, que está no `.gitignore`. Modelo em `docs/NOTAS-LOCAIS.exemplo.md`.
 - Os `.md` que vão para o Git (como este) não podem conter esses dados: aponte para as notas locais. Nunca cole valores de segredos em nenhum `.md`.
 
+## Contas e servidores de teste
+
+- Os testes nos simuladores e no iPhone da Isadora usam basicamente três contas de teste (endereços em `isaCloud/local/NOTAS-LOCAIS.md`, que não vai para o Git). Duas ficam no servidor `isacloud.im` e uma no `autozona.cc`.
+- **`isacloud.im`: Prosody 13.0.7.** **`autozona.cc`: ejabberd 26.09.** Vale lembrar disso ao investigar diferenças de comportamento entre servidores (avatares, MUC, push, MAM, upload de arquivos).
+
 ## ExyteChat (fork)
 
 - O chat usa um fork nosso do ExyteChat (`isaitgirl/ExyteChat`, branch `isaCloud`, clone em `~/projects/swift/ExyteChat`). Mudanças na biblioteca ficam lá, pequenas, comentadas e em commits separados. Depois de cada commit no fork: push na branch `isaCloud` e atualizar a revisão em `Monal/Monal.xcworkspace/xcshareddata/swiftpm/Package.resolved` (senão o TestFlight compila a versão antiga). Rotina de atualização, a revisão atual e o que o fork muda: `docs/exytechat-fork.md`.
