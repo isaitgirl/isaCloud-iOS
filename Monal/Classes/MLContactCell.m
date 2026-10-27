@@ -151,7 +151,14 @@
             }
             else
             {
-                [self showStatusText:lastMessage.messageText inboundDir:lastMessage.inbound fromUser:senderOfLastGroupMsg];
+                //isaCloud: a forwarded text starts with a line like "<arrow> Forwarded": the preview shows it on one line, with the text after it
+                //(otherwise only the label would be seen). Same rule as MessageForward.split in the app: a short first line that starts with the arrow.
+                NSString* previewText = lastMessage.messageText;
+                NSRange lineBreak = [previewText rangeOfString:@"\n"];
+                if(lineBreak.location != NSNotFound && lineBreak.location <= 30 && lineBreak.location + 1 < previewText.length
+                   && ([previewText hasPrefix:@"\u21AA"] || [previewText hasPrefix:@"\u21B7"] || [previewText hasPrefix:@"\u27A6"]))
+                    previewText = [previewText stringByReplacingCharactersInRange:lineBreak withString:@" "];
+                [self showStatusText:previewText inboundDir:lastMessage.inbound fromUser:senderOfLastGroupMsg];
             }
         }
     }

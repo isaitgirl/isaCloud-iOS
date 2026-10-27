@@ -2,6 +2,11 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 34) — 28/10/2026
+
+### Adicionado
+- **Encaminhar mensagem de texto.** No menu da mensagem (toque longo) há a ação **Encaminhar…**, que abre uma folha com contatos, grupos, canais e as suas próprias notas, com busca por nome ou endereço e a conta indicada quando há mais de uma. Dá para escolher até 5 destinos por vez; canais e grupos onde você não pode escrever aparecem apagados, com o aviso "Você não pode escrever aqui". A mensagem sai como sua, com a criptografia do destino, sem o autor original, e começa com a linha "➦ Encaminhado" (em negrito e branco no seu balão; a lista de Conversas mostra o rótulo e o texto numa linha). Em outros aplicativos a linha aparece como texto comum. Mídia (foto, vídeo, áudio, arquivo) ainda não pode ser encaminhada.
+
 ## 0.0.1 (build 33) — 28/10/2026
 
 ### Adicionado

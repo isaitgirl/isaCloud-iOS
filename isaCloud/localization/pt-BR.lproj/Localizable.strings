@@ -168,3 +168,10 @@
 "Names" = "Nomes";
 "Type at least two letters to search in the messages." = "Digite pelo menos duas letras para buscar nas mensagens.";
 "Messages in search" = "Mensagens";
+"Forward…" = "Encaminhar…";
+"Forwarded" = "Encaminhado";
+"Forward to" = "Encaminhar para";
+"Forward" = "Encaminhar";
+"Forward (%lld)" = "Encaminhar (%lld)";
+"You cannot write here" = "Você não pode escrever aqui";
+"Up to %lld chats at once." = "Até %lld conversas por vez.";

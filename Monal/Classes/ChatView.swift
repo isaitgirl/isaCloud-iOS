@@ -137,6 +137,7 @@ struct ChatView: View {
     @State private var typingTimer: Timer?
 
     //isaCloud: opened from the search in the messages: the chat shows this message in the middle of the screen (nil: the newest ones as always)
+    @State private var messageToForward: String?       //isaCloud: the text of the message being forwarded (the picker of destinations is shown while it is set)
     @State private var jumpToHistoryId: NSNumber?
     @State private var jumpScrollParams: ScrollToParams?
     /// a chat is only opened at a message if it takes at most this many messages to get there from the newest ones
@@ -150,7 +151,7 @@ struct ChatView: View {
     }
 
     enum MessageAction: MessageMenuAction {
-        case copy, quote, edit, retract, moderate, delete, resend
+        case copy, quote, forward, edit, retract, moderate, delete, resend
 
         func title() -> String {
             switch self {
@@ -158,6 +159,8 @@ struct ChatView: View {
                     NSLocalizedString("Copy", comment: "message menu")
                 case .quote:
                     NSLocalizedString("Reply", comment: "message menu: quote the message in the input")
+                case .forward:
+                    NSLocalizedString("Forward…", comment: "message menu: send the message to other chats")
                 case .edit:
                     NSLocalizedString("Edit", comment: "message menu")
                 case .retract:
@@ -177,6 +180,8 @@ struct ChatView: View {
                     Image(systemName: "doc.on.doc")
                 case .quote:
                     Image(systemName: "arrowshape.turn.up.left")
+                case .forward:
+                    Image(systemName: "arrowshape.turn.up.right")
                 case .edit:
                     if #available(iOS 18.0, macCatalyst 18.0, *) {
                         Image(systemName: "bubble.and.pencil")
@@ -210,6 +215,16 @@ struct ChatView: View {
             //(TEMPORARY, until Monal implements XEP-0461: see ChatViewMessage.replyQuoteText)
             if (message as! ChatViewMessage).replyQuoteText != nil {
                 availableActions.append(.quote)
+            }
+
+            //isaCloud: forwarding (texts only, for now)
+            var hasSendError = false
+            if case .error = message.status {
+                hasSendError = true
+            }
+            if (mlMessage.messageType == kMessageTypeText || mlMessage.messageType == kMessageTypeUrl)
+                && MessageForward.canForward(text: mlMessage.messageText, isRetracted: mlMessage.retracted, hasSendError: hasSendError) {
+                availableActions.append(.forward)
             }
 
             if !mlMessage.inbound && DataLayer.sharedInstance().checkLMCEligible(mlMessage.messageDBId, encrypted: mlMessage.encrypted || contact.isEncrypted, historyBaseID: nil) {
@@ -479,6 +494,24 @@ struct ChatView: View {
             }
             .finally {
                 self.isLoadingMamHistory = false
+            }
+        }
+    }
+
+    /// isaCloud: sends the text to each destination as a message of ours, with the line that says it was forwarded
+    private func forward(_ text: String?, to destinations: [MLContact]) {
+        guard let text = text else {
+            return
+        }
+        let body = MessageForward.body(forwarding: text, word: NSLocalizedString("Forwarded", comment: "label on top of a forwarded message: the symbol is put in front"))
+        for destination in destinations {
+            if let sent = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: body, havingType: kMessageTypeText, toContact: destination, isEncrypted: destination.isEncrypted, uploadInfo: nil) {
+                //the chat we are in shows it at once when it is one of the destinations
+                if destination.isEqual(toContact: self.contact.obj) {
+                    messages.append(ChatViewMessage(sent))
+                }
+            } else {
+                DDLogError("Forward: could not send to \(destination)")
             }
         }
     }
@@ -787,6 +820,8 @@ struct ChatView: View {
                 case .quote:
                     // the author is only needed where several people write: groups and channels
                     inputModel.quote(author: mlMessage.isMuc ? mlMessage.contactDisplayName : nil, text: (message as! ChatViewMessage).replyQuoteText ?? mlMessage.messageText)
+                case .forward:
+                    messageToForward = mlMessage.messageText
                 case .edit:
                     inputModel.startEdit(of: mlMessage.messageId, text: mlMessage.messageText)
                     editSaveClosure = { editedText in
@@ -1213,6 +1248,14 @@ struct ChatView: View {
             }
             encryptionIndicatorToolbarItem
         }
+        .sheet(isPresented: Binding(get: { messageToForward != nil }, set: { if !$0 { messageToForward = nil } })) {
+            MessageForwardPicker { destinations in
+                //(closing the sheet clears the text: it is read before)
+                let text = messageToForward
+                messageToForward = nil
+                forward(text, to: destinations)
+            }
+        }
         .toolbarRole(.editor)       //make sure to never show the title of the previous view in the back bar button
         .canContainExternalLinks()
         .addLoadingOverlay(overlay)
@@ -1424,37 +1467,51 @@ class ChatViewMessage: ExyteChat.Message {
         }
         return QuoteFormatting.attachmentLabel(.file(name: fileInfo.filename))
     }
+    /// isaCloud: the text of a message: quoted lines ("> ...") are marked as a quote (ExyteChat draws them with bars on their left, see
+    /// AttributedString+Quote.swift in our ExyteChat fork); the other lines are shown as usual, with their links
+    static func attributed(body text: String, linkColor: Color, isText: Bool) -> AttributedString {
+        if isText && QuoteFormatting.containsQuote(text) {
+            var result = AttributedString()
+            var previousDepth = 0
+            for (index, line) in QuoteFormatting.lines(of: text).enumerated() {
+                if index > 0 {
+                    // the line break between two quoted lines belongs to the quote they share (the smaller depth), so they
+                    // make one quote and not two
+                    var lineBreak = AttributedString("\n")
+                    let shared = min(previousDepth, line.depth)
+                    if shared > 0 {
+                        lineBreak.quoteDepth = shared
+                    }
+                    result.append(lineBreak)
+                }
+                if line.depth > 0 {
+                    var quoted = AttributedString(line.text)
+                    quoted.quoteDepth = line.depth
+                    result.append(quoted)
+                } else {
+                    result.append(line.text.linkify(linkColor: linkColor))
+                }
+                previousDepth = line.depth
+            }
+            return result
+        }
+        return text.linkify(linkColor: linkColor)
+    }
     override var attributedText: AttributedString {
         get {
             // Keep outgoing links in the same color as outgoing text (white) for readability
             let linkColor: Color = self.user.isCurrentUser ? .white : .accentColor
 
-            // quoted lines ("> ...") are marked as a quote: ExyteChat draws them with one bar on their left (see
-            // AttributedString+Quote.swift in our ExyteChat fork); the other lines are shown as usual
-            if innerMessage.messageType == kMessageTypeText && QuoteFormatting.containsQuote(text) {
-                var result = AttributedString()
-                var previousDepth = 0
-                for (index, line) in QuoteFormatting.lines(of: text).enumerated() {
-                    if index > 0 {
-                        // the line break between two quoted lines belongs to the quote they share (the smaller depth), so they
-                        // make one quote and not two
-                        var lineBreak = AttributedString("\n")
-                        let shared = min(previousDepth, line.depth)
-                        if shared > 0 {
-                            lineBreak.quoteDepth = shared
-                        }
-                        result.append(lineBreak)
-                    }
-                    if line.depth > 0 {
-                        var quoted = AttributedString(line.text)
-                        quoted.quoteDepth = line.depth
-                        result.append(quoted)
-                    } else {
-                        result.append(line.text.linkify(linkColor: linkColor))
-                    }
-                    previousDepth = line.depth
-                }
-                return result
+            // isaCloud: the first line of a forwarded text says so, in bold (white in our own bubbles); the rest is the text as always
+            if innerMessage.messageType == kMessageTypeText || innerMessage.messageType == kMessageTypeUrl, let forwarded = MessageForward.split(text) {
+                var label = AttributedString(forwarded.label)
+                label.inlinePresentationIntent = .stronglyEmphasized
+                //white on the pink bubble of our own messages; on the light bubble of what others forward to us white would not be seen
+                label.foregroundColor = self.user.isCurrentUser ? Color.white : Color.primary
+                return label + AttributedString("\n") + Self.attributed(body: forwarded.rest, linkColor: linkColor, isText: innerMessage.messageType == kMessageTypeText)
+            }
+            if innerMessage.messageType == kMessageTypeText {
+                return Self.attributed(body: text, linkColor: linkColor, isText: true)
             }
 
             if innerMessage.messageType == kMessageTypeGeo && !chatViewDefaultsDB.showGeoLocation {
