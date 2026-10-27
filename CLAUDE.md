@@ -14,6 +14,7 @@ Fork do Monal (cliente XMPP para iOS) com a marca e os ajustes do isaCloud. Bran
 - As traduções devem seguir os padrões do Monal, considerando o merge com weblate, mas as traduções do isaCloud devem prevalecer sobre elas.
 - Estamos escrevendo o software em pt-br, mas você deve seguir as convenções de código do Monal, usando o idioma padrão dele e usando nosso mecanismo de tradução pro pt-br.
 - Se identificar textos em inglês não traduzidos nos simuladores, você deve avisar o usuário e confirmar qual será a tradução.
+- **Mudanças de banco do isaCloud** entram na escada própria (`+migrateISACloudDB:` em `DataLayerMigrations.m`, flag `isacloud_dbversion`), nunca como 7.0xx na escada do Monal, e cada passo deve poder rodar de novo sem estragar nada. Detalhes em `docs/decisoes.md`.
 - Busque implementar seguindo as convenções atuais do Monal, é importante respeitarmos esse legado para mantermos a menor fricção possível nos merges futuros.
 
 ## Capturas de tela

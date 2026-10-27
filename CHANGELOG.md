@@ -2,6 +2,15 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 32) — 27/10/2026
+
+### Alterado
+- **Mudanças de banco do isaCloud numa escada própria de migrations.** Os três passos que o isaCloud acrescentou à escada do Monal com os números 7.014 a 7.016 (dias de histórico dos canais, "hats" e avatares de quem não é contato) passam a ter versão própria (`isacloud_dbversion`) e rodam depois das migrations do Monal. Assim as próximas migrations do Monal, que vão usar esses números, não são puladas nos nossos bancos. Na primeira abertura, o banco que já estava em 7.014 a 7.016 tem a versão do Monal devolvida a 7.013 (as mensagens e as tabelas continuam como estão). Testado em cópias dos bancos do simulador, do TestFlight e do Monal Beta (133 mil mensagens, versão 6.407).
+- **A SQLite do app agora tem o módulo de busca de texto (FTS5).** O pacote `sqlite3-package` do Monal repassa uma lista fixa de opções e deixava o FTS5 desligado; o app passa a usar o fork `isaitgirl/sqlite3-package` (branch `isaCloud`) com `ENABLE_FTS5` ligado. É a base para a futura busca em mensagens; por enquanto nada aparece na tela.
+
+### Corrigido
+- **O spinner da lista de conversas podia ficar preso.** Quando as transferências de arquivo terminavam depois de as contas já estarem ociosas, o spinner não era atualizado e só sumia na próxima mudança de estado de uma conta ou ao voltar para o app. Agora ele também é atualizado quando as transferências terminam.
+
 ## 0.0.1 (build 31) — 27/10/2026
 
 ### Alterado

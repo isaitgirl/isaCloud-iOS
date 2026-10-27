@@ -34,6 +34,14 @@ Use a configuração `AppStore`. A configuração `Release` não existe no proje
 cd Monal && xcodebuild archive -workspace Monal.xcworkspace -scheme Monal -sdk iphoneos -configuration AppStore -archivePath "$(pwd)/../build/isaCloud-AppStore.xcarchive" -allowProvisioningUpdates DEVELOPMENT_TEAM=K8Y6S5RF2S ISACLOUD_BUNDLE_ID=br.com.isacloud.messenger ISACLOUD_ENTITLEMENTS_DIR= GIPHY_API_KEY="$(tr -d '[:space:]' < ../isaCloud/local/giphy-api-key.txt)"
 ```
 
+**Depois de mudar as opções (traits) de um pacote, como o `ENABLE_FTS5` do `sqlite3-package`, arquive com uma pasta de compilação nova** (acrescente `-derivedDataPath /tmp/ddarch` e apague a pasta antes): o Xcode reaproveita a SQLite compilada antes e o arquivo sai sem a opção nova, sem avisar (aconteceu no build 32). Confira no arquivo, antes de enviar:
+
+```bash
+strings -a build/isaCloud-AppStore.xcarchive/Products/Applications/*.app/Frameworks/monalxmpp.framework/monalxmpp | grep -c '^ENABLE_FTS5$'
+```
+
+O resultado deve ser `1`.
+
 Confira o arquivo gerado (deve sair `2` ou o número escolhido, e `br.com.isacloud.messenger`):
 
 ```bash

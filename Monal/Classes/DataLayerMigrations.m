@@ -69,6 +69,9 @@
         [db executeNonQuery:@"PRAGMA legacy_alter_table=on;"];
         [db executeNonQuery:@"PRAGMA foreign_keys=off;"];
         
+        //isaCloud: databases that ran our migrations as 7.014 to 7.016 of the Monal ladder get the Monal version put back to 7.013
+        [self moveISACloudMigrationsOutOfMonalLadder:db];
+        
         NSNumber* dbversion = [self readDBVersion:db];
         DDLogInfo(@"Got db version %@", dbversion);
 
@@ -1160,38 +1163,10 @@
             );"];
         }];
 
-        //isaCloud: history window (in days, 0 = whole archive) used when catching up public channels on connect
-        [self updateDB:db withDataLayer:dataLayer toVersion:7.014 withBlock:^{
-            [db executeNonQuery:@"ALTER TABLE buddylist ADD COLUMN mam_catchup_days INTEGER DEFAULT 7;"];
-        }];
-        //isaCloud: hats of the occupants of the rooms (XEP-0317), as a JSON list; a room sends them only when it is joined
-        [self updateDB:db withDataLayer:dataLayer toVersion:7.015 withBlock:^{
-            [db executeNonQuery:@"CREATE TABLE IF NOT EXISTS muc_hats ( \
-                'account_id' INTEGER NOT NULL, \
-                'room' VARCHAR(255) NOT NULL, \
-                'room_nick' VARCHAR(255) NOT NULL, \
-                'hats' TEXT NOT NULL, \
-                PRIMARY KEY(account_id, room, room_nick) \
-            );"];
-        }];
-        //isaCloud: avatars of people we have no PEP avatar from (members of groups, participants of channels): the hash last seen in their presences,
-        //the hash of the image we hold, and the last failed attempt (to wait before trying again). The images are stored by hash, not here.
-        [self updateDB:db withDataLayer:dataLayer toVersion:7.016 withBlock:^{
-            [db executeNonQuery:@"CREATE TABLE IF NOT EXISTS remote_avatar ( \
-                'account_id' INTEGER NOT NULL, \
-                'owner' VARCHAR(512) NOT NULL, \
-                'hash' VARCHAR(64) NOT NULL DEFAULT '', \
-                'fetched_hash' VARCHAR(64), \
-                'failed_hash' VARCHAR(64), \
-                'failed_at' INTEGER NOT NULL DEFAULT 0, \
-                'fail_count' INTEGER NOT NULL DEFAULT 0, \
-                PRIMARY KEY(account_id, owner) \
-            );"];
-        }];
+        //isaCloud: our own migrations are NOT part of this ladder anymore (see +migrateISACloudDB: below): they used the numbers 7.014 to 7.016, which
+        //the Monal will use itself for its next migrations
+        [self migrateISACloudDB:db];
 
-        
-        
-        
         //check if device id changed and invalidate state, if so
         //but do so only for non-sandbox (e.g. non-development) installs
         if(![[HelperTools defaultsDB] boolForKey:@"isSandboxAPNS"])
@@ -1240,6 +1215,74 @@
             DDLogInfo(@"Database: no migration needed, version: %@", newdbversion);
             return NO;
         }
+    }];
+}
+
+#pragma mark - isaCloud migrations (own ladder, outside of the Monal ladder)
+
+//isaCloud: our own database changes have their own version, stored in the flag "isacloud_dbversion" and counting 1, 2, 3...
+//They run after the whole Monal ladder, so a migration the Monal adds later never collides with one of ours. Every step must be harmless
+//to run again (IF NOT EXISTS, checking for the column first), because databases of the first isaCloud builds already ran them as 7.014 to 7.016.
++(BOOL) updateISACloudDB:(MLSQLite*) db toVersion:(int) version withBlock:(monal_void_block_t) block
+{
+    NSNumber* current = (NSNumber*)[db executeScalar:@"SELECT value FROM flags WHERE name='isacloud_dbversion';"];
+    if(current.intValue < version)
+    {
+        DDLogVerbose(@"isaCloud database version <%d detected. Performing upgrade.", version);
+        block();
+        [db executeNonQuery:@"INSERT OR REPLACE INTO flags (name, value) VALUES('isacloud_dbversion', ?);" andArguments:@[[NSNumber numberWithInt:version]]];
+        DDLogDebug(@"isaCloud upgrade to %d success", version);
+        return YES;
+    }
+    return NO;
+}
+
+//the first isaCloud builds ran our migrations as 7.014 (history days of public channels), 7.015 (hats) and 7.016 (avatars of non-contacts) of the Monal ladder.
+//The Monal is at 7.013 and will want those numbers: a database already at 7.016 would silently skip its next migrations 7.014 and 7.015.
+//So a database that has no isaCloud version yet, but a Monal version between 7.014 and 7.016, gets the Monal version back to 7.013. Our steps below then
+//run again, harmlessly. This must happen before the Monal ladder reads the version.
++(void) moveISACloudMigrationsOutOfMonalLadder:(MLSQLite*) db
+{
+    if([db executeScalar:@"SELECT value FROM flags WHERE name='isacloud_dbversion';"] != nil)
+        return;
+    double monalVersion = [self readDBVersion:db].doubleValue;
+    if(monalVersion > 7.0135 && monalVersion < 7.0165)
+    {
+        DDLogWarn(@"Moving the isaCloud migrations out of the Monal ladder: putting the Monal db version back from %@ to 7.013", [NSNumber numberWithDouble:monalVersion]);
+        [db executeNonQuery:@"UPDATE flags SET value=? WHERE name='dbversion';" andArguments:@[[NSNumber numberWithDouble:7.013]]];
+    }
+}
+
++(void) migrateISACloudDB:(MLSQLite*) db
+{
+    //history window (in days, 0 = whole archive) used when catching up public channels on connect
+    [self updateISACloudDB:db toVersion:1 withBlock:^{
+        if(![[db executeScalar:@"SELECT count(*) FROM pragma_table_info('buddylist') WHERE name='mam_catchup_days';"] boolValue])
+            [db executeNonQuery:@"ALTER TABLE buddylist ADD COLUMN mam_catchup_days INTEGER DEFAULT 7;"];
+    }];
+    //hats of the occupants of the rooms (XEP-0317), as a JSON list; a room sends them only when it is joined
+    [self updateISACloudDB:db toVersion:2 withBlock:^{
+        [db executeNonQuery:@"CREATE TABLE IF NOT EXISTS muc_hats ( \
+            'account_id' INTEGER NOT NULL, \
+            'room' VARCHAR(255) NOT NULL, \
+            'room_nick' VARCHAR(255) NOT NULL, \
+            'hats' TEXT NOT NULL, \
+            PRIMARY KEY(account_id, room, room_nick) \
+        );"];
+    }];
+    //avatars of people we have no PEP avatar from (members of groups, participants of channels): the hash last seen in their presences,
+    //the hash of the image we hold, and the last failed attempt (to wait before trying again). The images are stored by hash, not here.
+    [self updateISACloudDB:db toVersion:3 withBlock:^{
+        [db executeNonQuery:@"CREATE TABLE IF NOT EXISTS remote_avatar ( \
+            'account_id' INTEGER NOT NULL, \
+            'owner' VARCHAR(512) NOT NULL, \
+            'hash' VARCHAR(64) NOT NULL DEFAULT '', \
+            'fetched_hash' VARCHAR(64), \
+            'failed_hash' VARCHAR(64), \
+            'failed_at' INTEGER NOT NULL DEFAULT 0, \
+            'fail_count' INTEGER NOT NULL DEFAULT 0, \
+            PRIMARY KEY(account_id, owner) \
+        );"];
     }];
 }
 

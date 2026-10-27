@@ -1356,6 +1356,9 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
 -(void) filetransfersNowIdle:(NSNotification*) notification
 {
     DDLogInfo(@"### FILETRANSFERS CHANGED TO IDLE STATE ###");
+    //isaCloud: refresh the spinner, too: it also depends on the filetransfers, and without this it stayed visible after the last transfer finished
+    //(when the accounts had become idle before that) until the next account state change or the next foreground
+    [self handleSpinner];
     //dispatch *async* to main queue to avoid deadlock between receiveQueue ---sync--> im.monal.disconnect ---sync--> receiveQueue
     dispatch_async(dispatch_get_main_queue(), ^{
         [self checkIfBackgroundTaskIsStillNeeded];
