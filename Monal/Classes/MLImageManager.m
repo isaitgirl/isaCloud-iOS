@@ -259,6 +259,54 @@
     }];
 }
 
+#pragma mark avatars of people who are not contacts
+
+//isaCloud: the hash comes from a presence of another person: only a plain sha1 is allowed in the file name
+-(NSString* _Nullable) remoteAvatarPathForHash:(NSString*) hash
+{
+    if(hash.length != 40 || [hash rangeOfCharacterFromSet:[[NSCharacterSet characterSetWithCharactersInString:@"0123456789abcdef"] invertedSet]].location != NSNotFound)
+        return nil;
+    return [[self.documentsDirectory stringByAppendingPathComponent:@"remoteavatars"] stringByAppendingPathComponent:hash];
+}
+
+-(BOOL) hasRemoteAvatarForHash:(NSString*) hash
+{
+    NSString* path = [self remoteAvatarPathForHash:hash];
+    return path != nil && [[NSFileManager defaultManager] fileExistsAtPath:path];
+}
+
+-(void) saveRemoteAvatarData:(NSData*) data forHash:(NSString*) hash
+{
+    NSString* path = [self remoteAvatarPathForHash:hash];
+    if(path == nil)
+        return;
+    NSFileManager* fileManager = [NSFileManager defaultManager];
+    [fileManager createDirectoryAtPath:[path stringByDeletingLastPathComponent] withIntermediateDirectories:YES attributes:nil error:nil];
+    [HelperTools configureFileProtectionFor:[path stringByDeletingLastPathComponent]];
+    if([data writeToFile:path atomically:YES])
+        [HelperTools configureFileProtectionFor:path];
+    else
+        DDLogError(@"failed to write remote avatar to file: %@", path);
+    [self.iconCache removeObjectForKey:[NSString stringWithFormat:@"remote_%@", hash]];
+}
+
+-(UIImage*) remoteAvatarForOwner:(NSString*) owner accountID:(NSNumber*) accountID
+{
+    NSDictionary* info = [[DataLayer sharedInstance] getRemoteAvatarInfoForOwner:owner forAccountID:accountID];
+    NSString* hash = info[@"fetched_hash"];
+    if(![hash isKindOfClass:[NSString class]] || hash.length == 0)
+        return nil;
+    NSString* cacheKey = [NSString stringWithFormat:@"remote_%@", hash];
+    UIImage* image = [self.iconCache objectForKey:cacheKey];
+    if(image)
+        return image;
+    NSString* path = [self remoteAvatarPathForHash:hash];
+    image = path != nil ? [UIImage imageWithContentsOfFile:path] : nil;
+    if(image && ![HelperTools isAppExtension])
+        [self.iconCache setObject:image forKey:cacheKey];
+    return image;
+}
+
 -(NSString*) fileNameforContact:(MLContact*) contact
 {
     return [NSString stringWithFormat:@"%@_%@.png", contact.accountID.stringValue, [contact.contactJid lowercaseString]];;
@@ -399,7 +447,12 @@
                     toreturn = [MLImageManager defaultMucIconForChannel:NO];
             }
             else
-                toreturn = [self generateDummyIconForContact:contact];
+            {
+                //isaCloud: a member of a group who is not our contact: the avatar fetched from the vcard (see MLMucProcessor)
+                toreturn = [self remoteAvatarForOwner:contact.contactJid accountID:contact.accountID];
+                if(toreturn == nil)
+                    toreturn = [self generateDummyIconForContact:contact];
+            }
         }
         else if(contact.isMuc)        //add group indicator overlay for non-default muc avatar
         {

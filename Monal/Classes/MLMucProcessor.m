@@ -42,6 +42,10 @@
     NSMutableDictionary* _changingName;
     NSMutableSet* _nickBookmarkPending;     //isaCloud: rooms whose new nick is not in the remote bookmark yet (memory only)
     NSMutableDictionary* _changingNick;     //isaCloud: room --> @{nick, oldNick, token} of a nick change waiting for the answer of the service (memory only, never saved)
+    NSMutableDictionary* _remoteAvatarQueryJids;    //isaCloud: avatar owner --> jid to ask the vcard of (room/nick for channel participants), memory only
+    NSMutableSet* _remoteAvatarQueued;              //isaCloud: avatar owners waiting in the queue, to ask only once at a time
+    NSMutableDictionary* _remoteAvatarSent;         //isaCloud: avatar owner --> when the request was sent (an answer may never come, e.g. after a disconnect)
+    NSMutableArray* _remoteAvatarQueue;             //isaCloud: waiting requests (dictionaries owner, jid, hash)
     NSDate* _lastPing;
     NSMutableSet* _noUpdateBookmarks;
     //these won't be persisted because it is only for the ui
@@ -460,6 +464,13 @@ static NSString* const kIsaCloudGuideRoom = @"guiaxmpp@conference.isacloud.cc";
             {
                 DDLogVerbose(@"Adding participant from muc(%@): %@", presenceNode.fromUser, item);
                 [[DataLayer sharedInstance] addParticipant:item toMuc:presenceNode.fromUser forAccountID:_account.accountID];
+            }
+            
+            //isaCloud: the avatar hash (XEP-0153) of the occupant: members of groups and participants of channels have no PEP avatar for us
+            if(![presenceNode check:@"/<type=unavailable>"] && ![presenceNode check:@"{http://jabber.org/protocol/muc#user}x/status<code=110>"])
+            {
+                if([presenceNode check:@"{vcard-temp:x:update}x/photo"])
+                    [self handleAvatarHash:nilDefault([presenceNode findFirst:@"{vcard-temp:x:update}x/photo#"], @"") ofOccupantWithNick:presenceNode.fromResource occupantId:item[@"occupant_id"] jid:item[@"jid"] inRoom:presenceNode.fromUser];
             }
             
             //handle members updates (publishing the changes in members/participants is already handled by handleMembersListUpdate
@@ -2151,6 +2162,212 @@ $$instance_handler(handleCatchup, account.mucProcessor, $$ID(xmpp*, account), $$
         [_account mamFinishedFor:iqNode.fromUser];
     }
 $$
+
+#pragma mark avatars of people who are not our contacts
+
+//isaCloud: waiting times after a failed attempt for the same hash (a vcard without a photo means the person keeps the avatar for contacts only);
+//a new hash starts again at once. The same image is never fetched twice (stored by hash).
+static const NSTimeInterval kRemoteAvatarRetryDelays[] = {60 * 60, 6 * 60 * 60, 24 * 60 * 60};
+static const NSUInteger kRemoteAvatarMaxParallelRequests = 3;
+
++(NSString*) avatarOwnerOfChannelParticipant:(NSString*) occupantId inRoom:(NSString*) room
+{
+    return [NSString stringWithFormat:@"%@|%@", room, occupantId];
+}
+
+-(void) handleAvatarHash:(NSString*) hash ofOccupantWithNick:(NSString*) nick occupantId:(NSString*) occupantId jid:(NSString*) jid inRoom:(NSString*) room
+{
+    //only the main app fetches: the images are drawn there
+    if(hash == nil || nick == nil || [HelperTools isAppExtension])
+        return;
+    BOOL isChannel = [kMucTypeChannel isEqualToString:[[DataLayer sharedInstance] getMucTypeOfRoom:room andAccount:_account.accountID]];
+    NSString* owner;
+    NSString* queryJid;
+    if(isChannel)
+    {
+        //channels hide the jid of the participants: the vcard is asked from the occupant, the room hands the question to the person
+        if(occupantId == nil)
+            return;
+        owner = [[self class] avatarOwnerOfChannelParticipant:occupantId inRoom:room];
+        queryJid = [NSString stringWithFormat:@"%@/%@", room, nick];
+    }
+    else
+    {
+        if(jid == nil || [jid isEqualToString:_account.connectionProperties.identity.jid] || [MLContact createContactFromJid:jid andAccountID:_account.accountID].isSubscribedTo)
+            return;         //our contacts have the avatar published for them (PEP)
+        owner = jid;
+        queryJid = jid;
+    }
+    @synchronized(self) {
+        if(_remoteAvatarQueryJids == nil)
+            _remoteAvatarQueryJids = [NSMutableDictionary new];
+        _remoteAvatarQueryJids[owner] = queryJid;
+    }
+    
+    NSDictionary* oldInfo = [[DataLayer sharedInstance] getRemoteAvatarInfoForOwner:owner forAccountID:_account.accountID];
+    BOOL changed = [[DataLayer sharedInstance] noteRemoteAvatarHash:hash forOwner:owner forAccountID:_account.accountID];
+    if(hash.length == 0)
+    {
+        //the person removed the avatar
+        if(oldInfo != nil && [oldInfo[@"fetched_hash"] isKindOfClass:[NSString class]])
+        {
+            [[DataLayer sharedInstance] setRemoteAvatarFetchedHash:nil forOwner:owner forAccountID:_account.accountID];
+            [self remoteAvatarChangedForOwner:owner];
+        }
+        return;
+    }
+    //channels can be big: the avatar is only fetched when it is drawn (see avatarOfChannelParticipant), groups are small: now
+    //(this also makes a waiting time that is over try again each time we join the room again)
+    if(!isChannel)
+        [self requestRemoteAvatarForOwner:owner];
+    else if(changed)
+        [self remoteAvatarChangedForOwner:owner];       //whoever draws it asks again with the new hash
+}
+
+-(UIImage*) avatarOfChannelParticipant:(NSString*) occupantId inRoom:(NSString*) room
+{
+    NSString* owner = [[self class] avatarOwnerOfChannelParticipant:occupantId inRoom:room];
+    UIImage* image = [[MLImageManager sharedInstance] remoteAvatarForOwner:owner accountID:_account.accountID];
+    //the image we have stays on screen while the new one is on its way
+    [self requestRemoteAvatarForOwner:owner];
+    return image;
+}
+
+-(void) requestRemoteAvatarForOwner:(NSString*) owner
+{
+    if([HelperTools isAppExtension])
+        return;
+    NSDictionary* info = [[DataLayer sharedInstance] getRemoteAvatarInfoForOwner:owner forAccountID:_account.accountID];
+    NSString* hash = info[@"hash"];
+    if(![hash isKindOfClass:[NSString class]] || hash.length == 0 || [info[@"fetched_hash"] isEqual:hash])
+        return;
+    
+    //the same image from somewhere else, or from an earlier attempt: no request needed
+    if([[MLImageManager sharedInstance] hasRemoteAvatarForHash:hash])
+    {
+        [[DataLayer sharedInstance] setRemoteAvatarFetchedHash:hash forOwner:owner forAccountID:_account.accountID];
+        [self remoteAvatarChangedForOwner:owner];
+        return;
+    }
+    
+    //a failed attempt for this very hash: wait (a new hash has no failure saved)
+    if([info[@"failed_hash"] isEqual:hash])
+    {
+        NSInteger failures = MAX(1, MIN([info[@"fail_count"] integerValue], (NSInteger)(sizeof(kRemoteAvatarRetryDelays) / sizeof(kRemoteAvatarRetryDelays[0]))));
+        NSTimeInterval age = [[NSDate date] timeIntervalSince1970] - [info[@"failed_at"] doubleValue];
+        if(age >= 0 && age < kRemoteAvatarRetryDelays[failures - 1])
+            return;
+    }
+    
+    @synchronized(self) {
+        NSString* queryJid = _remoteAvatarQueryJids[owner];
+        if(queryJid == nil)
+            return;
+        if(_remoteAvatarQueue == nil)
+        {
+            _remoteAvatarQueue = [NSMutableArray new];
+            _remoteAvatarQueued = [NSMutableSet new];
+            _remoteAvatarSent = [NSMutableDictionary new];
+        }
+        NSDate* sent = _remoteAvatarSent[owner];
+        if([_remoteAvatarQueued containsObject:owner] || (sent != nil && [[NSDate date] timeIntervalSinceDate:sent] < 60))
+            return;         //already waiting or asked a moment ago
+        [_remoteAvatarQueued addObject:owner];
+        [_remoteAvatarQueue addObject:@{@"owner": owner, @"jid": queryJid, @"hash": hash}];
+    }
+    [self processRemoteAvatarQueue];
+}
+
+-(void) processRemoteAvatarQueue
+{
+    while(YES)
+    {
+        NSDictionary* job;
+        @synchronized(self) {
+            //forget requests that were never answered
+            for(NSString* owner in [_remoteAvatarSent allKeys])
+                if([[NSDate date] timeIntervalSinceDate:_remoteAvatarSent[owner]] >= 60)
+                    [_remoteAvatarSent removeObjectForKey:owner];
+            if(_remoteAvatarQueue.count == 0 || _remoteAvatarSent.count >= kRemoteAvatarMaxParallelRequests)
+                return;
+            job = _remoteAvatarQueue.firstObject;
+            [_remoteAvatarQueue removeObjectAtIndex:0];
+            [_remoteAvatarQueued removeObject:job[@"owner"]];
+            _remoteAvatarSent[job[@"owner"]] = [NSDate date];
+        }
+        [self sendRemoteAvatarRequest:job];
+    }
+}
+
+-(void) sendRemoteAvatarRequest:(NSDictionary*) job
+{
+    NSString* owner = job[@"owner"];
+    NSString* hash = job[@"hash"];
+    DDLogDebug(@"Asking the vcard of %@ for avatar hash %@...", job[@"jid"], hash);
+    XMPPIQ* vcardQuery = [[XMPPIQ alloc] initWithType:kiqGetType to:job[@"jid"]];
+    [vcardQuery setVcardQuery];
+    [_account sendIq:vcardQuery withResponseHandler:^(XMPPIQ* response) {
+        NSData* imageData = [response findFirst:@"{vcard-temp}vCard/PHOTO/BINVAL#|base64"];
+        [self finishRemoteAvatarRequestForOwner:owner hash:hash imageData:imageData];
+    } andErrorHandler:^(XMPPIQ* error) {
+        DDLogDebug(@"vcard of %@ could not be read: %@", job[@"jid"], [error findFirst:@"error"]);
+        [self finishRemoteAvatarRequestForOwner:owner hash:hash imageData:nil];
+    }];
+}
+
+-(void) finishRemoteAvatarRequestForOwner:(NSString*) owner hash:(NSString*) hash imageData:(NSData*) imageData
+{
+    @synchronized(self) {
+        [_remoteAvatarSent removeObjectForKey:owner];
+    }
+    
+    //an empty vcard is what the service answers when the avatar is only for contacts; a photo that does not match the hash was changed meanwhile
+    BOOL success = NO;
+    if(imageData.length > 0 && imageData.length <= 512 * 1024)
+    {
+        if([[HelperTools hexadecimalString:[HelperTools sha1:imageData]] isEqualToString:hash])
+        {
+            UIImage* image = [UIImage imageWithData:imageData];
+            NSData* resized = image != nil ? [HelperTools resizeAvatarImage:image withCircularMask:YES toMaxBase64Size:256000] : nil;
+            if(resized != nil)
+            {
+                [[MLImageManager sharedInstance] saveRemoteAvatarData:resized forHash:hash];
+                [[DataLayer sharedInstance] setRemoteAvatarFetchedHash:hash forOwner:owner forAccountID:_account.accountID];
+                success = YES;
+            }
+        }
+        else
+            DDLogWarn(@"Avatar of %@ does not match the hash %@ of the presence, the person changed it meanwhile", owner, hash);
+    }
+    if(success)
+    {
+        DDLogInfo(@"Fetched avatar %@ of %@", hash, owner);
+        [self remoteAvatarChangedForOwner:owner];
+    }
+    else
+    {
+        NSInteger failures = [[DataLayer sharedInstance] setRemoteAvatarFailedForHash:hash forOwner:owner forAccountID:_account.accountID];
+        DDLogDebug(@"No avatar available for %@ (hash %@), failed attempts in a row: %ld", owner, hash, (long)failures);
+    }
+    [self processRemoteAvatarQueue];
+}
+
+//isaCloud: tells everybody who draws this person that the avatar changed
+-(void) remoteAvatarChangedForOwner:(NSString*) owner
+{
+    NSArray<NSString*>* parts = [owner componentsSeparatedByString:@"|"];
+    if(parts.count == 1)
+    {
+        //member of a group: its contact draws it from MLImageManager
+        [[MLImageManager sharedInstance] purgeCacheForContact:owner andAccount:_account.accountID];
+        [[MLNotificationQueue currentQueue] postNotificationName:kMonalContactRefresh object:_account userInfo:@{
+            @"contact": [MLContact createContactFromJid:owner andAccountID:_account.accountID]
+        }];
+    }
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [[NSNotificationCenter defaultCenter] postNotificationName:kMonalRemoteAvatarUpdated object:self->_account userInfo:@{@"owner": owner}];
+    });
+}
 
 -(void) fetchAvatarForRoom:(NSString*) room
 {

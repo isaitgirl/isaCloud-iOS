@@ -1174,6 +1174,20 @@
                 PRIMARY KEY(account_id, room, room_nick) \
             );"];
         }];
+        //isaCloud: avatars of people we have no PEP avatar from (members of groups, participants of channels): the hash last seen in their presences,
+        //the hash of the image we hold, and the last failed attempt (to wait before trying again). The images are stored by hash, not here.
+        [self updateDB:db withDataLayer:dataLayer toVersion:7.016 withBlock:^{
+            [db executeNonQuery:@"CREATE TABLE IF NOT EXISTS remote_avatar ( \
+                'account_id' INTEGER NOT NULL, \
+                'owner' VARCHAR(512) NOT NULL, \
+                'hash' VARCHAR(64) NOT NULL DEFAULT '', \
+                'fetched_hash' VARCHAR(64), \
+                'failed_hash' VARCHAR(64), \
+                'failed_at' INTEGER NOT NULL DEFAULT 0, \
+                'fail_count' INTEGER NOT NULL DEFAULT 0, \
+                PRIMARY KEY(account_id, owner) \
+            );"];
+        }];
 
         
         

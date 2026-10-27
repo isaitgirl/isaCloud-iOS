@@ -14,6 +14,8 @@
 #import <monalxmpp/MLContact.h>
 #import <monalxmpp/MLMessage.h>
 #import <monalxmpp/MLImageManager.h>
+#import <monalxmpp/xmpp.h>
+#import <monalxmpp/MLMucProcessor.h>
 
 static NSMutableDictionary* _singletonCache;
 
@@ -68,6 +70,8 @@ static NSMutableDictionary* _singletonCache;
     self = [super init];
     //watch for all sorts of changes and update our singleton dynamically
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleParticipantUpdate:) name:kMonalMucParticipantsAndMembersUpdated object:nil];
+    //isaCloud: the avatar of a participant was fetched or removed
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleRemoteAvatarUpdate:) name:kMonalRemoteAvatarUpdated object:nil];
     return self;
 }
 
@@ -107,6 +111,17 @@ static NSMutableDictionary* _singletonCache;
 -(instancetype) awakeAfterUsingCoder:(NSCoder*) coder
 {
     return [[self class] createChannelContactFromOccupantId:self.occupantId withNick:self.nick inMuc:self.mucContact];
+}
+
+-(void) handleRemoteAvatarUpdate:(NSNotification*) notification
+{
+    if(self.occupantId == nil || self.mucContact == nil)
+        return;
+    if(![notification.userInfo[@"owner"] isEqualToString:[MLMucProcessor avatarOwnerOfChannelParticipant:self.occupantId inRoom:self.mucContact.contactJid]])
+        return;
+    //KVO observers (the chat view) read the avatar again
+    [self willChangeValueForKey:@"avatar"];
+    [self didChangeValueForKey:@"avatar"];
 }
 
 -(void) handleParticipantUpdate:(NSNotification*) notification
@@ -158,6 +173,11 @@ static NSMutableDictionary* _singletonCache;
 
 -(UIImage*) avatar
 {
+    //isaCloud: the avatar of the participant, if he or she made it visible to everybody (see MLMucProcessor); asks for it when we have only the hash
+    xmpp* account = [[MLXMPPManager sharedInstance] getEnabledAccountForID:self.mucContact.accountID];
+    UIImage* remoteAvatar = self.occupantId != nil ? [account.mucProcessor avatarOfChannelParticipant:self.occupantId inRoom:self.mucContact.contactJid] : nil;
+    if(remoteAvatar != nil)
+        return remoteAvatar;
     //isaCloud: initials on a XEP-0392 color (no real jid in channels, so the occupant jid room@service/nick is used as color input)
     if(_avatar == nil || ![_avatarNick isEqualToString:self.nick])
     {

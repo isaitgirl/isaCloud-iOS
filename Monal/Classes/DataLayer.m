@@ -26,6 +26,7 @@
 @end
 
 NSString* const kMonalMucHatsUpdated = @"kMonalMucHatsUpdated";
+NSString* const kMonalRemoteAvatarUpdated = @"kMonalRemoteAvatarUpdated";
 
 @interface DataLayer()
 @property (readonly, strong) MLSQLite* db;
@@ -1170,6 +1171,83 @@ static NSMutableDictionary<NSString*, NSArray<NSDictionary<NSString*, NSString*>
         _mucHatsCache[cacheKey] = hats;
     }
     return hats;
+}
+
+//isaCloud: avatars of people we have no PEP avatar from (see DataLayer.h). Kept in memory, too: the avatar of every message asks for it while drawing.
+static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
+
+-(NSDictionary*) getRemoteAvatarInfoForOwner:(NSString*) owner forAccountID:(NSNumber*) accountID
+{
+    if(!owner || accountID == nil)
+        return nil;
+    NSString* cacheKey = [NSString stringWithFormat:@"%@|%@", accountID, owner];
+    @synchronized(self) {
+        NSDictionary* cached = _remoteAvatarCache[cacheKey];
+        if(cached)
+            return [cached isKindOfClass:[NSNull class]] ? nil : cached;
+    }
+    NSArray* rows = [self.db idReadTransaction:^{
+        return [self.db executeReader:@"SELECT hash, fetched_hash, failed_hash, failed_at, fail_count FROM remote_avatar WHERE account_id=? AND owner=?;" andArguments:@[accountID, owner]];
+    }];
+    NSDictionary* info = rows.count > 0 ? rows[0] : nil;
+    @synchronized(self) {
+        if(!_remoteAvatarCache)
+            _remoteAvatarCache = [NSMutableDictionary new];
+        _remoteAvatarCache[cacheKey] = info ? info : (NSDictionary*)[NSNull null];
+    }
+    return info;
+}
+
+-(void) saveRemoteAvatarInfo:(NSDictionary*) info forOwner:(NSString*) owner forAccountID:(NSNumber*) accountID
+{
+    [self.db voidWriteTransaction:^{
+        [self.db executeNonQuery:@"INSERT INTO remote_avatar ('account_id', 'owner', 'hash', 'fetched_hash', 'failed_hash', 'failed_at', 'fail_count') VALUES(?, ?, ?, ?, ?, ?, ?) ON CONFLICT(account_id, owner) DO UPDATE SET hash=excluded.hash, fetched_hash=excluded.fetched_hash, failed_hash=excluded.failed_hash, failed_at=excluded.failed_at, fail_count=excluded.fail_count;" andArguments:@[
+            accountID, owner, info[@"hash"], nilWrapper(info[@"fetched_hash"]), nilWrapper(info[@"failed_hash"]), info[@"failed_at"], info[@"fail_count"]
+        ]];
+    }];
+    @synchronized(self) {
+        if(!_remoteAvatarCache)
+            _remoteAvatarCache = [NSMutableDictionary new];
+        _remoteAvatarCache[[NSString stringWithFormat:@"%@|%@", accountID, owner]] = info;
+    }
+}
+
+-(BOOL) noteRemoteAvatarHash:(NSString*) hash forOwner:(NSString*) owner forAccountID:(NSNumber*) accountID
+{
+    NSDictionary* old = [self getRemoteAvatarInfoForOwner:owner forAccountID:accountID];
+    if(old != nil && [old[@"hash"] isEqualToString:hash])
+        return NO;
+    //a new hash ends any waiting time: the failed attempt was for another image
+    NSMutableDictionary* info = [(old ? old : @{@"fetched_hash": [NSNull null], @"failed_hash": [NSNull null], @"failed_at": @0, @"fail_count": @0}) mutableCopy];
+    info[@"hash"] = hash;
+    info[@"failed_hash"] = [NSNull null];
+    info[@"failed_at"] = @0;
+    info[@"fail_count"] = @0;
+    [self saveRemoteAvatarInfo:info forOwner:owner forAccountID:accountID];
+    return YES;
+}
+
+-(void) setRemoteAvatarFetchedHash:(NSString*) hash forOwner:(NSString*) owner forAccountID:(NSNumber*) accountID
+{
+    NSDictionary* old = [self getRemoteAvatarInfoForOwner:owner forAccountID:accountID];
+    NSMutableDictionary* info = [(old ? old : @{@"hash": hash ? hash : @"", @"failed_hash": [NSNull null], @"failed_at": @0, @"fail_count": @0}) mutableCopy];
+    info[@"fetched_hash"] = hash ? hash : [NSNull null];
+    info[@"failed_hash"] = [NSNull null];
+    info[@"failed_at"] = @0;
+    info[@"fail_count"] = @0;
+    [self saveRemoteAvatarInfo:info forOwner:owner forAccountID:accountID];
+}
+
+-(NSInteger) setRemoteAvatarFailedForHash:(NSString*) hash forOwner:(NSString*) owner forAccountID:(NSNumber*) accountID
+{
+    NSDictionary* old = [self getRemoteAvatarInfoForOwner:owner forAccountID:accountID];
+    NSMutableDictionary* info = [(old ? old : @{@"hash": hash, @"fetched_hash": [NSNull null], @"failed_hash": [NSNull null], @"failed_at": @0, @"fail_count": @0}) mutableCopy];
+    NSInteger count = [info[@"failed_hash"] isEqual:hash] ? [info[@"fail_count"] integerValue] + 1 : 1;
+    info[@"failed_hash"] = hash;
+    info[@"failed_at"] = @((NSInteger)[[NSDate date] timeIntervalSince1970]);
+    info[@"fail_count"] = @(count);
+    [self saveRemoteAvatarInfo:info forOwner:owner forAccountID:accountID];
+    return count;
 }
 
 -(NSDictionary* _Nullable) getParticipantForOccupant:(NSString*) occupant inRoom:(NSString*) room forAccountID:(NSNumber*) accountID

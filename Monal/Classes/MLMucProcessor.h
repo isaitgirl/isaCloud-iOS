@@ -34,6 +34,12 @@ NS_ASSUME_NONNULL_BEGIN
 -(void) queryMemberCountOfRoom:(NSString*) room completion:(monal_id_block_t) completion;
 //isaCloud: avatar of a room (vcard-temp, not stored), completion gets NSData or NSNull
 -(void) queryAvatarOfRoom:(NSString*) room completion:(monal_id_block_t) completion;
+//isaCloud: avatars of people who are not our contacts (members of groups, participants of channels), read from their vcard-temp.
+//The presence of the occupant carries the hash of the avatar (XEP-0153): a new hash is the signal to fetch, no polling.
+-(void) handleAvatarHash:(NSString* _Nullable) hash ofOccupantWithNick:(NSString*) nick occupantId:(NSString* _Nullable) occupantId jid:(NSString* _Nullable) jid inRoom:(NSString*) room;
+//the avatar of a channel participant, or nil (then the caller draws initials): asks to fetch it when needed
+-(UIImage* _Nullable) avatarOfChannelParticipant:(NSString*) occupantId inRoom:(NSString*) room;
++(NSString*) avatarOwnerOfChannelParticipant:(NSString*) occupantId inRoom:(NSString*) room;
 -(NSString* _Nullable) createGroup:(NSString*) room;
 -(void) destroyRoom:(NSString*) room;
 -(void) changeNameOfMuc:(NSString*) room to:(NSString*) name;

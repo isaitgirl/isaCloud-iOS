@@ -18,6 +18,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 //isaCloud: a room's occupants can have hats (XEP-0317); posted on the main thread when the hats of an occupant change, userInfo has "room"
 extern NSString* const kMonalMucHatsUpdated;
+//isaCloud: an avatar of a person who is not our contact was fetched or removed (userInfo: owner, see getRemoteAvatarInfoForOwner:)
+extern NSString* const kMonalRemoteAvatarUpdated;
 
 @interface DataLayer : NSObject
 
@@ -129,6 +131,14 @@ extern NSString* const kMessageTypeFiletransfer;
 //isaCloud: hats of an occupant (dictionaries with "uri" and "title"), saved in the database and replaced by every presence of the occupant
 -(void) setMucHats:(NSArray<NSDictionary<NSString*, NSString*>*>*) hats forRoom:(NSString*) room nick:(NSString*) nick forAccountID:(NSNumber*) accountID;
 -(NSArray<NSDictionary<NSString*, NSString*>*>*) getMucHatsForRoom:(NSString*) room nick:(NSString*) nick forAccountID:(NSNumber*) accountID;
+//isaCloud: avatars of people we have no PEP avatar from. "owner" is the bare jid (members of groups) or room|occupant-id (participants of channels).
+//Returns @{hash, fetched_hash, failed_hash, failed_at, fail_count} (strings as NSNull when unset) or nil when the owner is unknown
+-(NSDictionary* _Nullable) getRemoteAvatarInfoForOwner:(NSString*) owner forAccountID:(NSNumber*) accountID;
+//saves the hash seen in a presence (empty string: no avatar), returns YES if it differs from the one saved before
+-(BOOL) noteRemoteAvatarHash:(NSString*) hash forOwner:(NSString*) owner forAccountID:(NSNumber*) accountID;
+-(void) setRemoteAvatarFetchedHash:(NSString* _Nullable) hash forOwner:(NSString*) owner forAccountID:(NSNumber*) accountID;
+//remembers a failed attempt for this hash and returns how many attempts failed in a row
+-(NSInteger) setRemoteAvatarFailedForHash:(NSString*) hash forOwner:(NSString*) owner forAccountID:(NSNumber*) accountID;
 -(NSArray<NSDictionary<NSString*, id>*>*) getMembersAndParticipantsOfMuc:(NSString*) room forAccountID:(NSNumber*) accountID;
 -(NSString* _Nullable) getOwnAffiliationInGroupOrChannel:(MLContact*) contact;
 -(NSString* _Nullable) getOwnRoleInGroupOrChannel:(MLContact*) contact;

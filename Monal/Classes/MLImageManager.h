@@ -46,6 +46,12 @@
 +(NSString* _Nonnull) initialsForName:(NSString* _Nullable) name;
 -(UIImage* _Nonnull) generateDummyIconWithName:(NSString* _Nullable) name andColorInput:(NSString* _Nonnull) colorInput;
 
+//isaCloud: avatars of people we have no PEP avatar from (members of groups, participants of channels), stored by their hash:
+//the same image is stored once, even if the person is in many rooms. "owner" is a bare jid or room|occupant-id, see DataLayer.h
+-(BOOL) hasRemoteAvatarForHash:(NSString* _Nonnull) hash;
+-(void) saveRemoteAvatarData:(NSData* _Nonnull) data forHash:(NSString* _Nonnull) hash;
+-(UIImage* _Nullable) remoteAvatarForOwner:(NSString* _Nonnull) owner accountID:(NSNumber* _Nonnull) accountID;
+
 -(NSURL* _Nullable) getThumbnailURLOfMessage:(MLMessage* _Nonnull) message;
 -(NSURL* _Nullable) setThumbnailOfMessage:(MLMessage* _Nonnull) message withData:(NSData* _Nullable) data;
 
