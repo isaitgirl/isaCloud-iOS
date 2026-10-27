@@ -1358,8 +1358,10 @@ static BOOL _dnssecWarningDisplayed;
 
 -(CGFloat) tableView:(UITableView*) tableView heightForRowAtIndexPath:(NSIndexPath*) indexPath
 {
-    //isaCloud: room for the account's jid under the name while there is more than one account
-    return _accountJids != nil ? 74.0f : 60.0f;
+    //isaCloud: room for the account's jid under the name while there is more than one account;
+    //the rows are 12 pt taller than the original ones (60 pt) so the chats are not squeezed together: the avatar and the
+    //texts are centered in the row, so only the height has to change
+    return _accountJids != nil ? 86.0f : 72.0f;
 }
 
 -(NSString*) tableView:(UITableView*) tableView titleForDeleteConfirmationButtonForRowAtIndexPath:(NSIndexPath*) indexPath
