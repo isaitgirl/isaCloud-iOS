@@ -836,6 +836,14 @@ struct ChatView: View {
             }
         ])
         */
+        // isaCloud: pulling a message to the right replies to it, like "Reply" in the message menu
+        .onSwipeToReply(activeFor: { message in
+            let mlMessage = (message as! ChatViewMessage).innerMessage.obj
+            return message.hasText && !mlMessage.retracted
+        }, onReply: { message in
+            let mlMessage = (message as! ChatViewMessage).innerMessage.obj
+            inputModel.quote(author: mlMessage.isMuc ? mlMessage.contactDisplayName : nil, text: mlMessage.messageText)
+        })
         .onMessageReaction(didReactTo: { message, reaction in
             let mlMessage = (message as! ChatViewMessage).innerMessage.obj
             switch reaction.type {

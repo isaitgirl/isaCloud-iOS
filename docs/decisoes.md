@@ -11,6 +11,12 @@ Registro do **porquê** das escolhas feitas no fork: decisões de produto, de c�
 - **Alternativas descartadas:** (a) trocar `│` por caractere de bloco (testado: barras grossas e ainda segmentadas); (b) balão próprio via `messageBuilder` para toda mensagem com citação (1 a 2 dias e risco de regressão: reproduzir avatar, nome, hora, status, reações, links, menu e swipe); (c) esperar a XEP-0461 do Monal (sem previsão).
 - **Regras:** mudanças pequenas, comentadas com "isaCloud:" e em commits separados, para o rebase ser fácil; se o upstream trouxer o recurso, descartar o nosso commit. Toda mudança entra por PR de uma branch nova para `isaCloud`, no fork e no app (o PR do app só depois do PR do fork). Depois de cada commit no fork, atualizar a revisão fixada no `Package.resolved` do app.
 
+## Responder puxando o balão (27/10/2026, do Jejê)
+- **Decisão:** puxar um balão para a direita responde a ele: o balão acompanha o dedo, uma seta aparece atrás, e ao soltar o balão volta com uma mola e o campo de texto ganha o foco. É o mesmo "Responder" do menu do toque longo, que no isaCloud é só a citação (`> texto`) colocada no início do campo (`ChatInputModel.quote`), sem resposta estruturada do protocolo.
+- **Por quê:** é o gesto que as pessoas já conhecem de outros apps de mensagem e é bem mais rápido que abrir o menu. Mudança nº 5 do fork do ExyteChat (`docs/exytechat-fork.md`).
+- **Detalhes:** vale para mensagens com texto que não foram retiradas. Só conta o arrasto que começa na horizontal e longe da borda esquerda (a borda é o gesto de voltar). O balão do GIF e outros balões próprios do app também ganham o gesto, porque ele fica na célula da lista.
+- **Não testado:** iPhone real e VoiceOver (o gesto não tem alternativa de acessibilidade além do "Responder" do menu, que continua). No simulador a gravação do bounce é lenta; num aparelho ele é fluido.
+
 ## Modal de quem reagiu (25 e 26/10/2026, do Jejê)
 - **Decisão:** tocar nas reações de um balão abre uma modal com a lista de quem reagiu e com qual emoji, com filtro por emoji, e o balão agrupa as reações por emoji, com contagem. A lista que aparecia no topo ao segurar a mensagem foi removida.
 - **Por quê:** o balão mostrava um círculo por reação (duas pessoas com ❤️ davam dois corações) e a lista do toque longo tinha layout ruim e só aparecia segurando a mensagem. É desenhado pelo ExyteChat, então é a mudança nº 4 do fork, com um PR par no app.
