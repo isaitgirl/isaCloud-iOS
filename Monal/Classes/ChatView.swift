@@ -198,6 +198,10 @@ struct ChatView: View {
             var availableActions: [MessageAction] = []
             if message.hasText {
                 availableActions.append(.copy)
+            }
+            //isaCloud: a message without text (photo, video, audio, file, location) can be replied to as well, quoting a label
+            //(TEMPORARY, until Monal implements XEP-0461: see ChatViewMessage.replyQuoteText)
+            if (message as! ChatViewMessage).replyQuoteText != nil {
                 availableActions.append(.quote)
             }
 
@@ -730,7 +734,7 @@ struct ChatView: View {
                     defaultActionClosure(message, .copy)
                 case .quote:
                     // the author is only needed where several people write: groups and channels
-                    inputModel.quote(author: mlMessage.isMuc ? mlMessage.contactDisplayName : nil, text: mlMessage.messageText)
+                    inputModel.quote(author: mlMessage.isMuc ? mlMessage.contactDisplayName : nil, text: (message as! ChatViewMessage).replyQuoteText ?? mlMessage.messageText)
                 case .edit:
                     inputModel.startEdit(of: mlMessage.messageId, text: mlMessage.messageText)
                     editSaveClosure = { editedText in
@@ -839,11 +843,13 @@ struct ChatView: View {
         */
         // isaCloud: pulling a message to the right replies to it, like "Reply" in the message menu
         .onSwipeToReply(activeFor: { message in
-            let mlMessage = (message as! ChatViewMessage).innerMessage.obj
-            return message.hasText && !mlMessage.retracted
+            (message as! ChatViewMessage).replyQuoteText != nil
         }, onReply: { message in
-            let mlMessage = (message as! ChatViewMessage).innerMessage.obj
-            inputModel.quote(author: mlMessage.isMuc ? mlMessage.contactDisplayName : nil, text: mlMessage.messageText)
+            let chatMessage = message as! ChatViewMessage
+            guard let text = chatMessage.replyQuoteText else {
+                return
+            }
+            inputModel.quote(author: chatMessage.innerMessage.obj.isMuc ? chatMessage.innerMessage.obj.contactDisplayName : nil, text: text)
         })
         .onMessageReaction(didReactTo: { message, reaction in
             let mlMessage = (message as! ChatViewMessage).innerMessage.obj
@@ -1336,6 +1342,37 @@ class ChatViewMessage: ExyteChat.Message {
     }
     override var hasText: Bool {
         return !text.isEmpty
+    }
+    /// What a reply to this message quotes, or nil when it cannot be replied to (a retracted message, or one without text
+    /// that is none of the kinds below). A text message quotes its text. A message without text (photo, video, GIF, audio, file, location) quotes a
+    /// short label such as "📷 Photo" (see QuoteFormatting.attachmentLabel).
+    /// TEMPORARY: the reply is only a quote in the text of the message until Monal implements XEP-0461 (Message Replies) and
+    /// XEP-0428 (Fallback Indication); with them the label is the fallback text, and the thumbnail of a photo and the jump to
+    /// the original message become possible. The label says what kind of message it was, not which one.
+    var replyQuoteText: String? {
+        let mlMessage = innerMessage.obj
+        if mlMessage.retracted {
+            return nil
+        }
+        if hasText {
+            return mlMessage.messageText
+        }
+        if staticLocation != nil {
+            return QuoteFormatting.attachmentLabel(.location)
+        }
+        guard mlMessage.messageType == kMessageTypeFiletransfer, let fileInfo = fileInfo else {
+            return nil
+        }
+        if fileInfo.mimeType == "image/gif" {
+            return QuoteFormatting.attachmentLabel(.gif)
+        } else if fileInfo.isImage {
+            return QuoteFormatting.attachmentLabel(.photo)
+        } else if fileInfo.isVideo {
+            return QuoteFormatting.attachmentLabel(.video)
+        } else if fileInfo.isAudio {
+            return QuoteFormatting.attachmentLabel(.audio)
+        }
+        return QuoteFormatting.attachmentLabel(.file(name: fileInfo.filename))
     }
     override var attributedText: AttributedString {
         get {

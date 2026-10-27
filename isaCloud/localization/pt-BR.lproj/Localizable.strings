@@ -153,3 +153,8 @@
 "More options" = "Mais opções";
 "Reactions above the messages" = "Reações acima das mensagens";
 "Shows the reactions of a message as round bubbles over the corner of its bubble, instead of capsules in its footer." = "Mostra as reações de uma mensagem em bolinhas sobre o canto do balão, em vez de cápsulas no rodapé dele.";
+"Photo" = "Foto";
+"Video" = "Vídeo";
+"Audio message" = "Mensagem de áudio";
+"File" = "Arquivo";
+"File: %@" = "Arquivo: %@";
