@@ -101,6 +101,43 @@ struct QuoteFormattingTests {
         model.quote(author: "Lu", text: "oi")
         #expect(model.text == "texto original")
     }
+
+    // TEMPORARY labels for replying to a message without text, until Monal implements XEP-0461 and XEP-0428
+
+    @Test("a message without text is quoted by a label with an emoji in front of the word")
+    func attachmentLabels() {
+        let same: (String) -> String = { $0 }
+        #expect(QuoteFormatting.attachmentLabel(.photo, localize: same) == "📷 Photo")
+        #expect(QuoteFormatting.attachmentLabel(.gif, localize: same) == "🎞️ GIF")
+        #expect(QuoteFormatting.attachmentLabel(.video, localize: same) == "🎥 Video")
+        #expect(QuoteFormatting.attachmentLabel(.audio, localize: same) == "🎤 Audio message")
+        #expect(QuoteFormatting.attachmentLabel(.location, localize: same) == "📍 Location")
+        #expect(QuoteFormatting.attachmentLabel(.file(name: "contrato.pdf"), localize: same) == "📎 File: contrato.pdf")
+    }
+
+    @Test("the word is translated, the emoji and the file name are not")
+    func attachmentLabelsAreTranslated() {
+        let pt: (String) -> String = { ["Photo": "Foto", "File: %@": "Arquivo: %@"][$0] ?? $0 }
+        #expect(QuoteFormatting.attachmentLabel(.photo, localize: pt) == "📷 Foto")
+        #expect(QuoteFormatting.attachmentLabel(.file(name: "a.pdf"), localize: pt) == "📎 Arquivo: a.pdf")
+    }
+
+    @Test("a file name with line breaks stays on one line, and one without name falls back to the word")
+    func attachmentLabelFileNames() {
+        let same: (String) -> String = { $0 }
+        #expect(QuoteFormatting.attachmentLabel(.file(name: "a\nb.pdf"), localize: same) == "📎 File: a b.pdf")
+        #expect(QuoteFormatting.attachmentLabel(.file(name: "  "), localize: same) == "📎 File")
+    }
+
+    @Test("the label is quoted like any text: with the author in groups and channels, and it nests like a reply")
+    func attachmentLabelIsQuoted() {
+        let label = QuoteFormatting.attachmentLabel(.photo, localize: { $0 })
+        #expect(QuoteFormatting.quoteLine(author: nil, text: label) == "> 📷 Photo")
+        #expect(QuoteFormatting.quoteLine(author: "Ana", text: label) == "> Ana: 📷 Photo")
+        #expect(QuoteFormatting.parse("> 📷 Photo") == (1, "📷 Photo"))
+        //replying to a reply that quoted a photo: the quote goes one level down, as with any other quote
+        #expect(QuoteFormatting.quoteLine(author: "Lu", text: "> 📷 Photo\nque legal") == ">> 📷 Photo\n> Lu: que legal")
+    }
 }
 
 @Suite("Chat message batching")

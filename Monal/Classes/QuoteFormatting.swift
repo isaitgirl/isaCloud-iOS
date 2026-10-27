@@ -18,6 +18,38 @@ enum QuoteFormatting {
     /// grow forever (as in Conversations): the quote of a reply shows the reply and what it quoted, no more
     static let maxQuotedDepth = 2
 
+    // TEMPORARY: the reply to something that is not text. The quote is only text in the body, so a photo, a video, an
+    // audio message, a file or a location is quoted by a short label (a "> 📷 Photo" line), which says what kind of thing
+    // it was but not which one. This is to be replaced when Monal implements the XEPs that do it properly: XEP-0461
+    // (Message Replies: a reference to the original message, from which the thumbnail and the jump to it come) and XEP-0428
+    // (Fallback Indication: this label becomes the fallback text of the reply). Until then it is what a reply to a
+    // message without text can be.
+    enum AttachmentKind: Equatable {
+        case photo, gif, video, audio, location
+        case file(name: String)
+    }
+
+    /// the text that stands for a message without text when it is quoted, with an emoji in front of the word; `localize`
+    /// translates the word (the emojis and a file name are not translated)
+    static func attachmentLabel(_ kind: AttachmentKind, localize: (String) -> String = { NSLocalizedString($0, comment: "label of the quote when replying to a message without text, the emoji in front is not translated") }) -> String {
+        switch kind {
+            case .photo:
+                return "📷 " + localize("Photo")
+            case .gif:
+                return "🎞️ GIF"
+            case .video:
+                return "🎥 " + localize("Video")
+            case .audio:
+                return "🎤 " + localize("Audio message")
+            case .location:
+                return "📍 " + localize("Location")
+            case .file(let name):
+                //a file name is one line: a line break in it would end the quote
+                let oneLine = name.components(separatedBy: .newlines).joined(separator: " ").trimmingCharacters(in: .whitespaces)
+                return "📎 " + (oneLine.isEmpty ? localize("File") : String(format: localize("File: %@"), oneLine))
+        }
+    }
+
     /// How deep a line is quoted and what is left of it without the markers. Every ">" that is followed by a space or by another
     /// ">" is one level, so "> a", ">> a" and "> > a" are quotes of depth 1, 2 and 2; ">a" and ">:)" are not quotes.
     static func parse(_ line: String) -> (depth: Int, text: String) {
