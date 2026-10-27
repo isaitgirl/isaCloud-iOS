@@ -165,8 +165,8 @@ static const int pingFreqencyMinutes = 5;       //about the same Conversations u
     
     [self upgradeBoolUserSettingsIfUnset:@"showAdvancedUI" toDefault:NO];
     
-    //isaCloud: reactions as capsules in the footer of the bubble (Settings > User Interface > Appearance), off: round bubbles over the corner
-    [self upgradeBoolUserSettingsIfUnset:@"reactionsBelowBubble" toDefault:NO];
+    //isaCloud: reactions as round bubbles over the corner of the message bubble (Settings > User Interface > Appearance), off: capsules in the footer
+    [self upgradeBoolUserSettingsIfUnset:@"reactionsAboveMessages" toDefault:NO];
     
     [self upgradeBoolUserSettingsIfUnset:@"showNewChatView" toDefault:YES];
     

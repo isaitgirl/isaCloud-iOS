@@ -39,8 +39,50 @@ struct QuoteFormattingTests {
     @Test("the lines of a body keep the quoted ones apart, without their marker")
     func splitsLines() {
         let lines = QuoteFormatting.lines(of: "> Lu: oi\nresposta\n> outra")
-        #expect(lines.map { $0.quoted } == [true, false, true])
+        #expect(lines.map { $0.depth } == [1, 0, 1])
         #expect(lines.map { $0.text } == ["Lu: oi", "resposta", "outra"])
+    }
+
+    @Test("every marker followed by a space or another marker is one level of quote")
+    func nestedDepth() {
+        #expect(QuoteFormatting.parse("> a") == (1, "a"))
+        #expect(QuoteFormatting.parse(">> a") == (2, "a"))
+        #expect(QuoteFormatting.parse("> > a") == (2, "a"))
+        #expect(QuoteFormatting.parse(">>> a") == (3, "a"))
+        #expect(QuoteFormatting.parse(">   > a") == (2, "a"))
+        #expect(QuoteFormatting.parse("a > b") == (0, "a > b"))
+    }
+
+    @Test("a marker followed by something else is just text")
+    func notQuotes() {
+        #expect(QuoteFormatting.parse(">a") == (0, ">a"))
+        #expect(QuoteFormatting.parse(">:)") == (0, ">:)"))
+        #expect(QuoteFormatting.parse("> >a") == (1, ">a"))
+        #expect(QuoteFormatting.parse("") == (0, ""))
+    }
+
+    @Test("the depth stops at the maximum")
+    func depthIsLimited() {
+        let line = String(repeating: ">", count: QuoteFormatting.maxDepth + 3) + " a"
+        #expect(QuoteFormatting.parse(line).depth == QuoteFormatting.maxDepth)
+    }
+
+    @Test("quoting a reply nests what it quoted one level deeper and keeps the reply as the first level")
+    func quotingAReply() {
+        let reply = "> Ana: oi tudo bem\nsim, e você?"
+        #expect(QuoteFormatting.quoteLine(author: "Lu", text: reply) == ">> Ana: oi tudo bem\n> Lu: sim, e você?")
+        #expect(QuoteFormatting.quoteLine(author: nil, text: reply) == ">> Ana: oi tudo bem\n> sim, e você?")
+    }
+
+    @Test("lines that are already nested too deep are left out when quoting")
+    func quotingLeavesOutDeepLines() {
+        let reply = ">> Ana: oi\n> Lu: tudo bem?\nsim"
+        #expect(QuoteFormatting.quoteLine(author: "Bia", text: reply) == ">> Lu: tudo bem?\n> Bia: sim")
+    }
+
+    @Test("a quote made only of too deep lines is an empty quote")
+    func quotingOnlyDeepLines() {
+        #expect(QuoteFormatting.quoteLine(author: "Bia", text: ">> a\n>> b") == "> ")
     }
 
     @Test("starting a reply puts the quote in front of the text and keeps what was typed")

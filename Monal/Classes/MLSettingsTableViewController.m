@@ -40,13 +40,11 @@ enum SettingsAppRows {
 
 enum SettingsSupportRow {
     EmailRow,
-    SubmitABugRow,
     OpenFAQRow,
     SettingsSupportRowCnt
 };
 
 enum SettingsAboutRows {
-    RateMonalRow,
     OpenSourceRow,
     PrivacyRow,
     AboutRow,
@@ -61,6 +59,10 @@ enum SettingsAboutRows {
 //this will hold all disabled rows of all enums (this is needed because the code below still references these rows)
 enum DummySettingsRows {
     DummySettingsRowsBegin = 100,
+    //isaCloud: "Submit A Bug" opened the issues of the Monal repository and "Rate Monal" the Monal page of the App Store:
+    //both are hidden until isaCloud has its own bug tracker and its own App Store page
+    SubmitABugRow,
+    RateMonalRow,
 };
 
 @interface MLSettingsTableViewController () {
@@ -325,12 +327,35 @@ enum DummySettingsRows {
     return cell;
 }
 
-//isaCloud: section headers are thinner than the system default; the accounts list has no header at all
+//isaCloud: the sections look like the ones of the SwiftUI settings screens (inset cards, headers in mixed case, vertically centered);
+//the accounts list has no header at all
 -(CGFloat) tableView:(UITableView*) tableView heightForHeaderInSection:(NSInteger) section
 {
     if(section == kSettingSectionAccounts)
-        return CGFLOAT_MIN;
-    return 24;
+        return 12;
+    return 44;
+}
+
+-(UIView*) tableView:(UITableView*) tableView viewForHeaderInSection:(NSInteger) section
+{
+    NSString* title = [self tableView:tableView titleForHeaderInSection:section];
+    if(title == nil)
+        return nil;
+    UIView* header = [UIView new];
+    UILabel* label = [UILabel new];
+    label.translatesAutoresizingMaskIntoConstraints = NO;
+    label.text = title;
+    //semibold like the headers of the SwiftUI settings screens, and it grows with the text size of the system
+    label.font = [[UIFontMetrics metricsForTextStyle:UIFontTextStyleTitle3] scaledFontForFont:[UIFont systemFontOfSize:20 weight:UIFontWeightSemibold]];
+    label.textColor = [UIColor secondaryLabelColor];
+    label.adjustsFontForContentSizeCategory = YES;
+    [header addSubview:label];
+    [NSLayoutConstraint activateConstraints:@[
+        [label.leadingAnchor constraintEqualToAnchor:header.layoutMarginsGuide.leadingAnchor constant:4],
+        [label.trailingAnchor constraintEqualToAnchor:header.layoutMarginsGuide.trailingAnchor],
+        [label.centerYAnchor constraintEqualToAnchor:header.centerYAnchor constant:2],
+    ]];
+    return header;
 }
 
 -(NSString*) tableView:(UITableView*) tableView titleForHeaderInSection:(NSInteger) section

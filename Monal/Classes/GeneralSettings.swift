@@ -131,9 +131,9 @@ class GeneralSettingsDefaultsDB: ObservableObject {
     @defaultsDB("showAdvancedUI")
     var showAdvancedUI: Bool
     
-    //isaCloud: reactions in the footer of the bubble (capsules) instead of round bubbles over its corner
-    @defaultsDB("reactionsBelowBubble")
-    var reactionsBelowBubble: Bool
+    //isaCloud: reactions as round bubbles over the corner of the message bubble instead of capsules in its footer
+    @defaultsDB("reactionsAboveMessages")
+    var reactionsAboveMessages: Bool
     
     @defaultsDB("preventLeaksBeforeAuth")
     var preventLeaksBeforeAuth: Bool
@@ -276,10 +276,10 @@ struct UserInterfaceSettings: View {
                         .font(.footnote)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                //isaCloud: off by default
-                SettingsToggle(isOn: $generalSettingsDefaultsDB.reactionsBelowBubble) {
-                    Text("Reactions below the message bubble")
-                    Text("Shows the reactions of a message as capsules in the footer of its bubble, instead of round bubbles over its corner.")
+                //isaCloud: off by default (the reactions are in the footer of the bubble)
+                SettingsToggle(isOn: $generalSettingsDefaultsDB.reactionsAboveMessages) {
+                    Text("Reactions above the messages")
+                    Text("Shows the reactions of a message as round bubbles over the corner of its bubble, instead of capsules in its footer.")
                 }
                 SettingsToggle(isOn: $generalSettingsDefaultsDB.showAdvancedUI) {
                     Text("Show advanced options in UI")

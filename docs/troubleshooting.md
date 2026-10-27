@@ -165,6 +165,10 @@ Para investigar o que o app está fazendo, o caminho que funcionou foi acrescent
 
 O app tem um logger de arquivo e um logger por UDP (`udpLoggerEnabled`), que no iPhone real são os padrões. No simulador o padrão é o log do Xcode. Para ver o que cada um faz, veja `HelperTools.m` (`initSystem`, `configureLogging`, `configureXcodeLogging`).
 
+### Spinner preso depois de o app dormir
+
+Se o spinner gira sem conectar, **reabra o app (feche e abra) e depois exporte o log**: o arquivo do log fica em disco (rolagem de 48 h, até 4 arquivos) e guarda também a execução anterior. Em Configurações → Depuração → Arquivos de log, toque no mais recente e compartilhe. Anote a hora aproximada do travamento. Procure no arquivo por `Unfreezing account`, `existing account, calling unfreeze`, `connected(?) existing account, just pinging`, `ping attempted before logged in and bound`, `ping already sent` e `Login took too long`.
+
 ## 7. Reiniciar o estado do app para testar
 
 - **Fila do compartilhamento travada** (a share sheet "compartilha o item anterior"): na tela de Debug dos ajustes, o botão "Limpar a fila de compartilhamento" (o `.dev` e o de produção têm filas separadas). O texto exato do caminho pode variar; o botão está em `DebugView.swift`.

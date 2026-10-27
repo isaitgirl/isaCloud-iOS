@@ -95,9 +95,10 @@ class ChatViewDefaultsDB: ObservableObject {
     @defaultsDB("ShowGeoLocation")
     var showGeoLocation: Bool
 
-    //isaCloud: reactions as capsules in the footer of the bubble (Settings > User Interface > Appearance)
-    @defaultsDB("reactionsBelowBubble")
-    var reactionsBelowBubble: Bool
+    //isaCloud: reactions as round bubbles over the top corner of the message bubble instead of capsules in its footer
+    //(Settings > User Interface > Appearance)
+    @defaultsDB("reactionsAboveMessages")
+    var reactionsAboveMessages: Bool
 }
 
 struct ChatView: View {
@@ -875,7 +876,7 @@ struct ChatView: View {
         .autoFocusTextInputOnChatOpen(chatViewDefaultsDB.showKeyboardOnChatOpen)
         .showUsername(contact.isMuc)
         .messageMenuAnimationDuration(0.15)      //isaCloud: the message menu (reactions, actions) opens sooner than the library's 0.3 s
-        .reactionsBelowBubble(chatViewDefaultsDB.reactionsBelowBubble)       //isaCloud: a setting, off by default
+        .reactionsBelowBubble(!chatViewDefaultsDB.reactionsAboveMessages)       //isaCloud: in the footer, unless the setting asks for the old place
         .tapAvatarClosure { user, _ in
             // mentions use only the nick: the verified emoji of the name is not part of it
             inputModel.setText(inputModel.text + "\(ChatNameWithHats.nick(from: user.name)), ")
@@ -1345,22 +1346,26 @@ class ChatViewMessage: ExyteChat.Message {
             // AttributedString+Quote.swift in our ExyteChat fork); the other lines are shown as usual
             if innerMessage.messageType == kMessageTypeText && QuoteFormatting.containsQuote(text) {
                 var result = AttributedString()
-                var previousWasQuote = false
+                var previousDepth = 0
                 for (index, line) in QuoteFormatting.lines(of: text).enumerated() {
                     if index > 0 {
-                        // the line break between two quoted lines belongs to the quote, so they make one quote and not two
+                        // the line break between two quoted lines belongs to the quote they share (the smaller depth), so they
+                        // make one quote and not two
                         var lineBreak = AttributedString("\n")
-                        lineBreak.quote = previousWasQuote && line.quoted
+                        let shared = min(previousDepth, line.depth)
+                        if shared > 0 {
+                            lineBreak.quoteDepth = shared
+                        }
                         result.append(lineBreak)
                     }
-                    if line.quoted {
+                    if line.depth > 0 {
                         var quoted = AttributedString(line.text)
-                        quoted.quote = true
+                        quoted.quoteDepth = line.depth
                         result.append(quoted)
                     } else {
                         result.append(line.text.linkify(linkColor: linkColor))
                     }
-                    previousWasQuote = line.quoted
+                    previousDepth = line.depth
                 }
                 return result
             }

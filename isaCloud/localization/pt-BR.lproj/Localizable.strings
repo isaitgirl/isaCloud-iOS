@@ -151,5 +151,5 @@
 "Decline and Block" = "Recusar e Bloquear";
 "Open Conversation" = "Abrir Conversa";
 "More options" = "Mais opções";
-"Reactions below the message bubble" = "Reações abaixo do balão";
-"Shows the reactions of a message as capsules in the footer of its bubble, instead of round bubbles over its corner." = "Mostra as reações de uma mensagem em cápsulas, no rodapé do balão, em vez de bolinhas sobre o canto dele.";
+"Reactions above the messages" = "Reações acima das mensagens";
+"Shows the reactions of a message as round bubbles over the corner of its bubble, instead of capsules in its footer." = "Mostra as reações de uma mensagem em bolinhas sobre o canto do balão, em vez de cápsulas no rodapé dele.";

@@ -1669,8 +1669,9 @@ $$instance_handler(handleDiscoResponse, account.mucProcessor, $$ID(xmpp*, accoun
         //this will also keep the buddy list entry
         //--> allow users to read the last messages before the muc got broken
         
-        //only display an error banner, no notification (this is only temporary)
-        [self handleError:[NSString stringWithFormat:NSLocalizedString(@"Temporary failure to enter Group/Channel: %@", @""), roomJid] forMuc:roomJid withNode:iqNode andIsSevere:NO];
+        //isaCloud: this is only temporary and does not stop the app from being used: no banner and no notification (only the log)
+        //(the same as for the error presence above: a room of another server that does not answer would show a banner at every ping)
+        [self handleBackgroundError:[NSString stringWithFormat:NSLocalizedString(@"Temporary failure to enter Group/Channel: %@", @""), roomJid] forMuc:roomJid withNode:iqNode];
         return;
     }
     else if([iqNode check:@"/<type=error>"])
