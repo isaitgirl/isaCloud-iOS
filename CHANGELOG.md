@@ -2,6 +2,14 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 33) — 28/10/2026
+
+### Adicionado
+- **Busca nas mensagens.** Na barra de busca da tela Conversas, duas abas fixas: **Nomes** (contatos, grupos e canais, como antes) e **Mensagens**. A busca em mensagens acha as palavras (a partir de 2 letras) pelo começo, sem diferenciar acento nem maiúscula, e mostra, da mais nova para a mais antiga, o nome da conversa, quem escreveu, a data (a hora, se for de hoje), um trecho com as palavras em negrito e, com mais de uma conta, a conta. Tocar num resultado abre a conversa já rolada até a mensagem, no meio da tela (se ela estiver a mais de 3.000 mensagens do fim, a conversa abre nas mais novas). Mensagens de arquivo (a URL leva a chave do OMEMO), apagadas e retiradas não entram, nem as de contas desligadas. Na primeira abertura depois da atualização o app cria o índice de busca (uns 3 segundos com 133 mil mensagens no iPhone); depois ele é mantido a cada mensagem.
+
+### Corrigido
+- **Tocar num resultado da busca (inclusive na aba Nomes) não abria a conversa no iOS 27.** A busca ainda estava fechando quando o app tentava abrir a conversa. Agora a conversa abre quando a busca termina de fechar.
+
 ## 0.0.1 (build 32) — 27/10/2026
 
 ### Alterado

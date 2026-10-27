@@ -888,15 +888,21 @@ class SwiftuiInterface : NSObject {
 
     @objc
     func makeChatView(for contact: MLContact) -> UIViewController {
+        return makeChatView(for: contact, atMessage: nil)
+    }
+
+    //isaCloud: opens the chat at a message found by the search in the messages (history id of the message; nil: the newest messages)
+    @objc(makeChatViewFor:atMessage:)
+    func makeChatView(for contact: MLContact, atMessage historyId: NSNumber?) -> UIViewController {
         let host = UIHostingController(rootView:AnyView(EmptyView()))
         let isCompact = UIUserInterfaceSizeClass(rawValue: activeChats.sizeClass.horizontal.rawValue) == .compact
         @ViewBuilder
         var chatView: some View {
             if isCompact {
-                ChatView(contact:ObservableKVOWrapper<MLContact>(contact))
+                ChatView(contact:ObservableKVOWrapper<MLContact>(contact), jumpToHistoryId: historyId)
             } else {
                 NavigationStack {
-                    ChatView(contact:ObservableKVOWrapper<MLContact>(contact))
+                    ChatView(contact:ObservableKVOWrapper<MLContact>(contact), jumpToHistoryId: historyId)
                 }
             }
         }
@@ -1144,40 +1150,74 @@ private final class KeyboardDismissTapHandler: NSObject, UIGestureRecognizerDele
     }
 }
 
-/// isaCloud: the names found by the search bar of the home screen (contacts, groups and channels)
+/// isaCloud: what the search bar of the home screen finds: the names of contacts, groups and channels, and, when the person asks for it,
+/// the messages that have the words
 final class ChatListSearchModel : ObservableObject {
     @Published var query = ""
     @Published var results: [MLContact] = []
+    /// the list shows the messages found instead of the names
+    @Published var showMessages = false
+    let messages = MessageSearchModel()
 
     func update(query: String) {
         self.query = query.trimmingCharacters(in: .whitespacesAndNewlines)
         results = self.query.isEmpty ? [] : (DataLayer.sharedInstance().searchContacts(with: self.query) as? [MLContact] ?? [])
+        if self.query.isEmpty {
+            showMessages = false
+            messages.search("")
+        } else if showMessages {
+            messages.search(self.query)
+        }
+    }
+
+    func setShowMessages(_ show: Bool) {
+        showMessages = show
+        if show {
+            messages.search(query, immediately: true)
+        }
     }
 }
 
 struct ChatListSearchResults : View {
     @ObservedObject var model: ChatListSearchModel
     let onSelect: (MLContact) -> Void
+    let onSelectMessage: (MLContact, NSNumber) -> Void
 
     var body: some View {
         if model.query.isEmpty {
             EmptyView()
-        } else if model.results.isEmpty {
-            ContentUnavailableShimView.search(text: model.query)
         } else {
-            List(Array(model.results.enumerated()), id: \.offset) { _, contact in
-                Button {
-                    onSelect(contact)
-                } label: {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(contact.contactDisplayNameWithoutSelfnotesPrefix)
-                        Text(contact.contactJid)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+            VStack(spacing: 0) {
+                //two fixed tabs: the names of contacts, groups and channels, or the text of the messages
+                Picker("", selection: Binding(get: { model.showMessages }, set: { model.setShowMessages($0) })) {
+                    Text("Names").tag(false)
+                    Text("Messages in search").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                if model.showMessages {
+                    MessageSearchResultsList(model: model.messages, onSelect: onSelectMessage)
+                } else if model.results.isEmpty {
+                    ContentUnavailableShimView.search(text: model.query)
+                } else {
+                    List(Array(model.results.enumerated()), id: \.offset) { _, contact in
+                        Button {
+                            onSelect(contact)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(contact.contactDisplayNameWithoutSelfnotesPrefix)
+                                Text(contact.contactJid)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                     }
+                    .listStyle(.plain)
                 }
             }
-            .listStyle(.plain)
+            //the tabs stay at the top, also when there is nothing to show (the view would center what is smaller than the screen)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
     }
 }
@@ -1189,10 +1229,10 @@ class ChatListSearch : NSObject {
     @objc let resultsController: UIViewController
 
     @objc
-    init(onSelect: @escaping (MLContact) -> Void) {
+    init(onSelect: @escaping (MLContact) -> Void, onSelectMessage: @escaping (MLContact, NSNumber) -> Void) {
         let model = ChatListSearchModel()
         self.model = model
-        resultsController = UIHostingController(rootView: ChatListSearchResults(model: model, onSelect: onSelect))
+        resultsController = UIHostingController(rootView: ChatListSearchResults(model: model, onSelect: onSelect, onSelectMessage: onSelectMessage))
         super.init()
     }
 

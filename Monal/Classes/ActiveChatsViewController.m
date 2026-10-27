@@ -92,7 +92,7 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
 */
 
 
-@interface ActiveChatsViewController() <UISearchResultsUpdating> {
+@interface ActiveChatsViewController() <UISearchResultsUpdating, UISearchControllerDelegate> {
     int _startedOrientation;
     double _portraitTop;
     double _landscapeTop;
@@ -104,6 +104,8 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
 }
 @property (atomic, strong) NSMutableArray* unpinnedContacts;
 @property (nonatomic, strong) ChatListSearch* chatListSearch;
+@property (nonatomic, strong) NSNumber* _Nullable jumpToHistoryIdOfNextChat;        //isaCloud: the message of the search the next opened chat shows (nil: the newest ones)
+@property (nonatomic, copy) monal_void_block_t openAfterSearchDismissed;      //isaCloud: opens the chat chosen in the search as soon as the search is gone
 @property (atomic, strong) NSMutableArray* pinnedContacts;
 @end
 
@@ -426,15 +428,32 @@ static BOOL _dnssecWarningDisplayed;
     
     //isaCloud: the search bar finds contacts, groups and channels by name; choosing one opens its chat
     __weak typeof(self) weakSelf = self;
-    self.chatListSearch = [[ChatListSearch alloc] initOnSelect:^(MLContact* contact) {
-        [weakSelf.navigationItem.searchController setActive:NO];
-        //the search results are still being dismissed; the chat is pushed once they are gone
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.4 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    monal_id_block_t openChat = ^(MLContact* contact) {
+        //the chat can only be pushed once the search results are gone: its dismissal takes longer than any fixed wait (iOS 27),
+        //so the chat opens when the search controller says it is dismissed (and after one second at most, if it never does)
+        __block BOOL done = NO;
+        monal_void_block_t open = ^{
+            if(done)
+                return;
+            done = YES;
+            weakSelf.openAfterSearchDismissed = nil;
             [weakSelf presentChatWithContact:contact];
-        });
+        };
+        weakSelf.openAfterSearchDismissed = open;
+        [weakSelf.navigationItem.searchController setActive:NO];
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), open);
+    };
+    self.chatListSearch = [[ChatListSearch alloc] initOnSelect:^(MLContact* contact) {
+        weakSelf.jumpToHistoryIdOfNextChat = nil;
+        openChat(contact);
+    } onSelectMessage:^(MLContact* contact, NSNumber* historyId) {
+        DDLogVerbose(@"Search: opening the conversation at message %@", historyId);
+        weakSelf.jumpToHistoryIdOfNextChat = historyId;
+        openChat(contact);
     }];
     UISearchController* searchController = [[UISearchController alloc] initWithSearchResultsController:self.chatListSearch.resultsController];
     searchController.searchResultsUpdater = self;
+    searchController.delegate = self;
     searchController.obscuresBackgroundDuringPresentation = NO;
     self.navigationItem.searchController = searchController;
     self.navigationItem.hidesSearchBarWhenScrolling = NO;
@@ -1157,6 +1176,13 @@ static BOOL _dnssecWarningDisplayed;
     }];
 }
 
+//isaCloud: the search is gone: now a chat chosen in it can be opened
+-(void) didDismissSearchController:(UISearchController*) searchController
+{
+    if(self.openAfterSearchDismissed != nil)
+        self.openAfterSearchDismissed();
+}
+
 -(void) updateSearchResultsForSearchController:(UISearchController*) searchController
 {
     [self.chatListSearch updateWithQuery:searchController.searchBar.text ?: @""];
@@ -1197,7 +1223,9 @@ static BOOL _dnssecWarningDisplayed;
             
             //this will open the chat
             monal_void_block_t presentator = ^{
-                UIViewController* chatView = [[SwiftuiInterface new] makeChatViewFor:contact];
+                NSNumber* jumpToHistoryId = self.jumpToHistoryIdOfNextChat;
+                self.jumpToHistoryIdOfNextChat = nil;
+                UIViewController* chatView = [[SwiftuiInterface new] makeChatViewFor:contact atMessage:jumpToHistoryId];
                 chatView.ml_disposeCallback = ^{
                     [self sheetDismissed];
                 };

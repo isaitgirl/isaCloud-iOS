@@ -114,7 +114,10 @@
 		A1C0FFEE00000000000002A5 /* QuoteFormattingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000002A4 /* QuoteFormattingTests.swift */; };
 		A1C0FFEE0000000000000B03 /* MucNickTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000B02 /* MucNickTests.swift */; };
 		A1C0FFEE00000000000001F3 /* MucHatRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001F1 /* MucHatRules.swift */; };
+		A1C0FFEE0000000000000209 /* MessageSearchSnippet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000207 /* MessageSearchSnippet.swift */; };
+		A1C0FFEE000000000000020D /* MessageSearchSnippetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE000000000000020C /* MessageSearchSnippetTests.swift */; };
 		A1C0FFEE00000000000001F7 /* MucHatRulesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001F6 /* MucHatRulesTests.swift */; };
+		A1C0FFEE0000000000000206 /* MessageSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000205 /* MessageSearchTests.swift */; };
 		A1C0FFEE00000000000001E7 /* ChatLocationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001E6 /* ChatLocationTests.swift */; };
 		A1C0FFEE00000000000001D7 /* GiphySearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001D6 /* GiphySearchTests.swift */; };
 		34E26BC2304C399F00287300 /* Recording in Frameworks */ = {isa = PBXBuildFile; productRef = 34E26BC1304C399F00287300 /* Recording */; };
@@ -260,6 +263,8 @@
 		A1C0FFEE00000000000001E2 /* ChatLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001E1 /* ChatLocation.swift */; };
 		A1C0FFEE00000000000002A2 /* QuoteFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000002A1 /* QuoteFormatting.swift */; };
 		A1C0FFEE00000000000001F2 /* MucHatRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001F1 /* MucHatRules.swift */; };
+		A1C0FFEE0000000000000208 /* MessageSearchSnippet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000207 /* MessageSearchSnippet.swift */; };
+		A1C0FFEE000000000000020B /* MessageSearchResults.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE000000000000020A /* MessageSearchResults.swift */; };
 		A1C0FFEE00000000000001F5 /* MucHatViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001F4 /* MucHatViews.swift */; };
 		A1C0FFEE00000000000001E5 /* LocationPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001E4 /* LocationPickerView.swift */; };
 		A1C0FFEE00000000000001D5 /* GifPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001D4 /* GifPickerView.swift */; };
@@ -273,6 +278,8 @@
 		C1613B5A2520723D0062C0C2 /* MLBasePaser.h in Headers */ = {isa = PBXBuildFile; fileRef = C1613B572520723C0062C0C2 /* MLBasePaser.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		C1613B5B2520723D0062C0C2 /* MLBasePaser.m in Sources */ = {isa = PBXBuildFile; fileRef = C1613B592520723C0062C0C2 /* MLBasePaser.m */; };
 		C16D18352792A4AF00F869A0 /* DataLayerMigrations.h in Headers */ = {isa = PBXBuildFile; fileRef = C16D18332792A4AF00F869A0 /* DataLayerMigrations.h */; };
+		A1C0FFEE0000000000000203 /* MLMessageSearch.h in Headers */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000201 /* MLMessageSearch.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		A1C0FFEE0000000000000204 /* MLMessageSearch.m in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000202 /* MLMessageSearch.m */; };
 		C16D18362792A4AF00F869A0 /* DataLayerMigrations.m in Sources */ = {isa = PBXBuildFile; fileRef = C16D18342792A4AF00F869A0 /* DataLayerMigrations.m */; };
 		C176F1EC2AF11C31002034E5 /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C176F1EB2AF11C31002034E5 /* UserNotifications.framework */; };
 		C1850EB825F38A2D003D506A /* MonalUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1850EB725F38A2D003D506A /* MonalUITests.swift */; };
@@ -585,6 +592,7 @@
 		A1C0FFEE00000000000000E5 /* ChatInputModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatInputModelTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000001D6 /* GiphySearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GiphySearchTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000001F6 /* MucHatRulesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MucHatRulesTests.swift; sourceTree = "<group>"; };
+		A1C0FFEE0000000000000205 /* MessageSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageSearchTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000002A4 /* QuoteFormattingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuoteFormattingTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE0000000000000B02 /* MucNickTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MucNickTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000001E6 /* ChatLocationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatLocationTests.swift; sourceTree = "<group>"; };
@@ -612,6 +620,9 @@
 		A1C0FFEE00000000000001E1 /* ChatLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatLocation.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000002A1 /* QuoteFormatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuoteFormatting.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000001F1 /* MucHatRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MucHatRules.swift; sourceTree = "<group>"; };
+		A1C0FFEE0000000000000207 /* MessageSearchSnippet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageSearchSnippet.swift; sourceTree = "<group>"; };
+		A1C0FFEE000000000000020A /* MessageSearchResults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageSearchResults.swift; sourceTree = "<group>"; };
+		A1C0FFEE000000000000020C /* MessageSearchSnippetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageSearchSnippetTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000001F4 /* MucHatViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MucHatViews.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000001E4 /* LocationPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPickerView.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000001D4 /* GifPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GifPickerView.swift; sourceTree = "<group>"; };
@@ -778,6 +789,8 @@
 		C1613B592520723C0062C0C2 /* MLBasePaser.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MLBasePaser.m; sourceTree = "<group>"; };
 		C16D18332792A4AF00F869A0 /* DataLayerMigrations.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DataLayerMigrations.h; sourceTree = "<group>"; };
 		C16D18342792A4AF00F869A0 /* DataLayerMigrations.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DataLayerMigrations.m; sourceTree = "<group>"; };
+		A1C0FFEE0000000000000201 /* MLMessageSearch.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MLMessageSearch.h; sourceTree = "<group>"; };
+		A1C0FFEE0000000000000202 /* MLMessageSearch.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MLMessageSearch.m; sourceTree = "<group>"; };
 		C176F1EB2AF11C31002034E5 /* UserNotifications.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotifications.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.0.sdk/System/Library/Frameworks/UserNotifications.framework; sourceTree = DEVELOPER_DIR; };
 		C1850E6625F37EC0003D506A /* Monal Tests-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Monal Tests-Bridging-Header.h"; sourceTree = "<group>"; };
 		C1850EB525F38A2D003D506A /* MonalUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MonalUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -1002,6 +1015,8 @@
 				263AFDFB209B3B35007F9CEE /* MLSignalStore.m */,
 				C16D18332792A4AF00F869A0 /* DataLayerMigrations.h */,
 				C16D18342792A4AF00F869A0 /* DataLayerMigrations.m */,
+				A1C0FFEE0000000000000201 /* MLMessageSearch.h */,
+				A1C0FFEE0000000000000202 /* MLMessageSearch.m */,
 			);
 			name = Shared;
 			path = Classes;
@@ -1229,6 +1244,8 @@
 				A1C0FFEE00000000000001E1 /* ChatLocation.swift */,
 				A1C0FFEE00000000000002A1 /* QuoteFormatting.swift */,
 				A1C0FFEE00000000000001F1 /* MucHatRules.swift */,
+				A1C0FFEE0000000000000207 /* MessageSearchSnippet.swift */,
+				A1C0FFEE000000000000020A /* MessageSearchResults.swift */,
 				A1C0FFEE00000000000001F4 /* MucHatViews.swift */,
 				A1C0FFEE00000000000001E4 /* LocationPickerView.swift */,
 				A1C0FFEE00000000000001D4 /* GifPickerView.swift */,
@@ -1591,6 +1608,8 @@
 				A1C0FFEE00000000000000E5 /* ChatInputModelTests.swift */,
 				A1C0FFEE00000000000001D6 /* GiphySearchTests.swift */,
 				A1C0FFEE00000000000001F6 /* MucHatRulesTests.swift */,
+				A1C0FFEE0000000000000205 /* MessageSearchTests.swift */,
+				A1C0FFEE000000000000020C /* MessageSearchSnippetTests.swift */,
 				A1C0FFEE00000000000002A4 /* QuoteFormattingTests.swift */,
 				A1C0FFEE0000000000000B02 /* MucNickTests.swift */,
 				A1C0FFEE00000000000001E6 /* ChatLocationTests.swift */,
@@ -1690,6 +1709,7 @@
 				844921EC2C29F9BE00B99A9C /* MLDelayableTimer.h in Headers */,
 				8426B09630762D0E004801F5 /* MLIQProcessor.h in Headers */,
 				C16D18352792A4AF00F869A0 /* DataLayerMigrations.h in Headers */,
+				A1C0FFEE0000000000000203 /* MLMessageSearch.h in Headers */,
 				340F0CA62D24267B006224D0 /* MLXMLNode.h in Headers */,
 				540BD0D224D8D1F40087A743 /* IPC.h in Headers */,
 				54507CE8255D8C47007092F4 /* MLFiletransfer.h in Headers */,
@@ -2380,6 +2400,8 @@
 				A1C0FFEE00000000000001E2 /* ChatLocation.swift in Sources */,
 				A1C0FFEE00000000000002A2 /* QuoteFormatting.swift in Sources */,
 				A1C0FFEE00000000000001F2 /* MucHatRules.swift in Sources */,
+				A1C0FFEE0000000000000208 /* MessageSearchSnippet.swift in Sources */,
+				A1C0FFEE000000000000020B /* MessageSearchResults.swift in Sources */,
 				A1C0FFEE00000000000001F5 /* MucHatViews.swift in Sources */,
 				A1C0FFEE00000000000001E5 /* LocationPickerView.swift in Sources */,
 				A1C0FFEE00000000000001D5 /* GifPickerView.swift in Sources */,
@@ -2469,6 +2491,7 @@
 				541E4CC0254AA0E700FD7B28 /* MLHandler.m in Sources */,
 				C158D41425A0AC630005AA40 /* MLMucProcessor.m in Sources */,
 				C16D18362792A4AF00F869A0 /* DataLayerMigrations.m in Sources */,
+				A1C0FFEE0000000000000204 /* MLMessageSearch.m in Sources */,
 				54507CE5255D8C14007092F4 /* MLFiletransfer.m in Sources */,
 				542CF3FF2763314F002C3710 /* hsluv.c in Sources */,
 				8420EA9D2915E5100038FF40 /* OmemoState.m in Sources */,
@@ -2512,7 +2535,10 @@
 				A1C0FFEE00000000000002A5 /* QuoteFormattingTests.swift in Sources */,
 				A1C0FFEE0000000000000B03 /* MucNickTests.swift in Sources */,
 				A1C0FFEE00000000000001F3 /* MucHatRules.swift in Sources */,
+				A1C0FFEE0000000000000209 /* MessageSearchSnippet.swift in Sources */,
+				A1C0FFEE000000000000020D /* MessageSearchSnippetTests.swift in Sources */,
 				A1C0FFEE00000000000001F7 /* MucHatRulesTests.swift in Sources */,
+				A1C0FFEE0000000000000206 /* MessageSearchTests.swift in Sources */,
 				A1C0FFEE00000000000001E7 /* ChatLocationTests.swift in Sources */,
 				84C6F6032D597FB20015575E /* ParserTest.m in Sources */,
 				C1049189261301530054AC9E /* MonalXMPPUnitTests.swift in Sources */,
@@ -2778,7 +2804,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)Monal.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Monal.macos.entitlements;
 				COMPILER_INDEX_STORE_ENABLE = YES;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEAD_CODE_STRIPPING = NO;
 				ENABLE_BITCODE = NO;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
@@ -2841,7 +2867,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)NotificationService/NotificationService.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = NotificationService/NotificationService.macos.entitlements;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
 				INFOPLIST_FILE = NotificationService/Info.plist;
@@ -2873,7 +2899,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)NotificationService/NotificationService.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = NotificationService/NotificationService.macos.entitlements;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
 				INFOPLIST_FILE = NotificationService/Info.plist;
@@ -2905,7 +2931,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)NotificationService/NotificationService.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = NotificationService/NotificationService.macos.entitlements;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
 				INFOPLIST_FILE = NotificationService/Info.plist;
@@ -2971,7 +2997,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEAD_CODE_STRIPPING = NO;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -3038,7 +3064,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)Monal.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Monal.macos.entitlements;
 				COMPILER_INDEX_STORE_ENABLE = YES;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEAD_CODE_STRIPPING = NO;
 				ENABLE_BITCODE = NO;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
@@ -3097,7 +3123,7 @@
 			baseConfigurationReference = 21E99538324C14220843F325 /* Pods-shareSheet.debug.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "$(ISACLOUD_ENTITLEMENTS_DIR)shareSheet.entitlements";
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
@@ -3125,7 +3151,7 @@
 			baseConfigurationReference = 0EC0A5305E72C0F7F9E1CDEF /* Pods-shareSheet.adhoc.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "$(ISACLOUD_ENTITLEMENTS_DIR)shareSheet.entitlements";
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
@@ -3153,7 +3179,7 @@
 			baseConfigurationReference = 061EF1BEDEE7A71FDF9AB402 /* Pods-shareSheet.appstore.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "$(ISACLOUD_ENTITLEMENTS_DIR)shareSheet.entitlements";
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
@@ -3182,7 +3208,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEAD_CODE_STRIPPING = NO;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = "";
@@ -3225,7 +3251,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEAD_CODE_STRIPPING = NO;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = "";
@@ -3267,7 +3293,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEAD_CODE_STRIPPING = NO;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = "";
@@ -3346,7 +3372,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEAD_CODE_STRIPPING = NO;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -3416,7 +3442,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)Monal.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Monal.macos.entitlements;
 				COMPILER_INDEX_STORE_ENABLE = YES;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEAD_CODE_STRIPPING = NO;
 				ENABLE_BITCODE = NO;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
@@ -3516,7 +3542,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEAD_CODE_STRIPPING = NO;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -3796,7 +3822,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEAD_CODE_STRIPPING = NO;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -3868,7 +3894,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)Monal.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Monal.macos.entitlements;
 				COMPILER_INDEX_STORE_ENABLE = YES;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEAD_CODE_STRIPPING = NO;
 				ENABLE_BITCODE = NO;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
@@ -3927,7 +3953,7 @@
 			baseConfigurationReference = 6BCB9FB4EBEA3735D24A44DF /* Pods-shareSheet.beta.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "$(ISACLOUD_ENTITLEMENTS_DIR)shareSheet.entitlements";
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
@@ -3959,7 +3985,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)NotificationService/NotificationService.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = NotificationService/NotificationService.macos.entitlements;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
 				INFOPLIST_FILE = NotificationService/Info.plist;
@@ -3988,7 +4014,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEAD_CODE_STRIPPING = NO;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = "";
@@ -4222,7 +4248,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEAD_CODE_STRIPPING = NO;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -4299,7 +4325,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMPILER_INDEX_STORE_ENABLE = YES;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEAD_CODE_STRIPPING = NO;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_BITCODE = NO;
@@ -4361,7 +4387,7 @@
 			baseConfigurationReference = 6015D382ABCE0D788029D7A3 /* Pods-shareSheet.alpha.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Alpha.shareSheet.entitlements;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
@@ -4392,7 +4418,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = NotificationService/Alpha.NotificationService.ios.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = NotificationService/Alpha.NotificationService.macos.entitlements;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
 				INFOPLIST_FILE = NotificationService/Alpha.Info.plist;
@@ -4420,7 +4446,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEAD_CODE_STRIPPING = NO;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = "";

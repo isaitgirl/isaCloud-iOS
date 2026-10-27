@@ -136,7 +136,14 @@ struct ChatView: View {
     @State private var isTyping = false
     @State private var typingTimer: Timer?
 
-    init(contact: ObservableKVOWrapper<MLContact>) {
+    //isaCloud: opened from the search in the messages: the chat shows this message in the middle of the screen (nil: the newest ones as always)
+    @State private var jumpToHistoryId: NSNumber?
+    @State private var jumpScrollParams: ScrollToParams?
+    /// a chat is only opened at a message if it takes at most this many messages to get there from the newest ones
+    static let maxMessagesToJumpOver = 3000
+
+    init(contact: ObservableKVOWrapper<MLContact>, jumpToHistoryId: NSNumber? = nil) {
+        _jumpToHistoryId = State(wrappedValue: jumpToHistoryId)
         _contact = StateObject(wrappedValue:contact)
         _voipProcessor = StateObject(wrappedValue:ObservableKVOWrapper((UIApplication.shared.delegate as! MonalAppDelegate).voipProcessor!))
         account = contact.obj.account!
@@ -472,6 +479,37 @@ struct ChatView: View {
             }
             .finally {
                 self.isLoadingMamHistory = false
+            }
+        }
+    }
+
+    /// isaCloud: opens the chat at the message found by the search: loads from the database everything between that message and what is shown,
+    /// then scrolls to it (the list loads older messages in blocks, from the newest; this closes the gap at once)
+    private func jumpToSearchedMessage() {
+        guard let target = jumpToHistoryId else {
+            return
+        }
+        jumpToHistoryId = nil
+        let alreadyShown = messages.contains { $0.innerMessage.obj.messageDBId == target }
+        if !alreadyShown {
+            guard let oldestShown = messages.first?.innerMessage.obj.messageDBId, target.intValue < oldestShown.intValue else {
+                return
+            }
+            guard let missing = DataLayer.sharedInstance().messages(forContact: contact.contactJid, forAccount: contact.accountID, aroundMsgHistoryID: target, beforeMsgHistoryID: oldestShown, limit: UInt(ChatView.maxMessagesToJumpOver)) as? [MLMessage] else {
+                DDLogWarn("Search: message \(target) is too far back (or gone) to open the chat there")
+                return
+            }
+            messages.insert(contentsOf: missing.map { ChatViewMessage($0) }, at: 0)
+        }
+        guard let message = messages.first(where: { $0.innerMessage.obj.messageDBId == target }) else {
+            return
+        }
+        //the list must have taken the new messages before it can scroll to one of them
+        //(and once more a moment later: the first scroll goes by the estimated height of the rows, which are measured while the list is drawn)
+        //(the second one has another offset: the list only scrolls when the parameters change)
+        for (delay, offset) in [(0.4, 0.0), (1.2, 0.5)] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                jumpScrollParams = ScrollToParams(messageID: message.id, position: .middle, offset: offset)
             }
         }
     }
@@ -895,6 +933,7 @@ struct ChatView: View {
         })
         .autoFocusTextInputOnChatOpen(chatViewDefaultsDB.showKeyboardOnChatOpen)
         .showUsername(contact.isMuc)
+        .scrollTo(jumpScrollParams)      //isaCloud: see jumpToSearchedMessage()
         .messageMenuAnimationDuration(0.15)      //isaCloud: the message menu (reactions, actions) opens sooner than the library's 0.3 s
         .reactionsBelowBubble(!chatViewDefaultsDB.reactionsAboveMessages)       //isaCloud: in the footer, unless the setting asks for the old place
         .tapAvatarClosure { user, _ in
@@ -1189,6 +1228,7 @@ struct ChatView: View {
                 inputModel.setText(messageDraft)
             }
             loadHistory()
+            jumpToSearchedMessage()      //isaCloud
             if self.contact.obj.isMuc {
                 ownRole = DataLayer.sharedInstance().getOwnRole(inGroupOrChannel: contact.obj) ?? kMucRoleNone
                 voiceRequests = DataLayer.sharedInstance().getVoiceRequests(forRoom:contact.obj) as! [[String: AnyObject]]

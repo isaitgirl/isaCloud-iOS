@@ -17,6 +17,7 @@ FOUNDATION_EXPORT const unsigned char monalxmppVersionString[];
 #import <monalxmpp/MLConstants.h>
 #import <monalxmpp/MLSQLite.h>
 #import <monalxmpp/DataLayer.h>
+#import <monalxmpp/MLMessageSearch.h>   //isaCloud
 #import <monalxmpp/MLSignalStore.h>
 #import <monalxmpp/MLContact.h>
 #import <monalxmpp/MLChannelContact.h>

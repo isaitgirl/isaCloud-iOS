@@ -266,6 +266,9 @@ extern NSString* const kMessageTypeFiletransfer;
 -(NSNumber*) lastMessageHistoryIdForContact:(NSString*) buddy forAccount:(NSNumber*) accountID;
 -(NSMutableArray<MLMessage*>*) messagesForContact:(NSString*) buddy forAccount:(NSNumber*) accountID beforeMsgHistoryID:(NSNumber* _Nullable) msgHistoryID;
 -(NSMutableArray<MLMessage*>*) messagesForContact:(NSString*) buddy forAccount:(NSNumber*) accountID;
+//isaCloud: the messages of a chat from a few before the message `historyId` (context) up to, not including, `beforeHistoryId`, oldest first; used to open a chat at a message
+//found by the search. Returns nil, if there are more than `limit` of them (the chat view would be too heavy)
+-(NSMutableArray<MLMessage*>* _Nullable) messagesForContact:(NSString*) buddy forAccount:(NSNumber*) accountID aroundMsgHistoryID:(NSNumber*) historyId beforeMsgHistoryID:(NSNumber*) beforeHistoryId limit:(NSUInteger) limit;
 -(NSDictionary*) messageDataForHistoryID:(NSNumber*) historyID;
 //isaCloud: like messageDataForHistoryID:, but nil instead of an assertion if the message does not exist (anymore), e.g. after removing its account
 -(NSDictionary* _Nullable) optionalMessageDataForHistoryID:(NSNumber*) historyID;
@@ -330,6 +333,9 @@ extern NSString* const kMessageTypeFiletransfer;
 /*
  search message by keyword in message, buddy_name, messageType.
  */
+//isaCloud: full text search in the messages (every word a prefix, accents and case do not matter), newest first; see MLMessageSearch
+-(NSArray<NSNumber*>*) searchMessageHistoryIdsForQuery:(NSString*) query limit:(NSUInteger) limit offset:(NSUInteger) offset;
+
 -(NSArray* _Nullable) searchResultOfHistoryMessageWithKeyWords:(NSString* _Nonnull) keyword
                                              accountID:(NSNumber*  _Nonnull) accountID;
 

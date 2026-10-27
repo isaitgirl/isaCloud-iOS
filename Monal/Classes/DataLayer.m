@@ -17,6 +17,7 @@
 #import <monalxmpp/XMPPDataForm.h>
 #import <monalxmpp/MLFileTransfer.h>
 #import <monalxmpp/DataLayerMigrations.h>
+#import <monalxmpp/MLMessageSearch.h>   //isaCloud
 #import <monalxmpp/MLContactSoftwareVersionInfo.h>
 #import <monalxmpp/MLXMPPManager.h>
 #import <monalxmpp/MLReactionsEntry.h>
@@ -314,6 +315,7 @@ static NSDateFormatter* dbFormatter;
             [MLFiletransfer deleteFileForMessage:[MLMessage createMessageFromHistoryID:historyId]];
 
         // delete account and all entries with the same account_id (CASCADE DELETE)
+        [MLMessageSearch removeFromIndexMessagesWhere:@"account_id=?" arguments:@[accountID] inDatabase:self.db];      //isaCloud: search index
         BOOL accountDeleted = [self.db executeNonQuery:@"DELETE FROM account WHERE account_id=?;" andArguments:@[accountID]];
 
         // disable secure delete again
@@ -1535,6 +1537,7 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
             if(!success)
                 return (NSNumber*)nil;
             NSNumber* historyId = [self.db lastInsertId];
+            [MLMessageSearch indexNewMessageWithHistoryId:historyId inDatabase:self.db];     //isaCloud: search index
             
             //update autodecrement value (only strictly monotonically decreasing)
             [self.db executeNonQuery:@"UPDATE flags SET value=MIN(?,  (SELECT CAST(value as INTEGER) FROM flags WHERE name='autodecrement~message_history')) WHERE name='autodecrement~message_history';" andArguments:@[historyId]];
@@ -1655,6 +1658,7 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
         NSString* query = @"UPDATE message_history SET messageType=? WHERE message_history_id=?;";
         DDLogVerbose(@"setting message type '%@' for history id %@", messageType, historyId);
         [self.db executeNonQuery:query andArguments:@[messageType, historyId]];
+        [MLMessageSearch updateIndexForHistoryId:historyId inDatabase:self.db];         //isaCloud: search index (a message can turn into a file or a link)
     }];
 }
 
@@ -1733,6 +1737,7 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
         NSArray* messageHistoryIDs = [self.db executeScalarReader:@"SELECT message_history_id FROM message_history WHERE messageType=? AND account_id=?;" andArguments:@[kMessageTypeFiletransfer, accountID]];
         for(NSNumber* historyId in messageHistoryIDs)
             [MLFiletransfer deleteFileForMessage:[MLMessage createMessageFromHistoryID:historyId]];
+        [MLMessageSearch removeFromIndexMessagesWhere:@"account_id=?" arguments:@[accountID] inDatabase:self.db];      //isaCloud: search index (before the messages are gone)
         [self.db executeNonQuery:@"DELETE FROM message_history WHERE account_id=?;" andArguments:@[accountID]];
         
         [self.db executeNonQuery:@"DELETE FROM activechats WHERE account_id=?;" andArguments:@[accountID]];
@@ -1750,6 +1755,7 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
         NSArray* messageHistoryIDs = [self.db executeScalarReader:@"SELECT message_history_id FROM message_history WHERE messageType=? AND account_id=? AND buddy_name=?;" andArguments:@[kMessageTypeFiletransfer, accountID, buddy]];
         for(NSNumber* historyId in messageHistoryIDs)
             [MLFiletransfer deleteFileForMessage:[MLMessage createMessageFromHistoryID:historyId]];
+        [MLMessageSearch removeFromIndexMessagesWhere:@"account_id=? AND buddy_name=?" arguments:@[accountID, buddy] inDatabase:self.db];     //isaCloud: search index
         [self.db executeNonQuery:@"DELETE FROM message_history WHERE account_id=? AND buddy_name=?;" andArguments:@[accountID, buddy]];
         
         //better UX without deleting the active chat
@@ -1777,6 +1783,7 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
 
         //delete inbound read messages or outgoing messages being old enough
         NSNumber* deletionCount = [self.db executeScalar:@"SELECT COUNT(*) FROM message_history WHERE (inbound=0 OR unread=0) AND timestamp<?;" andArguments:@[pastDateString]];
+        [MLMessageSearch removeFromIndexMessagesWhere:@"(inbound=0 OR unread=0) AND timestamp<?" arguments:@[pastDateString] inDatabase:self.db];    //isaCloud: search index
         [self.db executeNonQuery:@"DELETE FROM message_history WHERE (inbound=0 OR unread=0) AND timestamp<?;" andArguments:@[pastDateString]];
 
         //delete all chats with empty history from active chats list
@@ -1796,6 +1803,7 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
         if([msg.messageType isEqualToString:kMessageTypeFiletransfer])
             [MLFiletransfer deleteFileForMessage:msg];
         [self.db executeNonQuery:@"UPDATE message_history SET message='', messageType=?, retracted=1 WHERE message_history_id=?;" andArguments:@[kMessageTypeText, messageNo]];
+        [MLMessageSearch updateIndexForHistoryId:messageNo inDatabase:self.db];         //isaCloud: search index (still inside secure_delete)
         [self.db executeNonQuery:@"UPDATE filetransfer_info SET mime_type='', size=0 WHERE message_history_id=?;" andArguments:@[messageNo]];
         [self.db executeNonQuery:@"PRAGMA secure_delete=off;"];
     }];
@@ -1809,6 +1817,7 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
         if([msg.messageType isEqualToString:kMessageTypeFiletransfer])
             [MLFiletransfer deleteFileForMessage:msg];
         [self.db executeNonQuery:@"DELETE FROM message_history WHERE message_history_id=?;" andArguments:@[messageNo]];
+        [MLMessageSearch updateIndexForHistoryId:messageNo inDatabase:self.db];         //isaCloud: search index (still inside secure_delete)
         [self.db executeNonQuery:@"PRAGMA secure_delete=off;"];
     }];
 }
@@ -1817,6 +1826,7 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
 {
     [self.db voidWriteTransaction:^{
         [self.db executeNonQuery:@"UPDATE message_history SET message=? WHERE message_history_id=?;" andArguments:@[newText, messageNo]];
+        [MLMessageSearch updateIndexForHistoryId:messageNo inDatabase:self.db];         //isaCloud: search index
     }];
 }
 
@@ -2012,6 +2022,24 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
     }];
 }
 
+//isaCloud: see DataLayer.h
+-(NSMutableArray<MLMessage*>* _Nullable) messagesForContact:(NSString*) buddy forAccount:(NSNumber*) accountID aroundMsgHistoryID:(NSNumber*) historyId beforeMsgHistoryID:(NSNumber*) beforeHistoryId limit:(NSUInteger) limit
+{
+    if(accountID == nil || !buddy || historyId == nil || beforeHistoryId == nil)
+        return nil;
+    return [self.db idReadTransaction:^{
+        //the id of the 20th message before the one we look for: a bit of what was said before it is shown, too
+        NSNumber* startId = [self.db executeScalar:@"SELECT MIN(message_history_id) FROM (SELECT message_history_id FROM message_history WHERE account_id=? AND buddy_name=? AND message_history_id<=? ORDER BY message_history_id DESC LIMIT 21);" andArguments:@[accountID, buddy, historyId]];
+        if(startId == nil || [startId isKindOfClass:[NSNull class]])
+            return (NSMutableArray<MLMessage*>*)nil;
+        NSNumber* count = [self.db executeScalar:@"SELECT COUNT(*) FROM message_history WHERE account_id=? AND buddy_name=? AND message_history_id>=? AND message_history_id<?;" andArguments:@[accountID, buddy, startId, beforeHistoryId]];
+        if(count.unsignedIntegerValue > limit)
+            return (NSMutableArray<MLMessage*>*)nil;
+        NSArray* results = [self.db executeScalarReader:@"SELECT message_history_id FROM message_history WHERE account_id=? AND buddy_name=? AND message_history_id>=? AND message_history_id<? ORDER BY message_history_id ASC;" andArguments:@[accountID, buddy, startId, beforeHistoryId]];
+        return (NSMutableArray<MLMessage*>*)[MLMessage createMessagesFromHistoryIDs:results];
+    }];
+}
+
 -(MLMessage*) lastMessageForContact:(NSString*) contact forAccount:(NSNumber*) accountID
 {
     if(accountID == nil || !contact)
@@ -2112,6 +2140,7 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
             return (NSNumber*)nil;
 
         NSNumber* historyId = [self.db lastInsertId];
+        [MLMessageSearch indexNewMessageWithHistoryId:historyId inDatabase:self.db];         //isaCloud: search index
         if([messageType isEqualToString:kMessageTypeFiletransfer])
         {
             MLAssert(mimeType != nil && size != nil, @"Outgoing file transfers must have a mimeType and size");
@@ -2780,6 +2809,16 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
             [self.db executeNonQuery:@"UPDATE idle_timers SET timeout=timeout-1 WHERE id=?;" andArguments:@[timer[@"id"]]];
         }
         return handlerCalled;
+    }];
+}
+
+#pragma mark isaCloud: full text search in the messages (index: MLMessageSearch)
+
+//the history ids of the messages having every word of the query (each word as a prefix, no matter accents or case), newest first
+-(NSArray<NSNumber*>*) searchMessageHistoryIdsForQuery:(NSString*) query limit:(NSUInteger) limit offset:(NSUInteger) offset
+{
+    return [self.db idReadTransaction:^{
+        return (id)[MLMessageSearch historyIdsMatchingQuery:query limit:limit offset:offset inDatabase:self.db];
     }];
 }
 

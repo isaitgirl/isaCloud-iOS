@@ -11,6 +11,7 @@
 #import <monalxmpp/DataLayer.h>
 #import <monalxmpp/HelperTools.h>
 #import <monalxmpp/MLImageManager.h>
+#import <monalxmpp/MLMessageSearch.h>   //isaCloud
 
 @implementation DataLayerMigrations
 
@@ -1284,6 +1285,13 @@
             PRIMARY KEY(account_id, owner) \
         );"];
     }];
+
+    //full text search in the messages: the index (FTS5, see MLMessageSearch) is created and filled once here...
+    [self updateISACloudDB:db toVersion:4 withBlock:^{
+        [MLMessageSearch createIndexInDatabase:db];
+    }];
+    //...and at every start it indexes what the hooks of the DataLayer did not see (messages written by an older build, for example)
+    [MLMessageSearch catchUpIndexInDatabase:db];
 }
 
 @end

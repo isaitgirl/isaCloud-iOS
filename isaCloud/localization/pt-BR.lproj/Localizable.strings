@@ -165,3 +165,6 @@
 "Audio message" = "Mensagem de áudio";
 "File" = "Arquivo";
 "File: %@" = "Arquivo: %@";
+"Names" = "Nomes";
+"Type at least two letters to search in the messages." = "Digite pelo menos duas letras para buscar nas mensagens.";
+"Messages in search" = "Mensagens";
