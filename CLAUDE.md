@@ -9,6 +9,8 @@ Fork do Monal (cliente XMPP para iOS) com a marca e os ajustes do isaCloud. Bran
 - Qualquer alteração que possa causa complexidade no merge com o Monal deve ser validada.
 - Os builds e testes devem sempre levar em consideração do iOS 18 ao 27.
 - Não perguntar a todo instante sobre commitar o projeto, aguardar instrução do usuário.
+- **"Fazer novo build e push"** quer dizer, nesta ordem: subir o número do build e enviar ao TestFlight (`docs/publicacao-testflight.md`); atualizar o iPhone com a mesma versão; atualizar o `CHANGELOG.md`; atualizar o `ROADMAP.md` se for feature; atualizar `docs/decisoes.md` (e `docs/exytechat-fork.md`) quando for relevante para merges futuros com o Monal e o ExyteChat, citando o Conversations quando a ideia veio de lá; commit com mensagem bonita e descrita; push. Se houver mudança no fork do ExyteChat, o PR do fork é mesclado antes e o `Package.resolved` aponta para o SHA mesclado.
+- **"Fazer novo build"** (sem "e push") é o mesmo sem o commit e o push: atualiza docs, TestFlight e iPhone e deixa as mudanças sem commit.
 - As traduções devem seguir os padrões do Monal, considerando o merge com weblate, mas as traduções do isaCloud devem prevalecer sobre elas.
 - Estamos escrevendo o software em pt-br, mas você deve seguir as convenções de código do Monal, usando o idioma padrão dele e usando nosso mecanismo de tradução pro pt-br.
 - Se identificar textos em inglês não traduzidos nos simuladores, você deve avisar o usuário e confirmar qual será a tradução.

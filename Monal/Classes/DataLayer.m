@@ -1454,6 +1454,14 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
 
 -(NSDictionary*) messageDataForHistoryID:(NSNumber*) historyID
 {
+    NSDictionary* message = [self optionalMessageDataForHistoryID:historyID];
+    MLAssert(message != nil, @"Querying for one single history ID must always yield exactly one result!", (@{@"historyID": historyID}));
+    return message;
+}
+
+//isaCloud: split out of messageDataForHistoryID: to let the global refresh of a message skip the messages that are gone
+-(NSDictionary*) optionalMessageDataForHistoryID:(NSNumber*) historyID
+{
     return [self.db idReadTransaction:^{
         NSArray<NSDictionary*>* result = [self.db executeReader:@"SELECT \
             CASE \
@@ -1465,7 +1473,9 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
             FROM message_history AS M INNER JOIN account AS A \
                 ON M.account_id=A.account_id \
             WHERE M.message_history_id=?;" andArguments:@[historyID]];
-        MLAssert(result.count == 1, @"Querying for one single history ID must always yield exactly one result!", (@{@"historyID": historyID}));
+        if(result.count == 0)
+            return (NSDictionary*)nil;
+        MLAssert(result.count == 1, @"Querying for one single history ID must never yield more than one result!", (@{@"historyID": historyID}));
         NSMutableDictionary* message = [result[0] mutableCopy];
         if(message[@"thetime"])
             message[@"thetime"] = [dbFormatter dateFromString:message[@"thetime"]];

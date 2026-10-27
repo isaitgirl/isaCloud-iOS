@@ -112,7 +112,7 @@ Plano e raciocínio completos: `docs/plano-nick-por-sala.md`.
 
 ## Código do Monal que não alteramos sem validar (26/10/2026)
 - **Exceção feita:** `showWarningsIfNeeded` (`ActiveChatsViewController.m`) pula a conta em vez de lançar exceção quando o objeto `xmpp*` ainda não existe, porque o app caía na abertura no iOS 27 (a tela inicial é montada durante a espera pela extensão de notificações, antes de `didFinishLaunching` criar as contas). Os avisos são checados de novo no fim do catchup. Mudança de poucas linhas, com comentário "isaCloud:".
-- `handleJoinTimeout` (asserção "Spurious idle timer firing!"), `DumpMemoryGraph` (`MLDelayedDealloc.m`, só em Debug) e a asserção ao remover conta (`MLMessage handleGlobalRefresh:`) são arquivos do Monal: só mexemos com validação da Isadora, por causa do merge. O TestFlight (Release) não tem o despejo de memória. Detalhes e correções possíveis: linha "Corrigir no Monal" em "Por avaliar" no roadmap.
+- `handleJoinTimeout` (asserção "Spurious idle timer firing!"), `DumpMemoryGraph` (`MLDelayedDealloc.m`, só em Debug) e a asserção ao remover conta (`MLMessage handleGlobalRefresh:`) são arquivos do Monal: só mexemos com validação (a asserção ao remover conta foi corrigida em 27/10/2026 com a validação da Isadora: `DataLayer optionalMessageDataForHistoryID:` e um `return` em `handleGlobalRefresh:` quando a mensagem já não existe, sem tirar a asserção de `messageDataForHistoryID:`) da Isadora, por causa do merge. O TestFlight (Release) não tem o despejo de memória. Detalhes e correções possíveis: linha "Corrigir no Monal" em "Por avaliar" no roadmap.
 
 ## Descartado
 - **Código de afiliado** (Tela "Tenho um código", `mod_invites` do Prosody): removido do roadmap por decisão da Isadora em 26/10/2026.

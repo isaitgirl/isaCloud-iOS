@@ -68,4 +68,4 @@ Os testadores são **internos**: o build fica disponível no app TestFlight assi
 
 ## Depois do envio
 
-Não há commit automático. Os commits ficam com a Isadora, como combinado.
+O commit e o push só acontecem quando a Isadora pede ("fazer novo build e push"; com "fazer novo build" só o envio, o iPhone e os docs). A rotina completa está em `CLAUDE.md`.

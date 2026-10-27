@@ -267,6 +267,8 @@ extern NSString* const kMessageTypeFiletransfer;
 -(NSMutableArray<MLMessage*>*) messagesForContact:(NSString*) buddy forAccount:(NSNumber*) accountID beforeMsgHistoryID:(NSNumber* _Nullable) msgHistoryID;
 -(NSMutableArray<MLMessage*>*) messagesForContact:(NSString*) buddy forAccount:(NSNumber*) accountID;
 -(NSDictionary*) messageDataForHistoryID:(NSNumber*) historyID;
+//isaCloud: like messageDataForHistoryID:, but nil instead of an assertion if the message does not exist (anymore), e.g. after removing its account
+-(NSDictionary* _Nullable) optionalMessageDataForHistoryID:(NSNumber*) historyID;
 
 
 -(MLMessage*) lastMessageForContact:(NSString*) contact forAccount:(NSNumber*) accountID;

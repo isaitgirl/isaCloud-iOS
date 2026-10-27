@@ -71,8 +71,12 @@ static NSMutableDictionary* _singletonCache;
 
 +(void) fillMessage:(MLMessage*) message fromDatabaseWithHistoryID:(NSNumber*) historyID
 {
-    NSDictionary* dic = [[DataLayer sharedInstance] messageDataForHistoryID:historyID];
+    [self fillMessage:message fromDictionary:[[DataLayer sharedInstance] messageDataForHistoryID:historyID]];
+}
 
+//isaCloud: split out of fillMessage:fromDatabaseWithHistoryID: (the code below is unchanged)
++(void) fillMessage:(MLMessage*) message fromDictionary:(NSDictionary*) dic
+{
     message.accountID = [dic objectForKey:@"account_id"];
 
     message.buddyName = [dic objectForKey:@"buddy_name"];
@@ -300,7 +304,15 @@ static NSMutableDictionary* _singletonCache;
 -(void) handleGlobalRefresh:(NSNotification*) notification
 {
     DDLogDebug(@"Handling global refresh for MLMessage: %@", self);
-    [MLMessage fillMessage:self fromDatabaseWithHistoryID:self.messageDBId];
+    //isaCloud: the message can be gone: removing an account deletes its messages and then posts this refresh,
+    //the assertion in messageDataForHistoryID: killed the app. Nothing to refresh then.
+    NSDictionary* dic = [[DataLayer sharedInstance] optionalMessageDataForHistoryID:self.messageDBId];
+    if(dic == nil)
+    {
+        DDLogDebug(@"Message %@ does not exist anymore, not refreshing it", self.messageDBId);
+        return;
+    }
+    [MLMessage fillMessage:self fromDictionary:dic];
     self.reactions = [[DataLayer sharedInstance] getReactionsForHistoryId:self.messageDBId];
 }
 
