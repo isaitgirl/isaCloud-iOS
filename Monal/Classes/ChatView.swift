@@ -94,6 +94,10 @@ class ChatViewDefaultsDB: ObservableObject {
 
     @defaultsDB("ShowGeoLocation")
     var showGeoLocation: Bool
+
+    //isaCloud: reactions as capsules in the footer of the bubble (Settings > User Interface > Appearance)
+    @defaultsDB("reactionsBelowBubble")
+    var reactionsBelowBubble: Bool
 }
 
 struct ChatView: View {
@@ -871,6 +875,7 @@ struct ChatView: View {
         .autoFocusTextInputOnChatOpen(chatViewDefaultsDB.showKeyboardOnChatOpen)
         .showUsername(contact.isMuc)
         .messageMenuAnimationDuration(0.15)      //isaCloud: the message menu (reactions, actions) opens sooner than the library's 0.3 s
+        .reactionsBelowBubble(chatViewDefaultsDB.reactionsBelowBubble)       //isaCloud: a setting, off by default
         .tapAvatarClosure { user, _ in
             // mentions use only the nick: the verified emoji of the name is not part of it
             inputModel.setText(inputModel.text + "\(ChatNameWithHats.nick(from: user.name)), ")
