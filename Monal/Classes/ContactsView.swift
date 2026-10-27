@@ -158,6 +158,9 @@ struct ContactsView: View {
     @State private var showingAddContact = false
     @State private var showingCreateGroup = false
     @State private var showingPublicChannels = false
+    @State private var showingAddMenu = false          //isaCloud (TEST): the popover of the "+" button
+    @State private var showingInvitation = false       //isaCloud: invite someone (moved here from the add contact screen)
+    @State private var showingQRCodeScanner = false    //isaCloud: add via QR code (moved here from the add contact screen)
     @State private var selectedContactForContactDetails: MLContact? = nil
     private let delegate: SheetDismisserProtocol
     private let dismissWithContact: (MLContact) -> ()
@@ -216,6 +219,28 @@ struct ContactsView: View {
         let search = search.lowercased()
 
         return jid.contains(search) || name.contains(search)
+    }
+
+    private func addMenuRow(_ title: LocalizedStringKey, icon: String, action: @escaping () -> Void) -> some View {
+        Button {
+            showingAddMenu = false
+            //let the popover go away before opening the next screen
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: action)
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: icon)
+                    .foregroundStyle(Color("isaCloudPink"))
+                    .frame(width: 30)
+                Text(title)
+                    .foregroundStyle(.primary)
+                Spacer()
+            }
+            .font(.callout)     //one point under the body text (16 pt instead of 17 pt), still following the text size of the system
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     var body: some View {
@@ -279,47 +304,57 @@ struct ContactsView: View {
         }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button {
-                        showingAddContact = true
-                    } label: {
-                        Label {
-                            Text("Add New Contact")
-                        } icon: {
-                            Image(systemName: "person.fill.badge.plus")
-                                .foregroundStyle(Color("isaCloudPink"))
-                        }
-                    }
-                    Button {
-                        showingCreateGroup = true
-                    } label: {
-                        Label {
-                            Text("Create contact group")
-                        } icon: {
-                            Image(systemName: "person.3.fill")
-                                .foregroundStyle(Color("isaCloudPink"))
-                        }
-                    }
-                    Button {
-                        showingPublicChannels = true
-                    } label: {
-                        Label {
-                            Text("List channels")
-                        } icon: {
-                            Image(systemName: "number")
-                                .foregroundStyle(Color("isaCloudPink"))
-                        }
-                    }
+                //isaCloud (TEST): a popover with a width of its own instead of the system Menu, whose width the system decides (labels broke in two lines)
+                Button {
+                    showingAddMenu = true
                 } label: {
                     //isaCloud: no badge here: the pending contact requests are at the top of this list
                     Image(systemName: "plus")
                 }
                 .tint(Color("isaCloudPink"))
                 .accessibilityLabel("Add contact, group or channel")
+                .popover(isPresented: $showingAddMenu) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        addMenuRow("Add New Contact", icon: "person.fill.badge.plus") { showingAddContact = true }
+                        Divider()
+                        //isaCloud: the invitation and the QR code scanner used to be icons in the toolbar of the add contact screen
+                        addMenuRow("Invite to isaCloud", icon: "square.and.arrow.up") { showingInvitation = true }
+                        Divider()
+                        addMenuRow("Add via QR code", icon: "camera.fill") { showingQRCodeScanner = true }
+                        Divider()
+                        addMenuRow("Create contact group", icon: "person.3.fill") { showingCreateGroup = true }
+                        Divider()
+                        addMenuRow("List channels", icon: "number") { showingPublicChannels = true }
+                    }
+                    .frame(width: 310)
+                    .padding(.vertical, 6)
+                    .presentationCompactAdaptation(.popover)
+                }
             }
         }
         .navigationDestination(isPresented: $showingAddContact) {
             AddContactMenu(delegate: SheetDismisserProtocol(), dismissWithNewContact: dismissWithContact)
+        }
+        .navigationDestination(isPresented: $showingInvitation) {
+            InvitationMenu()
+        }
+        .sheet(isPresented: $showingQRCodeScanner) {
+            NavigationStack {
+                MLQRCodeScanner(handleClose: {
+                    self.showingQRCodeScanner = false
+                })
+                .navigationTitle(Text("QR-Code Scanner"))
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar(content: {
+                    ToolbarItem(placement: .navigationBarLeading, content: {
+                        Button(action: {
+                            self.showingQRCodeScanner = false
+                        }, label: {
+                            Text("Close")
+                        })
+                    })
+                })
+            }
         }
         .navigationDestination(isPresented: $showingCreateGroup) {
             CreateGroupMenu(delegate: SheetDismisserProtocol())
@@ -329,6 +364,107 @@ struct ContactsView: View {
         }
         .sheet(item: $selectedContactForContactDetails) { selectedContact in
             AnyView(AddTopLevelNavigation(withDelegate: delegate, to: ContactDetails(delegate:delegate, contact:ObservableKVOWrapper<MLContact>(selectedContact))))
+        }
+    }
+}
+
+//isaCloud: creates an invitation to the server of an account (XEP-0401) and shows it as a QR code and a link to share. It used to be an
+//icon in the toolbar of the add contact screen; now it is an item of the "+" menu of the contacts.
+struct InvitationMenu: View {
+    @State private var accounts: [xmpp]
+    @State private var selectedAccount: Int = 0
+    @State private var result: [String:AnyObject]? = nil
+    @State private var errorMessage: String? = nil
+    @State private var isCreating = false
+
+    init() {
+        //only the accounts whose server can create invitations
+        self._accounts = State(wrappedValue: (MLXMPPManager.sharedInstance().connectedXMPP as! [xmpp]).filter {
+            $0.connectionProperties.discoveredAdhocCommands["urn:xmpp:invite#invite"] != nil
+        })
+    }
+
+    private func createInvitation() {
+        guard accounts.indices.contains(selectedAccount) else {
+            return
+        }
+        let account = accounts[selectedAccount]
+        let host = HelperTools.splitJid(account.connectionProperties.identity.jid)["host"] ?? ""
+        DDLogVerbose("Trying to create invitation for: \(host)")
+        result = nil
+        errorMessage = nil
+        isCreating = true
+        account.createInvitation(completion: {
+            let creationResult = $0 as! [String:AnyObject]
+            DispatchQueue.main.async {
+                isCreating = false
+                DDLogVerbose("Got invitation result: \(String(describing:creationResult))")
+                if creationResult["success"] as? Bool == true {
+                    result = creationResult
+                } else {
+                    errorMessage = creationResult["error"] as? String ?? ""
+                }
+            }
+        })
+    }
+
+    var body: some View {
+        Form {
+            if accounts.isEmpty {
+                Text("None of your connected accounts can create invitations.")
+                    .foregroundColor(.secondary)
+            } else {
+                if accounts.count > 1 {
+                    Section {
+                        Picker("Use account", selection: $selectedAccount) {
+                            ForEach(Array(accounts.enumerated()), id: \.element) { idx, account in
+                                Text(account.connectionProperties.identity.jid).tag(idx)
+                            }
+                        }
+                        .onChange(of: selectedAccount) {
+                            createInvitation()
+                        }
+                    }
+                }
+                Section {
+                    if isCreating {
+                        HStack {
+                            Spacer()
+                            ProgressView()
+                            Spacer()
+                        }
+                    } else if let result = result, let landing = result["landing"] as? String {
+                        VStack {
+                            Image(uiImage: createQrCode(value: landing))
+                                .interpolation(.none)
+                                .resizable()
+                                .scaledToFit()
+                                .aspectRatio(1, contentMode: .fit)
+                            if let expires = result["expires"] as? Date {
+                                Text("This invitation will expire on \(expires.formatted(date:.numeric, time:.shortened))")
+                                    .font(.footnote)
+                                    .multilineTextAlignment(.leading)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                        if let url = URL(string: landing) {
+                            ShareLink("Share invitation link", item: url)
+                        }
+                    } else if let errorMessage = errorMessage {
+                        Text("Failed to create invitation")
+                            .foregroundColor(.red)
+                        Text(errorMessage)
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
+        .navigationBarTitle(Text("Invite to isaCloud"), displayMode: .inline)
+        .onAppear {
+            if result == nil && !isCreating {
+                createInvitation()
+            }
         }
     }
 }

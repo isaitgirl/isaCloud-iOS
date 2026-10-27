@@ -2,6 +2,16 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 31) — 27/10/2026
+
+### Alterado
+- **Menu "+" de Contatos num painel mais largo.** Os itens ("Adicionar contato ou canal", "Convidar para o isaCloud", "Adicionar via QRCode", "Criar grupo" e "Listar canais") aparecem num painel próprio, de 310 pt, com cada texto em uma linha, em vez do menu do sistema, que quebrava os textos mais longos em duas linhas. Fonte um ponto menor que a do texto normal.
+- **Convite e leitura de QR code saíram da tela de adicionar e foram para o menu "+".** "Convidar para o isaCloud" (ícone de compartilhar, rosa) abre uma tela que cria o convite e mostra o QR code, a validade e o botão "Compartilhar link do convite"; com mais de uma conta cujo servidor aceita convites, há um seletor de conta. "Adicionar via QRCode" (câmera, rosa) abre o leitor. A tela de adicionar contato ou canal ficou só com o campo, sem os dois ícones do topo, e voltou a se chamar "Adicionar contato ou canal".
+- **Texto de ajuda da tela de adicionar:** "Informe o endereço do contato ou do canal que você quer adicionar, no formato nome@dominio.tld." O item do menu agora diz "Adicionar contato ou canal".
+
+### Corrigido
+- **O spinner não estica mais a bolha de vidro dos botões do topo (iOS 26 em diante).** Na lista de conversas, o spinner de sincronização dividia a bolha com o botão de contatos; na janela de mensagem, o do carregamento do histórico e do envio de arquivo dividia a bolha do telefone e do cadeado. Em ambos a bolha esticava e encolhia quando o spinner entrava e saía; agora o spinner fica solto, sem bolha.
+
 ## 0.0.1 (build 30) — 27/10/2026
 
 ### Adicionado

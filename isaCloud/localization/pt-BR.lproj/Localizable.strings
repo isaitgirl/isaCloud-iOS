@@ -67,7 +67,7 @@
 "Filter: contacts" = "Contatos";
 "Filter: groups" = "Grupos";
 "Filter: channels" = "Canais";
-"Add New Contact" = "Adicionar contato";
+"Add New Contact" = "Adicionar contato ou canal";
 "Create contact group" = "Criar grupo";
 "List channels" = "Listar canais";
 "Release to send" = "Solte para enviar";
@@ -90,6 +90,13 @@
 "Send this location" = "Enviar esta localização";
 "Accounts" = "Contas";
 "Contact-, Group- or Channel-Jid" = "Endereço do contato ou canal";
+"Add Contact or Channel" = "Adicionar contato ou canal";
+"Invite to isaCloud" = "Convidar para o isaCloud";
+"Add via QR code" = "Adicionar via QRCode";
+"None of your connected accounts can create invitations." = "Nenhuma das suas contas conectadas pode criar convites.";
+"Failed to create invitation" = "Não foi possível criar o convite";
+"Share invitation link" = "Compartilhar link do convite";
+"Contact and Group/Channel Jids are usually in the format: name@domain.tld" = "Informe o endereço do contato ou do canal que você quer adicionar, no formato nome@dominio.tld.";
 "No pending contact requests" = "Nenhum pedido de contato pendente";
 "Type a message..." = "Escreva uma mensagem...";
 "Reply" = "Responder";

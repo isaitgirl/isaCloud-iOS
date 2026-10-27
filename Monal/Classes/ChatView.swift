@@ -674,6 +674,20 @@ struct ChatView: View {
         }
     }
 
+    //isaCloud: the spinner of the history loading and of the upload is an item of its own without the glass bubble (iOS 26+): inside
+    //the bubble of the buttons it made that bubble grow and shrink every time the spinner came and went
+    @ToolbarContentBuilder
+    private var loadingIndicatorToolbarItem: some ToolbarContent {
+        if isLoadingMamHistory || inputModel.isUploading {
+            if #available(iOS 26.0, *) {
+                ToolbarItem(placement: .topBarTrailing) { ProgressView() }
+                    .sharedBackgroundVisibility(.hidden)
+            } else {
+                ToolbarItem(placement: .topBarTrailing) { ProgressView() }
+            }
+        }
+    }
+
     var body: some View {
         ExyteChatView(messages: messages, chatType: .conversation, replyMode: .quote, didSendMessage: { draft in
             if !draft.medias.isEmpty || draft.recording != nil || !draft.files.isEmpty {
@@ -1061,12 +1075,8 @@ struct ChatView: View {
                 }
             }
             
+            loadingIndicatorToolbarItem
             ToolbarItemGroup(placement: .topBarTrailing) {
-                //isaCloud: only present while loading; an invisible item still made the iOS 26+ glass bubble wider
-                if isLoadingMamHistory || inputModel.isUploading {
-                    ProgressView()
-                }
-
                 if ownRole == kMucRoleVisitor {
                     Button {
                         let _ = showPromisingLoadingOverlay(overlay, headline:"Requesting Voice") {

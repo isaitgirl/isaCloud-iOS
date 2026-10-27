@@ -23,11 +23,9 @@ struct AddContactMenu: View {
     @State private var showAlert = false
     // note: dismissLabel is not accessed but defined at the .alert() section
     @State private var alertPrompt = AlertPrompt(dismissLabel: Text("Close"))
-    @State private var invitationResult: [String:AnyObject]? = nil
 
     @StateObject private var overlay = LoadingOverlayState()
 
-    @State private var showQRCodeScanner = false
     @State private var success = false
     @State private var newContact : MLContact?
 
@@ -251,83 +249,8 @@ struct AddContactMenu: View {
                 }
             }))
         }
-        .richAlert(isPresented: $invitationResult, title:Text("Invitation for \(splitJid["host"]!) created")) { data in
-            VStack {
-                Image(uiImage: createQrCode(value: data["landing"] as! String))
-                    .interpolation(.none)
-                    .resizable()
-                    .scaledToFit()
-                    .aspectRatio(1, contentMode: .fit)
-
-                if let expires = data["expires"] as? Date {
-                    Text("This invitation will expire on \(expires.formatted(date:.numeric, time:.shortened))")
-                    .font(.footnote)
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
-        } buttons: { data in 
-            Button(action: {
-                UIPasteboard.general.setValue(data["landing"] as! String, forPasteboardType:UTType.utf8PlainText.identifier as String)
-                invitationResult = nil
-            }) {
-                ShareLink("Share invitation link", item: URL(string: data["landing"] as! String)!)
-            }
-            Button(action: {
-                invitationResult = nil
-            }) {
-                Text("Close")
-                    .frame(maxWidth: .infinity)
-            }
-        }
-        .sheet(isPresented: $showQRCodeScanner) {
-            NavigationStack {
-                MLQRCodeScanner(handleClose: {
-                    self.showQRCodeScanner = false
-                })
-                .navigationTitle(Text("QR-Code Scanner"))
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar(content: {
-                    ToolbarItem(placement: .navigationBarLeading, content: {
-                        Button(action: {
-                            self.showQRCodeScanner = false
-                        }, label: {
-                            Text("Close")
-                        })
-                    })
-                })
-            }
-        }
+        //isaCloud: creating an invitation and scanning a QR code moved to the "+" menu of the contacts (ContactsView), under the add button
         .navigationBarTitle(Text("Add Contact or Channel"), displayMode: .inline)
-        .toolbar(content: {
-            ToolbarItemGroup(placement: .navigationBarTrailing) {
-                if account.connectionProperties.discoveredAdhocCommands["urn:xmpp:invite#invite"] != nil {
-                    Button(action: {
-                        DDLogVerbose("Trying to create invitation for: \(String(describing:splitJid["host"]!))")
-                        showLoadingOverlay(overlay, headline:"Creating invitation...")
-                        account.createInvitation(completion: {
-                            let result = $0 as! [String:AnyObject]
-                            DispatchQueue.main.async {
-                                hideLoadingOverlay(overlay)
-                                DDLogVerbose("Got invitation result: \(String(describing:result))")
-                                if result["success"] as! Bool == true {
-                                    invitationResult = result
-                                } else {
-                                    errorAlert(title:Text("Failed to create invitation for \(splitJid["host"]!)"), message:Text(result["error"] as! String))
-                                }
-                            }
-                        })
-                    }, label: {
-                        Image(systemName: "square.and.arrow.up")
-                    })
-                }
-                Button(action: {
-                    self.showQRCodeScanner = true
-                }, label: {
-                    Image(systemName: "camera.fill")
-                })
-            }
-        })
         .addLoadingOverlay(overlay)
     }
 }

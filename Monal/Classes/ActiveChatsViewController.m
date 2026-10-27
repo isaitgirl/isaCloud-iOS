@@ -470,6 +470,9 @@ static BOOL _dnssecWarningDisplayed;
     [self configureComposeButton];
 
     self.spinnerButton.customView = self.spinner;
+    // isaCloud: the spinner stays out of the glass bubble of the buttons (iOS 26+), otherwise that bubble grows and shrinks every time it comes and goes
+    if(@available(iOS 26.0, *))
+        self.spinnerButton.hidesSharedBackground = YES;
     [self setSyncIndicatorVisible:NO];
     self.spinnerButton.isAccessibilityElement = YES;
     self.spinnerButton.accessibilityLabel = NSLocalizedString(@"Syncing", @"Accessibility label for the network/sync activity indicator shown in the chats toolbar when XMPP accounts or file transfers are active");
