@@ -43,6 +43,7 @@
     NSMutableSet* _nickBookmarkPending;     //isaCloud: rooms whose new nick is not in the remote bookmark yet (memory only)
     NSMutableDictionary* _changingNick;     //isaCloud: room --> @{nick, oldNick, token} of a nick change waiting for the answer of the service (memory only, never saved)
     NSMutableDictionary* _remoteAvatarQueryJids;    //isaCloud: avatar owner --> jid to ask the vcard of (room/nick for channel participants), memory only
+    NSMutableSet* _roomAvatarAsked;                 //isaCloud: rooms whose avatar we asked for without any hash, memory only (once per run)
     NSMutableSet* _remoteAvatarQueued;              //isaCloud: avatar owners waiting in the queue, to ask only once at a time
     NSMutableDictionary* _remoteAvatarSent;         //isaCloud: avatar owner --> when the request was sent (an answer may never come, e.g. after a disconnect)
     NSMutableArray* _remoteAvatarQueue;             //isaCloud: waiting requests (dictionaries owner, jid, hash)
@@ -1796,6 +1797,13 @@ $$instance_handler(handleDiscoResponse, account.mucProcessor, $$ID(xmpp*, accoun
         //we don't need to force saving of our new state because once this incoming iq gets counted by smacks the whole state will be saved
     }
     
+    //isaCloud: the avatar of the room does not depend on the presence of the room (see checkAvatarOfRoom:...)
+    NSString* advertisedAvatarHash = nil;
+    for(MLXMLNode* field in [iqNode find:@"{http://jabber.org/protocol/disco#info}query/{jabber:x:data}x/field"])
+        if([field.attributes[@"var"] isEqualToString:@"muc#roominfo_avatarhash"])
+            advertisedAvatarHash = [field findFirst:@"value#"];
+    [self checkAvatarOfRoom:iqNode.fromUser advertisedHash:advertisedAvatarHash supportsVcard:[features containsObject:@"vcard-temp"]];
+    
     if(join)
     {
         DDLogInfo(@"Clearing muc participants table: %@", iqNode.fromUser);
@@ -2368,6 +2376,36 @@ static const NSUInteger kRemoteAvatarMaxParallelRequests = 3;
     dispatch_async(dispatch_get_main_queue(), ^{
         [[NSNotificationCenter defaultCenter] postNotificationName:kMonalRemoteAvatarUpdated object:self->_account userInfo:@{@"owner": owner}];
     });
+}
+
+//isaCloud: the hash of the avatar of a room normally comes in a presence of the room itself, but some servers do not pass that presence on
+//(seen with a room of another server and an account of xmpp.social.br: the room never got its avatar). Like Conversations, we also read the
+//hash from the room info (muc#roominfo_avatarhash) and, if a room says nothing at all but can do vcard-temp, ask for its vcard once per run.
+-(void) checkAvatarOfRoom:(NSString*) room advertisedHash:(NSString* _Nullable) advertisedHash supportsVcard:(BOOL) supportsVcard
+{
+    if([HelperTools isAppExtension])
+        return;
+    NSString* currentHash = [[DataLayer sharedInstance] getAvatarHashForContact:room andAccount:_account.accountID];
+    if(advertisedHash.length > 0)
+    {
+        if([advertisedHash isEqualToString:currentHash])
+            return;
+        DDLogInfo(@"Room info of muc %@ advertises new avatar hash '%@' (stored: '%@'), fetching new image via vcard-temp...", room, advertisedHash, currentHash);
+        [self fetchAvatarForRoom:room];
+        return;
+    }
+    //no hash anywhere: a room that we have no avatar of may still have one (once per run, to not ask at every join)
+    if(!supportsVcard || currentHash.length > 0)
+        return;
+    @synchronized(_stateLockObject) {
+        if(_roomAvatarAsked == nil)
+            _roomAvatarAsked = [NSMutableSet new];
+        if([_roomAvatarAsked containsObject:room])
+            return;
+        [_roomAvatarAsked addObject:room];
+    }
+    DDLogInfo(@"Muc %@ advertises no avatar hash, but has none stored and supports vcard-temp: asking for its avatar once...", room);
+    [self fetchAvatarForRoom:room];
 }
 
 -(void) fetchAvatarForRoom:(NSString*) room
