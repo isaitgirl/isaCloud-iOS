@@ -11,6 +11,12 @@ Registro do **porquê** das escolhas feitas no fork: decisões de produto, de c�
 - **Alternativas descartadas:** (a) trocar `│` por caractere de bloco (testado: barras grossas e ainda segmentadas); (b) balão próprio via `messageBuilder` para toda mensagem com citação (1 a 2 dias e risco de regressão: reproduzir avatar, nome, hora, status, reações, links, menu e swipe); (c) esperar a XEP-0461 do Monal (sem previsão).
 - **Regras:** mudanças pequenas, comentadas com "isaCloud:" e em commits separados, para o rebase ser fácil; se o upstream trouxer o recurso, descartar o nosso commit. Toda mudança entra por PR de uma branch nova para `isaCloud`, no fork e no app (o PR do app só depois do PR do fork). Depois de cada commit no fork, atualizar a revisão fixada no `Package.resolved` do app.
 
+## Lista de conversas mais espaçada (27/10/2026, do Jejê)
+- **Decisão:** as linhas da lista de Conversas passam de 60 pt para **72 pt** (de 74 para **86 pt** quando há mais de uma conta), para os chats não ficarem espremidos, no estilo dos apps de mensagem mais usados. O tamanho do avatar e das fontes não mudou.
+- **Como:** a altura vem de `heightForRowAtIndexPath` em `ActiveChatsViewController.m`. A célula (`MLContactCell.xib`) é antiga e prende o nome, a data e o selo de mensagens novas ao topo da linha (só o avatar é centralizado), então as restrições de topo desses itens subiram 6 pt (a data 8 pt) para o texto acompanhar o aumento; sem isso o texto ficava grudado na linha de cima.
+- **Cuidado com o merge:** `MLContactCell.xib` e `ActiveChatsViewController.m` são arquivos do Monal. As mudanças são só 4 constantes no xib e 1 linha no controlador, mas se o Monal mexer na célula, confira esses pontos.
+- **Não testado:** várias contas (linha de 86 pt, com o jid da conta embaixo do nome), Dynamic Type maior e iPad.
+
 ## Responder puxando o balão (27/10/2026, do Jejê)
 - **Decisão:** puxar um balão para a direita responde a ele: o balão acompanha o dedo, uma seta aparece atrás, e ao soltar o balão volta com uma mola e o campo de texto ganha o foco. É o mesmo "Responder" do menu do toque longo, que no isaCloud é só a citação (`> texto`) colocada no início do campo (`ChatInputModel.quote`), sem resposta estruturada do protocolo.
 - **Por quê:** é o gesto que as pessoas já conhecem de outros apps de mensagem e é bem mais rápido que abrir o menu. Mudança nº 5 do fork do ExyteChat (`docs/exytechat-fork.md`).
