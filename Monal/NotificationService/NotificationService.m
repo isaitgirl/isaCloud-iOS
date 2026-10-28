@@ -104,7 +104,7 @@
 -(void) dealloc
 {
     DDLogError(@"Deallocating push singleton");
-    [DDLog flushLog];
+    [HelperTools flushLogsWithTimeout:0.1];
 }
 
 -(BOOL) checkAndUpdateFirstPush:(BOOL) value
@@ -236,7 +236,7 @@
             if([MLProcessLock checkRemoteRunning:@"MainApp"])
             {
                 DDLogInfo(@"NOT connecting accounts, main app already running in foreground, terminating immediately instead");
-                [DDLog flushLog];
+                [HelperTools flushLogsWithTimeout:0.1];
                 [self disconnectAndFeedAllWaitingHandlers];
                 [self killAppex];
             }
@@ -245,7 +245,7 @@
         }
         
         DDLogDebug(@"locking process and connecting accounts");
-        [DDLog flushLog];
+        [HelperTools flushLogsWithTimeout:0.1];
         [MLProcessLock lock];
         
         //handle message notifications by initializing the MLNotificationManager
@@ -453,7 +453,7 @@ static BOOL warnUnclean = NO;
     
     //log startup
     DDLogInfo(@"Notification Service Extension started: %@", [HelperTools appBuildVersionInfoFor:MLVersionTypeLog]);
-    [DDLog flushLog];
+    [HelperTools flushLogsWithTimeout:0.1];
     
     warnUnclean = ![NotificationService getAppexCleanShutdownStatus];
     if(warnUnclean)
@@ -507,7 +507,7 @@ static BOOL warnUnclean = NO;
 -(void) dealloc
 {
     DDLogInfo(@"Deallocating notification service extension class");
-    [DDLog flushLog];
+    [HelperTools flushLogsWithTimeout:0.1];
 }
 
 -(void) didReceiveNotificationRequest:(UNNotificationRequest*) request withContentHandler:(void (^)(UNNotificationContent* _Nonnull)) contentHandler
@@ -596,10 +596,10 @@ static BOOL warnUnclean = NO;
             
             //proxy to push singleton
             DDLogDebug(@"proxying to incomingPush");
-            [DDLog flushLog];
+            [HelperTools flushLogsWithTimeout:0.1];
             [[PushSingleton instance] incomingPush:contentHandler];
             DDLogDebug(@"incomingPush proxy completed");
-            [DDLog flushLog];
+            [HelperTools flushLogsWithTimeout:0.1];
         }
     }
 }
@@ -675,10 +675,10 @@ static BOOL warnUnclean = NO;
 /*
         //proxy to push singleton
         DDLogDebug(@"proxying to pushExpired");
-        [DDLog flushLog];
+        [HelperTools flushLogsWithTimeout:0.1];
         [[PushSingleton instance] pushExpired];
         DDLogDebug(@"pushExpired proxy completed");
-        [DDLog flushLog];
+        [HelperTools flushLogsWithTimeout:0.1];
 */
     }
 }

@@ -17,13 +17,20 @@ private func shareSheetString(_ key: String) -> String {
 }
 
 struct SharePickerView: View {
+    /// a destination with a stable identity: the same contact in two accounts are two different rows
+    private struct Destination: Identifiable {
+        let id: String
+        let contact: MLContact
+    }
+
     let onSend: (MLContact, String) -> Void
     let onCancel: () -> Void
     /// what the contacts list shows, for the accounts that can send; sorted by name and then by address (as in the app)
-    private let destinations: [MLContact]
+    private let destinations: [Destination]
 
     @State private var searchText = ""
-    @State private var selectedKey: String?
+    //one destination at a time: this is the only place that says which row is selected
+    @State private var selectedID: String?
     @State private var message = ""
     @State private var sending = false
     @ScaledMetric(relativeTo: .body) private var avatarSize: CGFloat = 40
@@ -37,36 +44,33 @@ struct SharePickerView: View {
         destinations = DataLayer.sharedInstance().contactList()
             .filter { enabledAccountIDs.contains($0.accountID.intValue) }
             .filter { $0.isSelf || $0.isMuc || $0.isSubscribedTo || $0.hasOutgoingContactRequest || $0.isSubscribedFrom }
-            .sorted { ($0.contactDisplayName.lowercased(), $0.contactJid.lowercased()) < ($1.contactDisplayName.lowercased(), $1.contactJid.lowercased()) }
+            .map { Destination(id: "\($0.accountID)|\($0.contactJid)", contact: $0) }
+            .sorted { ($0.contact.contactDisplayName.lowercased(), $0.contact.contactJid.lowercased()) < ($1.contact.contactDisplayName.lowercased(), $1.contact.contactJid.lowercased()) }
         //a Siri intent can name the chat to send to: start with it chosen, if it is a destination we can send to
-        if let recipient = initialRecipient, destinations.contains(where: { SharePickerView.key($0) == SharePickerView.key(recipient) }) {
-            _selectedKey = State(initialValue: SharePickerView.key(recipient))
+        if let recipient = initialRecipient, let match = destinations.first(where: { $0.id == "\(recipient.accountID)|\(recipient.contactJid)" }) {
+            _selectedID = State(initialValue: match.id)
         } else {
-            _selectedKey = State(initialValue: nil)
+            _selectedID = State(initialValue: nil)
         }
-    }
-
-    private static func key(_ contact: MLContact) -> String {
-        return "\(contact.accountID)|\(contact.contactJid)"
     }
 
     private func canWrite(_ contact: MLContact) -> Bool {
         return MessageForward.canWrite(isMuc: contact.isMuc, role: contact.isMuc ? DataLayer.sharedInstance().getOwnRole(inGroupOrChannel: contact) : nil)
     }
 
-    private var shown: [MLContact] {
+    private var shown: [Destination] {
         guard !searchText.isEmpty else {
             return destinations
         }
         let search = searchText.lowercased()
-        return destinations.filter { $0.contactJid.lowercased().contains(search) || $0.contactDisplayName.lowercased().contains(search) }
+        return destinations.filter { $0.contact.contactJid.lowercased().contains(search) || $0.contact.contactDisplayName.lowercased().contains(search) }
     }
 
     private var selectedContact: MLContact? {
-        guard let selectedKey = selectedKey else {
+        guard let selectedID = selectedID else {
             return nil
         }
-        return destinations.first { SharePickerView.key($0) == selectedKey }
+        return destinations.first(where: { $0.id == selectedID })?.contact
     }
 
     private var canSend: Bool {
@@ -83,8 +87,8 @@ struct SharePickerView: View {
                     ContentUnavailableView(shareSheetString("No contacts"), systemImage: "person.2.slash")
                 } else {
                     List {
-                        ForEach(shown, id: \.self) { contact in
-                            row(for: contact)
+                        ForEach(shown) { destination in
+                            row(for: destination)
                         }
                     }
                     .listStyle(.plain)
@@ -133,47 +137,51 @@ struct SharePickerView: View {
     }
 
     @ViewBuilder
-    private func row(for contact: MLContact) -> some View {
+    private func row(for destination: Destination) -> some View {
+        let contact = destination.contact
         let writable = canWrite(contact)
-        let isSelected = selectedKey == SharePickerView.key(contact)
-        Button {
-            selectedKey = isSelected ? nil : SharePickerView.key(contact)
-        } label: {
-            HStack(alignment: .center) {
-                Image(uiImage: contact.avatar)
-                    .resizable()
-                    .frame(width: avatarSize, height: avatarSize, alignment: .center)
-                VStack(alignment: .leading) {
-                    Text(contact.contactDisplayName)
-                    if !writable {
-                        Text(shareSheetString("You cannot write here"))
-                            .font(.caption)
-                            .foregroundStyle(.red)
-                    }
-                    //isaCloud: the address of a private group is a random string, meaningless to people: it is only shown in the group's details
-                    if !(contact.isMuc && contact.mucType == kMucTypeGroup) {
-                        Text(contact.contactJid)
-                            .font(.footnote)
-                            .foregroundStyle(Color(UIColor.secondaryLabel))
-                    }
-                    if let accountJid = HelperTools.accountJidToShow(forAccountID: contact.accountID) {
-                        HStack(spacing: 3) {
-                            Image(systemName: "person.crop.circle")
-                            Text(accountJid)
-                        }
+        let isSelected = selectedID == destination.id
+        //isaCloud: a plain tap instead of a Button: a Button inside a List keeps the row highlighted, which reads as a second selection
+        HStack(alignment: .center, spacing: 12) {
+            Image(uiImage: contact.avatar)
+                .resizable()
+                .frame(width: avatarSize, height: avatarSize, alignment: .center)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(contact.contactDisplayName)
+                if !writable {
+                    Text(shareSheetString("You cannot write here"))
                         .font(.caption)
-                        .foregroundStyle(Color(UIColor.secondaryLabel))
-                    }
+                        .foregroundStyle(.red)
                 }
-                Spacer(minLength: 8)
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(isSelected ? shareSheetPink : Color.secondary)
+                //isaCloud: the address of a private group is a random string, meaningless to people: it is only shown in the group's details
+                if !(contact.isMuc && contact.mucType == kMucTypeGroup) {
+                    Text(contact.contactJid)
+                        .font(.footnote)
+                        .foregroundStyle(Color(UIColor.secondaryLabel))
+                }
+                if let accountJid = HelperTools.accountJidToShow(forAccountID: contact.accountID) {
+                    HStack(spacing: 3) {
+                        Image(systemName: "person.crop.circle")
+                        Text(accountJid)
+                    }
+                    .font(.caption)
+                    .foregroundStyle(Color(UIColor.secondaryLabel))
+                }
             }
-            .contentShape(Rectangle())
+            Spacer(minLength: 8)
+            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                .font(.title3)
+                .foregroundStyle(isSelected ? shareSheetPink : Color.secondary)
         }
-        .buttonStyle(.plain)
-        .disabled(!writable)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard writable else {
+                return
+            }
+            selectedID = isSelected ? nil : destination.id
+        }
         .opacity(writable ? 1 : 0.45)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 
     private var messageField: some View {

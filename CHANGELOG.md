@@ -2,6 +2,16 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 47) — 28/10/2026
+
+### Corrigido
+- **O app congelava e podia ser encerrado pelo sistema por causa do log (`0x8BADF00D`).** Quatro relatórios de crash (builds 40 e 42) mostram a thread principal **parada** em `[DDLog flushLog]`, com o app quase sem CPU, até o iOS matar: *scene-update watchdog* (30 s) e, no último, *"Failed to terminate gracefully after 5.0s"*. O `flushLog` é um `dispatch_sync` **sem timeout** para a fila de log, que fica suspensa com o app em segundo plano; com a rede instável (mais linhas de log) ficou fácil de travar. Agora as **23 chamadas diretas** de flush do app e da extensão de notificação (14 em `MonalAppDelegate.m`, 9 em `NotificationService.m`) passam pelo `HelperTools flushLogsWithTimeout:`, que espera a fila **com timeout** e segue em frente se estourar. A única perda possível são as últimas linhas de log.
+- **Compartilhar um arquivo dava "your account got disconnected while requesting upload slot".** O app abria e subia a foto **antes de a conta conectar**; o pedido do espaço de upload ia por um stream ainda desconectado. Agora, na fila do compartilhar, o app espera a conta ficar ligada e o servidor de upload ser anunciado (até ~30 s) antes de subir arquivo ou imagem.
+- **O compartilhar deixava marcar vários destinos**, embora mandasse para um só: a linha usava `Button`, e o iOS mantinha a linha destacada. Agora é um toque simples, com um destino por vez.
+
+### Adicionado
+- **Responder com áudio mantendo a citação.** Puxar o balão para responder preenche o campo com a citação, e o microfone desaparecia. Agora o microfone fica ao lado do botão de enviar, e a resposta com áudio vai em duas mensagens: a citação num balão com um 🎤 e o áudio em seguida. Gravação com menos de 0,35 s é descartada (não vira áudio vazio).
+
 ## 0.0.1 (build 43) — 28/10/2026
 
 ### Alterado

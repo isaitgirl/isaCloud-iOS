@@ -149,6 +149,18 @@ Keycodes úteis: `delete` 51, `return` 36, `esc` 53, `space` 49, `tab` 48.
 - **O simulador não abre teclado na tela** ao focar um campo quando o teclado físico está ligado; a digitação entra direto.
 - **Não deixe o cursor fora do lugar:** sempre `CGWarpMouseCursorPosition` no fim.
 
+## 6b. Não atrapalhar quem está trabalhando (regra de convivência)
+
+Clicar numa janela **traz essa janela para a frente** — não tem como evitar, é o macOS. Quem estiver usando o Mac na hora perde o foco, e isso atrapalha de verdade. Combinado com a Isadora em 28/10/2026:
+
+- **Não ativar o DeviceHub a cada clique.** Ler a posição da janela no momento do clique (`System Events`) e clicar; nada de `open -a`/`activate` antes de cada passo.
+- **Trabalhar em lote:** uma sequência de toques de cada vez (abrir o share, escolher o destino, enviar), não um toque a cada minuto enquanto ela usa o Mac.
+- **Devolver o foco no fim do lote:** `osascript -e 'tell application "DeepSeek Harness" to activate'`.
+- **Nunca reaproveitar coordenada de print antigo.** Capturar o framebuffer com `simctl` imediatamente antes, calcular o alvo, clicar e conferir com outra captura. Se o esperado não aconteceu, **parar e re-sincronizar** em vez de tentar de novo no mesmo lugar.
+- **A janela só muda quando é redimensionada.** Mover muda só a origem (lida na hora). Se o tamanho mudar, recalibrar.
+- **`CGWindowListCreateImage` não existe mais no macOS 26** (ScreenCaptureKit no lugar), então capturar a janela coberta não é trivial: prefira derivar o mapa uma vez e reusar, em vez de capturar a janela a cada passo. E lembre que `screencapture -R` captura **o que está na tela**: se a janela do DeviceHub estiver coberta, você fotografa a janela errada.
+- **`CGEvent.postToPid` também traz a janela para a frente** — não é uma saída para o problema do foco.
+
 ## 7. O que não precisa de GUI nenhuma
 
 ```bash

@@ -2578,7 +2578,15 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
 {
     [_stderrRedirector flushWithTimeout:timeout];
     [_stdoutRedirector flushWithTimeout:timeout];
-    [DDLog flushLog];
+    //isaCloud: [DDLog flushLog] is a dispatch_sync onto the logging queue, which has no timeout. The queue is suspended while
+    //the app is in the background and can be busy for a long time after a network flap, and the caller here is often the main
+    //thread of a background wakeup, which the system kills after 30 s (0x8BADF00D, seen in builds 40 and 42). Wait for the queue
+    //to drain, but never forever: if the timeout passes, the few remaining log lines are lost and the caller goes on.
+    dispatch_semaphore_t drained = dispatch_semaphore_create(0);
+    dispatch_async([DDLog loggingQueue], ^{
+        dispatch_semaphore_signal(drained);
+    });
+    dispatch_semaphore_wait(drained, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(timeout * NSEC_PER_SEC)));
     [MLUDPLogger flushWithTimeout:timeout];
 }
 

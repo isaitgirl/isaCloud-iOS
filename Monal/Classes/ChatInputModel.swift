@@ -142,8 +142,15 @@ final class ChatInputModel: ObservableObject {
         guard recording != nil, let url = recordingURL else {
             return nil
         }
+        //isaCloud: a recording that barely started (a stray touch, or a gesture that ended by accident) would become an empty
+        //voice message; throw the file away instead of sending it (a real "ok" takes more than that)
+        let elapsed = recorder?.elapsed ?? 0
         recorder?.stop()
         resetRecording()
+        if elapsed < 0.35 {
+            try? FileManager.default.removeItem(at: url)
+            return nil
+        }
         return url
     }
 

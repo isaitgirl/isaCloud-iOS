@@ -730,7 +730,23 @@ struct ChatView: View {
             onShareLocation: { showLocationPicker = true },
             onRemoveAttachment: { inputModel.removeAttachment(at: $0) },
             onSendRecording: { url in
-                Task { await uploadAndSendFile(url) }
+                Task {
+                    //isaCloud: the quote in the field is the reply the person was writing, and the audio is that reply: the quote goes
+                    //first, marked with the microphone so the reader knows an audio follows, and the audio right after, in order (the
+                    //server delivers and archives them in the order they arrive). The audio itself can not carry the quote: its body is
+                    //the file address, and the database has no caption field (see docs/decisoes.md).
+                    let draftText = inputModel.text
+                    if !draftText.isEmpty {
+                        let body = draftText.hasPrefix(">") ? draftText + "\n🎤" : draftText
+                        inputModel.setText("")
+                        sendTextAtOnce(body)
+                        //the quote left the field: the stored draft has to go with it, or it comes back the next time the chat opens
+                        DispatchQueue.global(qos: .userInitiated).async {
+                            DataLayer.sharedInstance().saveMessageDraft(self.contact.contactJid, forAccount: self.account.accountID, withComment: "")
+                        }
+                    }
+                    await uploadAndSendFile(url)
+                }
             },
             mentionCandidates: mentionNicks
         )
