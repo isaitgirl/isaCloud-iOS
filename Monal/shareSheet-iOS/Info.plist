@@ -4,8 +4,6 @@
 <dict>
 	<key>IsaCloudAppGroup</key>
 	<string>group.$(ISACLOUD_BUNDLE_ID)</string>
-	<key>UIDesignRequiresCompatibility</key>
-	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

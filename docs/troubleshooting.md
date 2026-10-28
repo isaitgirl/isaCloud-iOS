@@ -66,7 +66,7 @@ Dicas para interpretar:
 scripts/isacloud-dev-device.sh K8Y6S5RF2S <UDID_DO_IPHONE>
 ```
 
-Compila em Debug, instala e abre. O certificado da conta gratuita expira em 7 dias. O `.dev` não tem push.
+Compila em Debug, instala e abre. O `.dev` é assinado com a conta paga da equipe `K8Y6S5RF2S` (perfil automático "iOS Team Provisioning Profile", válido por um ano; confira a validade com `security cms -D -i <app>/embedded.mobileprovision`) e **tem o App Group** `group.br.com.isacloud.messenger.dev`, então o app e as extensões compartilham os dados. Ele **não recebe push do APNs**, mas por escolha nossa: `isaCloud/dev-entitlements/` não pede `aps-environment` (nem as notificações de comunicação nem o limite de memória maior). As notificações que aparecem no `.dev` são **locais**, criadas pelo próprio app enquanto a conexão XMPP está viva. Para ter push no `.dev` seria preciso a capacidade Push Notifications no App ID `.dev` e `aps-environment = development` nesses entitlements (o app já usa o módulo `-sandbox` quando detecta o APNs de desenvolvimento).
 
 Abrir, fechar e listar processos no iPhone:
 

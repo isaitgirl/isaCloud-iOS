@@ -1,0 +1,19 @@
+/* isaCloud: the strings of the share extension picker. English is the base; the pt-BR translation lives in pt-BR.lproj/ShareSheet.strings */
+
+/* the title of the share extension picker */
+"Send to" = "Send to";
+
+/* the button that closes the share extension without sending */
+"Cancel" = "Cancel";
+
+/* the button that queues what was shared and opens the app */
+"Send" = "Send";
+
+/* the placeholder of the optional text sent in front of the attachments */
+"Message (optional)" = "Message (optional)";
+
+/* shown in a group or channel where the person has no voice */
+"You cannot write here" = "You cannot write here";
+
+/* shown when the contact list is empty */
+"No contacts" = "No contacts";

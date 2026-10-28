@@ -48,6 +48,10 @@ Fork do Monal (cliente XMPP para iOS) com a marca e os ajustes do isaCloud. Bran
 
 - Comandos e procedimentos para investigar crashes e travamentos (TestFlight e isaCloud.dev, iPhone e simulador): `docs/troubleshooting.md`. Quando aprender um comando útil novo, acrescente lá.
 
+## Simulador controlado por fora (agente)
+
+- Como tocar, digitar e capturar o simulador sem XCUITest — DeviceHub (não o Simulator do Xcode 26.2), as permissões, keycodes em vez de texto unicode e a calibração framebuffer→tela: `docs/DeviceHubControl.md`.
+
 ## Pendências
 
 - **Reativar o push filtering.** A entitlement `com.apple.developer.usernotifications.filtering` foi removida em 23/10/2026 de `Monal/Monal.ios.entitlements` e `Monal/NotificationService/NotificationService.ios.entitlements`, porque a Apple só a libera mediante pedido (texto de referência em `push_filtering_entitlement.md`). Sem ela, todo push vira notificação visível. Pedido enviado à Apple em 24/10/2026 (número do pedido em `isaCloud/local/NOTAS-LOCAIS.md`); a resposta chega por e-mail. Enquanto isso, o app de produção mostra a notificação genérica "New Message / New Message?" (texto do payload do `fpush`) quando decide não notificar. Depois de aprovada para a conta do isaCloud, ativar a capacidade nos App IDs do app e da extensão (`br.com.isacloud.messenger` e `.notificationService`), recolocar `<key>com.apple.developer.usernotifications.filtering</key><true/>` nos dois arquivos. **Junto, reverter o patch provisório dos avisos fantasma** (28/10/2026, `docs/fpush/README.md`): mudar `ISACLOUD_HAS_PUSH_FILTERING` para `1` em `Monal/Classes/HelperTools.m` e, no servidor, desfazer o patch do fpush (`0001-...v2.patch`) e o `cloud_notify_quiet`.

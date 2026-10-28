@@ -817,6 +817,36 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     return @[@"isacloud.im", @"xmpp.social.br", @"voz.social.br"];
 }
 
+//isaCloud: a name is a mention only as a whole word, so "isa" does not match "precisa" or "isafashiondev"
++(BOOL) text:(NSString*) text mentionsAnyOfNames:(NSArray<NSString*>*) names
+{
+    if(text.length == 0 || names.count == 0)
+        return NO;
+    NSMutableCharacterSet* wordCharacters = [NSMutableCharacterSet alphanumericCharacterSet];
+    [wordCharacters addCharactersInString:@"_"];
+    for(NSString* rawName in names)
+    {
+        NSString* name = [rawName stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        if(name.length == 0)
+            continue;
+        NSRange search = NSMakeRange(0, text.length);
+        while(search.length > 0)
+        {
+            NSRange found = [text rangeOfString:name options:NSCaseInsensitiveSearch | NSDiacriticInsensitiveSearch range:search];
+            if(found.location == NSNotFound)
+                break;
+            BOOL leftBorder = found.location == 0 || ![wordCharacters characterIsMember:[text characterAtIndex:found.location - 1]];
+            NSUInteger end = NSMaxRange(found);
+            BOOL rightBorder = end >= text.length || ![wordCharacters characterIsMember:[text characterAtIndex:end]];
+            if(leftBorder && rightBorder)
+                return YES;
+            //this occurrence is inside another word, keep looking after its first character
+            search = NSMakeRange(found.location + 1, text.length - found.location - 1);
+        }
+    }
+    return NO;
+}
+
 +(NSString*) getSelectedPushServerBasedOnLocale
 {
 #ifdef IS_ALPHA

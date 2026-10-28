@@ -116,6 +116,8 @@ NSDictionary* _Nullable dictionaryComprehension(NSDictionary* _Nullable dict, id
 +(NSString*) getSelectedPushServerBasedOnLocale;
 //isaCloud: the servers of the isaCloud network, in the order shown when creating an account
 +(NSArray<NSString*>*) isaCloudServerDomains;
+//isaCloud: true if one of the names (nick, display name, local part or jid) appears in the text as a whole word (any case and accents, no letter, digit or "_" right before or after it)
++(BOOL) text:(NSString*) text mentionsAnyOfNames:(NSArray<NSString*>*) names;
 +(NSDictionary<NSString*, NSString*>*) getAvailablePushServers;
 
 +(void) configureDefaultAudioSession;

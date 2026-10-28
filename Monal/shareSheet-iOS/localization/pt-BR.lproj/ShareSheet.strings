@@ -1,0 +1,19 @@
+/* isaCloud: a tradução pt-BR das strings da extensão de compartilhamento (ver Base.lproj/ShareSheet.strings) */
+
+/* o título do seletor da extensão de compartilhamento */
+"Send to" = "Enviar para";
+
+/* o botão que fecha a extensão sem enviar */
+"Cancel" = "Cancelar";
+
+/* o botão que põe na fila o que foi compartilhado e abre o app */
+"Send" = "Enviar";
+
+/* o texto de exemplo do campo opcional enviado antes dos anexos */
+"Message (optional)" = "Mensagem (opcional)";
+
+/* mostrado num grupo ou canal em que a pessoa não tem voz */
+"You cannot write here" = "Você não pode escrever aqui";
+
+/* mostrado quando a lista de contatos está vazia */
+"No contacts" = "Nenhum contato";
