@@ -205,6 +205,10 @@ struct ChatView: View {
         }
 
         static func menuItems(for message: ExyteChat.Message) -> [MessageAction] {
+            //isaCloud: a message on its way is not saved yet, so only its text can be copied (no edit, retract, forward, quote or resend)
+            if (message as! ChatViewMessage).isPending {
+                return message.hasText ? [.copy] : []
+            }
             let mlMessage = (message as! ChatViewMessage).innerMessage.obj
             let contact = mlMessage.chatContact
             let account = contact.account!
@@ -410,7 +414,7 @@ struct ChatView: View {
         // Insert new messages in batches to work around https://github.com/exyte/Chat/issues/223
         //isaCloud: a message that is already shown (or queued) is not added twice: the history loaded when the chat opens and the notice of a
         //new message can both carry the same one, and ExyteChat aborts the app when two messages have the same id
-        var knownIds = Set(messages.map { $0.innerMessage.obj.messageDBId })
+        var knownIds = Set(messages.compactMap { $0.historyId })
         knownIds.formUnion(queuedNewMessages.map { $0.innerMessage.obj.messageDBId })
         queuedNewMessages.append(contentsOf: newMessages.filter { !knownIds.contains($0.innerMessage.obj.messageDBId) })
         guard !queuedNewMessages.isEmpty else {
@@ -443,7 +447,7 @@ struct ChatView: View {
         guard !isLoadingMamHistory else {
             return
         }
-        var knownIds = Set(messages.map { $0.innerMessage.obj.messageDBId })
+        var knownIds = Set(messages.compactMap { $0.historyId })
         knownIds.formUnion(queuedNewMessages.map { $0.innerMessage.obj.messageDBId })
         let latest = DataLayer.sharedInstance().messages(forContact: contact.contactJid, forAccount: contact.accountID) as? [MLMessage] ?? []
         let missed = latest.filter { !knownIds.contains($0.messageDBId) }
@@ -465,7 +469,8 @@ struct ChatView: View {
         }
         var beforeId: NSNumber? = nil
         if !messages.isEmpty {
-            beforeId = messages[0].innerMessage.messageDBId
+            //isaCloud: the oldest message that is saved (a message on its way has no history id); nil loads the newest ones
+            beforeId = messages.first(where: { !$0.isPending })?.historyId
         }
         let oldMessages: [ChatViewMessage] = (DataLayer.sharedInstance().messages(forContact:contact.contactJid, forAccount:contact.accountID, beforeMsgHistoryID:beforeId) as! [MLMessage]).map {ChatViewMessage($0)}
         //insert what we got from the db
@@ -639,12 +644,12 @@ struct ChatView: View {
             return
         }
         jumpToHistoryId = nil
-        let alreadyShown = messages.contains { $0.innerMessage.obj.messageDBId == target }
+        let alreadyShown = messages.contains { $0.historyId == target }
         if alreadyShown {
             scrollToSearchedMessage(target)
             return
         }
-        guard let oldestShown = messages.first?.innerMessage.obj.messageDBId, target.intValue < oldestShown.intValue else {
+        guard let oldestShown = messages.first(where: { !$0.isPending })?.historyId, target.intValue < oldestShown.intValue else {
             return
         }
         guard let missing = DataLayer.sharedInstance().messages(forContact: contact.contactJid, forAccount: contact.accountID, aroundMsgHistoryID: target, beforeMsgHistoryID: oldestShown, limit: UInt(ChatView.maxMessagesToJumpOver)) as? [MLMessage] else {
@@ -660,7 +665,7 @@ struct ChatView: View {
             }
             DispatchQueue.main.async {
                 //(the list may have changed meanwhile: what is shown already is not inserted again, ExyteChat aborts on two messages with the same id)
-                let shownIds = Set(messages.map { $0.innerMessage.obj.messageDBId })
+                let shownIds = Set(messages.compactMap { $0.historyId })
                 messages.insert(contentsOf: missing.filter { !shownIds.contains($0.messageDBId) }.map { ChatViewMessage($0) }, at: 0)
                 scrollToSearchedMessage(target)
             }
@@ -669,7 +674,7 @@ struct ChatView: View {
 
     /// isaCloud: scrolls to a message already in the list (see jumpToSearchedMessage())
     private func scrollToSearchedMessage(_ target: NSNumber) {
-        guard let message = messages.first(where: { $0.innerMessage.obj.messageDBId == target }) else {
+        guard let message = messages.first(where: { $0.historyId == target }) else {
             return
         }
         //the list must have taken the new messages before it can scroll to one of them
@@ -977,6 +982,10 @@ struct ChatView: View {
                     showContextMenu: params.showContextMenuClosure,
                     onReactionsTap: params.showReactionDetailsClosure
                 )
+            } else if (params.message as! ChatViewMessage).isPending {
+                //isaCloud: a message that is still on its way (not saved yet) does not react to touches: no menu, no actions
+                params.defaultMessageView()
+                    .allowsHitTesting(false)
             } else {
                 params.defaultMessageView()
             }
@@ -1131,6 +1140,10 @@ struct ChatView: View {
                     self.account.sendReactions(currentReactions, for:mlMessage)
             }
         }, canReactTo: { message in
+            //isaCloud: a message on its way has no history id yet, so it cannot be reacted to
+            if (message as! ChatViewMessage).isPending {
+                return false
+            }
             //don't allow reactions in mucs without occupant-id support
             let mlMessage = (message as! ChatViewMessage).innerMessage.obj
             let retval = !mlMessage.isMuc || 
@@ -1535,7 +1548,7 @@ struct ChatView: View {
             //isaCloud: a received file gets its type and size after the message arrived; show it with them
             guard let updated = notification.userInfo?["message"] as? MLMessage,
                   updated.isEqual(self.contact.obj),
-                  let index = messages.firstIndex(where: { $0.innerMessage.obj.messageDBId == updated.messageDBId }) else {
+                  let index = messages.firstIndex(where: { $0.historyId == updated.messageDBId }) else {
                 return
             }
             messages[index] = ChatViewMessage(updated)
@@ -1893,6 +1906,14 @@ class ChatViewMessage: ExyteChat.Message {
         //share an id, and ExyteChat aborts on that
         pending.id = "pending|\(UUID().uuidString)"
         return pending
+    }
+    /// isaCloud: a message on its way has no history id yet (see pending(text:to:ownJid:))
+    var isPending: Bool {
+        return id.hasPrefix("pending|")
+    }
+    /// isaCloud: the history id of a saved message; nil for a message on its way, which is not in the database yet
+    var historyId: NSNumber? {
+        return isPending ? nil : innerMessage.obj.messageDBId
     }
     public var description: String {
         return "ChatViewMessage<\(String(describing:self.innerMessage))>"
