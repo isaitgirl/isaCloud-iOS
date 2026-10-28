@@ -376,6 +376,9 @@ struct InvitationMenu: View {
     @State private var result: [String:AnyObject]? = nil
     @State private var errorMessage: String? = nil
     @State private var isCreating = false
+    //isaCloud: which link of the invitation is shown: the website (landing) or the xmpp: link that opens the app
+    private enum InviteKind { case web, app }
+    @State private var inviteKind: InviteKind = .web
 
     init() {
         //only the accounts whose server can create invitations
@@ -408,6 +411,14 @@ struct InvitationMenu: View {
         })
     }
 
+    //isaCloud: the xmpp: link is only offered when the server sent a different one; servers that are not isaCloud send the web link as "uri"
+    private func appInviteLink(_ result: [String:AnyObject], landing: String) -> String? {
+        guard let uri = result["uri"] as? String, uri.hasPrefix("xmpp:"), uri != landing else {
+            return nil
+        }
+        return uri
+    }
+
     var body: some View {
         Form {
             if accounts.isEmpty {
@@ -434,8 +445,19 @@ struct InvitationMenu: View {
                             Spacer()
                         }
                     } else if let result = result, let landing = result["landing"] as? String {
+                        //isaCloud: the picker only appears when there is an xmpp: link different from the web link
+                        let xmppLink = appInviteLink(result, landing: landing)
+                        let shownLink = (inviteKind == .app ? xmppLink : nil) ?? landing
+                        if xmppLink != nil {
+                            Picker("", selection: $inviteKind) {
+                                Text("Through the website").tag(InviteKind.web)
+                                Text("In the app").tag(InviteKind.app)
+                            }
+                            .pickerStyle(.segmented)
+                            .labelsHidden()
+                        }
                         VStack {
-                            Image(uiImage: createQrCode(value: landing))
+                            Image(uiImage: createQrCode(value: shownLink))
                                 .interpolation(.none)
                                 .resizable()
                                 .scaledToFit()
@@ -446,8 +468,15 @@ struct InvitationMenu: View {
                                     .multilineTextAlignment(.leading)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
+                            if xmppLink != nil && inviteKind == .app {
+                                Text("Whoever receives it needs isaCloud installed. The link opens the app's sign-up screen.")
+                                    .font(.footnote)
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.leading)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
                         }
-                        if let url = URL(string: landing) {
+                        if let url = URL(string: shownLink) {
                             ShareLink("Share invitation link", item: url)
                         }
                     } else if let errorMessage = errorMessage {

@@ -96,6 +96,9 @@
 "None of your connected accounts can create invitations." = "Nenhuma das suas contas conectadas pode criar convites.";
 "Failed to create invitation" = "Não foi possível criar o convite";
 "Share invitation link" = "Compartilhar link do convite";
+"Through the website" = "Pelo site";
+"In the app" = "No aplicativo";
+"Whoever receives it needs isaCloud installed. The link opens the app's sign-up screen." = "Quem receber precisa ter o isaCloud instalado. O link abre a tela de criar conta do aplicativo.";
 "Contact and Group/Channel Jids are usually in the format: name@domain.tld" = "Informe o endereço do contato ou do canal que você quer adicionar, no formato nome@dominio.tld.";
 "No pending contact requests" = "Nenhum pedido de contato pendente";
 "Type a message..." = "Escreva uma mensagem...";

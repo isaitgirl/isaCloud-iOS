@@ -2,6 +2,17 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 37) — 28/10/2026
+
+### Adicionado
+- **Convite com duas abas.** A tela "Convidar para o isaCloud" tem agora **Pelo site** (o QR e o link de compartilhar do site, como era) e **No aplicativo** (o QR e o link `xmpp:` que abre a criação de conta direto no isaCloud e, depois, adiciona quem convidou). A aba do aplicativo avisa que quem recebe precisa ter o isaCloud instalado. As abas só aparecem quando o servidor devolve os dois links; sem mudança no servidor.
+
+### Alterado
+- **A bolinha de não lidas da lista de Conversas é vermelha ou cinza.** Vermelha: conversa 1:1 não silenciada; grupo ou canal com todas as notificações ativas; grupo ou canal em "só menção" com menção a você nas não lidas. Cinza: conversa 1:1 silenciada; grupo ou canal silenciado; "só menção" sem menção. Silenciado sempre vence, mesmo com menção. A menção segue a regra das notificações (seu apelido na sala, nome de exibição, parte local do endereço ou o endereço completo) e é procurada nas 500 mensagens não lidas mais novas.
+
+### Corrigido
+- **O app podia ser fechado pelo iOS ao tocar num resultado da busca em mensagens** (visto num iPhone XR com iOS 18, no build 33). O pulo até a mensagem carrega até 3.000 mensagens, e a lista refazia a detecção de links de cada uma na thread principal, a cada comparação. Agora a detecção usa um cache, calculado em segundo plano antes de inserir as mensagens, e o resultado na tela é o mesmo.
+
 ## 0.0.1 (build 36) — 28/10/2026
 
 ### Adicionado

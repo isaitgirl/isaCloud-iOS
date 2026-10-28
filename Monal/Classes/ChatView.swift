@@ -638,16 +638,35 @@ struct ChatView: View {
         }
         jumpToHistoryId = nil
         let alreadyShown = messages.contains { $0.innerMessage.obj.messageDBId == target }
-        if !alreadyShown {
-            guard let oldestShown = messages.first?.innerMessage.obj.messageDBId, target.intValue < oldestShown.intValue else {
-                return
-            }
-            guard let missing = DataLayer.sharedInstance().messages(forContact: contact.contactJid, forAccount: contact.accountID, aroundMsgHistoryID: target, beforeMsgHistoryID: oldestShown, limit: UInt(ChatView.maxMessagesToJumpOver)) as? [MLMessage] else {
-                DDLogWarn("Search: message \(target) is too far back (or gone) to open the chat there")
-                return
-            }
-            messages.insert(contentsOf: missing.map { ChatViewMessage($0) }, at: 0)
+        if alreadyShown {
+            scrollToSearchedMessage(target)
+            return
         }
+        guard let oldestShown = messages.first?.innerMessage.obj.messageDBId, target.intValue < oldestShown.intValue else {
+            return
+        }
+        guard let missing = DataLayer.sharedInstance().messages(forContact: contact.contactJid, forAccount: contact.accountID, aroundMsgHistoryID: target, beforeMsgHistoryID: oldestShown, limit: UInt(ChatView.maxMessagesToJumpOver)) as? [MLMessage] else {
+            DDLogWarn("Search: message \(target) is too far back (or gone) to open the chat there")
+            return
+        }
+        //isaCloud: the links of the loaded messages are found in the background first (the detector is slow), so the list does not
+        //have to find them on the main thread when it compares the messages; the result is kept in LinkCache
+        DispatchQueue.global(qos: .userInitiated).async {
+            for mlMessage in missing where !mlMessage.retracted && (mlMessage.messageType == kMessageTypeText || mlMessage.messageType == kMessageTypeUrl) {
+                let text = mlMessage.messageText
+                _ = ChatViewMessage.attributed(body: MessageForward.split(text)?.rest ?? text, linkColor: .white, isText: mlMessage.messageType == kMessageTypeText)
+            }
+            DispatchQueue.main.async {
+                //(the list may have changed meanwhile: what is shown already is not inserted again, ExyteChat aborts on two messages with the same id)
+                let shownIds = Set(messages.map { $0.innerMessage.obj.messageDBId })
+                messages.insert(contentsOf: missing.filter { !shownIds.contains($0.messageDBId) }.map { ChatViewMessage($0) }, at: 0)
+                scrollToSearchedMessage(target)
+            }
+        }
+    }
+
+    /// isaCloud: scrolls to a message already in the list (see jumpToSearchedMessage())
+    private func scrollToSearchedMessage(_ target: NSNumber) {
         guard let message = messages.first(where: { $0.innerMessage.obj.messageDBId == target }) else {
             return
         }

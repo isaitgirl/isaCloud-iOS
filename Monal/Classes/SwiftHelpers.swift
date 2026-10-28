@@ -83,20 +83,58 @@ public extension Binding {
     }
 }
 
+/// isaCloud: the links found in a text (ranges and URLs), kept in a cache: linkify() runs again for every message each time
+/// the chat list compares messages (Message.== reads attributedText), and the detector is slow. The colors are not kept:
+/// they are applied by linkify() each time, so the same text can have links of different colors.
+final class LinkMatches {
+    let matches: [(range: NSRange, url: URL)]
+
+    init(_ matches: [(range: NSRange, url: URL)]) {
+        self.matches = matches
+    }
+}
+
+enum LinkCache {
+    //the detector does not change after it is created, so one is enough for every thread
+    private static let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
+    private static let cache: NSCache<NSString, LinkMatches> = {
+        let cache = NSCache<NSString, LinkMatches>()
+        cache.countLimit = 20000
+        return cache
+    }()
+
+    static func matches(in text: String) -> [(range: NSRange, url: URL)] {
+        let key = text as NSString
+        if let cached = cache.object(forKey: key) {
+            return cached.matches
+        }
+        var found: [(range: NSRange, url: URL)] = []
+        //a text without a dot, a colon or an @ has no web address and no e-mail address: the detector is not run for it
+        if let detector = detector, text.contains(where: { $0 == "." || $0 == ":" || $0 == "@" }) {
+            let range = NSRange(text.startIndex..., in: text)
+            detector.enumerateMatches(in: text, range: range) { match, _, _ in
+                if let match = match, let url = match.url {
+                    found.append((range: match.range, url: url))
+                }
+            }
+        }
+        cache.setObject(LinkMatches(found), forKey: key)
+        return found
+    }
+}
+
 public extension String {
     /**
      Returns an attributed version of the string, where the links are clickable.
      */
     func linkify(linkColor: Color = .accentColor) -> AttributedString {
         var attributed = AttributedString(self)
-        if let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) {
-            let range = NSRange(self.startIndex..., in: self)
-            detector.enumerateMatches(in: self, range: range) { match, _, _ in
-                if let match = match, let url = match.url, let range = Range(match.range, in: attributed) {
-                    attributed[range].link = url
-                    attributed[range].underlineStyle = .single
-                    attributed[range].foregroundColor = linkColor
-                }
+        //isaCloud: the links come from LinkCache, the detector is not run again for a text it has seen
+        for match in LinkCache.matches(in: self) {
+            if let range = Range(match.range, in: attributed) {
+                attributed[range].link = match.url
+                attributed[range].underlineStyle = .single
+                attributed[range].foregroundColor = linkColor
             }
         }
         return attributed

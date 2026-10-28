@@ -294,6 +294,8 @@ extern NSString* const kMessageTypeFiletransfer;
 
 #pragma mark count unread
 -(NSNumber*) countUserUnreadMessages:(NSString* _Nullable) buddy forAccount:(NSNumber* _Nullable) accountID;
+//isaCloud: YES if one of the newest unread text messages of this chat contains one of the given names (case insensitive)
+-(BOOL) hasUnreadMentionInMuc:(NSString*) buddy forAccount:(NSNumber*) accountID withNames:(NSArray<NSString*>*) names;
 -(NSNumber*) countUnreadMessages;
 
 -(void) muteContact:(MLContact*) contact;

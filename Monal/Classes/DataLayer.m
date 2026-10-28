@@ -2304,6 +2304,26 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
     }];
 }
 
+//isaCloud: looks only at the newest unread text messages, a mention that is older than that does not matter for the badge color
+-(BOOL) hasUnreadMentionInMuc:(NSString*) buddy forAccount:(NSNumber*) accountID withNames:(NSArray<NSString*>*) names
+{
+    if(!buddy || accountID == nil || names.count == 0)
+        return NO;
+    NSArray* messages = [self.db idReadTransaction:^{
+        return [self.db executeReader:@"SELECT h.message FROM message_history AS h WHERE h.message_history_id > (SELECT COALESCE(latest_read_message_history_id, 0) FROM buddylist WHERE account_id=? AND buddy_name=?) AND h.unread=1 AND h.account_id=? AND h.buddy_name=? AND h.inbound=1 AND h.messageType=? AND h.retracted=0 ORDER BY h.message_history_id DESC LIMIT 500;" andArguments:@[accountID, buddy, accountID, buddy, kMessageTypeText]];
+    }];
+    for(NSDictionary* row in messages)
+    {
+        NSString* text = row[@"message"];
+        if(![text isKindOfClass:[NSString class]])
+            continue;
+        for(NSString* name in names)
+            if(name.length > 0 && [text localizedCaseInsensitiveContainsString:name])
+                return YES;
+    }
+    return NO;
+}
+
 -(void) invalidateAllAccountStates
 {
 #ifndef IS_ALPHA

@@ -77,6 +77,7 @@
     [self showDisplayName:contact.contactDisplayName];
     [self setPinned:contact.isPinned];
     [self setCount:(long)contact.unreadCount];
+    [self setBadgeColorForContact:contact];
     [self displayLastMessage:lastMessage forContact:contact];
     
     [[MLImageManager sharedInstance] getIconForContact:contact withCompletion:^(UIImage *image) {
@@ -252,6 +253,43 @@
         [self.badge setTitle:@"" forState:UIControlStateNormal];
         self.badge.hidden = YES;
     }
+}
+
+//isaCloud: the unread counter is gray when the chat is muted or a mention-only group has no unread mention for us
+-(BOOL) shouldShowGrayBadgeForContact:(MLContact*) contact
+{
+    //a muted chat is always gray, even when one of its unread messages mentions us
+    if(contact.isMuted)
+        return YES;
+    //one to one chats and groups with all notifications are red
+    if(!(contact.isMuc && contact.isMentionOnly))
+        return NO;
+    //a mention-only group without unread messages has no visible counter anyway
+    if(contact.unreadCount <= 0)
+        return YES;
+    //the names are the same ones the notification manager uses to detect a mention
+    NSMutableArray<NSString*>* names = [NSMutableArray new];
+    NSString* nick = [[DataLayer sharedInstance] ownNickNameforMuc:contact.contactJid forAccount:contact.accountID];
+    [names addObject:nick ?: @""];
+    xmpp* xmppAccount = [[MLXMPPManager sharedInstance] getEnabledAccountForID:contact.accountID];
+    if(xmppAccount)
+    {
+        NSString* ownJid = xmppAccount.connectionProperties.identity.jid;
+        [names addObject:[MLContact ownDisplayNameForAccount:xmppAccount] ?: @""];
+        [names addObject:[HelperTools splitJid:ownJid][@"user"] ?: @""];
+        [names addObject:ownJid ?: @""];
+    }
+    BOOL mentioned = [[DataLayer sharedInstance] hasUnreadMentionInMuc:contact.contactJid forAccount:contact.accountID withNames:names];
+    return !mentioned;
+}
+
+//isaCloud: cells are reused, so the image is always set again to avoid a gray counter staying in a red one
+-(void) setBadgeColorForContact:(MLContact*) contact
+{
+    UIImage* bubble = [UIImage imageNamed:@"NotificationBubble"];
+    if([self shouldShowGrayBadgeForContact:contact])
+        bubble = [bubble imageWithTintColor:UIColor.systemGrayColor renderingMode:UIImageRenderingModeAlwaysOriginal];
+    [self.badge setBackgroundImage:bubble forState:UIControlStateNormal];
 }
 
 -(void) setPinned:(BOOL) pinned

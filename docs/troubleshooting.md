@@ -200,3 +200,7 @@ Roteiro que resolveu casos desta sessão:
 ### O app .dev cai na abertura com "no such module: fts5" (SQLite sem FTS5)
 
 Depois de mudar um trait de pacote (como o `ENABLE_FTS5` do `sqlite3-package`), o Xcode pode reaproveitar a SQLite já compilada. O script do iPhone usa `build/dev-device` (o arquivo do TestFlight usa a pasta padrão do Xcode): apague `build/dev-device` (`rm -rf build/dev-device`) e rode `scripts/isacloud-dev-device.sh` de novo; para o TestFlight, arquive com `-derivedDataPath /tmp/ddarch` novo. Para conferir se um binário tem o FTS5: `strings -a <app>/Frameworks/monalxmpp.framework/monalxmpp | grep -c '^ENABLE_FTS5$'` deve dar `1`. O relatório de queda mostra `SQLite3Exception: no such module: fts5`. O índice de busca já não derruba o app (um erro nele só vai para o log), mas um build sem FTS5 não acha nada.
+
+## Relatório de crash do Xcode (.mcrash) com "Watchdog"
+- O arquivo salvo do Organizer (`CrashReport-1.mcrash-N`) é texto: o relatório da Apple no início e o JSON do KSCrash depois. `grep -n -E "Triggered by|Exception Type|exit_reason|monitor_id|app_start_time" arquivo` mostra o essencial; a pilha da thread 0 vem logo no começo.
+- `"monitor_id": "Watchdog"` e `exit_reason.code` **2343432205** (0x8BADF00D) querem dizer que a thread principal ficou presa e o iOS matou o app. O que importa é a pilha da **thread 0**. O `EXC_BAD_ACCESS` da thread do `watchdogTimerFired` é o KSCrash caindo ao escrever o relatório, não a causa. Exemplo: 28/10/2026, `linkify` na comparação de mensagens depois do pulo da busca (ver `docs/decisoes.md`).
