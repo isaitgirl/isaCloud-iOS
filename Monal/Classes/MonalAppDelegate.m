@@ -663,8 +663,20 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                         }));
                         
                         //add given jid to our roster if in roster mode (e.g. the jid is not the jid we just registered as like in register mode)
+                        //isaCloud: do not handle the link again here, the view queue lost the add contact screen after the register,
+                        //so add the inviting contact directly to the newly registered account and open its chat
                         if(account != nil && isRoster)      //silence memory warning despite assertion above
-                            return [self handleXMPPURL:url];
+                        {
+                            if([HelperTools splitJid:jid][@"host"] == nil)
+                            {
+                                DDLogError(@"isaCloud: can not add inviting contact after register, no host in jid!");
+                                return;
+                            }
+                            DDLogInfo(@"isaCloud: adding inviting contact '%@' directly after register", jid);
+                            MLContact* inviter = [MLContact createContactFromJid:jid andAccountID:accountID];
+                            [[MLXMPPManager sharedInstance] addContact:inviter withPreauthToken:preauthToken];
+                            [self.activeChats presentChatWithContact:inviter];
+                        }
                     }];
                 }
                 //I know this if is moot, but I wanted to preserve the different cases:

@@ -2,6 +2,14 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 38) — 28/10/2026
+
+### Corrigido
+- **Convite por link ou QR (`xmpp:…?roster;preauth=…;ibr=y`): quem convidou agora entra na lista de contatos de quem cria a conta.** Num app sem contas, o link abre o registro com o servidor e o convite; depois do registro o app adiciona quem convidou (com o token do convite) e abre a conversa com essa pessoa. Antes ele dependia de uma tela "Adicionar contato" que, depois do registro, não aparecia (visto no Monal.alpha). Testado de ponta a ponta com o `isacloud.im` num simulador sem contas. Num app que já tem conta, o link de contato continua abrindo a tela "Adicionar contato" (ou a conversa, se a pessoa já está na lista).
+
+### Alterado
+- **A tela "Convidar para o isaCloud" mostra só o link da página de convite** (QR e compartilhar), como antes do build 37: as duas abas "Pelo site" e "No aplicativo" saíram, porque a página de convite do servidor passou a oferecer os dois caminhos (registrar pelo aplicativo ou pelo site).
+
 ## 0.0.1 (build 37) — 28/10/2026
 
 ### Adicionado
