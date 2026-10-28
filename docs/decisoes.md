@@ -228,6 +228,13 @@ Plano e raciocínio completos: `docs/plano-nick-por-sala.md`.
 
 No iOS 27, "Adicionar contato ou canal" (`AddContactMenu`) e "Convidar para o isaCloud" (`InvitationMenu`) perdiam o título da barra ao serem abertas pela segunda vez (entrar, sair e entrar). Trocar `navigationBarTitle(_:displayMode:)` por `navigationTitle` + `navigationBarTitleDisplayMode(.inline)` não bastou; o que resolveu foi também colocar o título como `ToolbarItem(placement: .principal)`. Mudança de poucas linhas no arquivo do Monal (`AddContactMenu.swift`), comentada com "isaCloud:".
 
+## Mensagem enviada aparece na hora (28/10/2026, pedido do Jejê)
+- **Problema:** às vezes, ao enviar, a conversa parava e a mensagem só entrava depois de alguns segundos (às vezes já com reação). Causa, reproduzida no simulador: `sendMessageAndAddToHistory` gravava a mensagem na thread principal, e a gravação espera o bloqueio de escrita do banco (`BEGIN IMMEDIATE` com nova tentativa a cada 1 ms, sem limite). Com o bloqueio segurado por ~7 s por outra thread, a thread principal parava por 7,0 s; sem contenção o envio leva 0,2 s.
+- **Decisão:** a mensagem de texto entra na lista no mesmo instante (`ChatViewMessage.pending`, sem id de histórico, com id `pending|<uuid>` para duas pendentes não colidirem), com o spinner (`.sending`) no lugar do tique; a gravação e o envio rodam numa fila serial em segundo plano (`ChatView.sendQueue`, mantém a ordem) e, ao terminar, a mensagem provisória é trocada pela real. Se não for possível gravar, a provisória sai e o texto volta ao campo (se estiver vazio). O spinner mora no fork do ExyteChat (`MessageStatusView`).
+- **A hora continua sendo a da gravação** (decisão do Jejê): passar a hora do toque pediria um parâmetro novo no `DataLayer` (código do Monal) e foi deixado de fora. Efeito: com o banco ocupado, a mensagem pode ficar depois do que chegou nesse meio tempo.
+- **Descartado por ora:** mexer no `MLSQLite`/`DataLayer` do Monal (nova tentativa sem limite, hora do toque) e achar o culpado do bloqueio longo (vira pendência no roadmap); anexos e localização seguem no caminho antigo.
+- **Cuidados do código:** o `ChatViewMessage` provisório precisa de `reactions = []` (a lista compara mensagens lendo as reações; sem isso o app cai); ao trocar pela real, qualquer cópia da mesma mensagem que tenha chegado à lista por outro caminho é removida (ExyteChat aborta com dois ids iguais).
+
 ## Descartado
 - **Código de afiliado** (Tela "Tenho um código", `mod_invites` do Prosody): removido do roadmap por decisão da Isadora em 26/10/2026.
 - **Aviso de privacidade ao ligar a foto pública** e **"usar o apelido em todas as salas"**: ver as seções acima.

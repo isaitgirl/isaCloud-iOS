@@ -121,6 +121,8 @@ struct ChatView: View {
     // The actual initialization happens in onAppear. It can safely be nil then.
     @State private var backgroundImage: UIImage? = UIImage(systemName: "circle")
     @State var messages: [ChatViewMessage] = []
+    /// isaCloud: saves and sends the text messages one after the other, in the order they were sent (see sendTextAtOnce)
+    private static let sendQueue = DispatchQueue(label: "im.monal.chatview.send", qos: .userInitiated)
     @State var queuedNewMessages: [ChatViewMessage] = []
     @State private var mucPersonCount = 0      //isaCloud: members of a group / participants of a channel, shown under the name
     @State private var voiceRequests: [[String: AnyObject]] = []
@@ -754,15 +756,51 @@ struct ChatView: View {
             }
         }
         if !draft.text.isEmpty {
-            guard let newMLMessage = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: draft.text, havingType: kMessageTypeText, toContact: self.contact.obj, isEncrypted: self.contact.isEncrypted, uploadInfo: nil) else {
-                return
-            }
-            messages.append(ChatViewMessage(newMLMessage))
+            sendTextAtOnce(draft.text)
         }
         sendChatState(isTyping: false)
         // Clear the draft to show the newly sent message in active chats
         DispatchQueue.global(qos: .userInitiated).async {
             DataLayer.sharedInstance().saveMessageDraft(self.contact.contactJid, forAccount:self.account.accountID, withComment:"")
+        }
+    }
+
+    /// isaCloud: a text message is in the chat the moment it is sent. It used to be saved and sent on the main thread first, and the main
+    /// thread waits when the database is busy with other writes (a few seconds, now and then): the chat stood still and the message came late.
+    /// Now a message that is on its way (the spinner takes the place of the check mark) is shown at once, saved and sent in the background,
+    /// and swapped for the real one when that is done. The time of the message is still the time it was saved.
+    private func sendTextAtOnce(_ text: String) {
+        let destination = contact.obj
+        let encrypted: Bool = contact.isEncrypted
+        let pending = ChatViewMessage.pending(text: text, to: destination, ownJid: account.connectionProperties.identity.jid)
+        messages.append(pending)
+        ChatView.sendQueue.async {
+            let sent = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: text, havingType: kMessageTypeText, toContact: destination, isEncrypted: encrypted, uploadInfo: nil)
+            DispatchQueue.main.async {
+                finishSending(pending, as: sent, text: text)
+            }
+        }
+    }
+
+    /// isaCloud: the message that was shown at once is swapped for the saved one; if it could not be saved, it goes away and its text goes back
+    /// to the input (when that is empty), so nothing the person wrote is lost
+    private func finishSending(_ pending: ChatViewMessage, as sent: MLMessage?, text: String) {
+        guard messages.contains(where: { $0 === pending }) else {
+            return
+        }
+        guard let sent else {
+            messages.removeAll(where: { $0 === pending })
+            if inputModel.text.isEmpty {
+                inputModel.setText(text)
+            }
+            return
+        }
+        //the saved message may have reached the list by another way meanwhile (the list loads what the database has when the app comes
+        //back, for example): keep one of it, ExyteChat aborts on two messages with the same id
+        messages.removeAll(where: { $0 !== pending && $0.innerMessage.obj.messageDBId == sent.messageDBId })
+        queuedNewMessages.removeAll(where: { $0.innerMessage.obj.messageDBId == sent.messageDBId })
+        if let index = messages.firstIndex(where: { $0 === pending }) {
+            messages[index] = ChatViewMessage(sent)
         }
     }
 
@@ -1833,6 +1871,28 @@ class ChatViewMessage: ExyteChat.Message {
                 self?.objectWillChange.send()
             }
             .store(in: &subscriptions)
+    }
+    /// isaCloud: the text message that was just sent, before it is saved (see ChatView.sendTextAtOnce): not in the database yet, no
+    /// history id, not sent yet, so it shows the sending state
+    static func pending(text: String, to contact: MLContact, ownJid: String) -> ChatViewMessage {
+        let message = MLMessage()
+        message.accountID = contact.accountID
+        message.buddyName = contact.contactJid
+        message.inbound = false
+        message.actualFrom = contact.isMuc ? contact.accountNickInGroup : ownJid
+        if contact.isMuc {
+            message.occupantId = DataLayer.sharedInstance().getOwnOccupantId(forMuc: contact.contactJid, onAccountID: contact.accountID) ?? UUID().uuidString
+        }
+        message.messageText = text
+        message.messageType = kMessageTypeText
+        message.timestamp = Date()
+        message.encrypted = contact.isEncrypted
+        message.reactions = []      //the list reads them on every comparison of messages
+        let pending = ChatViewMessage(message)
+        //the id of a message is made of the account and the history id, and this one has none yet: two messages on their way would
+        //share an id, and ExyteChat aborts on that
+        pending.id = "pending|\(UUID().uuidString)"
+        return pending
     }
     public var description: String {
         return "ChatViewMessage<\(String(describing:self.innerMessage))>"
