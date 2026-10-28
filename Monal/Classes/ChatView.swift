@@ -805,7 +805,9 @@ struct ChatView: View {
         messages.removeAll(where: { $0 !== pending && $0.innerMessage.obj.messageDBId == sent.messageDBId })
         queuedNewMessages.removeAll(where: { $0.innerMessage.obj.messageDBId == sent.messageDBId })
         if let index = messages.firstIndex(where: { $0 === pending }) {
-            messages[index] = ChatViewMessage(sent)
+            //isaCloud: the message shown while it was on its way takes the saved one, and the list keeps the same object (and id): it only
+            //reloads the row, it does not delete and insert another one (that made the chat jump)
+            pending.adopt(sent)
         }
     }
 
@@ -1617,9 +1619,10 @@ struct ChatView: View {
 
 class ChatViewMessage: ExyteChat.Message {
     @ObservedObject var chatViewDefaultsDB = ChatViewDefaultsDB()
-    let innerMessage: ObservableKVOWrapper<MLMessage>
+    private(set) var innerMessage: ObservableKVOWrapper<MLMessage>
     let fileInfo: ObservableKVOWrapper<MLFiletransferInfo>?
     private var subscriptions: Set<AnyCancellable> = Set()
+    private var innerSubscription: AnyCancellable?
     override var text: String {
         if self.staticLocation != nil {
             return ""
@@ -1871,12 +1874,7 @@ class ChatViewMessage: ExyteChat.Message {
         // We don't need to properly initialize the properties that we overrode with computed properties
         super.init(id: message.id, user: user, createdAt: Date(), text: "")
 
-        // Forward innerMessage changes as ChatViewMessage changes
-        innerMessage.objectWillChange
-            .sink { [weak self] _ in
-                self?.objectWillChange.send()
-            }
-            .store(in: &subscriptions)
+        observeInnerMessage()
 
         // Forward fileInfo changes as ChatViewMessage changes
         fileInfo?.objectWillChange
@@ -1884,6 +1882,21 @@ class ChatViewMessage: ExyteChat.Message {
                 self?.objectWillChange.send()
             }
             .store(in: &subscriptions)
+    }
+    /// Forwards innerMessage changes as ChatViewMessage changes
+    private func observeInnerMessage() {
+        innerSubscription = innerMessage.objectWillChange
+            .sink { [weak self] _ in
+                self?.objectWillChange.send()
+            }
+    }
+    /// isaCloud: the message shown while it was on its way takes the saved message (see ChatView.finishSending): the same object goes on
+    /// in the list, and it now follows the saved message (status, reactions, etc.)
+    func adopt(_ saved: MLMessage) {
+        innerMessage = ObservableKVOWrapper(saved)
+        isPending = false
+        observeInnerMessage()
+        objectWillChange.send()
     }
     /// isaCloud: the text message that was just sent, before it is saved (see ChatView.sendTextAtOnce): not in the database yet, no
     /// history id, not sent yet, so it shows the sending state
@@ -1905,12 +1918,12 @@ class ChatViewMessage: ExyteChat.Message {
         //the id of a message is made of the account and the history id, and this one has none yet: two messages on their way would
         //share an id, and ExyteChat aborts on that
         pending.id = "pending|\(UUID().uuidString)"
+        pending.isPending = true
         return pending
     }
-    /// isaCloud: a message on its way has no history id yet (see pending(text:to:ownJid:))
-    var isPending: Bool {
-        return id.hasPrefix("pending|")
-    }
+    /// isaCloud: true only while the message is on its way (adopt(_:) clears it); the id keeps its "pending|" prefix for the rest of the session, so it
+    /// cannot be used to tell
+    var isPending = false
     /// isaCloud: the history id of a saved message; nil for a message on its way, which is not in the database yet
     var historyId: NSNumber? {
         return isPending ? nil : innerMessage.obj.messageDBId
