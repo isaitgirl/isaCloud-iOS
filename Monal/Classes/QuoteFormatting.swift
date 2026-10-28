@@ -29,24 +29,43 @@ enum QuoteFormatting {
         case file(name: String)
     }
 
+    /// isaCloud: the emoji of each kind, alone: the label of a quote and the label of a forwarded file both use it
+    static func emoji(for kind: AttachmentKind) -> String {
+        switch kind {
+            case .photo:
+                return "📷"
+            case .gif:
+                return "🎞️"
+            case .video:
+                return "🎥"
+            case .audio:
+                return "🎤"
+            case .location:
+                return "📍"
+            case .file:
+                return "📎"
+        }
+    }
+
     /// the text that stands for a message without text when it is quoted, with an emoji in front of the word; `localize`
     /// translates the word (the emojis and a file name are not translated)
     static func attachmentLabel(_ kind: AttachmentKind, localize: (String) -> String = { NSLocalizedString($0, comment: "label of the quote when replying to a message without text, the emoji in front is not translated") }) -> String {
+        let emoji = emoji(for: kind) + " "
         switch kind {
             case .photo:
-                return "📷 " + localize("Photo")
+                return emoji + localize("Photo")
             case .gif:
-                return "🎞️ GIF"
+                return emoji + "GIF"
             case .video:
-                return "🎥 " + localize("Video")
+                return emoji + localize("Video")
             case .audio:
-                return "🎤 " + localize("Audio message")
+                return emoji + localize("Audio message")
             case .location:
-                return "📍 " + localize("Location")
+                return emoji + localize("Location")
             case .file(let name):
                 //a file name is one line: a line break in it would end the quote
                 let oneLine = name.components(separatedBy: .newlines).joined(separator: " ").trimmingCharacters(in: .whitespaces)
-                return "📎 " + (oneLine.isEmpty ? localize("File") : String(format: localize("File: %@"), oneLine))
+                return emoji + (oneLine.isEmpty ? localize("File") : String(format: localize("File: %@"), oneLine))
         }
     }
 

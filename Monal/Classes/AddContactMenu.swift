@@ -250,7 +250,14 @@ struct AddContactMenu: View {
             }))
         }
         //isaCloud: creating an invitation and scanning a QR code moved to the "+" menu of the contacts (ContactsView), under the add button
-        .navigationBarTitle(Text("Add Contact or Channel"), displayMode: .inline)
+        .navigationTitle(Text("Add Contact or Channel"))
+        .navigationBarTitleDisplayMode(.inline)
+        //isaCloud: on iOS 27 the title above disappeared when the screen was opened a second time, so it is also placed in the bar by hand
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Add Contact or Channel").font(.headline)
+            }
+        }
         .addLoadingOverlay(overlay)
     }
 }

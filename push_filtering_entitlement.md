@@ -1,3 +1,5 @@
+> Nota (28/10/2026): este é o texto-modelo do Monal (escrito por quem mantém o Monal, em primeira pessoa), colado no pedido do isaCloud sem adaptação. Os números do pedido e do contato com a Apple ficam em `isaCloud/local/NOTAS-LOCAIS.md`. Se a Apple pedir uma explicação nova, escrever uma específica do isaCloud (TestFlight, não ad hoc).
+
 # Explain why existing APIs are not adequate for your app.
 I'm a co-developer of the App Monal (see https://github.com/monal-im/Monal.
 I'm using this dev-account to do an adhoc distribution of alpha-versions before my changes hit the betatesters via the main repo.

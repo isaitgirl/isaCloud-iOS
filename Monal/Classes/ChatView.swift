@@ -136,8 +136,13 @@ struct ChatView: View {
     @State private var isTyping = false
     @State private var typingTimer: Timer?
 
+    /// isaCloud: what the picker of destinations forwards: a text, or a file (its message, read again from the database before it is sent)
+    private enum ForwardedItem {
+        case text(String)
+        case file(messageDBId: NSNumber, message: MLMessage)
+    }
+    @State private var messageToForward: ForwardedItem?       //isaCloud: what is being forwarded (the picker of destinations is shown while it is set)
     //isaCloud: opened from the search in the messages: the chat shows this message in the middle of the screen (nil: the newest ones as always)
-    @State private var messageToForward: String?       //isaCloud: the text of the message being forwarded (the picker of destinations is shown while it is set)
     @State private var jumpToHistoryId: NSNumber?
     @State private var jumpScrollParams: ScrollToParams?
     /// a chat is only opened at a message if it takes at most this many messages to get there from the newest ones
@@ -217,13 +222,16 @@ struct ChatView: View {
                 availableActions.append(.quote)
             }
 
-            //isaCloud: forwarding (texts only, for now)
+            //isaCloud: forwarding (texts and files)
             var hasSendError = false
             if case .error = message.status {
                 hasSendError = true
             }
             if (mlMessage.messageType == kMessageTypeText || mlMessage.messageType == kMessageTypeUrl)
                 && MessageForward.canForward(text: mlMessage.messageText, isRetracted: mlMessage.retracted, hasSendError: hasSendError) {
+                availableActions.append(.forward)
+            } else if mlMessage.messageType == kMessageTypeFiletransfer
+                && MessageForward.canForwardFile(isRetracted: mlMessage.retracted, hasSendError: hasSendError) {
                 availableActions.append(.forward)
             }
 
@@ -398,7 +406,14 @@ struct ChatView: View {
     /// isaCloud: new messages reach the list in batches (see the ExyteChat issue below)
     private func enqueueNewMessages(_ newMessages: [ChatViewMessage]) {
         // Insert new messages in batches to work around https://github.com/exyte/Chat/issues/223
-        queuedNewMessages.append(contentsOf: newMessages)
+        //isaCloud: a message that is already shown (or queued) is not added twice: the history loaded when the chat opens and the notice of a
+        //new message can both carry the same one, and ExyteChat aborts the app when two messages have the same id
+        var knownIds = Set(messages.map { $0.innerMessage.obj.messageDBId })
+        knownIds.formUnion(queuedNewMessages.map { $0.innerMessage.obj.messageDBId })
+        queuedNewMessages.append(contentsOf: newMessages.filter { !knownIds.contains($0.innerMessage.obj.messageDBId) })
+        guard !queuedNewMessages.isEmpty else {
+            return
+        }
         if messageInsertionTimer == nil {
             messageInsertionTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: false) { _ in
                 //isaCloud: a message of a day not shown yet and one of a day already shown must not reach the list in the same
@@ -505,6 +520,8 @@ struct ChatView: View {
         }
         let body = MessageForward.body(forwarding: text, word: NSLocalizedString("Forwarded", comment: "label on top of a forwarded message: the symbol is put in front"))
         for destination in destinations {
+            //a destination without a conversation yet (for example your own notes on another account) shows up in the list of chats
+            DataLayer.sharedInstance().addActiveBuddies(destination.contactJid, forAccount: destination.accountID)
             if let sent = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: body, havingType: kMessageTypeText, toContact: destination, isEncrypted: destination.isEncrypted, uploadInfo: nil) {
                 //the chat we are in shows it at once when it is one of the destinations
                 if destination.isEqual(toContact: self.contact.obj) {
@@ -513,6 +530,103 @@ struct ChatView: View {
             } else {
                 DDLogError("Forward: could not send to \(destination)")
             }
+        }
+    }
+
+    /// isaCloud: sends a file to each destination, one after the other. The file is downloaded once (if it is not on the device yet);
+    /// a destination that fails is skipped and the others go on. The alert names the destinations that failed.
+    private func forwardFile(_ messageDBId: NSNumber, _ message: MLMessage, to destinations: [MLContact]) async {
+        showLoadingOverlay(overlay, headline: "Forwarding…")
+        var failed: [MLContact] = []
+        if let downloaded = await downloadForForwarding(messageDBId), let cacheURL = downloaded.fileInfo.fileURL {
+            let filename = downloaded.fileInfo.filename
+            //isaCloud: the emoji of the kind of file goes in the label, the same for every destination
+            let emoji = MessageForward.mediaEmoji(isGif: downloaded.fileInfo.mimeType == "image/gif", isImage: downloaded.fileInfo.isImage, isVideo: downloaded.fileInfo.isVideo, isAudio: downloaded.fileInfo.isAudio)
+            for destination in destinations {
+                if !(await sendForwardedFile(to: destination, cacheURL: cacheURL, filename: filename, emoji: emoji)) {
+                    failed.append(destination)
+                }
+            }
+        } else {
+            DDLogError("Forward: the file of \(message.messageId) could not be downloaded, nothing was forwarded")
+            failed = destinations
+        }
+        hideLoadingOverlay(overlay)
+        if !failed.isEmpty {
+            alertPrompt = AlertPrompt(
+                title: Text("Could not forward"),
+                message: Text(failed.map { $0.contactDisplayName }.joined(separator: ", ")),
+                dismissLabel: Text("Close")
+            )
+        }
+    }
+
+    /// isaCloud: the file of a message, downloaded now if it is not on the device yet; nil if that fails or takes longer than two minutes
+    private func downloadForForwarding(_ messageDBId: NSNumber) async -> MLMessage? {
+        //(the message may not be in the database anymore, so it is read as optional)
+        let initial: MLMessage? = MLMessage.createMessage(fromHistoryID: messageDBId)
+        guard let initial = initial else {
+            return nil
+        }
+        if initial.fileInfo.downloadState == .complete {
+            return initial
+        }
+        MLFiletransfer.downloadFile(forHistoryID: messageDBId)
+        let deadline = Date().addingTimeInterval(120)
+        while Date() < deadline {
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            let updated: MLMessage? = MLMessage.createMessage(fromHistoryID: messageDBId)
+            guard let updated = updated else {
+                return nil
+            }
+            if updated.fileInfo.downloadState == .complete {
+                return updated
+            }
+            //the download is over without the file: it failed (a failure posts no notice, so the list of transfers is asked)
+            if !MLFiletransfer.isFileForHistoryId(inTransfer: messageDBId) {
+                return nil
+            }
+        }
+        return nil
+    }
+
+    /// isaCloud: uploads the file to the server of one destination and sends it there: the label line first, then the file.
+    /// The file is copied under its own name first, because the upload names it after the copy. false if the destination was skipped.
+    private func sendForwardedFile(to destination: MLContact, cacheURL: URL, filename: String, emoji: String) async -> Bool {
+        guard let account = MLXMPPManager.sharedInstance().getEnabledAccount(forID: destination.accountID) else {
+            DDLogError("Forward: no enabled account for a destination, skipping it")
+            return false
+        }
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer {
+            try? FileManager.default.removeItem(at: folder)
+        }
+        do {
+            let copy = folder.appendingPathComponent(filename)
+            //(copying a big file must not block the screen)
+            try await Task.detached {
+                try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                try FileManager.default.copyItem(at: cacheURL, to: copy)
+            }.value
+            let (url, mimeType, size) = try await MLFiletransfer.uploadFile(copy, onAccount: account, withEncryption: destination.isEncrypted)
+            //a destination without a conversation yet shows up in the list of chats
+            DataLayer.sharedInstance().addActiveBuddies(destination.contactJid, forAccount: destination.accountID)
+            //the label and the file go out one after the other, nothing in between
+            let label = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: MessageForward.labelOnly(word: NSLocalizedString("Forwarded", comment: "label on top of a forwarded message: the symbol is put in front"), emoji: emoji), havingType: kMessageTypeText, toContact: destination, isEncrypted: destination.isEncrypted, uploadInfo: nil)
+            let sent = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: url, havingType: kMessageTypeFiletransfer, toContact: destination, isEncrypted: destination.isEncrypted, uploadInfo: ["mimeType": mimeType, "size": size])
+            //the chat we are in shows them at once when it is one of the destinations
+            if destination.isEqual(toContact: self.contact.obj) {
+                if let label = label {
+                    messages.append(ChatViewMessage(label))
+                }
+                if let sent = sent {
+                    messages.append(ChatViewMessage(sent))
+                }
+            }
+            return sent != nil
+        } catch {
+            DDLogError("Forward: could not upload the file to a destination: \(error.localizedDescription)")
+            return false
         }
     }
 
@@ -821,7 +935,11 @@ struct ChatView: View {
                     // the author is only needed where several people write: groups and channels
                     inputModel.quote(author: mlMessage.isMuc ? mlMessage.contactDisplayName : nil, text: (message as! ChatViewMessage).replyQuoteText ?? mlMessage.messageText)
                 case .forward:
-                    messageToForward = mlMessage.messageText
+                    if mlMessage.messageType == kMessageTypeFiletransfer {
+                        messageToForward = .file(messageDBId: messageDBId, message: mlMessage)
+                    } else {
+                        messageToForward = .text(mlMessage.messageText)
+                    }
                 case .edit:
                     inputModel.startEdit(of: mlMessage.messageId, text: mlMessage.messageText)
                     editSaveClosure = { editedText in
@@ -1250,10 +1368,17 @@ struct ChatView: View {
         }
         .sheet(isPresented: Binding(get: { messageToForward != nil }, set: { if !$0 { messageToForward = nil } })) {
             MessageForwardPicker { destinations in
-                //(closing the sheet clears the text: it is read before)
-                let text = messageToForward
+                //(closing the sheet clears the item: it is read before)
+                let item = messageToForward
                 messageToForward = nil
-                forward(text, to: destinations)
+                switch item {
+                case .text(let text)?:
+                    forward(text, to: destinations)
+                case .file(let messageDBId, let message)?:
+                    Task { await forwardFile(messageDBId, message, to: destinations) }
+                case nil:
+                    break
+                }
             }
         }
         .toolbarRole(.editor)       //make sure to never show the title of the previous view in the back bar button
@@ -1467,6 +1592,14 @@ class ChatViewMessage: ExyteChat.Message {
         }
         return QuoteFormatting.attachmentLabel(.file(name: fileInfo.filename))
     }
+    /// isaCloud: the label line of a forwarded message, in bold (white in our own bubbles)
+    private func forwardLabelText(_ label: String) -> AttributedString {
+        var attributed = AttributedString(label)
+        attributed.inlinePresentationIntent = .stronglyEmphasized
+        //white on the pink bubble of our own messages; on the light bubble of what others forward to us white would not be seen
+        attributed.foregroundColor = self.user.isCurrentUser ? Color.white : Color.primary
+        return attributed
+    }
     /// isaCloud: the text of a message: quoted lines ("> ...") are marked as a quote (ExyteChat draws them with bars on their left, see
     /// AttributedString+Quote.swift in our ExyteChat fork); the other lines are shown as usual, with their links
     static func attributed(body text: String, linkColor: Color, isText: Bool) -> AttributedString {
@@ -1504,11 +1637,11 @@ class ChatViewMessage: ExyteChat.Message {
 
             // isaCloud: the first line of a forwarded text says so, in bold (white in our own bubbles); the rest is the text as always
             if innerMessage.messageType == kMessageTypeText || innerMessage.messageType == kMessageTypeUrl, let forwarded = MessageForward.split(text) {
-                var label = AttributedString(forwarded.label)
-                label.inlinePresentationIntent = .stronglyEmphasized
-                //white on the pink bubble of our own messages; on the light bubble of what others forward to us white would not be seen
-                label.foregroundColor = self.user.isCurrentUser ? Color.white : Color.primary
-                return label + AttributedString("\n") + Self.attributed(body: forwarded.rest, linkColor: linkColor, isText: innerMessage.messageType == kMessageTypeText)
+                return forwardLabelText(forwarded.label) + AttributedString("\n") + Self.attributed(body: forwarded.rest, linkColor: linkColor, isText: innerMessage.messageType == kMessageTypeText)
+            }
+            //isaCloud: the label sent alone, before a forwarded file (no text under it): drawn the same way
+            if innerMessage.messageType == kMessageTypeText, let label = MessageForward.labelAlone(text) {
+                return forwardLabelText(label)
             }
             if innerMessage.messageType == kMessageTypeText {
                 return Self.attributed(body: text, linkColor: linkColor, isText: true)

@@ -35,15 +35,32 @@ enum MessageForward {
         }
         let firstLine = String(text[text.startIndex..<lineEnd])
         let rest = String(text[text.index(after: lineEnd)...])
-        guard !rest.isEmpty, firstLine.count <= maxLabelLength else {
+        guard !rest.isEmpty, let label = normalizedLabel(firstLine) else {
             return nil
         }
-        for symbol in knownSymbols where firstLine.hasPrefix(symbol + " ") {
-            let word = firstLine.dropFirst(symbol.count + 1).trimmingCharacters(in: .whitespaces)
+        return (label, rest)
+    }
+
+    /// isaCloud: the label line alone, when the whole text is one (a file sent with the label in front of it, or a label with no text under it).
+    /// Nil if the text is anything else; the label is returned as `split` returns it.
+    static func labelAlone(_ text: String) -> String? {
+        guard !text.contains("\n") else {
+            return nil
+        }
+        return normalizedLabel(text)
+    }
+
+    /// isaCloud: the label as it is drawn ("➦ word", the symbol in its text form) if `line` is one: a known symbol, a space, then one or two
+    /// words with an optional emoji among them (no other punctuation); nil otherwise
+    private static func normalizedLabel(_ line: String) -> String? {
+        guard line.count <= maxLabelLength else {
+            return nil
+        }
+        for symbol in knownSymbols where line.hasPrefix(symbol + " ") {
+            let word = line.dropFirst(symbol.count + 1).trimmingCharacters(in: .whitespaces)
             //one or two words, nothing else (no sentence that happens to start with an arrow)
             if !word.isEmpty && word.split(separator: " ").count <= 2 && !word.contains(where: { $0.isPunctuation && $0 != "-" }) {
-                //the label as it is drawn: always with the symbol in its text form, whichever form it was sent in
-                return ("\(MessageForward.symbol) \(word)", rest)
+                return "\(MessageForward.symbol) \(word)"
             }
         }
         return nil
@@ -52,6 +69,34 @@ enum MessageForward {
     /// can a message be forwarded: a text that was not retracted and did not fail to send
     static func canForward(text: String, isRetracted: Bool, hasSendError: Bool) -> Bool {
         return !text.isEmpty && !isRetracted && !hasSendError
+    }
+
+    /// can a file be forwarded: a file that was not retracted and did not fail to send
+    static func canForwardFile(isRetracted: Bool, hasSendError: Bool) -> Bool {
+        return !isRetracted && !hasSendError
+    }
+
+    /// the label alone, sent in front of a forwarded file (a file has no text to put under the label). isaCloud: with the emoji of the
+    /// kind of file between the symbol and the word ("➦ 📷 Forwarded"); the symbol stays the first character
+    static func labelOnly(word: String, emoji: String? = nil) -> String {
+        guard let emoji = emoji, !emoji.isEmpty else {
+            return "\(symbol) \(word)"
+        }
+        return "\(symbol) \(emoji) \(word)"
+    }
+
+    /// isaCloud: the emoji of a forwarded file, by its kind in the order the file is told apart (GIF first, as a GIF is an image too)
+    static func mediaEmoji(isGif: Bool, isImage: Bool, isVideo: Bool, isAudio: Bool) -> String {
+        if isGif {
+            return QuoteFormatting.emoji(for: .gif)
+        } else if isImage {
+            return QuoteFormatting.emoji(for: .photo)
+        } else if isVideo {
+            return QuoteFormatting.emoji(for: .video)
+        } else if isAudio {
+            return QuoteFormatting.emoji(for: .audio)
+        }
+        return QuoteFormatting.emoji(for: .file(name: ""))
     }
 
     /// can the person write in this chat: always in a conversation with a contact; in a group or channel only with a role that has a voice

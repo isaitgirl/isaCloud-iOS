@@ -14,6 +14,7 @@ Fork do Monal (cliente XMPP para iOS) com a marca e os ajustes do isaCloud. Bran
 - As traduções devem seguir os padrões do Monal, considerando o merge com weblate, mas as traduções do isaCloud devem prevalecer sobre elas.
 - Estamos escrevendo o software em pt-br, mas você deve seguir as convenções de código do Monal, usando o idioma padrão dele e usando nosso mecanismo de tradução pro pt-br.
 - Se identificar textos em inglês não traduzidos nos simuladores, você deve avisar o usuário e confirmar qual será a tradução.
+- **Ao final de uma tarefa que atualiza os simuladores, atualizar também o `isaCloud.dev` no iPhone** (`scripts/isacloud-dev-device.sh`), sem esperar pedido, e avisar quando ele tiver código que ainda não está no TestFlight.
 - **Mudanças de banco do isaCloud** entram na escada própria (`+migrateISACloudDB:` em `DataLayerMigrations.m`, flag `isacloud_dbversion`), nunca como 7.0xx na escada do Monal, e cada passo deve poder rodar de novo sem estragar nada. Detalhes em `docs/decisoes.md`.
 - Busque implementar seguindo as convenções atuais do Monal, é importante respeitarmos esse legado para mantermos a menor fricção possível nos merges futuros.
 
@@ -50,3 +51,12 @@ Fork do Monal (cliente XMPP para iOS) com a marca e os ajustes do isaCloud. Bran
 ## Pendências
 
 - **Reativar o push filtering.** A entitlement `com.apple.developer.usernotifications.filtering` foi removida em 23/10/2026 de `Monal/Monal.ios.entitlements` e `Monal/NotificationService/NotificationService.ios.entitlements`, porque a Apple só a libera mediante pedido (texto de referência em `push_filtering_entitlement.md`). Sem ela, todo push vira notificação visível. Pedido enviado à Apple em 24/10/2026 (número do pedido em `isaCloud/local/NOTAS-LOCAIS.md`); a resposta chega por e-mail. Enquanto isso, o app de produção mostra a notificação genérica "New Message / New Message?" (texto do payload do `fpush`) quando decide não notificar. Depois de aprovada para a conta do isaCloud, ativar a capacidade nos App IDs do app e da extensão (`br.com.isacloud.messenger` e `.notificationService`), recolocar `<key>com.apple.developer.usernotifications.filtering</key><true/>` nos dois arquivos.
+
+## Planejamento e delegação (Claude Code)
+
+- A sessão principal roda em Sonnet 5.5 com esforço alto (`.claude/settings.json`) e cuida da avaliação, do planejamento e da revisão. A execução fica com o subagente `executor` (Haiku 5.5, `.claude/agents/executor.md`).
+- Para qualquer tarefa que altere código, primeiro investigue e monte o plano. Depois que a Isadora aprovar, delegue a implementação ao `executor` em vez de editar os arquivos na conversa principal. Mudanças triviais (uma linha, um texto, um ajuste de doc) podem ser feitas direto.
+- Sempre que delegar, escreva para o subagente instruções completas e autossuficientes, porque ele começa sem o contexto desta conversa: objetivo; arquivos e símbolos exatos (caminho, classe, método); passos numerados na ordem; trechos de código ou assinaturas esperadas quando ajudarem; o que não deve ser tocado; como validar (comando de build, teste, simulador e versões de iOS); e o formato do relatório esperado.
+- Tarefas independentes podem ir para mais de um `executor` em paralelo; tarefas que mexem nos mesmos arquivos vão para um só.
+- Ao receber o relatório, revise o diff antes de dar a tarefa por concluída. Se o `executor` apontar divergência entre o plano e o código, replaneje aqui em vez de mandar ele improvisar.
+- Commits, push, PRs e a rotina de "fazer novo build" continuam com a sessão principal, seguindo as regras acima.

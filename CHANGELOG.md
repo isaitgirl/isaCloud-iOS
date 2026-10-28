@@ -2,6 +2,23 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 36) — 28/10/2026
+
+### Adicionado
+- **Encaminhar mídia.** A ação **Encaminhar…** do toque longo agora também aparece em foto, vídeo, áudio, GIF e arquivo (que não tenham sido retirados nem falhado). Vale a mesma folha de destinos do texto (até 5, sem o autor original, inclui as próprias notas). Se a mídia ainda não foi baixada, o app baixa sozinho (aparece "Encaminhando…"). Para cada destino o arquivo é **enviado de novo**, no servidor da conta do destino e com a criptografia do destino (o endereço com a chave nunca é copiado); só depois do envio do arquivo saem, uma logo após a outra, a linha "➦ 📷 Encaminhado" (o emoji muda: 📷 foto, 🎥 vídeo, 🎤 áudio, 🎞️ GIF, 📎 arquivo) e a mídia. Um destino que falha é pulado e aparece num aviso; os outros seguem. O rótulo sozinho também aparece em negrito e branco, como o do texto.
+
+### Alterado
+- **A hora das fotos e dos vídeos fica embaixo do balão, fora da imagem**, do lado da mensagem e com o cadeado se for criptografada, como já era nos GIFs (mudança no fork do ExyteChat, PR 8). Mensagem com legenda e a prévia de uma resposta ficam como eram.
+
+### Corrigido
+- **Encaminhar para uma conversa que não estava na lista** (inclusive as próprias notas de outra conta e uma conversa arquivada) agora coloca a conversa de volta na lista, no lugar da hora do envio. Valia também para o encaminhar de texto.
+- **O app podia fechar ao abrir uma conversa no momento em que chegava uma mensagem nova** (visto uma vez no iOS 18.6): a mesma mensagem entrava duas vezes na lista e o ExyteChat aborta com ids repetidos. Agora uma mensagem já mostrada não entra de novo.
+
+## 0.0.1 (build 35) — 28/10/2026
+
+### Corrigido
+- **O título das telas "Adicionar contato ou canal" e "Convidar para o isaCloud" sumia ao entrar, sair e entrar de novo (iOS 27).** O título agora também é colocado na barra de navegação à mão, e as duas telas usam `navigationTitle` no lugar da API antiga `navigationBarTitle(_:displayMode:)`. Testado nos simuladores do iOS 18.6 e do iOS 27.
+
 ## 0.0.1 (build 34) — 28/10/2026
 
 ### Adicionado

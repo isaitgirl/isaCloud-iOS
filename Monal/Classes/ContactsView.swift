@@ -460,7 +460,14 @@ struct InvitationMenu: View {
                 }
             }
         }
-        .navigationBarTitle(Text("Invite to isaCloud"), displayMode: .inline)
+        .navigationTitle(Text("Invite to isaCloud"))
+        .navigationBarTitleDisplayMode(.inline)
+        //isaCloud: on iOS 27 the title above disappeared when the screen was opened a second time, so it is also placed in the bar by hand
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Invite to isaCloud").font(.headline)
+            }
+        }
         .onAppear {
             if result == nil && !isCreating {
                 createInvitation()
