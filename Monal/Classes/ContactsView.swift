@@ -162,6 +162,7 @@ struct ContactsView: View {
     @State private var showingInvitation = false       //isaCloud: invite someone (moved here from the add contact screen)
     @State private var showingQRCodeScanner = false    //isaCloud: add via QR code (moved here from the add contact screen)
     @State private var selectedContactForContactDetails: MLContact? = nil
+    private let controlsAtBottom = ControlsAtBottom.isOn      //isaCloud: the setting "Controls at the bottom of the screen", read when the screen opens
     private let delegate: SheetDismisserProtocol
     private let dismissWithContact: (MLContact) -> ()
 
@@ -243,52 +244,110 @@ struct ContactsView: View {
         .buttonStyle(.plain)
     }
 
+    /// isaCloud: the segmented control that switches the list between all, contacts, groups and channels
+    private var filterPicker: some View {
+        Picker("Filter", selection: $filter) {
+            ForEach(ContactsFilter.allCases) { option in
+                Text(option.title).tag(option)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+    }
+
+    /// isaCloud (TEST): the "+" button with the popover of what can be added; at the top, or in the bar at the bottom
+    private var addButton: some View {
+        //isaCloud (TEST): a popover with a width of its own instead of the system Menu, whose width the system decides (labels broke in two lines)
+        Button {
+            showingAddMenu = true
+        } label: {
+            //isaCloud: no badge here: the pending contact requests are at the top of this list
+            Image(systemName: "plus")
+                .frame(width: controlsAtBottom ? 44 : nil, height: controlsAtBottom ? 44 : nil)
+        }
+        .tint(Color("isaCloudPink"))
+        .accessibilityLabel("Add contact, group or channel")
+        .popover(isPresented: $showingAddMenu) {
+            VStack(alignment: .leading, spacing: 0) {
+                addMenuRow("Add New Contact", icon: "person.fill.badge.plus") { showingAddContact = true }
+                Divider()
+                //isaCloud: the invitation and the QR code scanner used to be icons in the toolbar of the add contact screen
+                addMenuRow("Invite to isaCloud", icon: "square.and.arrow.up") { showingInvitation = true }
+                Divider()
+                addMenuRow("Add via QR code", icon: "camera.fill") { showingQRCodeScanner = true }
+                Divider()
+                addMenuRow("Create contact group", icon: "person.3.fill") { showingCreateGroup = true }
+                Divider()
+                addMenuRow("List channels", icon: "number") { showingPublicChannels = true }
+            }
+            .frame(width: 310)
+            .padding(.vertical, 6)
+            .presentationCompactAdaptation(.popover)
+        }
+    }
+
+    /// isaCloud: the contact requests
+    @ViewBuilder
+    private var requestsSection: some View {
+        if showRequests {
+            Section {
+                ForEach(contacts.requests, id: \.self) { request in
+                    ContactRequestRow(contact: request)
+                }
+            } header: {
+                Text("Contact requests (\(contacts.requests.count))")
+            } footer: {
+                Text("Allowing someone to add you as a contact lets them see your profile picture and when you are online.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    /// isaCloud: with the controls at the bottom the list grows upwards (see BottomUpList), and a Section turns its header and footer over with
+    /// it: the requests are plain rows there. From the bottom: the notice, the requests, their title, and then the contacts.
+    @ViewBuilder
+    private var requestsRowsBottomUp: some View {
+        if showRequests {
+            Text("Allowing someone to add you as a contact lets them see your profile picture and when you are online.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .bottomUpRow(true)
+            ForEach(contacts.requests.reversed(), id: \.self) { request in
+                ContactRequestRow(contact: request)
+                    .bottomUpRow(true)
+            }
+            Text("Contact requests (\(contacts.requests.count))")
+                .font(.footnote)
+                .textCase(.uppercase)
+                .foregroundStyle(.secondary)
+                .bottomUpRow(true)
+        }
+    }
+
+    private var contactRows: some View {
+        ForEach(searchResults, id: \.self) { contact in
+            ContactViewEntry(contact: contact, selectedContactForContactDetails: $selectedContactForContactDetails, dismissWithContact: dismissWithContact)
+                .bottomUpRow(controlsAtBottom)
+        }
+    }
+
     var body: some View {
         List {
-            //isaCloud: the contact requests are at the top of the list, where they cannot be missed
-            if showRequests {
-                Section {
-                    ForEach(contacts.requests, id: \.self) { request in
-                        ContactRequestRow(contact: request)
-                    }
-                } header: {
-                    Text("Contact requests (\(contacts.requests.count))")
-                } footer: {
-                    Text("Allowing someone to add you as a contact lets them see your profile picture and when you are online.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            ForEach(searchResults, id: \.self) { contact in
-                ContactViewEntry(contact: contact, selectedContactForContactDetails: $selectedContactForContactDetails, dismissWithContact: dismissWithContact)
-            }
-        }
-        .animation(.default, value: contactList)
-        .navigationTitle(Text("Contacts"))
-        .navigationBarTitleDisplayMode(.inline) //isaCloud: inline, like the title of the home screen
-        .safeAreaInset(edge: .top, spacing: 0) {
-            //isaCloud: one list for contacts, groups and channels, switched by this control
-            Picker("Filter", selection: $filter) {
-                ForEach(ContactsFilter.allCases) { option in
-                    Text(option.title).tag(option)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-            .background(.bar)
-        }
-        .listStyle(.plain)
-        .applyClosure { view in
-            if contactList.isEmpty {
-                view
+            if controlsAtBottom {
+                //isaCloud: the first thing of the list is at the bottom: the requests, then the contacts
+                requestsRowsBottomUp
+                contactRows
             } else {
-                view.searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always))
+                //isaCloud: the contact requests are at the top of the list, where they cannot be missed
+                requestsSection
+                contactRows
             }
         }
-        .autocorrectionDisabled()
-        .textInputAutocapitalization(.never)
-        .keyboardType(.emailAddress)
+        .bottomUpList(controlsAtBottom)
+        .animation(.default, value: contactList)
+        //isaCloud: right after the list, so the bars at the top and at the bottom stay over it (they were hidden by the empty message)
         .overlay {
             if contactList.isEmpty && contacts.requests.isEmpty {
                 ZStack {
@@ -302,33 +361,53 @@ struct ContactsView: View {
                 }
             }
         }
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                //isaCloud (TEST): a popover with a width of its own instead of the system Menu, whose width the system decides (labels broke in two lines)
-                Button {
-                    showingAddMenu = true
-                } label: {
-                    //isaCloud: no badge here: the pending contact requests are at the top of this list
-                    Image(systemName: "plus")
-                }
-                .tint(Color("isaCloudPink"))
-                .accessibilityLabel("Add contact, group or channel")
-                .popover(isPresented: $showingAddMenu) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        addMenuRow("Add New Contact", icon: "person.fill.badge.plus") { showingAddContact = true }
-                        Divider()
-                        //isaCloud: the invitation and the QR code scanner used to be icons in the toolbar of the add contact screen
-                        addMenuRow("Invite to isaCloud", icon: "square.and.arrow.up") { showingInvitation = true }
-                        Divider()
-                        addMenuRow("Add via QR code", icon: "camera.fill") { showingQRCodeScanner = true }
-                        Divider()
-                        addMenuRow("Create contact group", icon: "person.3.fill") { showingCreateGroup = true }
-                        Divider()
-                        addMenuRow("List channels", icon: "number") { showingPublicChannels = true }
+        .navigationTitle(Text("Contacts"))
+        .navigationBarTitleDisplayMode(.inline) //isaCloud: inline, like the title of the home screen
+        .safeAreaInset(edge: .top, spacing: 0) {
+            //isaCloud: one list for contacts, groups and channels, switched by this control
+            if !controlsAtBottom {
+                filterPicker
+                    .background(.bar)
+            }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            //isaCloud: with the setting "Controls at the bottom of the screen": the filters and, under them, back, search and "+"
+            if controlsAtBottom {
+                VStack(spacing: 0) {
+                    filterPicker
+                    HStack(spacing: 4) {
+                        Button {
+                            delegate.dismiss()
+                        } label: {
+                            Image(systemName: "arrow.backward")
+                                .frame(width: 44, height: 44)
+                        }
+                        .accessibilityLabel(Text("Back"))
+                        BottomSearchField(text: $searchText)
+                            .frame(height: 56)
+                        addButton
                     }
-                    .frame(width: 310)
-                    .padding(.vertical, 6)
-                    .presentationCompactAdaptation(.popover)
+                    .padding(.horizontal, 10)
+                }
+                .background(Color(uiColor: BottomBarStyle.background))
+                .overlay(alignment: .top) { Divider() }
+            }
+        }
+        .listStyle(.plain)
+        .applyClosure { view in
+            if contactList.isEmpty || controlsAtBottom {
+                view
+            } else {
+                view.searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always))
+            }
+        }
+        .autocorrectionDisabled()
+        .textInputAutocapitalization(.never)
+        .keyboardType(.emailAddress)
+        .toolbar {
+            if !controlsAtBottom {
+                ToolbarItem(placement: .topBarTrailing) {
+                    addButton
                 }
             }
         }

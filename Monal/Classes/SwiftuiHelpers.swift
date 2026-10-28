@@ -750,10 +750,12 @@ struct AddTopLevelNavigation<Content: View>: View {
     @StateObject private var sizeClass: ObservableKVOWrapper<SizeClassWrapper>
     let build: () -> Content
     let delegate: SheetDismisserProtocol?
+    let hidesBackButton: Bool       //isaCloud: the screen has its own back button (at the bottom)
     
-    init(withDelegate delegate: SheetDismisserProtocol?, to build: @autoclosure @escaping () -> Content) {
+    init(withDelegate delegate: SheetDismisserProtocol?, hidesBackButton: Bool = false, to build: @autoclosure @escaping () -> Content) {
         self.build = build
         self.delegate = delegate
+        self.hidesBackButton = hidesBackButton
 
         let activeChats = (UIApplication.shared.delegate as! MonalAppDelegate).activeChats!
         self._sizeClass = StateObject(wrappedValue: ObservableKVOWrapper<SizeClassWrapper>(activeChats.sizeClass))
@@ -768,7 +770,7 @@ struct AddTopLevelNavigation<Content: View>: View {
 #if targetEnvironment(macCatalyst)
                     let shouldDisplayBackButton = true
 #else
-                    let shouldDisplayBackButton = UIUserInterfaceSizeClass(rawValue: sizeClass.horizontal) == .compact
+                    let shouldDisplayBackButton = UIUserInterfaceSizeClass(rawValue: sizeClass.horizontal) == .compact && !hidesBackButton
 #endif
                     if shouldDisplayBackButton {
                         ToolbarItem(placement: .topBarLeading) {
@@ -1028,7 +1030,7 @@ class SwiftuiInterface : NSObject {
         let host = UIHostingController(rootView: AnyView(EmptyView()))
         let contactsView = ContactsView(contacts: Contacts(), delegate: delegate, dismissWithContact: dismisser)
         delegate.host = host
-        host.rootView = AnyView(AddTopLevelNavigation(withDelegate: delegate, to: contactsView))
+        host.rootView = AnyView(AddTopLevelNavigation(withDelegate: delegate, hidesBackButton: ControlsAtBottom.isOn, to: contactsView))
         host.modalPresentationStyle = .popover
         host.popoverPresentationController?.sourceItem = button
         host.preferredContentSize = host.sizeThatFits(in: CGSize(width: 400, height: 600))
@@ -1147,6 +1149,518 @@ private final class KeyboardDismissTapHandler: NSObject, UIGestureRecognizerDele
 
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return true
+    }
+}
+
+// MARK: isaCloud: controls at the bottom
+
+/// isaCloud: how the bars at the bottom of the screen look ("Controls at the bottom of the screen"): a solid background (never see-through, so the
+/// content behind it cannot be mixed up with the controls) and a thin line on top.
+enum BottomBarStyle {
+    static var background: UIColor { UIColor.secondarySystemBackground }
+
+    static func toolbarAppearance() -> UIToolbarAppearance {
+        let appearance = UIToolbarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = background
+        appearance.shadowColor = UIColor.separator
+        return appearance
+    }
+}
+
+/// isaCloud: the setting "Controls at the bottom of the screen" (Settings > User Interface > Appearance). iPhone only: on the iPad the screens
+/// keep their controls at the top. The screens read it each time they are shown or built.
+@objc
+class ControlsAtBottom : NSObject {
+    @objc static var isOn: Bool {
+#if targetEnvironment(macCatalyst)
+        return false
+#else
+        return UIDevice.current.userInterfaceIdiom == .phone && HelperTools.defaultsDB().bool(forKey: "controlsAtBottom")
+#endif
+    }
+}
+
+/// isaCloud: the controls of the home screen (account, search and contacts) in a bar fixed at the bottom of the screen, over the list. The
+/// background is solid (BottomBarStyle), and the bar rises with the keyboard. The search is a system
+/// UISearchBar: while it is used the account and contacts buttons make room for it and the system "Cancel" button shows up.
+@objc
+final class BottomControlsBar : UIView, UISearchBarDelegate {
+    /// the height of the bar above the home indicator: what the list needs to keep clear at its end
+    @objc static let contentHeight: CGFloat = 60
+
+    @objc var onAccount: (() -> Void)?
+    @objc var onContacts: (() -> Void)?
+    @objc var onSearchBegan: (() -> Void)?
+    @objc var onSearchChanged: ((String) -> Void)?
+    @objc var onSearchEnded: (() -> Void)?
+
+    private let accountButton = UIButton(type: .system)
+    private let contactsButton = UIButton(type: .system)
+    private let searchBar = UISearchBar()
+    private let stack = UIStackView()
+
+    @objc init() {
+        super.init(frame: .zero)
+        let blur = UIView()     //(the background of the bar, solid)
+        blur.backgroundColor = BottomBarStyle.background
+        blur.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(blur)
+        let separator = UIView()
+        separator.backgroundColor = .separator
+        separator.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(separator)
+
+        accountButton.addAction(UIAction { [weak self] _ in self?.onAccount?() }, for: .touchUpInside)
+        contactsButton.addAction(UIAction { [weak self] _ in self?.onContacts?() }, for: .touchUpInside)
+        searchBar.searchBarStyle = .minimal
+        searchBar.placeholder = NSLocalizedString("Search", comment: "placeholder of the search field in the bar at the bottom of the screen")
+        searchBar.delegate = self
+        searchBar.autocapitalizationType = .none
+        searchBar.autocorrectionType = .no
+        searchBar.setContentHuggingPriority(.defaultLow, for: .horizontal)
+
+        stack.axis = .horizontal
+        stack.alignment = .center
+        stack.spacing = 4
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        stack.addArrangedSubview(accountButton)
+        stack.addArrangedSubview(searchBar)
+        stack.addArrangedSubview(contactsButton)
+        addSubview(stack)
+
+        let side: CGFloat = 44
+        NSLayoutConstraint.activate([
+            blur.topAnchor.constraint(equalTo: topAnchor),
+            blur.bottomAnchor.constraint(equalTo: bottomAnchor),
+            blur.leadingAnchor.constraint(equalTo: leadingAnchor),
+            blur.trailingAnchor.constraint(equalTo: trailingAnchor),
+            separator.topAnchor.constraint(equalTo: topAnchor),
+            separator.leadingAnchor.constraint(equalTo: leadingAnchor),
+            separator.trailingAnchor.constraint(equalTo: trailingAnchor),
+            separator.heightAnchor.constraint(equalToConstant: 1 / UIScreen.main.scale),
+            stack.topAnchor.constraint(equalTo: topAnchor, constant: 2),
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 10),
+            stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -10),
+            accountButton.widthAnchor.constraint(equalToConstant: side),
+            accountButton.heightAnchor.constraint(equalToConstant: side),
+            contactsButton.widthAnchor.constraint(equalToConstant: side),
+            contactsButton.heightAnchor.constraint(equalToConstant: side),
+            searchBar.heightAnchor.constraint(equalToConstant: 56),
+            //the height of the content is fixed, so the bar is as tall as its content (plus the space under it) and never grows with the keyboard
+            stack.heightAnchor.constraint(equalToConstant: BottomControlsBar.contentHeight - 4),
+        ])
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    /// puts the bar at the bottom of `host`, over its content; it rises with the keyboard
+    @objc func install(in host: UIView) {
+        translatesAutoresizingMaskIntoConstraints = false
+        host.addSubview(self)
+        NSLayoutConstraint.activate([
+            leadingAnchor.constraint(equalTo: host.leadingAnchor),
+            trailingAnchor.constraint(equalTo: host.trailingAnchor),
+            bottomAnchor.constraint(equalTo: host.bottomAnchor),
+            //the content stays above the keyboard, or above the home indicator when there is no keyboard; the blur goes down to the edge
+            stack.bottomAnchor.constraint(equalTo: host.keyboardLayoutGuide.topAnchor, constant: -2),
+        ])
+    }
+
+    @objc func setAccountImage(_ image: UIImage?, accessibilityLabel: String?) {
+        accountButton.setImage(image, for: .normal)
+        accountButton.accessibilityLabel = accessibilityLabel
+    }
+
+    @objc func setContactsImage(_ image: UIImage?, accessibilityLabel: String?) {
+        contactsButton.setImage(image, for: .normal)
+        contactsButton.accessibilityLabel = accessibilityLabel
+    }
+
+    /// leaves the search: clears the text, closes the keyboard and brings the other buttons back
+    @objc func endSearch() {
+        searchBar.text = ""
+        searchBar.resignFirstResponder()
+        setSearching(false)
+        onSearchEnded?()
+    }
+
+    private func setSearching(_ searching: Bool) {
+        searchBar.setShowsCancelButton(searching, animated: true)
+        UIView.animate(withDuration: 0.25) {
+            self.accountButton.isHidden = searching
+            self.contactsButton.isHidden = searching
+            self.stack.layoutIfNeeded()
+        }
+    }
+
+    func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
+        setSearching(true)
+        onSearchBegan?()
+    }
+
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        onSearchChanged?(searchText)
+    }
+
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        searchBar.resignFirstResponder()
+    }
+
+    func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
+        endSearch()
+    }
+}
+
+private extension UIImage {
+    /// a transparent 1 pt image (the system back arrow is replaced by it)
+    static let clearPixel: UIImage = {
+        UIGraphicsImageRenderer(size: CGSize(width: 1, height: 1)).image { _ in }
+    }()
+}
+
+/// isaCloud: with the setting "Controls at the bottom of the screen", the screens of one navigation stack (the settings opened from the avatar, and
+/// everything that opens from there) keep their title at the top and have their controls in the toolbar at the bottom: the way back on the left, and
+/// the buttons of the navigation bar (confirm, close, save...) on the right. The screens are not changed: their buttons are taken from their
+/// navigation item as they set them (SwiftUI sets them late and changes them, so the item is watched) and given back when the setting is turned off.
+@objc
+final class BottomBarNavigation : NSObject, UINavigationControllerDelegate {
+    private final class Record {
+        var left: [UIBarButtonItem] = []            //the buttons the screen has put on the left of its navigation bar
+        var right: [UIBarButtonItem] = []           //and on the right
+        var hidesBackButton = false                 //what the screen had asked for before
+        var adopted = false
+        var observations: [NSKeyValueObservation] = []
+        var lastTakenAt: CFTimeInterval = 0         //when the buttons were last taken off the navigation item by us
+    }
+
+    private static var associationKey: UInt8 = 0
+    private let records = NSMapTable<UIViewController, Record>(keyOptions: .weakMemory, valueOptions: .strongMemory)
+    private var busy = false
+    private weak var navigation: UINavigationController?
+
+    override init() {
+        super.init()
+        //the setting can be turned on or off while screens of the stack are open (it is a screen of this stack): all of them follow at once
+        NotificationCenter.default.addObserver(self, selector: #selector(settingMayHaveChanged), name: UserDefaults.didChangeNotification, object: nil)
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    @objc private func settingMayHaveChanged() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let navigation = self.navigation else {
+                return
+            }
+            self.updateNavigationBarLook(of: navigation)
+            for viewController in navigation.viewControllers {
+                self.apply(to: viewController, in: navigation, changedByScreen: false, animated: false)
+            }
+        }
+    }
+
+    /// Puts the screen (and the others of its navigation stack, as they are shown) in the place the setting asks for. Call it when the screen
+    /// is about to appear.
+    @objc static func adopt(_ viewController: UIViewController) {
+        guard let navigation = viewController.navigationController else {
+            return
+        }
+        let adopter: BottomBarNavigation
+        if let existing = objc_getAssociatedObject(navigation, &associationKey) as? BottomBarNavigation {
+            adopter = existing
+        } else {
+            adopter = BottomBarNavigation()
+            objc_setAssociatedObject(navigation, &associationKey, adopter, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            navigation.delegate = adopter
+            //a solid bar: the content never shows through it, and it is not drawn over the end of a table
+            let appearance = BottomBarStyle.toolbarAppearance()
+            navigation.toolbar.standardAppearance = appearance
+            navigation.toolbar.scrollEdgeAppearance = appearance
+            navigation.toolbar.compactAppearance = appearance
+            navigation.toolbar.isTranslucent = false
+        }
+        adopter.navigation = navigation
+        adopter.updateNavigationBarLook(of: navigation)
+        adopter.apply(to: viewController, in: navigation, changedByScreen: false, animated: false)
+    }
+
+    /// The navigation bar of the stack: with the controls at the bottom its own back button is invisible from the start (hiding it when a screen is
+    /// about to be shown is too late: it shows at the top for the first moments of the transition); without them everything is as it was.
+    private var originalBarAppearances: (standard: UINavigationBarAppearance, scrollEdge: UINavigationBarAppearance?, compact: UINavigationBarAppearance?)?
+
+    private func updateNavigationBarLook(of navigation: UINavigationController) {
+        let bar = navigation.navigationBar
+        if ControlsAtBottom.isOn {
+            if originalBarAppearances == nil {
+                originalBarAppearances = (bar.standardAppearance, bar.scrollEdgeAppearance, bar.compactAppearance)
+            }
+            func withoutBackButton(_ source: UINavigationBarAppearance) -> UINavigationBarAppearance {
+                let appearance = source.copy()
+                let clear = UIImage.clearPixel
+                appearance.setBackIndicatorImage(clear, transitionMaskImage: clear)
+                let invisible: [NSAttributedString.Key: Any] = [.foregroundColor: UIColor.clear, .font: UIFont.systemFont(ofSize: 1)]
+                for style in [appearance.backButtonAppearance, appearance.doneButtonAppearance].map({ $0 }) {
+                    for state in [style.normal, style.highlighted, style.disabled, style.focused] {
+                        state.titleTextAttributes = invisible
+                    }
+                }
+                return appearance
+            }
+            if let original = originalBarAppearances {
+                bar.standardAppearance = withoutBackButton(original.standard)
+                bar.scrollEdgeAppearance = withoutBackButton(original.scrollEdge ?? original.standard)
+                bar.compactAppearance = withoutBackButton(original.compact ?? original.standard)
+            }
+        } else if let original = originalBarAppearances {
+            bar.standardAppearance = original.standard
+            bar.scrollEdgeAppearance = original.scrollEdge
+            bar.compactAppearance = original.compact
+            originalBarAppearances = nil
+        }
+    }
+
+    func navigationController(_ navigationController: UINavigationController, willShow viewController: UIViewController, animated: Bool) {
+        updateNavigationBarLook(of: navigationController)
+        apply(to: viewController, in: navigationController, changedByScreen: false, animated: animated)
+    }
+
+    func navigationController(_ navigationController: UINavigationController, didShow viewController: UIViewController, animated: Bool) {
+        //SwiftUI puts the buttons of a screen on its navigation item after the screen was shown
+        apply(to: viewController, in: navigationController, changedByScreen: false, animated: false)
+    }
+
+    private func record(for viewController: UIViewController) -> Record {
+        if let existing = records.object(forKey: viewController) {
+            return existing
+        }
+        let created = Record()
+        records.setObject(created, forKey: viewController)
+        return created
+    }
+
+    private func apply(to viewController: UIViewController, in navigation: UINavigationController, changedByScreen: Bool, animated: Bool) {
+        if busy {
+            return      //a change we made ourselves
+        }
+        busy = true
+        defer { busy = false }
+        let record = record(for: viewController)
+        let item = viewController.navigationItem
+
+        if ControlsAtBottom.isOn {
+            if !record.adopted {
+                record.adopted = true
+                record.hidesBackButton = item.hidesBackButton
+                watch(viewController, in: navigation, record: record)
+            }
+            //the buttons the screen has set are taken over; when there are none and the screen did not just remove them, the ones taken before stay
+            //(SwiftUI puts them in the item groups of the navigation item, UIKit screens in the left and right lists, which are the same thing for UIKit:
+            //every button is taken once)
+            let currentLeft = BottomBarNavigation.uniqued((item.leftBarButtonItems ?? []) + item.leadingItemGroups.flatMap { $0.barButtonItems })
+            let currentRight = BottomBarNavigation.uniqued((item.rightBarButtonItems ?? []) + item.trailingItemGroups.flatMap { $0.barButtonItems })
+            if changedByScreen && currentLeft.isEmpty && currentRight.isEmpty && CACurrentMediaTime() - record.lastTakenAt < 0.5 {
+                return      //UIKit tells about the buttons we took off a little later: that is not the screen removing them
+            }
+            if !currentLeft.isEmpty || !currentRight.isEmpty || changedByScreen {
+                record.left = currentLeft
+                record.right = currentRight
+            }
+            if item.leftBarButtonItems != nil {
+                item.leftBarButtonItems = nil
+            }
+            if item.rightBarButtonItems != nil {
+                item.rightBarButtonItems = nil
+            }
+            //(the groups are only touched when the screen uses them: setting them on every screen leaves the bar laid out differently afterwards)
+            if !item.leadingItemGroups.isEmpty {
+                item.leadingItemGroups = []
+            }
+            if !item.trailingItemGroups.isEmpty {
+                item.trailingItemGroups = []
+            }
+            if navigation.viewControllers.first !== viewController {
+                item.hidesBackButton = true     //(the first screen has no back button: leaving it alone keeps the bar as it was)
+            }
+            record.lastTakenAt = CACurrentMediaTime()
+
+            var items: [UIBarButtonItem] = []
+            if let back = backItem(for: viewController, in: navigation) {
+                items.append(back)
+            }
+            items.append(UIBarButtonItem.flexibleSpace())
+            //back is on the left; whatever else the screen has (close, cancel, confirm, save) is on the right
+            items.append(contentsOf: record.left + record.right)
+            viewController.toolbarItems = items.count > 1 ? items : nil
+        } else if record.adopted {
+            record.observations = []
+            record.adopted = false
+            item.leftBarButtonItems = record.left.isEmpty ? nil : record.left
+            item.rightBarButtonItems = record.right.isEmpty ? nil : record.right
+            if navigation.viewControllers.first !== viewController {
+                item.hidesBackButton = record.hidesBackButton
+            }
+            record.left = []
+            record.right = []
+            viewController.toolbarItems = nil
+        }
+        if navigation.topViewController === viewController {
+            navigation.setToolbarHidden(viewController.toolbarItems?.isEmpty ?? true, animated: animated)
+        }
+        //the bar keeps the place it had given to the title while the buttons were elsewhere (the title came up next to the "Close" button): it is
+        //laid out again once the buttons are back
+        DispatchQueue.main.async { [weak navigation] in
+            navigation?.navigationBar.setNeedsLayout()
+            navigation?.navigationBar.layoutIfNeeded()
+        }
+    }
+
+    /// the screen may change its buttons later (SwiftUI does, when its state changes): they are taken over again
+    private func watch(_ viewController: UIViewController, in navigation: UINavigationController, record: Record) {
+        let item = viewController.navigationItem
+        let changed: (UINavigationItem, NSKeyValueObservedChange<[UIBarButtonItem]?>) -> Void = { [weak self, weak viewController, weak navigation] _, _ in
+            guard let self, let viewController, let navigation else {
+                return
+            }
+            self.apply(to: viewController, in: navigation, changedByScreen: true, animated: false)
+        }
+        let changedSingle: (UINavigationItem, NSKeyValueObservedChange<UIBarButtonItem?>) -> Void = { [weak self, weak viewController, weak navigation] _, _ in
+            guard let self, let viewController, let navigation else {
+                return
+            }
+            self.apply(to: viewController, in: navigation, changedByScreen: true, animated: false)
+        }
+        let changedGroups: (UINavigationItem, NSKeyValueObservedChange<[UIBarButtonItemGroup]>) -> Void = { [weak self, weak viewController, weak navigation] _, _ in
+            guard let self, let viewController, let navigation else {
+                return
+            }
+            self.apply(to: viewController, in: navigation, changedByScreen: true, animated: false)
+        }
+        record.observations = [
+            item.observe(\.leftBarButtonItems, options: [.new], changeHandler: changed),
+            item.observe(\.rightBarButtonItems, options: [.new], changeHandler: changed),
+            item.observe(\.leftBarButtonItem, options: [.new], changeHandler: changedSingle),
+            item.observe(\.rightBarButtonItem, options: [.new], changeHandler: changedSingle),
+            item.observe(\.leadingItemGroups, options: [.new], changeHandler: changedGroups),
+            item.observe(\.trailingItemGroups, options: [.new], changeHandler: changedGroups),
+        ]
+    }
+
+    private static func uniqued(_ items: [UIBarButtonItem]) -> [UIBarButtonItem] {
+        var seen = Set<ObjectIdentifier>()
+        return items.filter { seen.insert(ObjectIdentifier($0)).inserted }
+    }
+
+    /// the way back, on the left: an arrow and the title of the screen before, as the system's own back button has
+    private func backItem(for viewController: UIViewController, in navigation: UINavigationController) -> UIBarButtonItem? {
+        guard let index = navigation.viewControllers.firstIndex(of: viewController), index > 0 else {
+            return nil
+        }
+        let previous = navigation.viewControllers[index - 1]
+        let title = previous.navigationItem.backButtonTitle ?? previous.navigationItem.title ?? previous.title ?? NSLocalizedString("Back", comment: "")
+        var configuration = UIButton.Configuration.plain()
+        configuration.image = UIImage(systemName: "chevron.backward", withConfiguration: UIImage.SymbolConfiguration(weight: .semibold))
+        configuration.title = title
+        configuration.imagePadding = 4
+        configuration.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 8)
+        let button = UIButton(configuration: configuration)
+        button.accessibilityLabel = NSLocalizedString("Back", comment: "")
+        button.addAction(UIAction { [weak navigation] _ in
+            navigation?.popViewController(animated: true)
+        }, for: .touchUpInside)
+        return UIBarButtonItem(customView: button)
+    }
+}
+
+/// isaCloud: a list that grows from the bottom up (the first row is the one next to the controls at the bottom of the screen): the list is turned
+/// upside down and every row (see bottomUpRow) is turned back. The rows are still a List, so swipe actions, menus and the like keep working.
+struct BottomUpList : ViewModifier {
+    let isOn: Bool
+
+    func body(content: Content) -> some View {
+        if isOn {
+            GeometryReader { geometry in
+                content
+                    .scaleEffect(x: 1, y: -1)
+                    //the navigation bar is not a margin of the list any more (it would show up at the bottom, turned over): the list goes under it
+                    //and keeps its own margin at its end, which is the top of the screen
+                    .ignoresSafeArea(.container, edges: .top)
+                    .contentMargins(.bottom, geometry.safeAreaInsets.top, for: .scrollContent)
+            }
+        } else {
+            content
+        }
+    }
+}
+
+extension View {
+    /// isaCloud: see BottomUpList
+    func bottomUpList(_ isOn: Bool) -> some View {
+        modifier(BottomUpList(isOn: isOn))
+    }
+
+    /// isaCloud: turns a row of a bottom up list back (see BottomUpList)
+    func bottomUpRow(_ isOn: Bool) -> some View {
+        scaleEffect(x: 1, y: isOn ? -1 : 1)
+    }
+}
+
+/// isaCloud: the system search field (UISearchBar, minimal style) for SwiftUI screens that keep their search at the bottom of the screen
+struct BottomSearchField : UIViewRepresentable {
+    @Binding var text: String
+
+    func makeUIView(context: Context) -> UISearchBar {
+        let searchBar = UISearchBar()
+        searchBar.searchBarStyle = .minimal
+        searchBar.placeholder = NSLocalizedString("Search", comment: "placeholder of the search field in the bar at the bottom of the screen")
+        searchBar.delegate = context.coordinator
+        searchBar.autocapitalizationType = .none
+        searchBar.autocorrectionType = .no
+        searchBar.keyboardType = .emailAddress
+        return searchBar
+    }
+
+    func updateUIView(_ searchBar: UISearchBar, context: Context) {
+        if searchBar.text != text {
+            searchBar.text = text
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text)
+    }
+
+    final class Coordinator : NSObject, UISearchBarDelegate {
+        @Binding var text: String
+
+        init(text: Binding<String>) {
+            self._text = text
+        }
+
+        func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+            text = searchText
+        }
+
+        func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
+            searchBar.setShowsCancelButton(true, animated: true)
+        }
+
+        func searchBarTextDidEndEditing(_ searchBar: UISearchBar) {
+            searchBar.setShowsCancelButton(false, animated: true)
+        }
+
+        func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+            searchBar.resignFirstResponder()
+        }
+
+        func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
+            text = ""
+            searchBar.text = ""
+            searchBar.resignFirstResponder()
+        }
     }
 }
 

@@ -113,6 +113,7 @@ enum DummySettingsRows {
 {
     [super viewWillAppear:animated];
     [self refreshAccountList];
+    [BottomBarNavigation adopt:self];       //isaCloud: with the setting "Controls at the bottom of the screen" the controls of every screen of this stack are in a bar at the bottom
 
     _tappedVersionInfo = 0;
     self.selected = nil;

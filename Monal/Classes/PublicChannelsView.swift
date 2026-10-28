@@ -29,6 +29,8 @@ struct PublicChannelsView: View {
     @State private var joiningJids: Set<String> = []    //isaCloud: channels being joined, the row waits for the buddy list entry
     private static let avatarCache = NSCache<NSString, UIImage>()   //kept while the app runs, shared by every opening of the list
     private let pageSize = 50
+    private let controlsAtBottom = ControlsAtBottom.isOn        //isaCloud: the setting "Controls at the bottom of the screen"
+    @Environment(\.dismiss) private var goBack
 
     init(dismissWithContact: @escaping (MLContact) -> ()) {
         self.dismissWithContact = dismissWithContact
@@ -51,6 +53,8 @@ struct PublicChannelsView: View {
                     .padding()
             } else {
                 List {
+                    //isaCloud: with the controls at the bottom the list grows upwards (see BottomUpList): the first channel is at the bottom and
+                    //"Load more…" at the top
                     ForEach(channels.prefix(visibleCount)) { channel in
                         //isaCloud: tapping a channel joins it (or opens it, when already joined)
                         Button {
@@ -59,27 +63,60 @@ struct PublicChannelsView: View {
                             row(for: channel)
                         }
                         .buttonStyle(.plain)
+                        .bottomUpRow(controlsAtBottom)
                         .onAppear {
                             loadMemberCount(channel.jid)
                             loadAvatar(channel)
                         }
                     }
-                    if channels.count > visibleCount {
-                        Button {
-                            visibleCount += pageSize
-                        } label: {
-                            Text("Load more…")
-                                .foregroundStyle(Color("isaCloudPink"))
-                        }
-                    }
+                    loadMoreButton
+                        .bottomUpRow(controlsAtBottom)
                 }
+                .bottomUpList(controlsAtBottom)
                 .listStyle(.plain)
             }
         }
         .navigationTitle(Text("Public channels"))
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(controlsAtBottom)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            //isaCloud: with the setting "Controls at the bottom of the screen" the way back is a bar at the bottom, on the left
+            if controlsAtBottom {
+                HStack {
+                    Button {
+                        goBack()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.backward")
+                                .fontWeight(.semibold)
+                            Text("Contacts")
+                        }
+                        .frame(minHeight: 44)
+                    }
+                    .accessibilityLabel(Text("Back"))
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.bottom, 2)
+                .background(Color(uiColor: BottomBarStyle.background))
+                .overlay(alignment: .top) { Divider() }
+            }
+        }
         .onAppear {
             load()
+        }
+    }
+
+    /// isaCloud: shows more channels (the list is loaded whole, "Load more…" only reveals the next ones)
+    @ViewBuilder
+    private var loadMoreButton: some View {
+        if channels.count > visibleCount {
+            Button {
+                visibleCount += pageSize
+            } label: {
+                Text("Load more…")
+                    .foregroundStyle(Color("isaCloudPink"))
+            }
         }
     }
 

@@ -101,6 +101,11 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
     NSString* _accountAvatarSignature;      //isaCloud: what the profile button shows now, to not set the same image again
     NSMutableArray* _blockQueue;
     dispatch_semaphore_t _blockQueueSemaphore;
+    BottomControlsBar* _bottomBar;                  //isaCloud: the controls at the bottom ("Controls at the bottom of the screen"), nil until first used
+    BOOL _controlsAtBottomApplied;                  //isaCloud: which of the two places the controls are in now
+    NSArray<UIBarButtonItem*>* _topLeftItems;       //isaCloud: what the navigation bar had before the controls went down
+    NSArray<UIBarButtonItem*>* _topRightItems;
+    UISearchController* _topSearchController;       //isaCloud: the search of the navigation bar, kept while the search is at the bottom
 }
 @property (atomic, strong) NSMutableArray* unpinnedContacts;
 @property (nonatomic, strong) ChatListSearch* chatListSearch;
@@ -355,6 +360,7 @@ static BOOL _dnssecWarningDisplayed;
         icon = [HelperTools imageWithOverlappedAvatars:@[avatars[0], avatars[1]] extraCount:(NSInteger)avatars.count - 2 diameter:size - 4 ringColor:[UIColor systemBackgroundColor]];
     }
     self.settingsButton.image = [icon imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
+    [self updateBottomBarImages];
 }
 
 -(void) setSyncIndicatorVisible:(BOOL) visible
@@ -401,6 +407,103 @@ static BOOL _dnssecWarningDisplayed;
         [self.composeButton setAccessibilityLabel:NSLocalizedString(@"Open contact list (contact requests pending)", @"")];
     else
         [self.composeButton setAccessibilityLabel:NSLocalizedString(@"Open contact list", @"")];
+    [self updateBottomBarImages];
+}
+
+#pragma mark controls at the bottom
+
+//isaCloud: "Controls at the bottom of the screen" (Settings > User Interface > Appearance, iPhone only): the account, search and contacts buttons
+//in a bar fixed at the bottom of the list; the navigation bar keeps the title and the sync indicator
+-(void) updateBottomBarImages
+{
+    if(_bottomBar == nil)
+        return;
+    [_bottomBar setAccountImage:self.settingsButton.image accessibilityLabel:self.settingsButton.accessibilityLabel];
+    UIImage* contactsImage = [self.composeButton.customView isKindOfClass:[UIImageView class]] ? ((UIImageView*)self.composeButton.customView).image : nil;
+    [_bottomBar setContactsImage:contactsImage accessibilityLabel:self.composeButton.accessibilityLabel];
+}
+
+-(void) controlsPlacementMayHaveChanged
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self applyControlsPlacement];
+    });
+}
+
+-(void) applyControlsPlacement
+{
+    BOOL bottom = ControlsAtBottom.isOn;
+    if(bottom == _controlsAtBottomApplied)
+        return;
+    _controlsAtBottomApplied = bottom;
+    if(bottom)
+    {
+        if(_bottomBar == nil)
+        {
+            __weak typeof(self) weakSelf = self;
+            _bottomBar = [BottomControlsBar new];
+            _bottomBar.onAccount = ^{ [weakSelf showSettings]; };
+            _bottomBar.onContacts = ^{ [weakSelf showContacts]; };
+            _bottomBar.onSearchBegan = ^{ [weakSelf showBottomSearchResults:YES]; };
+            _bottomBar.onSearchChanged = ^(NSString* query) { [weakSelf.chatListSearch updateWithQuery:query]; };
+            _bottomBar.onSearchEnded = ^{
+                [weakSelf.chatListSearch updateWithQuery:@""];
+                [weakSelf showBottomSearchResults:NO];
+            };
+            [_bottomBar installIn:self.view];
+        }
+        _bottomBar.hidden = NO;
+        [self updateBottomBarImages];
+        //the end of the list keeps clear of the bar
+        self.chatListTable.contentInset = UIEdgeInsetsMake(0, 0, BottomControlsBar.contentHeight, 0);
+        self.chatListTable.verticalScrollIndicatorInsets = UIEdgeInsetsMake(0, 0, BottomControlsBar.contentHeight, 0);
+        //the buttons and the search leave the navigation bar (the sync indicator stays)
+        _topLeftItems = self.navigationItem.leftBarButtonItems;
+        _topRightItems = self.navigationItem.rightBarButtonItems;
+        self.navigationItem.leftBarButtonItems = @[];
+        self.navigationItem.rightBarButtonItems = [self.navigationItem.rightBarButtonItems containsObject:self.spinnerButton] ? @[self.spinnerButton] : @[];
+        _topSearchController = self.navigationItem.searchController;
+        self.navigationItem.searchController = nil;
+    }
+    else
+    {
+        [_bottomBar endSearch];
+        _bottomBar.hidden = YES;
+        self.chatListTable.contentInset = UIEdgeInsetsZero;
+        self.chatListTable.verticalScrollIndicatorInsets = UIEdgeInsetsZero;
+        BOOL spinning = [self.navigationItem.rightBarButtonItems containsObject:self.spinnerButton];
+        NSMutableArray* right = [NSMutableArray arrayWithArray:_topRightItems ?: @[]];
+        [right removeObject:self.spinnerButton];
+        if(spinning)
+            [right addObject:self.spinnerButton];
+        self.navigationItem.leftBarButtonItems = _topLeftItems;
+        self.navigationItem.rightBarButtonItems = right;
+        self.navigationItem.searchController = _topSearchController;
+        _topLeftItems = nil;
+        _topRightItems = nil;
+        _topSearchController = nil;
+    }
+}
+
+//isaCloud: the results of the search at the bottom cover the list, down to the bar
+-(void) showBottomSearchResults:(BOOL) show
+{
+    UIViewController* results = self.chatListSearch.resultsController;
+    if(show && results.parentViewController == nil)
+    {
+        [self addChildViewController:results];
+        results.view.translatesAutoresizingMaskIntoConstraints = NO;
+        results.view.backgroundColor = [UIColor systemBackgroundColor];
+        [self.view insertSubview:results.view belowSubview:_bottomBar];
+        [NSLayoutConstraint activateConstraints:@[
+            [results.view.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor],
+            [results.view.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
+            [results.view.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
+            [results.view.bottomAnchor constraintEqualToAnchor:_bottomBar.topAnchor],
+        ]];
+        [results didMoveToParentViewController:self];
+    }
+    results.view.hidden = !show;
 }
 
 -(void) viewDidLoad
@@ -440,6 +543,14 @@ static BOOL _dnssecWarningDisplayed;
             [weakSelf presentChatWithContact:contact];
         };
         weakSelf.openAfterSearchDismissed = open;
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if(strongSelf != nil && strongSelf->_controlsAtBottomApplied)
+        {
+            //isaCloud: the search is a view of ours, not a search controller: it is gone as soon as it is closed
+            [strongSelf->_bottomBar endSearch];
+            open();
+            return;
+        }
         [weakSelf.navigationItem.searchController setActive:NO];
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), open);
     };
@@ -461,12 +572,26 @@ static BOOL _dnssecWarningDisplayed;
     self.navigationItem.preferredSearchBarPlacement = UINavigationItemSearchBarPlacementStacked;
     self.definesPresentationContext = YES;
 
-    self.view = self.chatListTable;
+    //isaCloud: the list sits in a plain view, so a bar can be fixed at the bottom over it ("Controls at the bottom of the screen")
+    UIView* container = [UIView new];
+    container.backgroundColor = [UIColor systemBackgroundColor];
+    self.chatListTable.translatesAutoresizingMaskIntoConstraints = NO;
+    [container addSubview:self.chatListTable];
+    [NSLayoutConstraint activateConstraints:@[
+        [self.chatListTable.topAnchor constraintEqualToAnchor:container.topAnchor],
+        [self.chatListTable.bottomAnchor constraintEqualToAnchor:container.bottomAnchor],
+        [self.chatListTable.leadingAnchor constraintEqualToAnchor:container.leadingAnchor],
+        [self.chatListTable.trailingAnchor constraintEqualToAnchor:container.trailingAnchor],
+    ]];
+    self.view = container;
+    [self setContentScrollView:self.chatListTable forEdge:NSDirectionalRectEdgeAll];        //the bars react to this list, as when it was the view
     
     self.sizeClass = [SizeClassWrapper new];
     [self updateSizeClass];
 
     NSNotificationCenter* nc = [NSNotificationCenter defaultCenter];
+    //isaCloud: the settings open as a sheet, which does not bring this screen back through viewWillAppear: listen for the setting instead
+    [nc addObserver:self selector:@selector(controlsPlacementMayHaveChanged) name:NSUserDefaultsDidChangeNotification object:nil];
     [nc addObserver:self selector:@selector(handleRefreshDisplayNotification:) name:kMonalRefresh object:nil];
     [nc addObserver:self selector:@selector(handleContactRemoved:) name:kMonalContactRemoved object:nil];
     [nc addObserver:self selector:@selector(handleRefreshDisplayNotification:) name:kMonalMessageFiletransferUpdateNotice object:nil];
@@ -774,6 +899,7 @@ static BOOL _dnssecWarningDisplayed;
 {
     DDLogDebug(@"active chats view will appear");
     [super viewWillAppear:animated];
+    [self applyControlsPlacement];      //isaCloud: the setting may have changed while another screen was open
     
     [self presentSplitPlaceholder];
 }

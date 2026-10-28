@@ -135,6 +135,10 @@ class GeneralSettingsDefaultsDB: ObservableObject {
     @defaultsDB("reactionsAboveMessages")
     var reactionsAboveMessages: Bool
     
+    //isaCloud: the account, search and contacts buttons of the home screen (and the controls of the contacts screen) in a bar at the bottom
+    @defaultsDB("controlsAtBottom")
+    var controlsAtBottom: Bool
+    
     @defaultsDB("preventLeaksBeforeAuth")
     var preventLeaksBeforeAuth: Bool
     
@@ -280,6 +284,13 @@ struct UserInterfaceSettings: View {
                 SettingsToggle(isOn: $generalSettingsDefaultsDB.reactionsAboveMessages) {
                     Text("Reactions above the messages")
                     Text("Shows the reactions of a message as round bubbles over the corner of its bubble, instead of capsules in its footer.")
+                }
+                //isaCloud: off by default; iPhone only (on the iPad the screens keep their controls at the top)
+                if UIDevice.current.userInterfaceIdiom == .phone {
+                    SettingsToggle(isOn: $generalSettingsDefaultsDB.controlsAtBottom) {
+                        Text("Controls at the bottom of the screen")
+                        Text("Moves the account, search and contacts buttons to a bar at the bottom of the screen, within reach of your thumb.")
+                    }
                 }
                 SettingsToggle(isOn: $generalSettingsDefaultsDB.showAdvancedUI) {
                     Text("Show advanced options in UI")

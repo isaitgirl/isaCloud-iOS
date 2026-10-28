@@ -177,3 +177,9 @@
 "Could not forward" = "Não foi possível encaminhar";
 "You cannot write here" = "Você não pode escrever aqui";
 "Up to %lld chats at once." = "Até %lld conversas por vez.";
+
+/* "Controls at the bottom" setting (Settings > User Interface > Appearance) and the back button of the contacts screen */
+"Controls at the bottom of the screen" = "Controles na parte de baixo da tela";
+"Moves the account, search and contacts buttons to a bar at the bottom of the screen, within reach of your thumb." = "Leva a conta, a busca e os contatos para uma barra embaixo da tela, ao alcance do polegar.";
+"Back" = "Voltar";
+"Search" = "Buscar";
