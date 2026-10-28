@@ -70,6 +70,25 @@ docker compose logs -f fpush
 - **fpush parado em "Opening connection to prosody"**: a conexão de componente não foi aceita. Confira no log do Prosody (`External component successfully authenticated` é o sinal de sucesso), se o `componentKey` do `settings.json` é igual ao `component_secret` do Prosody, e se o fpush e o Prosody estão na mesma rede Docker (`docker network inspect prosody`).
 - **Push não chega no TestFlight**: o log do Prosody deve mostrar `Push notifications enabled for ...`. Para testar, o app precisa estar em segundo plano e outra conta precisa mandar mensagem. O log do fpush (`docker compose logs -f fpush`) mostra o envio e o resultado do APNs.
 
+## Patches do push enquanto não há push filtering (aplicados em 28/10/2026)
+
+Sem a entitlement `com.apple.developer.usernotifications.filtering` (pedido à Apple em andamento, ver `CLAUDE.md`), todo push de alerta vira uma notificação visível ("New Message / New Message?", com som), mesmo quando o app decide não notificar. Dois patches, um no servidor e um no app, reduzem esses "fantasmas". **Os dois são reversíveis.**
+
+### Servidor (fpush no ar): `0001-silent-unimportant-pushes.v2.patch`
+- Aplicado em cima do commit fixo do fpush (`FPUSH_COMMIT` no `Dockerfile`, linha `RUN git apply /tmp/isacloud.patch`), imagem `isacloud/fpush:42359ca-isacloud2`. Push sem `last-message-body` vira push em segundo plano (`content-available`, sem alerta); os de alerta usam o mesmo collapse id (`isacloud-sync`) e o rate limit nunca rebaixa um push importante.
+- O módulo `cloud_notify_quiet` do Prosody foi atualizado no servidor junto (ele fica fora deste repositório).
+- **Reverter:** no `Dockerfile`, apagar as linhas `COPY 0001-silent-unimportant-pushes.v2.patch ...` e `RUN git apply ...` (deixando só o `cargo build --release --locked -p fpush`), trocar a tag da imagem no `docker-compose.yaml` e rodar `docker compose up -d --build`; no Prosody, voltar o `cloud_notify_quiet` à versão anterior (ou descarregá-lo).
+
+### App: `0002-app-push-placeholder.patch` (o original) e `0002-app-push-placeholder.applied.patch` (o que está no código)
+- O que o app faz: quando a extensão de notificação (NSE) entregaria "conteúdo vazio" (o que o iOS ignora sem a entitlement e troca pelo alerta original), ela entrega um aviso **passivo** (sem som, sem banner), com o nome do app como título ("isaCloud" ou "isaCloud.dev") e **sem texto** (a extensão não recebe as traduções do isaCloud), marcado com `isaCloudPushPlaceholder`, e o remove ao fim da extensão (quando ela ainda está viva), no próximo push e ao abrir o app.
+- Diferenças do `.applied` para o original: título = nome do app, corpo vazio (o original tinha o texto "Checking for new messages…", sem tradução na extensão) e a tradução pt-BR desse texto não foi adicionada; o comentário sobre a remoção ficou menos otimista.
+- Código: `HelperTools.m` (`isaCloudPushPlaceholderContent`, `removeIsaCloudPushPlaceholdersAfter:`, `#define ISACLOUD_HAS_PUSH_FILTERING`), `HelperTools.h`, `NotificationService.m` (dois pontos que entregam conteúdo vazio e uma limpeza na inicialização) e `MonalAppDelegate.m` (limpeza ao abrir o app).
+- **Reverter, de três formas:**
+  1. **Quando a Apple liberar a entitlement:** recolocar `<key>com.apple.developer.usernotifications.filtering</key><true/>` nos dois `.entitlements` (ver `CLAUDE.md`) e mudar `#define ISACLOUD_HAS_PUSH_FILTERING` para `1` em `HelperTools.m`: o app volta a entregar conteúdo vazio, e o resto do código vira inofensivo.
+  2. **Tirar o patch inteiro:** `git apply -R docs/fpush/0002-app-push-placeholder.applied.patch` (já verificado com `--check`; vale se não houver mais mudanças nesses trechos) ou `git revert` do commit que o trouxe.
+  3. **Só desligar:** `ISACLOUD_HAS_PUSH_FILTERING 1` sem a entitlement devolve o comportamento antigo (alerta fantasma), útil para comparar.
+- **Não testado ainda no aparelho:** se o iOS respeita o nível passivo definido pela extensão, e se o aviso some sozinho; o teste de verdade é com o TestFlight e o servidor com o `0001` (uma noite).
+
 ## Segredos
 
 `settings.json` e `secrets/` estão no `.gitignore` do repositório. Nunca faça commit deles.

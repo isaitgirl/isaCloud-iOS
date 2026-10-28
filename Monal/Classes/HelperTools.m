@@ -2211,6 +2211,57 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     [[HelperTools defaultsDB] setObject:syncErrorsDisplayed forKey:@"syncErrorsDisplayed"];
 }
 
+//isaCloud: without the com.apple.developer.usernotifications.filtering entitlement, handing an empty
+//content to the NSE contentHandler makes iOS show the ORIGINAL alert of the push ("New Message / New Message?"),
+//in addition to the real notifications MLNotificationManager posts with their own identifiers.
+//So every alert push became a ghost. Instead we hand over a passive (no sound, no banner, no screen wake)
+//placeholder that is marked so we can remove it shortly afterwards (when the appex stays alive long enough), when the
+//next push comes in or when the app is opened. The placeholder has no text of its own (nothing to translate: the appex
+//does not get the isaCloud translations); its title is the name of the app that owns the appex, so "isaCloud" and "isaCloud.dev" differ.
+//HOW TO REVERT (when the entitlement is granted): set ISACLOUD_HAS_PUSH_FILTERING to 1 (empty content again, nothing else changes).
+//To remove it completely: see docs/fpush/README.md ("Patches do push enquanto não há push filtering").
+#define ISACLOUD_HAS_PUSH_FILTERING 0
+#define kIsaCloudPushPlaceholder @"isaCloudPushPlaceholder"
+
++(UNMutableNotificationContent*) isaCloudPushPlaceholderContent
+{
+    UNMutableNotificationContent* content = [UNMutableNotificationContent new];
+#if !ISACLOUD_HAS_PUSH_FILTERING
+    //the appex lives in <app>.app/PlugIns/<name>.appex: the title is the display name of the app ("isaCloud" or "isaCloud.dev")
+    NSBundle* appBundle = [NSBundle mainBundle];
+    if([appBundle.bundlePath.pathExtension isEqualToString:@"appex"])
+        appBundle = [NSBundle bundleWithPath:[[appBundle.bundlePath stringByDeletingLastPathComponent] stringByDeletingLastPathComponent]] ?: appBundle;
+    NSString* appName = appBundle.infoDictionary[@"CFBundleDisplayName"] ?: appBundle.infoDictionary[@"CFBundleName"] ?: @"isaCloud";
+    content.title = appName;
+    content.threadIdentifier = kIsaCloudPushPlaceholder;
+    content.userInfo = @{kIsaCloudPushPlaceholder: @YES};
+    content.interruptionLevel = UNNotificationInterruptionLevelPassive;
+    content.relevanceScore = 0.0;
+    content.sound = nil;
+#endif
+    return content;
+}
+
++(void) removeIsaCloudPushPlaceholdersAfter:(double) delay
+{
+#if !ISACLOUD_HAS_PUSH_FILTERING
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delay * NSEC_PER_SEC)), dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+        UNUserNotificationCenter* center = [UNUserNotificationCenter currentNotificationCenter];
+        [center getDeliveredNotificationsWithCompletionHandler:^(NSArray<UNNotification*>* notifications) {
+            NSMutableArray<NSString*>* ids = [NSMutableArray new];
+            for(UNNotification* notification in notifications)
+                if([notification.request.content.userInfo[kIsaCloudPushPlaceholder] boolValue])
+                    [ids addObject:notification.request.identifier];
+            if(ids.count > 0)
+            {
+                DDLogInfo(@"isaCloud: removing %lu push placeholder notification(s)", (unsigned long)ids.count);
+                [center removeDeliveredNotificationsWithIdentifiers:ids];
+            }
+        }];
+    });
+#endif
+}
+
 +(void) removePendingSyncErrorNotifications
 {
     NSMutableDictionary* syncErrorsDisplayed = [NSMutableDictionary dictionaryWithDictionary:[[HelperTools defaultsDB] objectForKey:@"syncErrorsDisplayed"]];

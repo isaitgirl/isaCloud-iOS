@@ -50,7 +50,14 @@
         if(self.expirationTimer)
             self.expirationTimer();
         if(self.handler)
-            self.handler([UNMutableNotificationContent new]);
+        {
+            //isaCloud: passive placeholder instead of empty content (see HelperTools isaCloudPushPlaceholderContent)
+            self.handler([HelperTools isaCloudPushPlaceholderContent]);
+            //the appex usually keeps running a while (other pushes or the 1.5s shutdown wait), so this often removes it, but it is not
+            //guaranteed (Apple limits what we can do after the last handler, and the expiration path exits right away): the placeholder is
+            //also removed when the next push comes in and when the app is opened
+            [HelperTools removeIsaCloudPushPlaceholdersAfter:1.0];
+        }
         self.expirationTimer = nil;
         self.handler = nil;
     }
@@ -251,6 +258,9 @@
         
         //now connect all enabled accounts
         [[MLXMPPManager sharedInstance] connectIfNecessary];
+        
+        //isaCloud: clean up placeholders left by earlier runs (the appex may have been killed before removing them)
+        [HelperTools removeIsaCloudPushPlaceholdersAfter:0];
         
         //this will delay the delivery of such notifications until 60 seconds after our last sync attempt failed
         //rather than being delivered 60 seconds after our first sync attempt failed
@@ -651,8 +661,8 @@ static BOOL warnUnclean = NO;
             for(void (^_handler)(UNNotificationContent* _Nonnull) in handlers)
             {
                 DDLogError(@"Feeding handler with silent notification: %@", _handler);
-                UNMutableNotificationContent* emptyContent = [UNMutableNotificationContent new];
-                _handler(emptyContent);
+                //isaCloud: passive placeholder instead of empty content (removed on the next push or when the app opens)
+                _handler([HelperTools isaCloudPushPlaceholderContent]);
             }
         }
         else

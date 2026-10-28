@@ -2,6 +2,19 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 40) — 28/10/2026
+
+### Adicionado
+- **A mensagem de texto aparece na hora ao enviar, com um spinner no lugar do tique** (PR do Jejê, com uma correção). Antes, a gravação da mensagem no banco rodava na thread principal e esperava o bloqueio de escrita do banco, que outra parte do app segura de vez em quando (medido: 7 segundos parada); a conversa ficava parada e a mensagem só entrava depois, às vezes já com reação de alguém. Agora a mensagem entra na hora, é gravada e enviada em segundo plano, na ordem, e é trocada pela real quando termina (a hora continua sendo a da gravação). Se a gravação falhar, a mensagem sai e o texto volta ao campo. **Enquanto a mensagem está a caminho ela não responde a toque** (sem menu, reações nem ações). Só vale para texto escrito na barra; foto, GIF, arquivo, localização e áudio seguem como antes. O spinner vem do fork do ExyteChat (PR 9 de lá).
+
+### Alterado
+- **Menos notificações fantasma, até a Apple liberar o push filtering.** Sem essa permissão, todo push de alerta virava uma notificação visível ("New Message / New Message?", com som) mesmo quando o app decidia não notificar. Agora a extensão de notificação entrega no lugar um **aviso passivo** (sem som, sem banner, sem texto, com o nome do app como título) e o remove quando consegue: ao fim da extensão, no próximo push e ao abrir o app. Funciona junto com o patch do servidor (push em segundo plano para o que não é importante e um collapse id nos alertas), que já está no ar. Quando a Apple liberar a permissão, basta mudar `ISACLOUD_HAS_PUSH_FILTERING` para `1`. **Ainda não testado no aparelho com o servidor**: ver se o iOS respeita o aviso passivo e se ele some sozinho. Como reverter: `docs/fpush/README.md`. (Estava no build 39, enviado só ao TestFlight; o 40 o inclui.)
+
+## 0.0.1 (build 39) — 28/10/2026
+
+### Alterado
+- **Menos notificações fantasma, até a Apple liberar o push filtering.** Sem essa permissão, todo push de alerta virava uma notificação visível ("New Message / New Message?", com som) mesmo quando o app decidia não notificar. Agora a extensão de notificação entrega no lugar um **aviso passivo** (sem som, sem banner, sem texto, com o nome do app como título) e o remove quando consegue: ao fim da extensão, no próximo push e ao abrir o app. Funciona junto com o patch do servidor (push em segundo plano para o que não é importante e um collapse id nos alertas), que já está no ar. Quando a Apple liberar a permissão, basta mudar `ISACLOUD_HAS_PUSH_FILTERING` para `1`. **Ainda não testado no aparelho com o servidor**: ver se o iOS respeita o aviso passivo e se ele some sozinho. Como reverter: `docs/fpush/README.md`.
+
 ## 0.0.1 (build 38) — 28/10/2026
 
 ### Corrigido

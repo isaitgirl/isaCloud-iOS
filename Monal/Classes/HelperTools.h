@@ -35,6 +35,7 @@ NS_ASSUME_NONNULL_BEGIN
 @class xmpp;
 @class XMPPStanza;
 @class UNNotificationRequest;
+@class UNMutableNotificationContent;
 @class DDLogMessage;
 @class DDFileLogger;
 @class UIView;
@@ -164,6 +165,9 @@ NSDictionary* _Nullable dictionaryComprehension(NSDictionary* _Nullable dict, id
 +(void) scheduleBackgroundTask:(BOOL) force;
 +(void) clearSyncErrorsOnAppForeground;
 +(void) removePendingSyncErrorNotifications;
+//isaCloud: placeholder for pushes while we don't have the push filtering entitlement
++(UNMutableNotificationContent*) isaCloudPushPlaceholderContent;
++(void) removeIsaCloudPushPlaceholdersAfter:(double) delay;
 +(void) updateSyncErrorsWithDeleteOnly:(BOOL) removeOnly andWaitForCompletion:(BOOL) waitForCompletion;
 
 +(BOOL) isInBackground;

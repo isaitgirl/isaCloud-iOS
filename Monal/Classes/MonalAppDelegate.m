@@ -534,6 +534,9 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
 {
     [self updateAppIconIfNeeded];
     
+    //isaCloud: remove push placeholders left in Notification Center (see HelperTools isaCloudPushPlaceholderContent)
+    [HelperTools removeIsaCloudPushPlaceholdersAfter:0];
+    
     if([[MLXMPPManager sharedInstance] connectedXMPP].count > 0)
         [self handleSpinner];
     else

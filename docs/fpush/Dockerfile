@@ -18,7 +18,12 @@ RUN git clone "$FPUSH_REPO" fpush \
     && git checkout --detach "$FPUSH_COMMIT"
 
 WORKDIR /src/fpush
-RUN cargo build --release --locked -p fpush
+# isaCloud: pushes sem last-message-body viram background (content-available),
+# alertas com collapse-id, e o ratelimit nunca rebaixa um push importante
+COPY 0001-silent-unimportant-pushes.v2.patch /tmp/isacloud.patch
+RUN git apply /tmp/isacloud.patch \
+    && cargo test --release --locked -p fpush -p fpush-push -p fpush-ratelimit \
+    && cargo build --release --locked -p fpush
 
 # --- runtime ---
 FROM debian:bookworm-slim
