@@ -1597,7 +1597,7 @@ static BOOL _dnssecWarningDisplayed;
 -(UIImage*) imageForEmptyDataSet:(UIScrollView*) scrollView
 {
     int orientation;
-    if(self.tableView.frame.size.height > self.tableView.frame.size.width)
+    if(self.chatListTable.frame.size.height > self.chatListTable.frame.size.width)
     {
         orientation = 1;        //portrait
         _portraitTop = self.navigationController.navigationBar.frame.size.height;
@@ -1613,9 +1613,9 @@ static BOOL _dnssecWarningDisplayed;
     //DDLogError(@"started orientation: %@", _startedOrientation == 1 ? @"portrait" : @"landscape");
     //DDLogError(@"current orientation: %@", orientation == 1 ? @"portrait" : @"landscape");
     
-    DZNEmptyDataSetView* emptyDataSetView = self.tableView.emptyDataSetView;
+    DZNEmptyDataSetView* emptyDataSetView = self.chatListTable.emptyDataSetView;
     CGRect headerFrame = self.navigationController.navigationBar.frame;
-    CGRect tableFrame = self.tableView.frame;
+    CGRect tableFrame = self.chatListTable.frame;
     //CGRect contentFrame = emptyDataSetView.contentView.frame;
     //DDLogError(@"headerFrame: %@", NSStringFromCGRect(headerFrame));
     //DDLogError(@"tableFrame: %@", NSStringFromCGRect(tableFrame));
@@ -1724,7 +1724,7 @@ static BOOL _dnssecWarningDisplayed;
     if(toreturn)
     {
         // A little trick for removing the cell separators
-        self.tableView.tableFooterView = [UIView new];
+        self.chatListTable.tableFooterView = [UIView new];
     }
     return toreturn;
 }
