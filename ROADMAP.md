@@ -4,6 +4,9 @@ Todas as funcionalidades do isaCloud numa tabela só: o que está **feito** (ris
 
 A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23/10/2026 sobre a `develop` (Monal 7), base atual do fork. As reações (XEP-0444), que eram o item mais trabalhoso, saíram da lista porque já existem na `develop`.
 
+**Total de features no roadmap:** 92
+**Features concluídas:** 88
+
 | # | Funcionalidade | Esforço | Observações |
 |---|---|---|---|
 | 1 | ~~Busca de canais~~ **feito em 23/10/2026** | médio, cerca de 17 a 27 h de trabalho focado (3 a 4 dias úteis) | Tela com os canais públicos do servidor do usuário, via `disco#items` no serviço de MUC. Paginada por RSM (XEP-0059): 50 por vez, com botão "Carregar mais". Ordenada alfabeticamente no app, que percorre todas as páginas no início e guarda só JID e nome (o nome já vem no `disco#items`). Cada linha mostra a contagem de membros (`disco#info`, consulta leve) e o avatar do canal (`vcard-temp`, sob demanda, com cache no `MLImageManager`; enquanto não chega, aparecem as iniciais coloridas). Botão "Entrar" reaproveita o fluxo de adicionar canal (entra nos bookmarks e nas conversas). Só salas públicas aparecem (no isaCloud, `muc_room_default_public = false`). |
