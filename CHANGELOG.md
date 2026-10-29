@@ -2,6 +2,12 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 62) — 29/10/2026
+
+### Mudado
+- **Ícone com o "im" mais equilibrado** (arte final ajustada pela Isadora): o balão ganhou mais respiro e as letras ficaram um pouco menores em relação a ele. Fontes em `isaCloud/branding/` (`logo-isacloud-im-ios-icon.svg` e `…-1024.png`, RGB sem alfa). Vale para todos os iOS — no 26+ o sistema aplica o Liquid Glass por cima.
+- **Roadmap em dia**: todos os itens concluídos estão riscados e o resumo antes da tabela mostra 92 features, 88 concluídas.
+
 ## 0.0.1 (build 61) — 29/10/2026
 
 ### Mudado
