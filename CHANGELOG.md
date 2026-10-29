@@ -2,6 +2,19 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 56) — 29/10/2026
+
+### Corrigido
+- **Mensagem que ficava "enviando" para sempre depois de um crash.** Se o app morresse no meio do envio, a mensagem ficava no banco com `sent = 0` e ninguém voltava a tentar: o indicador de envio não saía mais. Agora, na abertura, mensagens de saída com mais de um minuto que continuam sem confirmação são marcadas como **falha de entrega** — o balão mostra o aviso e o botão **tentar de novo** (que reenvia com o mesmo id). Nada é reenviado sozinho, então não há risco de duplicar.
+
+## 0.0.1 (build 55) — 29/10/2026
+
+### Corrigido
+- **Crash ao abrir uma conversa com mensagem de arquivo sem mimetype** (relatório do build 53, iPhone 12 Pro, iOS 27.0.1): a lista chama `replyQuoteText` para montar a citação, e o wrapper de KVO **lança exceção** quando o campo é nulo (`fileInfo.mimeType` de um anexo ainda não baixado) — o app abortava em `ObservableKVOWrapperCastingError`. A leitura passou a pedir o valor como opcional (com padrão seguro), então anexo sem tipo não derruba mais a tela.
+
+### Adicionado
+- **Instrumentação das esperas pelo banco.** O `MLSQLite` agora conta quantas vezes uma transação teve que esperar o lock e qual foi a maior espera; isso entra nas amostras de métricas como `db_lock_waits` e `db_lock_max_ms`, e o dashboard ganhou o painel **"Esperas pelo banco (lock)"**. É medição para decidir com dados se vale mexer na contenção (e não uma mudança no comportamento do banco).
+
 ## 0.0.1 (build 54) — 29/10/2026
 
 ### Adicionado

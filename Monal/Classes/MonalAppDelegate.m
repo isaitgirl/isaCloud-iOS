@@ -221,6 +221,14 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
     //isaCloud: device metrics for the resource evaluation (samples + MetricKit), exported from the Debug screen
     [MetricsCollector start];
     
+    //isaCloud: a message that was on its way when the app died keeps sent=0 and nobody would retry it (the sending indicator would
+    //stay forever): mark it as failed so the chat offers the retry button. Anything younger than a minute may still be in flight.
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
+        NSUInteger stale = [[DataLayer sharedInstance] markStaleOutgoingMessagesAsFailedBefore:[NSDate dateWithTimeIntervalSinceNow:-60]];
+        if(stale > 0)
+            DDLogWarn(@"isaCloud: marked %lu message(s) that stayed unsent as failed", (unsigned long)stale);
+    });
+    
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleScheduleBackgroundTaskNotification:) name:kScheduleBackgroundTask object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(nowIdle:) name:kMonalIdle object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(filetransfersNowIdle:) name:kMonalFiletransfersIdle object:nil];

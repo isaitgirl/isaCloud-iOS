@@ -186,3 +186,6 @@
 "Export Metrics" = "Exportar métricas";
 "Metrics export failed" = "Não foi possível exportar as métricas";
 "The app could not build the metrics file. Try again after using the app for a while." = "O app não conseguiu montar o arquivo de métricas. Tente de novo depois de usar o app por um tempo.";
+
+/* isaCloud: motivo mostrado quando uma mensagem ficou sem confirmação de envio */
+"the app was closed before this message could be sent" = "o app foi fechado antes de esta mensagem ser enviada";
