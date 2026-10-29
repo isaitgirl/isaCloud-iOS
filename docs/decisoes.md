@@ -5,6 +5,17 @@ Registro do **porquê** das escolhas feitas no fork: decisões de produto, de c�
 - O que está feito, em andamento ou pendente, com datas e resultados de teste, fica no `ROADMAP.md` (toda decisão daqui tem uma linha lá). O histórico de cada build fica no `CHANGELOG.md`.
 - Dados sensíveis ficam em `isaCloud/local/NOTAS-LOCAIS.md`, nunca aqui.
 
+## Métricas do aparelho e do sistema (29/10/2026)
+
+- **Pedido:** avaliar se o app consome recursos acima do esperado (CPU, bateria, memória) **por build**, com arquivos que possam ser copiados de tempo em tempo.
+- **Camada A — MetricKit** (`MetricsCollector.m`): assinante de `MXMetricManager` no app; cada payload (métricas e diagnósticos) é gravado em `<grupo>/metrics/metrickit-<kind>-<data>.json` com o build carimbado na chegada. É a fonte oficial da Apple (CPU, memória, bateria, lançamentos, hangs). **Limite:** os payloads chegam tipicamente 1×/dia (às vezes pulando dias) e trazem a versão curta, não o build — daí o carimbo.
+- **Camada B — amostrador próprio** (`MetricsCollector.m`): uma amostra JSONL em `<grupo>/metrics/samples-<data>.jsonl` na abertura, ao ir para segundo plano e a cada 5 minutos com o app ativo. Campos: `build`, `short`, `ios`, `model`, memória (`HelperTools report_memory` + `os_proc_available_memory`), CPU (delta por `getrusage(RUSAGE_SELF)`), `wall_ms`, térmica, modo de baixa energia, bateria, contas ociosas, último `lastAppexStart`, tamanho do banco e do WAL. Rotação: arquivos com mais de 45 dias são apagados.
+- **CPU:** a primeira versão usava `task_info(TASK_BASIC_INFO_64)`, que devolve **zero** nos simuladores (iOS 18 e 27); trocado por `getrusage`, que é POSIX e público.
+- **Exportação:** Depuração → "Métricas do aparelho" → **"Exportar métricas"** monta um JSON único (`isaCloud-metrics-<build>-<data>.json`, com `exportedAt`, `build`, `samples` e `metrickit`) e abre o compartilhamento. O JSONL bruto continua no container (não é copiável pelo `devicectl` porque fica na raiz do App Group).
+- **Harness:** `tools/metrics-harness/` (Python 3, só biblioteca padrão) lê o JSON exportado **ou** um diretório com os arquivos brutos, converte para line protocol e envia ao InfluxDB 2.x por `POST /api/v2/write`. Credenciais em `.credentials` (ignorado pelo Git; modelo em `.credentials.example`): `INFLUX_URL`, `INFLUX_TOKEN`, `INFLUX_ORG`, `INFLUX_BUCKET`, `INFLUX_MEASUREMENT`. Estado em `.sent-state.json` evita reenvio duplicado; `--dry-run` imprime o line protocol sem enviar.
+- **Dashboard:** `tools/metrics-harness/grafana/isaCloud-metrics-12.0.1.json`, importável no **Grafana 12.0.1**, com **uma única variável** (o datasource InfluxDB) — de propósito, para importar em qualquer instância sem editar painel.
+- **O que ainda falta para medir de verdade:** os dados de MetricKit só aparecem depois de ~1 dia de uso; `mem_available_mb` é 0 no simulador (é 0 também por natureza lá); `model` sai `arm64` no simulador e o identificador real no aparelho.
+
 ## Avisos fantasma do push: filtro no servidor, v2 (29/10/2026)
 
 - **Sintoma observado:** notificações "New Message?" com **som** e que **não somem**, em rajada (duas às 11:19). Antes, o mesmo mecanismo produzia avisos **sem som que somem sozinhos** — esse segundo comportamento é o esperado: a extensão entrega um aviso passivo e o app o remove quando o appex desliga (~25 s, visto no log: `removing 1 push placeholder` → `Shutting down appex`).

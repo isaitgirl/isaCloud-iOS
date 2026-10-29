@@ -11,6 +11,7 @@
 
 #import <BackgroundTasks/BackgroundTasks.h>
 #import "MonalAppDelegate.h"
+#import "MetricsCollector.h"
 #import <monalxmpp/MLConstants.h>
 #import <monalxmpp/HelperTools.h>
 #import "MLNotificationManager.h"
@@ -216,6 +217,9 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
 {
     //this will use the cached values in defaultsDB, if possible
     [[MLXMPPManager sharedInstance] setPushToken:nil];
+    
+    //isaCloud: device metrics for the resource evaluation (samples + MetricKit), exported from the Debug screen
+    [MetricsCollector start];
     
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleScheduleBackgroundTaskNotification:) name:kScheduleBackgroundTask object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(nowIdle:) name:kMonalIdle object:nil];

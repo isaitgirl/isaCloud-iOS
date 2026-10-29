@@ -180,3 +180,9 @@
 
 /* isaCloud: menu de Configurações → App, tela de importar o histórico do Monal */
 "Import from Monal" = "Importar do Monal";
+
+/* isaCloud: Depuração → métricas do aparelho (harness do InfluxDB/Grafana) */
+"Device Metrics" = "Métricas do aparelho";
+"Export Metrics" = "Exportar métricas";
+"Metrics export failed" = "Não foi possível exportar as métricas";
+"The app could not build the metrics file. Try again after using the app for a while." = "O app não conseguiu montar o arquivo de métricas. Tente de novo depois de usar o app por um tempo.";

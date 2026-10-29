@@ -402,6 +402,7 @@
 		};
 /* End PBXCopyFilesBuildPhase section */
 
+		3AD82514469F8FCBF2145418 /* MetricsCollector.m in Sources */ = {isa = PBXBuildFile; fileRef = 947BC57D16853EFDFD2A04AF /* MetricsCollector.m */; };
 /* Begin PBXFileReference section */
 		061EF1BEDEE7A71FDF9AB402 /* Pods-shareSheet.appstore.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-shareSheet.appstore.xcconfig"; path = "Target Support Files/Pods-shareSheet/Pods-shareSheet.appstore.xcconfig"; sourceTree = "<group>"; };
 		0D0362F6B26B9407BE313F36 /* Pods-NotificaionService.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NotificaionService.debug.xcconfig"; path = "Target Support Files/Pods-NotificaionService/Pods-NotificaionService.debug.xcconfig"; sourceTree = "<group>"; };
@@ -925,6 +926,8 @@
 		F04FE24284F1563D80523B52 /* Pods-monalxmpp.alpha-catalyst.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-monalxmpp.alpha-catalyst.xcconfig"; path = "Target Support Files/Pods-monalxmpp/Pods-monalxmpp.alpha-catalyst.xcconfig"; sourceTree = "<group>"; };
 		F7506FDE7A78EB0CAB14FF60 /* Pods-MonalUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MonalUITests.debug.xcconfig"; path = "Target Support Files/Pods-MonalUITests/Pods-MonalUITests.debug.xcconfig"; sourceTree = "<group>"; };
 		FCADB10208409DD462AC921F /* Pods-Monal.beta.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Monal.beta.xcconfig"; path = "Target Support Files/Pods-Monal/Pods-Monal.beta.xcconfig"; sourceTree = "<group>"; };
+		6A63573C5DEC2FD016BAD2F8 /* MetricsCollector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MetricsCollector.h; sourceTree = "<group>"; };
+		947BC57D16853EFDFD2A04AF /* MetricsCollector.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MetricsCollector.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1452,6 +1455,8 @@
 				540A3FAC24D674BD0008965D /* MLSQLite.m */,
 				C1AAC3E224B5EF4100BB15D6 /* HelperTools.h */,
 				C1AAC3E324B5EF4100BB15D6 /* HelperTools.m */,
+				6A63573C5DEC2FD016BAD2F8 /* MetricsCollector.h */,
+				947BC57D16853EFDFD2A04AF /* MetricsCollector.m */,
 				540E139F24CDCDB30038FDA0 /* MLProcessLock.m */,
 				540E13A124CDCE3B0038FDA0 /* MLProcessLock.h */,
 				541E4CBD254AA0B600FD7B28 /* MLHandler.h */,
@@ -2538,6 +2543,7 @@
 				541E4CC7254D370200FD7B28 /* MLPubSubProcessor.m in Sources */,
 				26CC57C723A0892100ABB92A /* MLContact.m in Sources */,
 				540F625F24BA951E0008A6D8 /* HelperTools.m in Sources */,
+				3AD82514469F8FCBF2145418 /* MetricsCollector.m in Sources */,
 				38720923251EDE07001837EB /* MLXEPSlashMeHandler.m in Sources */,
 				844921EA2C29F9A000B99A9C /* MLDelayableTimer.m in Sources */,
 				544656BB2534910D006B2953 /* XMPPDataForm.m in Sources */,
