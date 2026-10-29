@@ -1378,7 +1378,9 @@ static BOOL _dnssecWarningDisplayed;
     else
     {
         cell.backgroundColor = [UIColor clearColor];
-        cell.statusText.textColor = [UIColor lightGrayColor];
+        //isaCloud: this runs after initCell, so it is the one that decides the preview color (a highlighted chat gets
+        //the near black of the bold preview instead of the usual light gray)
+        cell.statusText.textColor = cell.previewHighlighted ? [MLContactCell previewHighlightColor] : [UIColor lightGrayColor];
     }
 
     return cell;

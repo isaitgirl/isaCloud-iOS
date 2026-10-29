@@ -2,6 +2,12 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 52) — 29/10/2026
+
+### Mudado
+- **A conversa com bolinha vermelha na lista fica mais fácil de achar:** o preview da última mensagem aparece em **cinza quase preto (#373736)** em vez do cinza claro, e um **`@` rosa** aparece logo antes do sininho que indica o tipo de notificação do canal (só quando há sininho: canal em "só menção" ou silenciado). O nome do canal, a linha da conta e as conversas com bolinha cinza continuam exatamente como eram — a regra do vermelho/cinza não mudou.
+- O negrito chegou a ser usado nesse preview e foi **descartado**: no iPhone a fonte ficava visualmente maior que o nome da conversa.
+
 ## 0.0.1 (build 51) — 29/10/2026
 
 ### Corrigido

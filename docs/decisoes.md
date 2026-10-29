@@ -5,6 +5,15 @@ Registro do **porquê** das escolhas feitas no fork: decisões de produto, de c�
 - O que está feito, em andamento ou pendente, com datas e resultados de teste, fica no `ROADMAP.md` (toda decisão daqui tem uma linha lá). O histórico de cada build fica no `CHANGELOG.md`.
 - Dados sensíveis ficam em `isaCloud/local/NOTAS-LOCAIS.md`, nunca aqui.
 
+## Destaque da conversa com bolinha vermelha na lista (29/10/2026)
+
+- **Pedido:** quando a conversa tem bolinha vermelha (notificação/menção), o preview fica em negrito e entra um "@" antes do sininho que indica o tipo de notificação do canal.
+- **Cor:** começou como negrito; virou **negrito + cinza quase preto**; ficou **só o cinza quase preto (#373736)**, porque o negrito deixava a fonte visualmente maior que o nome da conversa no iPhone. O `@` é rosa (`isaCloudPink`), a mesma cor do sininho.
+- **Onde aplicar:** o texto do preview é montado em `showStatusText:inboundDir:fromUser:`, que **reescreve** o label a cada atualização e compara com o texto "original" guardado — atributos aplicados depois dele são perdidos. Por isso o destaque é aplicado **dentro** dele, a partir de `_previewHighlight`, calculado no `initCell` antes de montar o texto.
+- **Quem decide a cor final:** o `ActiveChatsViewController` escreve `cell.statusText.textColor` **depois** de `initCell:` (cinza claro, ou branco na conversa selecionada). É ele que dá a última palavra, então a célula expõe `previewHighlighted` e o controlador usa `[MLContactCell previewHighlightColor]` quando é o caso.
+- **Sem regressão de regra:** o destaque usa o mesmo resultado de `shouldShowGrayBadgeForContact` que pinta a bolinha, guardado em `_badgeIsGray` (calculado uma única vez por célula, porque a regra consulta o banco para achar menção).
+- **O "@"** só aparece quando há sininho visível (canal em "só menção" ou silenciado): é o lugar que o pedido descreve. Em conversa 1:1, que não tem sininho, só a cor muda.
+
 ## Corrida entre as limpezas de abertura e a migration (29/10/2026)
 
 - **Sintoma:** depois de importar um banco (build 50), o app abortava em toda abertura num iPhone 11 com iOS 26.7 — quatro relatórios, todos `EXC_CRASH (SIGABRT)`, com a thread 13 (segundo plano) lançando exceção no `MLSQLite` ao consultar `buddylist`.
