@@ -16,6 +16,18 @@ Registro do **porquê** das escolhas feitas no fork: decisões de produto, de c�
 - **Dashboard:** `tools/metrics-harness/grafana/isaCloud-metrics-12.0.1.json`, importável no **Grafana 12.0.1**, com **uma única variável** (o datasource InfluxDB) — de propósito, para importar em qualquer instância sem editar painel.
 - **O que ainda falta para medir de verdade:** os dados de MetricKit só aparecem depois de ~1 dia de uso; `mem_available_mb` é 0 no simulador (é 0 também por natureza lá); `model` sai `arm64` no simulador e o identificador real no aparelho.
 
+## Filtros da lista de conversas (29/10/2026)
+
+- **Pedido:** chips abaixo da busca na tela inicial, com multi-seleção e estado guardado entre aberturas: **Não lidas, Contatos, Grupos e Canais**.
+- **Semântica:** "Contatos/Grupos/Canais" são mutuamente exclusivos por conversa (`isMuc` + `mucType`), então formam um **conjunto**; "Não lidas" é **ortogonal** (`unreadCount > 0`, contando também a bolinha cinza de canal silenciado). **Nenhum tipo marcado = todos** — o filtro sozinho nunca deixa a tela vazia sem explicação.
+- **UI:** fileira de pílulas (`ChatListFilterBar`, classe privada no próprio `ActiveChatsViewController.m` para não mexer no pbxproj), fixa entre a barra de navegação e a lista. `UISegmentedControl` foi descartado: não tem multi-seleção. Estado: pílula preenchida (rosa `isaCloudPink`) = ativa, contorno = inativa; VoiceOver ganha `UIAccessibilityTraitSelected`.
+- **Onde filtra:** na mesma rotina que monta as listas (`refreshDisplay`), depois de buscar `activeContactsWithPinned:` — assim contagens, seções e o estado vazio seguem coerentes. Trocar chip zera as listas e recarrega (`reloadData` + `refreshDisplay`), em vez de tentar o diff incremental.
+- **Persistência:** `chatListFilterUnread` (bool) e `chatListFilterTypes` (array) no `defaultsDB` do app.
+- **Estado vazio:** com o filtro ativo o título vira "Nenhuma conversa com esses filtros" e a imagem/descrição do estado vazio padrão são omitidas (o layout manual antigo escalava a imagem para a tela inteira).
+- **Correção de brinde:** `imageForEmptyDataSet:` montava um dicionário de views que podia conter `nil` e **derrubava o app** quando o estado vazio aparecia; agora há guarda.
+- **v1:** conversa que chega com o filtro fechado não entra nem sai da lista até o filtro mudar (combinado com a Isadora).
+- **Testado:** iOS 18.6 no simulador com o estado dirigido por argumento de lançamento (`-chatListFilterTypes contact|group|channel`, `-chatListFilterUnread YES`), porque o `defaults write` do host não chega à suite do App Group. Capturas em `docs/screenshots/2026-10-29-15*-iphone-xr-ios18-filtros-*`.
+
 ## Avisos fantasma do push: filtro no servidor, v2 (29/10/2026)
 
 - **Sintoma observado:** notificações "New Message?" com **som** e que **não somem**, em rajada (duas às 11:19). Antes, o mesmo mecanismo produzia avisos **sem som que somem sozinhos** — esse segundo comportamento é o esperado: a extensão entrega um aviso passivo e o app o remove quando o appex desliga (~25 s, visto no log: `removing 1 push placeholder` → `Shutting down appex`).

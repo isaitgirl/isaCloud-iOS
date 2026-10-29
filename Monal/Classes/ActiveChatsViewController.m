@@ -92,6 +92,130 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
 */
 
 
+#pragma mark - isaCloud: filtros da lista de conversas
+
+//isaCloud: the chips under the search bar. Multi-select and kept in the defaults: "Unread" is independent and the three types are a
+//set where "no type selected" means every type (the filters alone never leave the screen empty without an explanation).
+@interface ChatListFilterBar : UIView
+@property (nonatomic, copy) void (^onChange)(void);
+-(instancetype) initWithUnread:(BOOL) unread types:(NSSet<NSString*>*) types;
+-(BOOL) unreadSelected;
+-(NSSet<NSString*>*) selectedTypes;
+@end
+
+@implementation ChatListFilterBar
+{
+    UIButton* _unread;
+    NSMutableDictionary<NSString*, UIButton*>* _types;
+}
+
+-(UIColor*) pink
+{
+    return [UIColor colorNamed:@"isaCloudPink"] ?: [UIColor systemPinkColor];
+}
+
+-(instancetype) initWithUnread:(BOOL) unread types:(NSSet<NSString*>*) types
+{
+    self = [super initWithFrame:CGRectZero];
+    if(self == nil)
+        return nil;
+    _types = [NSMutableDictionary new];
+    UIScrollView* scrollView = [UIScrollView new];
+    scrollView.showsHorizontalScrollIndicator = NO;
+    scrollView.translatesAutoresizingMaskIntoConstraints = NO;
+    UIStackView* stack = [UIStackView new];
+    stack.axis = UILayoutConstraintAxisHorizontal;
+    stack.spacing = 8;
+    stack.translatesAutoresizingMaskIntoConstraints = NO;
+    [self addSubview:scrollView];
+    [scrollView addSubview:stack];
+
+    _unread = [self makeButton:NSLocalizedString(@"Unread", @"filter of the chat list: only chats with unread messages")];
+    [_unread setSelected:unread];
+    [self refreshLook:_unread];
+    [stack addArrangedSubview:_unread];
+    NSArray* ordered = @[@"contact", @"group", @"channel"];
+    NSArray* titles = @[NSLocalizedString(@"Filter: contacts", @""), NSLocalizedString(@"Filter: groups", @""), NSLocalizedString(@"Filter: channels", @"")];
+    for(NSUInteger i = 0; i < ordered.count; i++)
+    {
+        UIButton* button = [self makeButton:titles[i]];
+        [button setSelected:[types containsObject:ordered[i]]];
+        [self refreshLook:button];
+        _types[ordered[i]] = button;
+        [stack addArrangedSubview:button];
+    }
+
+    [NSLayoutConstraint activateConstraints:@[
+        [scrollView.topAnchor constraintEqualToAnchor:self.topAnchor],
+        [scrollView.bottomAnchor constraintEqualToAnchor:self.bottomAnchor],
+        [scrollView.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:16],
+        [scrollView.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16],
+        [stack.topAnchor constraintEqualToAnchor:scrollView.topAnchor constant:6],
+        [stack.bottomAnchor constraintEqualToAnchor:scrollView.bottomAnchor constant:-6],
+        [stack.leadingAnchor constraintEqualToAnchor:scrollView.leadingAnchor],
+        [stack.trailingAnchor constraintEqualToAnchor:scrollView.trailingAnchor],
+    ]];
+    return self;
+}
+
+-(UIButton*) makeButton:(NSString*) title
+{
+    UIButton* button = [UIButton buttonWithType:UIButtonTypeSystem];
+    [button setTitle:title forState:UIControlStateNormal];
+    button.titleLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightMedium];
+    button.layer.cornerRadius = 15;
+    button.layer.borderWidth = 1;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    button.contentEdgeInsets = UIEdgeInsetsMake(4, 12, 4, 12);
+#pragma clang diagnostic pop
+    [button addTarget:self action:@selector(toggle:) forControlEvents:UIControlEventTouchUpInside];
+    [button.heightAnchor constraintEqualToConstant:30].active = YES;
+    return button;
+}
+
+-(void) refreshLook:(UIButton*) button
+{
+    UIColor* pink = [self pink];
+    if(button.isSelected)
+    {
+        button.backgroundColor = pink;
+        [button setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        button.layer.borderColor = pink.CGColor;
+    }
+    else
+    {
+        button.backgroundColor = [UIColor clearColor];
+        [button setTitleColor:pink forState:UIControlStateNormal];
+        button.layer.borderColor = pink.CGColor;
+    }
+    [button setAccessibilityTraits:button.isSelected ? (UIAccessibilityTraitButton | UIAccessibilityTraitSelected) : UIAccessibilityTraitButton];
+}
+
+-(void) toggle:(UIButton*) button
+{
+    [button setSelected:!button.isSelected];
+    [self refreshLook:button];
+    if(self.onChange != nil)
+        self.onChange();
+}
+
+-(BOOL) unreadSelected
+{
+    return _unread.isSelected;
+}
+
+-(NSSet<NSString*>*) selectedTypes
+{
+    NSMutableSet* selected = [NSMutableSet new];
+    for(NSString* key in _types)
+        if(_types[key].isSelected)
+            [selected addObject:key];
+    return selected;
+}
+
+@end
+
 @interface ActiveChatsViewController() <UISearchResultsUpdating, UISearchControllerDelegate> {
     int _startedOrientation;
     double _portraitTop;
@@ -100,6 +224,7 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
     NSDictionary<NSNumber*, NSString*>* _accountJids;      //isaCloud: account id -> jid, only while more than one account is enabled (shown under the names)
     NSString* _accountAvatarSignature;      //isaCloud: what the profile button shows now, to not set the same image again
     NSMutableArray* _blockQueue;
+    ChatListFilterBar* _chatListFilterBar;      //isaCloud: chips under the search bar
     dispatch_semaphore_t _blockQueueSemaphore;
 }
 @property (atomic, strong) NSMutableArray* unpinnedContacts;
@@ -461,7 +586,27 @@ static BOOL _dnssecWarningDisplayed;
     self.navigationItem.preferredSearchBarPlacement = UINavigationItemSearchBarPlacementStacked;
     self.definesPresentationContext = YES;
 
-    self.view = self.chatListTable;
+    //isaCloud: the filter chips stay above the list (fixed), the list gets the rest of the screen
+    UIView* container = [UIView new];
+    container.backgroundColor = self.chatListTable.backgroundColor;
+    _chatListFilterBar = [[ChatListFilterBar alloc] initWithUnread:[self chatListFilterUnread] types:[self chatListFilterTypes]];
+    __weak typeof(self) weakSelfForFilter = self;
+    _chatListFilterBar.onChange = ^{ [weakSelfForFilter chatListFilterChanged]; };
+    _chatListFilterBar.translatesAutoresizingMaskIntoConstraints = NO;
+    self.chatListTable.translatesAutoresizingMaskIntoConstraints = NO;
+    [container addSubview:_chatListFilterBar];
+    [container addSubview:self.chatListTable];
+    [NSLayoutConstraint activateConstraints:@[
+        [_chatListFilterBar.topAnchor constraintEqualToAnchor:container.safeAreaLayoutGuide.topAnchor],
+        [_chatListFilterBar.heightAnchor constraintEqualToConstant:42],
+        [_chatListFilterBar.leadingAnchor constraintEqualToAnchor:container.leadingAnchor],
+        [_chatListFilterBar.trailingAnchor constraintEqualToAnchor:container.trailingAnchor],
+        [self.chatListTable.topAnchor constraintEqualToAnchor:_chatListFilterBar.bottomAnchor],
+        [self.chatListTable.leadingAnchor constraintEqualToAnchor:container.leadingAnchor],
+        [self.chatListTable.trailingAnchor constraintEqualToAnchor:container.trailingAnchor],
+        [self.chatListTable.bottomAnchor constraintEqualToAnchor:container.bottomAnchor],
+    ]];
+    self.view = container;
     
     self.sizeClass = [SizeClassWrapper new];
     [self updateSizeClass];
@@ -520,6 +665,62 @@ static BOOL _dnssecWarningDisplayed;
     });
 }
 
+#pragma mark - isaCloud: filtros da lista
+
+-(BOOL) chatListFilterUnread
+{
+    return [[HelperTools defaultsDB] boolForKey:@"chatListFilterUnread"];
+}
+
+-(NSSet<NSString*>*) chatListFilterTypes
+{
+    id stored = [[HelperTools defaultsDB] objectForKey:@"chatListFilterTypes"];
+    //an array (what this code writes) or a comma separated string (handy for a launch argument while debugging)
+    if([stored isKindOfClass:[NSString class]])
+        stored = [(NSString*)stored componentsSeparatedByString:@","];
+    return [NSSet setWithArray:[stored isKindOfClass:[NSArray class]] ? stored : @[]];
+}
+
+-(BOOL) chatListFiltersActive
+{
+    return [self chatListFilterUnread] || [self chatListFilterTypes].count > 0;
+}
+
+//isaCloud: a chat passes when it is unread (if the filter asks for that) and its type is one of the selected ones: with no type
+//selected every type passes, so the screen never looks empty just because of the filter
+-(BOOL) contactPassesChatListFilter:(MLContact*) contact
+{
+    if([self chatListFilterUnread] && contact.unreadCount == 0)
+        return NO;
+    NSSet<NSString*>* types = [self chatListFilterTypes];
+    if(types.count == 0)
+        return YES;
+    NSString* kind = !contact.isMuc ? @"contact" : ([contact.mucType isEqualToString:kMucTypeGroup] ? @"group" : @"channel");
+    return [types containsObject:kind];
+}
+
+-(NSMutableArray<MLContact*>*) filteredChatList:(NSArray<MLContact*>*) contacts
+{
+    NSMutableArray<MLContact*>* filtered = [NSMutableArray new];
+    for(MLContact* contact in contacts)
+        if([self contactPassesChatListFilter:contact])
+            [filtered addObject:contact];
+    return filtered;
+}
+
+-(void) chatListFilterChanged
+{
+    [[HelperTools defaultsDB] setBool:_chatListFilterBar.unreadSelected forKey:@"chatListFilterUnread"];
+    NSArray* types = [_chatListFilterBar.selectedTypes.allObjects sortedArrayUsingSelector:@selector(compare:)];
+    [[HelperTools defaultsDB] setObject:types forKey:@"chatListFilterTypes"];
+    [[HelperTools defaultsDB] synchronize];
+    //the list is not filtered incrementally on purpose: the change can hide or show many chats at once
+    self.pinnedContacts = [NSMutableArray new];
+    self.unpinnedContacts = [NSMutableArray new];
+    [self.chatListTable reloadData];
+    [self refreshDisplay];
+}
+
 -(void) refreshDisplay
 {
     void (^resizeSections)(UITableView*, size_t, int) = ^void(UITableView* table, size_t section, int diff){
@@ -552,6 +753,9 @@ static BOOL _dnssecWarningDisplayed;
             newUnpinnedContacts = [NSMutableArray new];
         if(!newPinnedContacts)
             newPinnedContacts = [NSMutableArray new];
+        //isaCloud: the chips above the list decide what is shown (pinned chats included)
+        newUnpinnedContacts = [self filteredChatList:newUnpinnedContacts];
+        newPinnedContacts = [self filteredChatList:newPinnedContacts];
 
         int unpinnedCntDiff = (int)unpinnedConCntBefore - (int)newUnpinnedContacts.count;
         int pinnedCntDiff = (int)pinnedConCntBefore - (int)newPinnedContacts.count;
@@ -1472,6 +1676,10 @@ static BOOL _dnssecWarningDisplayed;
 
 -(UIImage*) imageForEmptyDataSet:(UIScrollView*) scrollView
 {
+    //isaCloud: with the filters on, the empty state is just the title (the manual layout below expects the full "no conversations
+    //yet" block and scaled the image to the whole screen)
+    if([self chatListFiltersActive])
+        return nil;
     int orientation;
     if(self.tableView.frame.size.height > self.tableView.frame.size.width)
     {
@@ -1515,6 +1723,14 @@ static BOOL _dnssecWarningDisplayed;
         tableFrame.origin.y += headerFrame.size.height;
     }
     
+    //isaCloud: the empty view may not have built its subviews yet (a filter can empty the list on the first layout);
+    //building the constraints dictionary with a nil view throws and killed the app
+    if(emptyDataSetView.imageView == nil || emptyDataSetView.titleLabel == nil || emptyDataSetView.detailLabel == nil)
+    {
+        if(self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark)
+            return [UIImage imageNamed:ACImageNameChatDark];
+        return [UIImage imageNamed:ACImageNameChat];
+    }
     emptyDataSetView.contentView.frame = tableFrame;
     emptyDataSetView.imageView.frame = tableFrame;
     [emptyDataSetView.contentView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:|[imageView]-(32@750)-[titleLabel]-(16@750)-[detailLabel]|" options:0 metrics:nil views:@{
@@ -1566,7 +1782,8 @@ static BOOL _dnssecWarningDisplayed;
 
 -(NSAttributedString*) titleForEmptyDataSet:(UIScrollView*) scrollView
 {
-    NSString* text = NSLocalizedString(@"No active conversations", @"");
+    //isaCloud: with the filters on, say why the list is empty instead of showing the "no conversations yet" text
+    NSString* text = [self chatListFiltersActive] ? NSLocalizedString(@"No conversations with these filters", @"") : NSLocalizedString(@"No active conversations", @"");
     
     NSDictionary* attributes = @{NSFontAttributeName: [UIFont boldSystemFontOfSize:18.0f],
                                  NSForegroundColorAttributeName: (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark ? [UIColor whiteColor] : [UIColor blackColor])};
@@ -1576,6 +1793,9 @@ static BOOL _dnssecWarningDisplayed;
 
 - (NSAttributedString*)descriptionForEmptyDataSet:(UIScrollView*) scrollView
 {
+    //isaCloud: with the filters on, the title already explains the empty list
+    if([self chatListFiltersActive])
+        return nil;
     NSString* text = NSLocalizedString(@"When you start a conversation\nwith someone, they will\nshow up here.", @"");
     
     NSMutableParagraphStyle* paragraph = [NSMutableParagraphStyle new];

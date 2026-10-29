@@ -189,3 +189,7 @@
 
 /* isaCloud: motivo mostrado quando uma mensagem ficou sem confirmação de envio */
 "the app was closed before this message could be sent" = "o app foi fechado antes de esta mensagem ser enviada";
+
+/* isaCloud: filtros da lista de conversas (chips abaixo da busca) */
+"Unread" = "Não lidas";
+"No conversations with these filters" = "Nenhuma conversa com esses filtros";
