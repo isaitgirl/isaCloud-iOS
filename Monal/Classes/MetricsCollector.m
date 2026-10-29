@@ -93,6 +93,21 @@ static BOOL _launchFinishedWritten = NO;
         _launchMarks[label] = @(milliseconds);
 }
 
+static double _lastStageTime = 0.0;
+
+//records the time since the previous stage: the stages of didFinishLaunching are sequential, so the deltas add up to app_delegate_ms
++(void) launchStage:(NSString*) name
+{
+    if(name == nil || _launchStart <= 0.0)
+        return;
+    double now = CACurrentMediaTime();
+    if(_lastStageTime <= 0.0)
+        _lastStageTime = _launchStart;
+    double delta = (now - _lastStageTime) * 1000.0;
+    _lastStageTime = now;
+    _launchMarks[[@"stage_" stringByAppendingString:name]] = @(delta);
+}
+
 +(void) launchFinished
 {
     //only writes when both the screen appeared and the list was built, whichever happens last
@@ -109,7 +124,7 @@ static BOOL _launchFinishedWritten = NO;
     NSNumber* appDelegate = _launchMarks[@"app_delegate"] ?: @(0);
     NSNumber* listBuild = _launchMarks[@"list_build"] ?: @(0);
     double total = [_launchMarks[@"first_frame"] doubleValue];
-    NSDictionary* launch = @{
+    NSMutableDictionary* launch = [@{
         @"build": info[@"CFBundleVersion"] ?: @"?",
         @"short": info[@"CFBundleShortVersionString"] ?: @"?",
         @"ios": [[UIDevice currentDevice] systemVersion] ?: @"?",
@@ -122,7 +137,11 @@ static BOOL _launchFinishedWritten = NO;
         @"main_ms": @(appDelegate.doubleValue + listBuild.doubleValue),
         @"cold": @YES,
         @"at": [[[NSISO8601DateFormatter alloc] init] stringFromDate:[NSDate date]],
-    };
+    } mutableCopy];
+    //the stages of didFinishLaunching, as stage_<nome>_ms (they add up to app_delegate_ms)
+    for(NSString* key in _launchMarks)
+        if([key hasPrefix:@"stage_"])
+            launch[[key stringByAppendingString:@"_ms"]] = _launchMarks[key];
     NSData* data = [NSJSONSerialization dataWithJSONObject:launch options:0 error:nil];
     if(data == nil)
         return;

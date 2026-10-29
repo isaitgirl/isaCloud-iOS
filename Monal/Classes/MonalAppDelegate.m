@@ -217,9 +217,11 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
 {
     //this will use the cached values in defaultsDB, if possible
     [[MLXMPPManager sharedInstance] setPushToken:nil];
+    [MetricsCollector launchStage:@"xmpp_manager"];
     
     //isaCloud: device metrics for the resource evaluation (samples + MetricKit), exported from the Debug screen
     [MetricsCollector start];
+    [MetricsCollector launchStage:@"metrics_start"];
     
     //isaCloud: a message that was on its way when the app died keeps sent=0 and nobody would retry it (the sending indicator would
     //stay forever): mark it as failed so the chat offers the retry button. Anything younger than a minute may still be in flight.
@@ -240,6 +242,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(prepareForFreeze:) name:kMonalWillBeFreezed object:nil];
     
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleFiletransferEventsFinished) name:kMonalFiletransferEventsFinished object:nil];
+    [MetricsCollector launchStage:@"observers"];
     
     UNUserNotificationCenter* center = [UNUserNotificationCenter currentNotificationCenter];
     center.delegate = self;
@@ -352,6 +355,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
         });
     }];
     [center setNotificationCategories:[NSSet setWithObjects:messageCategory, reactionCategory, somethingRegardingAContactCategory, subscriptionCategory , nil]];
+    [MetricsCollector launchStage:@"notifications"];
 
     UINavigationBarAppearance* appearance = [UINavigationBarAppearance new];
     [appearance configureWithTransparentBackground];
@@ -363,6 +367,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
     self.window.windowScene.titlebar.titleVisibility = UITitlebarTitleVisibilityHidden;
 #endif
     [[UINavigationBar appearance] setPrefersLargeTitles:YES];
+    [MetricsCollector launchStage:@"appearance"];
 
     //handle message notifications by initializing the MLNotificationManager
     [MLNotificationManager sharedInstance];
@@ -370,6 +375,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
     // Play audio even if phone is in silent mode
     [HelperTools configureDefaultAudioSession];
     self.audioState = MLAudioStateNormal;
+    [MetricsCollector launchStage:@"audio_session"];
     
     DDLogInfo(@"App started: %@", [HelperTools appBuildVersionInfoFor:MLVersionTypeLog]);
     
@@ -386,9 +392,11 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
         _shutdownPending = NO;
     }
     [self addBackgroundTask];
+    [MetricsCollector launchStage:@"background_task"];
     
     //should any accounts connect?
     [self connectIfNecessaryWithOptions:launchOptions];
+    [MetricsCollector launchStage:@"connect"];
     
     //handle IPC messages (this should be done *after* calling connectIfNecessary to make sure any disconnectAll messages are handled properly
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(incomingIPC:) name:kMonalIncomingIPC object:nil];

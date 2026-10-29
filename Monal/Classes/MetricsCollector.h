@@ -26,6 +26,7 @@ NS_ASSUME_NONNULL_BEGIN
 +(void) launchStarted;
 +(void) launchMark:(NSString*) label;
 +(void) launchDuration:(NSString*) label milliseconds:(double) milliseconds;
++(void) launchStage:(NSString*) name;
 +(void) launchFinished;
 
 /// builds a single JSON with every sample and MetricKit payload collected so far, for the share sheet
