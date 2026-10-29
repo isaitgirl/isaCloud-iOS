@@ -119,7 +119,7 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
     config.baseForegroundColor = button.isSelected ? [UIColor whiteColor] : gray;
     config.background.backgroundColor = button.isSelected ? gray : [UIColor clearColor];
     config.background.cornerRadius = 14;
-    config.contentInsets = NSDirectionalEdgeInsetsMake(3, 11, 3, 11);
+    config.contentInsets = NSDirectionalEdgeInsetsMake(3, 9, 3, 9);
     button.configuration = config;
     button.layer.borderWidth = 1;
     button.layer.cornerRadius = 14;
@@ -186,12 +186,14 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
     UIButton* button = [UIButton buttonWithType:UIButtonTypeSystem];
     [button setTitle:title forState:UIControlStateNormal];
     UIButtonConfiguration* config = [UIButtonConfiguration plainButtonConfiguration];
-    config.title = title;
+    //isaCloud: 11 pt with a little negative kerning: the system font has no real condensed variant on iOS, so the horizontal
+    //spacing is tightened by hand (the pills get shorter without shrinking the glyphs as much as a smaller size would)
     config.attributedTitle = [[NSAttributedString alloc] initWithString:title attributes:@{
-        NSFontAttributeName: [UIFont systemFontOfSize:13 weight:UIFontWeightMedium],
+        NSFontAttributeName: [UIFont systemFontOfSize:11 weight:UIFontWeightMedium],
+        NSKernAttributeName: @(-0.2),
     }];
     button.configuration = config;
-    button.titleLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightMedium];
+    button.titleLabel.font = [UIFont systemFontOfSize:11 weight:UIFontWeightMedium];
     [button addTarget:self action:@selector(toggle:) forControlEvents:UIControlEventTouchUpInside];
     [button.heightAnchor constraintEqualToConstant:28].active = YES;
     return button;
@@ -914,6 +916,13 @@ static BOOL _dnssecWarningDisplayed;
 
 -(void) insertOrMoveContact:(MLContact*) contact completion:(void (^ _Nullable)(BOOL finished)) completion
 {
+    //isaCloud: a chat that does not pass the filter chips does not enter the list (a new message in a channel must not show up
+    //while "Contacts" is the only filter, for instance). Chats already on screen keep updating through the normal paths.
+    if(![self contactPassesChatListFilter:contact])
+    {
+        if(completion) completion(YES);
+        return;
+    }
     dispatch_async(dispatch_get_main_queue(), ^{
         //extract chat array inside main queue (we only write to these arrays from the main queue)
         //this makes sure that the call to performBatchUpdates probably running in another thread
