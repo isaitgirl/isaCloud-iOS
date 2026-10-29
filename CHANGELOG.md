@@ -2,6 +2,13 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 63) — 29/10/2026
+
+### Corrigido
+- **Fim dos "crashes" em iPhone 11 e XR** (relatórios do Will, build 54, iOS 26.7.2): os dois incidentes eram o **vigia de travamento do KSCrash** matando o app, não um bug de lógica. O limiar dele é fixo em **250 ms**; na abertura a frio num telefone mais antigo a lista de conversas passava disso decodificando avatares (`imageWithContentsOfFile:` na thread principal) e montando o texto da prévia. Um dos relatórios ainda mostra o próprio KSCrash quebrando ao escrever o relatório.
+  - O vigia **não é mais ligado em produção** (só em build de desenvolvimento); travamentos reais continuam aparecendo como `0x8BADF00D` do sistema.
+  - A **decodificação dos avatares saiu da thread principal**: `getIconForContact:withCompletion:` devolve na hora o ícone de reserva (ou o que estiver em cache) e decodifica o avatar de verdade em background, entregando-o na main quando fica pronto. A célula usa o ícone devolvido na hora e troca quando o real chega.
+
 ## 0.0.1 (build 62) — 29/10/2026
 
 ### Mudado

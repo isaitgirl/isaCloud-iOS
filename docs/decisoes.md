@@ -24,6 +24,16 @@ Registro do **porquê** das escolhas feitas no fork: decisões de produto, de c�
 - **Como validar de novo:** `xcrun simctl spawn <udid> log show --predicate 'eventMessage CONTAINS "filtro dos chips"'` mostra o tempo de cada passada (log em nível debug, `DDLogDebug`), e a consulta pode ser cronometrada direto no banco exportado com `sqlite3`.
 - **Não mexido:** as células continuam usando `unreadCount` para o selo (uma query por conversa visível, como antes); se um dia isso incomodar, o mesmo `NSSet` serve de base para um cache por passada.
 
+## "Crashes" do iPhone 11 e do XR: vigia do KSCrash e avatares na main thread (29/10/2026)
+
+- **Sintoma:** o app "fechava" sozinho nos telefones mais antigos (iPhone 11 do Will, iOS 26.7.2, build 54; e o XR da Isadora). Os relatórios do KSCrash traziam `App hung for 2.25 seconds. Terminated by watchdog.`
+- **Causa:** o monitor de watchdog do KSCrash tem limiar **fixo de 250 ms** (`KSHANG_THRESHOLD_SECONDS`) e estava ligado em produção para iOS ≤ 26 (desligado só no 27). Na abertura a frio, a lista de conversas fazia duas coisas caras na main thread: **decodificar avatares de disco** (`imageWithContentsOfFile:` em `MLImageManager`, chamado de `MLContactCell.initCell:`) e **montar/layoutar o texto da prévia** (`displayLastMessage:` → UIFoundation). Num iPhone 11 isso passa de 250 ms e o próprio crash reporter **mata o app**. Um dos relatórios mostra o KSCrash quebrando ao escrever o relatório (`ksjson_addStringElement` com ponteiro inválido) — a mesma família do que já nos fez desligá-lo no iOS 27.
+- **Correção:**
+  1. o vigia **não é ligado em produção** (`#ifndef DEBUG` em `HelperTools.m`); builds de desenvolvimento continuam com ele. Travamentos reais seguem aparecendo como `0x8BADF00D` do sistema, que já sabemos investigar (`docs/troubleshooting.md`);
+  2. `getIconForContact:withCompletion:` devolve **na hora** o cache ou um ícone de reserva barato (`placeholderIconForContact:`) e decodifica o avatar em background, chamando a completion na main; a célula aplica o que veio na hora e troca quando o real chega. Sem isso, uma célula reaproveitada mostraria o avatar do contato anterior até a decodificação terminar.
+- **Testado:** simuladores iOS 18.6 e 27, lista renderizando e sem relatório novo de crash.
+- **Não feito:** cachear o texto atribuído da prévia (`displayLastMessage:` continua montando a cada célula). Fica como otimização futura se ainda aparecer lentidão ao rolar.
+
 ## Ícone do app (29/10/2026)
 
 - **Arte nova, em todas as versões de iOS** (decisão da Isadora): o ícone desenhado para o Liquid Glass (balão em tubo arredondado, letras com brilho) passou a ser o único, no lugar do desenho chapado.

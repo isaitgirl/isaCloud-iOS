@@ -429,72 +429,101 @@
     return [self getIconForContact:contact withCompletion:nil];
 }
 
--(UIImage*) getIconForContact:(MLContact*) contact withCompletion:(void (^)(UIImage *))completion
+//isaCloud: the expensive part (ImageIO decoding the avatar file, plus the dummy icon drawing) moved out of the caller's thread:
+//run inside cellForRow on an iPhone 11 it went past the 250 ms hang threshold of the KSCrash watchdog and the app was killed
+//(crash reports of 29/10/2026). Callers with a completion get a cheap placeholder right away and the real avatar later, on main.
+-(UIImage*) loadIconForContact:(MLContact*) contact cacheKey:(NSString*) cacheKey
 {
     NSString* filename = [self fileNameforContact:contact];
-    
-    __block UIImage* toreturn = nil;
-    //get filname from DB
-    NSString* cacheKey = [NSString stringWithFormat:@"%@_%@", contact.accountID, contact.contactJid];
-    
-    //check cache
-    toreturn = [self.iconCache objectForKey:cacheKey];
-    if(!toreturn)
+    NSString* writablePath = [self.documentsDirectory stringByAppendingPathComponent:@"buddyicons"];
+    writablePath = [writablePath stringByAppendingPathComponent:contact.accountID.stringValue];
+    writablePath = [writablePath stringByAppendingPathComponent:filename];
+
+    DDLogVerbose(@"Loading avatar image at: %@", writablePath);
+    UIImage* toreturn = [UIImage imageWithContentsOfFile:writablePath];
+
+    if(toreturn == nil)             //return default avatar
     {
-        NSString* writablePath = [self.documentsDirectory stringByAppendingPathComponent:@"buddyicons"];
-        writablePath = [writablePath stringByAppendingPathComponent:contact.accountID.stringValue];
-        writablePath = [writablePath stringByAppendingPathComponent:filename];
-        
-        DDLogVerbose(@"Loading avatar image at: %@", writablePath);
-        UIImage* savedImage = [UIImage imageWithContentsOfFile:writablePath];
-        if(savedImage)
-            toreturn = savedImage;
-        DDLogVerbose(@"Loaded image: %@", toreturn);
-        
-        if(toreturn == nil)             //return default avatar
+        DDLogVerbose(@"Using/generating dummy icon for contact: %@", contact);
+        if(contact.isMuc)
         {
-            DDLogVerbose(@"Using/generating dummy icon for contact: %@", contact);
-            if(contact.isMuc)
-            {
-                if([kMucTypeChannel isEqualToString:contact.mucType])
-                    toreturn = [MLImageManager defaultMucIconForChannel:YES];
-                else
-                    toreturn = [MLImageManager defaultMucIconForChannel:NO];
-            }
-            else
-            {
-                //isaCloud: a member of a group who is not our contact: the avatar fetched from the vcard (see MLMucProcessor)
-                toreturn = [self remoteAvatarForOwner:contact.contactJid accountID:contact.accountID];
-                if(toreturn == nil)
-                    toreturn = [self generateDummyIconForContact:contact];
-            }
-        }
-        else if(contact.isMuc)        //add group indicator overlay for non-default muc avatar
-        {
-            UIImage* overlay = nil;
             if([kMucTypeChannel isEqualToString:contact.mucType])
-                overlay = [MLImageManager defaultMucIconForChannel:YES];
+                toreturn = [MLImageManager defaultMucIconForChannel:YES];
             else
-                overlay = [MLImageManager defaultMucIconForChannel:NO];
-            if(overlay)
-                toreturn = [MLImageManager image:toreturn withMucOverlay:overlay];
+                toreturn = [MLImageManager defaultMucIconForChannel:NO];
         }
-        
-        //uiimage is cached if avaialable, but only if not in appex due to memory limits therein
-        if(toreturn && ![HelperTools isAppExtension])
-            [self.iconCache setObject:toreturn forKey:cacheKey];
-        
-        if(completion)
-            dispatch_async(dispatch_get_main_queue(), ^{
-                completion(toreturn);
-            });
+        else
+        {
+            //isaCloud: a member of a group who is not our contact: the avatar fetched from the vcard (see MLMucProcessor)
+            toreturn = [self remoteAvatarForOwner:contact.contactJid accountID:contact.accountID];
+            if(toreturn == nil)
+                toreturn = [self generateDummyIconForContact:contact];
+        }
     }
-    else if(completion)
-        dispatch_async(dispatch_get_main_queue(), ^{
-            completion(toreturn);
-        });
+    else if(contact.isMuc)        //add group indicator overlay for non-default muc avatar
+    {
+        UIImage* overlay = nil;
+        if([kMucTypeChannel isEqualToString:contact.mucType])
+            overlay = [MLImageManager defaultMucIconForChannel:YES];
+        else
+            overlay = [MLImageManager defaultMucIconForChannel:NO];
+        if(overlay)
+            toreturn = [MLImageManager image:toreturn withMucOverlay:overlay];
+    }
+
+    //uiimage is cached if avaialable, but only if not in appex due to memory limits therein
+    if(toreturn && ![HelperTools isAppExtension])
+        [self.iconCache setObject:toreturn forKey:cacheKey];
     return toreturn;
 }
+
+//the cheap avatar shown while the real one is decoded in background: never decodes the avatar file
+-(UIImage*) placeholderIconForContact:(MLContact*) contact
+{
+    if(contact.isMuc)
+        return [MLImageManager defaultMucIconForChannel:[kMucTypeChannel isEqualToString:contact.mucType]];
+    UIImage* remoteAvatar = [self remoteAvatarForOwner:contact.contactJid accountID:contact.accountID];
+    return remoteAvatar != nil ? remoteAvatar : [self generateDummyIconForContact:contact];
+}
+
+//the block is optional here (the no-completion variant returns the image synchronously), so the "completion handler must always be
+//called" warning does not apply to the synchronous path
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcompletion-handler"
+-(UIImage*) getIconForContact:(MLContact*) contact withCompletion:(void (^)(UIImage *))completion
+{
+    //get filname from DB
+    NSString* cacheKey = [NSString stringWithFormat:@"%@_%@", contact.accountID, contact.contactJid];
+
+    UIImage* cached = [self.iconCache objectForKey:cacheKey];
+    if(cached)
+    {
+        if(completion)
+            dispatch_async(dispatch_get_main_queue(), ^{
+                completion(cached);
+            });
+        return cached;
+    }
+
+    if(completion == nil)       //no completion: the caller needs the image right now (e.g. XMPPEdit)
+        return [self loadIconForContact:contact cacheKey:cacheKey];
+
+    UIImage* placeholder = [self placeholderIconForContact:contact];
+    if(placeholder && ![HelperTools isAppExtension])
+        [self.iconCache setObject:placeholder forKey:cacheKey];
+    __weak typeof(self) weakSelf = self;
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        typeof(self) strongSelf = weakSelf;
+        if(strongSelf == nil)
+            return;
+        UIImage* image = [strongSelf loadIconForContact:contact cacheKey:cacheKey];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            completion(image != nil ? image : placeholder);
+        });
+    });
+    return placeholder;
+}
+#pragma clang diagnostic pop
 
 
 -(void) saveBackgroundImageData:(NSData* _Nullable) data forContact:(MLContact* _Nullable) contact

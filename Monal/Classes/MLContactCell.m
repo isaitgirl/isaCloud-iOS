@@ -103,9 +103,14 @@
     _previewHighlight = contact.unreadCount > 0 && !_badgeIsGray;
     [self displayLastMessage:lastMessage forContact:contact];
     
-    [[MLImageManager sharedInstance] getIconForContact:contact withCompletion:^(UIImage *image) {
-        self.userImage.image = image;
+    //isaCloud: the avatar may be decoded in background now, so use the placeholder returned right away and swap it when the
+    //real image arrives (without this the reused cell would keep the previous contact's avatar until the decode finished)
+    UIImage* immediateIcon = [[MLImageManager sharedInstance] getIconForContact:contact withCompletion:^(UIImage *image) {
+        if(image != nil)
+            self.userImage.image = image;
     }];
+    if(immediateIcon != nil)
+        self.userImage.image = immediateIcon;
     
     if(contact.isMuc && contact.isMentionOnly)
     {

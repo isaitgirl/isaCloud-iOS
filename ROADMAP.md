@@ -4,8 +4,8 @@ Todas as funcionalidades do isaCloud numa tabela só: o que está **feito** (ris
 
 A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23/10/2026 sobre a `develop` (Monal 7), base atual do fork. As reações (XEP-0444), que eram o item mais trabalhoso, saíram da lista porque já existem na `develop`.
 
-**Total de features no roadmap:** 92
-**Features concluídas:** 88
+**Total de features no roadmap:** 93
+**Features concluídas:** 89
 
 | # | Funcionalidade | Esforço | Observações |
 |---|---|---|---|
@@ -112,6 +112,8 @@ A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23
 | 95 | ~~Filtros da lista de conversas (Não lidas, Contatos, Grupos, Canais)~~ | **feito em 29/10/2026** (build 59) | Chips multi-seleção abaixo da busca, estado guardado e lista ao vivo (conversa que fica não lida entra, a que é lida sai); "Não lidas" independente e contando bolinha cinza; nenhum tipo marcado = todos; estado vazio "Nenhuma conversa com esses filtros"; **a busca (nomes e FTS) ignora os chips** — decisão da Isadora em 29/10 — e ao fechar a busca a lista volta filtrada. De brinde, o crash do estado vazio (`imageForEmptyDataSet:` com view nula) e a mensagem nova que entrava fora do filtro. Detalhes em `docs/decisoes.md`. |
 
 | 96 | ~~Ícone do app com a arte nova (Liquid Glass) em todos os iOS~~ | **feito em 29/10/2026** (entra no próximo build) | Um ícone só: o desenho com volume desenhado para o Liquid Glass substituiu o chapado. Testado no iOS 18.6 (nítido) e no 27 (com o vidro do sistema). Detalhes e o porquê de não haver dois ícones por versão em `docs/decisoes.md`. |
+
+| 97 | "Crashes" no iPhone 11 e no XR eram o vigia de travamento do KSCrash | **corrigido em 29/10/2026** (build 63) | O limiar do vigia é fixo em 250 ms e ele matava o app na abertura a frio, quando a lista decodificava avatares e montava o texto da prévia na main thread. O vigia deixou de ser ligado em produção (só em DEBUG) e a decodificação dos avatares foi para background, com o ícone de reserva aparecendo na hora. Detalhes em `docs/decisoes.md`. |
 
 ## Aguardando o Monal
 

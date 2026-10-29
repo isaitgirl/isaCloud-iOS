@@ -2875,6 +2875,12 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     BOOL watchdogSupported = YES;
     if(@available(iOS 27.0, *))
         watchdogSupported = NO;
+#ifndef DEBUG
+    //isaCloud: never in production. KSCrash kills the app when the main thread is busy for 250 ms (its hang threshold), and a
+    //cold start decoding avatars and laying out the chat list passes that on older phones (iPhone 11 and XR, 29/10/2026): the
+    //"crash" the user saw was our own crash reporter. Real hangs still show up as the system's 0x8BADF00D termination reports.
+    watchdogSupported = NO;
+#endif
     if(![self isAppExtension] && watchdogSupported)
         config.monitors |= KSCrashMonitorTypeWatchdog;
     config.enableHangReporting = NO;        //don't report recovered hangs as crash reports, logging them is enough
