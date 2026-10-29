@@ -2,6 +2,12 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 58) — 29/10/2026
+
+### Corrigido
+- **O spinner eterno era uma mensagem retratada, não uma mensagem presa.** Com o banco da Isadora (banco real, 133 mil mensagens) a mensagem das 13:24 apareceu como `sent=0`, `received=NULL` **e `retracted=1`**: ela foi apagada antes de ser enviada, e o status só olhava `sent/received/displayed` — caía no caso "enviando" e girava para sempre. Agora mensagem retratada não mostra indicador de envio (não faz sentido "enviando" para o que foi apagado).
+- **A reconciliação do 57 não achava nada por dois motivos**, também descobertos no banco real: `received` é **NULL** nas mensagens que nunca receberam recibo (o filtro `received=0` descartava todas — 157 de 157) e mensagens retratadas não são falha de entrega. O filtro passou a usar `ifnull(received,0)=0`, a ignorar retratadas e a olhar só os últimos 7 dias (para não ressuscitar o histórico antigo importado como "falha").
+
 ## 0.0.1 (build 57) — 29/10/2026
 
 ### Corrigido

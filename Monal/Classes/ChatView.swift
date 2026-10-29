@@ -1766,6 +1766,11 @@ class ChatViewMessage: ExyteChat.Message {
             if innerMessage.inbound {
                 return nil
             }
+            //isaCloud: a retracted message is gone; it must not show the sending indicator (the one the Manuela chat showed forever
+            //was retracted before it was ever sent, so it kept sent=0 and looked like it was still on its way)
+            if innerMessage.retracted {
+                return nil
+            }
             let errorType = innerMessage.errorType as String?
             let isError = errorType != nil && !errorType!.isEmpty
             switch(innerMessage) {

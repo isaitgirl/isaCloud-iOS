@@ -1656,9 +1656,13 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
     //timestamp has no index, but this runs once per launch on a background queue: read the candidates first (a plain read, without
     //holding the write lock) and update only the few rows found. No id window: a message can be old and still be the one stuck.
     NSString* limit = [dbFormatter stringFromDate:before];
+    // - received is NULL on messages that never got a receipt: "received=0" would skip them (that is why the first version found nothing);
+    // - a retracted message is deleted, not unsent: it must not become a delivery failure;
+    // - only the last week, so an old history (e.g. an imported database) is not resurrected as failures.
+    NSString* oldest = [dbFormatter stringFromDate:[NSDate dateWithTimeIntervalSinceNow:-7 * 86400]];
     //every query has to run inside a transaction (MLSQLite throws otherwise), and this one is a plain read
     NSArray* rows = [self.db idReadTransaction:^{
-        return [self.db executeReader:@"SELECT messageid FROM message_history WHERE sent=0 AND received=0 AND inbound=0 AND timestamp < ? AND (errorType IS NULL OR errorType = '');" andArguments:@[limit]];
+        return [self.db executeReader:@"SELECT messageid FROM message_history WHERE sent=0 AND ifnull(received,0)=0 AND ifnull(retracted,0)=0 AND inbound=0 AND timestamp < ? AND timestamp > ? AND (errorType IS NULL OR errorType = '');" andArguments:@[limit, oldest]];
     }];
     DDLogInfo(@"isaCloud: %lu outgoing message(s) without confirmation older than the launch", (unsigned long)rows.count);
     if(rows.count == 0)
