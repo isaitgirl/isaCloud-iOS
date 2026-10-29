@@ -5,6 +5,28 @@ Registro do **porquê** das escolhas feitas no fork: decisões de produto, de c�
 - O que está feito, em andamento ou pendente, com datas e resultados de teste, fica no `ROADMAP.md` (toda decisão daqui tem uma linha lá). O histórico de cada build fica no `CHANGELOG.md`.
 - Dados sensíveis ficam em `isaCloud/local/NOTAS-LOCAIS.md`, nunca aqui.
 
+## Avisos fantasma do push: filtro no servidor, v2 (29/10/2026)
+
+- **Sintoma observado:** notificações "New Message?" com **som** e que **não somem**, em rajada (duas às 11:19). Antes, o mesmo mecanismo produzia avisos **sem som que somem sozinhos** — esse segundo comportamento é o esperado: a extensão entrega um aviso passivo e o app o remove quando o appex desliga (~25 s, visto no log: `removing 1 push placeholder` → `Shutting down appex`).
+- **Causa no servidor:** o `mod_cloud_notify` do Prosody marca como `important` **qualquer mensagem com corpo** — inclusive toda mensagem de canal. O `mod_cloud_notify_quiet` **v1** (perfil `conservative`) nunca bloqueia `important`, então cada mensagem de canal virava **alerta com som**. O log do servidor mostrou 6 alertas em ~50 s de salas movimentadas, um descartado por rate limit do fpush: o iOS desiste da extensão e mostra o payload cru (com som, persistente).
+- **Causa no app:** os pushes chegaram ao aparelho, mas a extensão **inicializou 16 vezes sem nenhum `didReceiveNotificationRequest`** naquela janela (log do app x log da extensão, arquivos separados pelo lock do DDLogger).
+- **Decisão (Isadora, 29/10/2026):** implantar o **v2** do `mod_cloud_notify_quiet` (que era `mod_cloud_notify_quiet.lua.new`, agora promovido a `mod_cloud_notify_quiet.lua`) e **observar**, sem teste de aceitação formal.
+- **Config em produção:**
+  ```lua
+  cloud_notify_quiet_appservers = { "push.isacloud.im" }
+  cloud_notify_quiet_dry_run = false
+  cloud_notify_quiet_log = false
+  cloud_notify_quiet_muc_group = "alert"       -- members-only / não anônima
+  cloud_notify_quiet_muc_channel = "mentions"  -- as demais (canais)
+  cloud_notify_quiet_actions = { ["muc-self"] = "drop" }
+  ```
+- **O que muda:** canal **sem menção** vira push silencioso (não apita; o app vê ao abrir); menção, DM e chamada continuam alerta; read-marker/retract/reaction/correction passam de alerta para silencioso; mensagem do próprio usuário na sala (`muc-self`) não gera push.
+- **Chaves antigas removidas** (o v2 as ignora em silêncio): `profile`, `allow_reasons`, `block_all_unimportant`, `log_allowed`, `muc_self`.
+- **Compatibilidade:** o fpush no ar (`isacloud/fpush:42359ca-isacloud2`) já aplica `0001-silent-unimportant-pushes.v2.patch`, que manda alerta quando há `last-message-body` e push de fundo quando não há — é esse o mecanismo que o v2 usa para "background".
+- **Rollback:** voltar o arquivo anterior do módulo e restaurar as cinco chaves acima.
+- **Como observar:** métrica `prosody_mod_cloud_notify_quiet__decisions_total{action,reason}`; para log linha a linha, `cloud_notify_quiet_log = true` (ou `dry_run = true`, que loga com prefixo `[dry-run]` e não altera nada).
+- **Riscos/limites:** push silencioso pode ser atrasado pelo iOS (canal sem menção deixa de ser "tempo real"); o módulo vive em `~/projects/lua/isacloud-custom-plugins` (fora do repositório do iOS e sem versionamento próprio); a detecção de menção depende de XEP-0372, XEP-0461 ou do nick no texto (este último cobre o `@` do app, que manda texto).
+
 ## Destaque da conversa com bolinha vermelha na lista (29/10/2026)
 
 - **Pedido:** quando a conversa tem bolinha vermelha (notificação/menção), o preview fica em negrito e entra um "@" antes do sininho que indica o tipo de notificação do canal.

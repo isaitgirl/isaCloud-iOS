@@ -17,6 +17,7 @@ Fork do Monal (cliente XMPP para iOS) com a marca e os ajustes do isaCloud. Bran
 - Estamos escrevendo o software em pt-br, mas você deve seguir as convenções de código do Monal, usando o idioma padrão dele e usando nosso mecanismo de tradução pro pt-br.
 - Se identificar textos em inglês não traduzidos nos simuladores, você deve avisar o usuário e confirmar qual será a tradução.
 - **Ao final de uma tarefa que atualiza os simuladores, atualizar também o `isaCloud.dev` no iPhone** (`scripts/isacloud-dev-device.sh`), sem esperar pedido, e avisar quando ele tiver código que ainda não está no TestFlight.
+- **Branches**: `isaCloud` é a de trabalho e a única que vai para o TestFlight. `develop` fica no repositório só como **ponto de atualização** para buscar commits do Monal (alpha/upstream) sob demanda — não é para desenvolvimento. `pr10-rebase` é local e fica guardada até a decisão sobre o PR 10 (controles na parte de baixo da tela) ser tomada com o Jejê.
 - **Mudanças de banco do isaCloud** entram na escada própria (`+migrateISACloudDB:` em `DataLayerMigrations.m`, flag `isacloud_dbversion`), nunca como 7.0xx na escada do Monal, e cada passo deve poder rodar de novo sem estragar nada. Detalhes em `docs/decisoes.md`.
 - Busque implementar seguindo as convenções atuais do Monal, é importante respeitarmos esse legado para mantermos a menor fricção possível nos merges futuros.
 
