@@ -177,3 +177,6 @@
 "Could not forward" = "Não foi possível encaminhar";
 "You cannot write here" = "Você não pode escrever aqui";
 "Up to %lld chats at once." = "Até %lld conversas por vez.";
+
+/* isaCloud: menu de Configurações → App, tela de importar o histórico do Monal */
+"Import from Monal" = "Importar do Monal";

@@ -1142,16 +1142,68 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
         return NO;
     NSURL* dbURL = [self getContainerURLForPathComponents:@[@"sworim.sqlite"]];
     DDLogWarn(@"Applying imported database at %@", importURL.path);
+    
+    //newer Monal versions export the database gzipped (the debug screen compresses it): unpack it first
+    NSFileHandle* handle = [NSFileHandle fileHandleForReadingAtPath:importURL.path];
+    NSData* magic = [handle readDataOfLength:2];
+    [handle closeFile];
+    BOOL isGzip = magic.length == 2 && ((const uint8_t*)magic.bytes)[0] == 0x1f && ((const uint8_t*)magic.bytes)[1] == 0x8b;
+    NSString* sourcePath = importURL.path;
+    if(isGzip)
+    {
+        NSString* unpackedPath = [dbURL.path stringByAppendingString:@".unpacked"];
+        [fm removeItemAtPath:unpackedPath error:nil];
+        DDLogWarn(@"Imported database is gzipped, unpacking it first");
+        if(![self gunzipFileAtPath:importURL.path toPath:unpackedPath])
+        {
+            DDLogError(@"Could not unpack the imported database");
+            return NO;
+        }
+        sourcePath = unpackedPath;
+    }
+    
     for(NSString* suffix in @[@"", @"-wal", @"-shm"])
         [fm removeItemAtPath:[dbURL.path stringByAppendingString:suffix] error:nil];
     NSError* error;
-    if(![fm moveItemAtURL:importURL toURL:dbURL error:&error])
+    if(![fm moveItemAtPath:sourcePath toPath:dbURL.path error:&error])
     {
         DDLogError(@"Could not apply the imported database: %@", error);
         return NO;
     }
+    if(isGzip)
+        [fm removeItemAtURL:importURL error:nil];
     DDLogWarn(@"Imported database applied, the app will migrate it now");
     return YES;
+}
+
+//isaCloud: zlib helper for the database import above (newer Monal versions export the database gzipped)
++(BOOL) gunzipFileAtPath:(NSString*) gzPath toPath:(NSString*) outputPath
+{
+    gzFile input = gzopen([gzPath fileSystemRepresentation], "rb");
+    if(input == NULL)
+        return NO;
+    FILE* output = fopen([outputPath fileSystemRepresentation], "wb");
+    if(output == NULL)
+    {
+        gzclose(input);
+        return NO;
+    }
+    uint8_t buffer[65536];
+    int bytesRead;
+    BOOL ok = YES;
+    while((bytesRead = gzread(input, buffer, sizeof(buffer))) > 0)
+    {
+        if(fwrite(buffer, 1, (size_t)bytesRead, output) != (size_t)bytesRead)
+        {
+            ok = NO;
+            break;
+        }
+    }
+    if(bytesRead < 0)
+        ok = NO;
+    fclose(output);
+    gzclose(input);
+    return ok;
 }
 
 +(NSURL*) getContainerURLForPathComponents:(NSArray*) components
