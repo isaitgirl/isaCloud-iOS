@@ -118,11 +118,11 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
     UIButtonConfiguration* config = button.configuration ?: [UIButtonConfiguration plainButtonConfiguration];
     config.baseForegroundColor = button.isSelected ? [UIColor whiteColor] : gray;
     config.background.backgroundColor = button.isSelected ? gray : [UIColor clearColor];
-    config.background.cornerRadius = 14;
-    config.contentInsets = NSDirectionalEdgeInsetsMake(3, 9, 3, 9);
+    config.background.cornerRadius = 12;
+    config.contentInsets = NSDirectionalEdgeInsetsMake(2, 7, 2, 7);
     button.configuration = config;
     button.layer.borderWidth = 1;
-    button.layer.cornerRadius = 14;
+    button.layer.cornerRadius = 12;
     button.layer.borderColor = gray.CGColor;
     [button setAccessibilityTraits:button.isSelected ? (UIAccessibilityTraitButton | UIAccessibilityTraitSelected) : UIAccessibilityTraitButton];
 }
@@ -141,7 +141,7 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
     contentView.translatesAutoresizingMaskIntoConstraints = NO;
     UIStackView* stack = [UIStackView new];
     stack.axis = UILayoutConstraintAxisHorizontal;
-    stack.spacing = 8;
+    stack.spacing = 6;
     stack.translatesAutoresizingMaskIntoConstraints = NO;
     [self addSubview:scrollView];
     [scrollView addSubview:contentView];
@@ -189,13 +189,13 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
     //isaCloud: 11 pt with a little negative kerning: the system font has no real condensed variant on iOS, so the horizontal
     //spacing is tightened by hand (the pills get shorter without shrinking the glyphs as much as a smaller size would)
     config.attributedTitle = [[NSAttributedString alloc] initWithString:title attributes:@{
-        NSFontAttributeName: [UIFont systemFontOfSize:9 weight:UIFontWeightMedium],
+        NSFontAttributeName: [UIFont systemFontOfSize:8 weight:UIFontWeightMedium],
         NSKernAttributeName: @(-0.2),
     }];
     button.configuration = config;
-    button.titleLabel.font = [UIFont systemFontOfSize:9 weight:UIFontWeightMedium];
+    button.titleLabel.font = [UIFont systemFontOfSize:8 weight:UIFontWeightMedium];
     [button addTarget:self action:@selector(toggle:) forControlEvents:UIControlEventTouchUpInside];
-    [button.heightAnchor constraintEqualToConstant:28].active = YES;
+    [button.heightAnchor constraintEqualToConstant:24].active = YES;
     return button;
 }
 
@@ -609,7 +609,7 @@ static BOOL _dnssecWarningDisplayed;
     [container addSubview:self.chatListTable];
     [NSLayoutConstraint activateConstraints:@[
         [_chatListFilterBar.topAnchor constraintEqualToAnchor:container.safeAreaLayoutGuide.topAnchor],
-        [_chatListFilterBar.heightAnchor constraintEqualToConstant:42],
+        [_chatListFilterBar.heightAnchor constraintEqualToConstant:36],
         [_chatListFilterBar.leadingAnchor constraintEqualToAnchor:container.leadingAnchor],
         [_chatListFilterBar.trailingAnchor constraintEqualToAnchor:container.trailingAnchor],
         [self.chatListTable.topAnchor constraintEqualToAnchor:_chatListFilterBar.bottomAnchor],
