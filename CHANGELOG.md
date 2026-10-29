@@ -2,6 +2,11 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 60) — 29/10/2026
+
+### Mudado
+- **A busca da tela inicial ignora os filtros dos chips**: buscar é para achar qualquer coisa, inclusive o que o filtro está escondendo. Enquanto a busca está aberta, os resultados vêm só de nomes e do texto das mensagens (FTS), como antes; ao cancelar/fechar a busca, a lista de conversas volta a aparecer filtrada pelos chips. (A versão do 59 aplicava os chips também na busca; foi revertida a pedido da Isadora.)
+
 ## 0.0.1 (build 59) — 29/10/2026
 
 ### Adicionado
