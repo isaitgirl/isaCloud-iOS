@@ -1653,18 +1653,26 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
 {
     if(before == nil)
         return 0;
-    //the timestamp column has no index: restrict the scan to the most recent ids (the primary key is autoincremented) to keep this
-    //cheap on a big history, and never touch a message of the current session
+    //timestamp has no index, but this runs once per launch on a background queue: read the candidates first (a plain read, without
+    //holding the write lock) and update only the few rows found. No id window: a message can be old and still be the one stuck.
     NSString* limit = [dbFormatter stringFromDate:before];
-    NSString* where = @"message_history_id > (SELECT MAX(message_history_id) FROM message_history) - 2000"
-        " AND sent=0 AND received=0 AND inbound=0 AND timestamp < ? AND (errorType IS NULL OR errorType = '')";
+    //every query has to run inside a transaction (MLSQLite throws otherwise), and this one is a plain read
+    NSArray* rows = [self.db idReadTransaction:^{
+        return [self.db executeReader:@"SELECT messageid FROM message_history WHERE sent=0 AND received=0 AND inbound=0 AND timestamp < ? AND (errorType IS NULL OR errorType = '');" andArguments:@[limit]];
+    }];
+    DDLogInfo(@"isaCloud: %lu outgoing message(s) without confirmation older than the launch", (unsigned long)rows.count);
+    if(rows.count == 0)
+        return 0;
     __block NSUInteger changed = 0;
     [self.db voidWriteTransaction:^{
-        id count = [self.db executeScalar:[NSString stringWithFormat:@"SELECT COUNT(*) FROM message_history WHERE %@;", where] andArguments:@[limit]];
-        changed = [count unsignedIntegerValue];
-        if(changed > 0)
-            [self.db executeNonQuery:[NSString stringWithFormat:@"UPDATE message_history SET errorType=?, errorReason=? WHERE %@;", where]
-                        andArguments:@[@"notSent", NSLocalizedString(@"the app was closed before this message could be sent", @""), limit]];
+        for(NSDictionary* row in rows)
+        {
+            if(row[@"messageid"] == nil)
+                continue;
+            [self.db executeNonQuery:@"UPDATE message_history SET errorType=?, errorReason=? WHERE messageid=? AND sent=0 AND (errorType IS NULL OR errorType = '');"
+                        andArguments:@[@"notSent", NSLocalizedString(@"the app was closed before this message could be sent", @""), row[@"messageid"]]];
+            changed++;
+        }
     }];
     return changed;
 }

@@ -2,6 +2,11 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 57) — 29/10/2026
+
+### Corrigido
+- **A reconciliação do 56 não achava a mensagem presa** (e podia derrubar o app): o `SELECT` era feito fora de uma transação, e o `MLSQLite` **lança exceção** nesse caso. Agora a leitura vai dentro de `idReadTransaction:`; o filtro também deixou de olhar só os últimos 2000 ids (uma mensagem antiga e ainda presa ficava de fora) — lê todas as não confirmadas e marca só as encontradas. Testado no simulador com uma mensagem de id antigo (marcada) e uma recente (intacta).
+
 ## 0.0.1 (build 56) — 29/10/2026
 
 ### Corrigido
