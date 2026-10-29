@@ -1,0 +1,134 @@
+diff -ruN a/Monal/Classes/HelperTools.h b/Monal/Classes/HelperTools.h
+--- a/Monal/Classes/HelperTools.h	2026-10-28 17:57:19.542000516 +0000
++++ b/Monal/Classes/HelperTools.h	2026-10-28 17:57:32.518000522 +0000
+@@ -35,6 +35,7 @@
+ @class xmpp;
+ @class XMPPStanza;
+ @class UNNotificationRequest;
++@class UNMutableNotificationContent;
+ @class DDLogMessage;
+ @class DDFileLogger;
+ @class UIView;
+@@ -164,6 +165,9 @@
+ +(void) scheduleBackgroundTask:(BOOL) force;
+ +(void) clearSyncErrorsOnAppForeground;
+ +(void) removePendingSyncErrorNotifications;
++//isaCloud: placeholder for pushes while we don't have the push filtering entitlement
+++(UNMutableNotificationContent*) isaCloudPushPlaceholderContent;
+++(void) removeIsaCloudPushPlaceholdersAfter:(double) delay;
+ +(void) updateSyncErrorsWithDeleteOnly:(BOOL) removeOnly andWaitForCompletion:(BOOL) waitForCompletion;
+ 
+ +(BOOL) isInBackground;
+diff -ruN a/Monal/Classes/HelperTools.m b/Monal/Classes/HelperTools.m
+--- a/Monal/Classes/HelperTools.m	2026-10-28 17:57:19.540000516 +0000
++++ b/Monal/Classes/HelperTools.m	2026-10-28 17:57:19.555000516 +0000
+@@ -2211,6 +2211,50 @@
+     [[HelperTools defaultsDB] setObject:syncErrorsDisplayed forKey:@"syncErrorsDisplayed"];
+ }
+ 
++//isaCloud: without the com.apple.developer.usernotifications.filtering entitlement, handing an empty
++//content to the NSE contentHandler makes iOS show the ORIGINAL alert of the push ("New Message / New Message?"),
++//in addition to the real notifications MLNotificationManager posts with their own identifiers.
++//So every alert push became a ghost. Instead we hand over a passive (no sound, no banner, no screen wake)
++//placeholder that is marked so we can remove it shortly afterwards.
++//When the entitlement is granted: set ISACLOUD_HAS_PUSH_FILTERING to 1 (empty content again).
++#define ISACLOUD_HAS_PUSH_FILTERING 0
++#define kIsaCloudPushPlaceholder @"isaCloudPushPlaceholder"
++
+++(UNMutableNotificationContent*) isaCloudPushPlaceholderContent
++{
++    UNMutableNotificationContent* content = [UNMutableNotificationContent new];
++#if !ISACLOUD_HAS_PUSH_FILTERING
++    content.title = @"isaCloud";
++    content.body = NSLocalizedString(@"Checking for new messages…", @"isaCloud: placeholder shown for a push that brought nothing to notify");
++    content.threadIdentifier = kIsaCloudPushPlaceholder;
++    content.userInfo = @{kIsaCloudPushPlaceholder: @YES};
++    content.interruptionLevel = UNNotificationInterruptionLevelPassive;
++    content.relevanceScore = 0.0;
++    content.sound = nil;
++#endif
++    return content;
++}
++
+++(void) removeIsaCloudPushPlaceholdersAfter:(double) delay
++{
++#if !ISACLOUD_HAS_PUSH_FILTERING
++    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delay * NSEC_PER_SEC)), dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
++        UNUserNotificationCenter* center = [UNUserNotificationCenter currentNotificationCenter];
++        [center getDeliveredNotificationsWithCompletionHandler:^(NSArray<UNNotification*>* notifications) {
++            NSMutableArray<NSString*>* ids = [NSMutableArray new];
++            for(UNNotification* notification in notifications)
++                if([notification.request.content.userInfo[kIsaCloudPushPlaceholder] boolValue])
++                    [ids addObject:notification.request.identifier];
++            if(ids.count > 0)
++            {
++                DDLogInfo(@"isaCloud: removing %lu push placeholder notification(s)", (unsigned long)ids.count);
++                [center removeDeliveredNotificationsWithIdentifiers:ids];
++            }
++        }];
++    });
++#endif
++}
++
+ +(void) removePendingSyncErrorNotifications
+ {
+     NSMutableDictionary* syncErrorsDisplayed = [NSMutableDictionary dictionaryWithDictionary:[[HelperTools defaultsDB] objectForKey:@"syncErrorsDisplayed"]];
+diff -ruN a/Monal/Classes/MonalAppDelegate.m b/Monal/Classes/MonalAppDelegate.m
+--- a/Monal/Classes/MonalAppDelegate.m	2026-10-28 17:57:19.544000516 +0000
++++ b/Monal/Classes/MonalAppDelegate.m	2026-10-28 17:57:19.555000516 +0000
+@@ -534,6 +534,9 @@
+ {
+     [self updateAppIconIfNeeded];
+     
++    //isaCloud: remove push placeholders left in Notification Center (see HelperTools isaCloudPushPlaceholderContent)
++    [HelperTools removeIsaCloudPushPlaceholdersAfter:0];
++    
+     if([[MLXMPPManager sharedInstance] connectedXMPP].count > 0)
+         [self handleSpinner];
+     else
+diff -ruN a/Monal/NotificationService/NotificationService.m b/Monal/NotificationService/NotificationService.m
+--- a/Monal/NotificationService/NotificationService.m	2026-10-28 17:57:19.538000516 +0000
++++ b/Monal/NotificationService/NotificationService.m	2026-10-28 17:57:19.555000516 +0000
+@@ -50,7 +50,12 @@
+         if(self.expirationTimer)
+             self.expirationTimer();
+         if(self.handler)
+-            self.handler([UNMutableNotificationContent new]);
++        {
++            //isaCloud: passive placeholder instead of empty content (see HelperTools isaCloudPushPlaceholderContent)
++            self.handler([HelperTools isaCloudPushPlaceholderContent]);
++            //the appex keeps running (other pushes or the 1.5s shutdown wait), so this usually removes it right away
++            [HelperTools removeIsaCloudPushPlaceholdersAfter:1.0];
++        }
+         self.expirationTimer = nil;
+         self.handler = nil;
+     }
+@@ -252,6 +257,9 @@
+         //now connect all enabled accounts
+         [[MLXMPPManager sharedInstance] connectIfNecessary];
+         
++        //isaCloud: clean up placeholders left by earlier runs (the appex may have been killed before removing them)
++        [HelperTools removeIsaCloudPushPlaceholdersAfter:0];
++        
+         //this will delay the delivery of such notifications until 60 seconds after our last sync attempt failed
+         //rather than being delivered 60 seconds after our first sync attempt failed
+         [HelperTools removePendingSyncErrorNotifications];
+@@ -651,8 +659,8 @@
+             for(void (^_handler)(UNNotificationContent* _Nonnull) in handlers)
+             {
+                 DDLogError(@"Feeding handler with silent notification: %@", _handler);
+-                UNMutableNotificationContent* emptyContent = [UNMutableNotificationContent new];
+-                _handler(emptyContent);
++                //isaCloud: passive placeholder instead of empty content (removed on the next push or when the app opens)
++                _handler([HelperTools isaCloudPushPlaceholderContent]);
+             }
+         }
+         else
+diff -ruN a/isaCloud/localization/pt-BR.lproj/Localizable.strings b/isaCloud/localization/pt-BR.lproj/Localizable.strings
+--- a/isaCloud/localization/pt-BR.lproj/Localizable.strings	2026-10-28 17:57:19.547000516 +0000
++++ b/isaCloud/localization/pt-BR.lproj/Localizable.strings	2026-10-28 17:57:19.555000516 +0000
+@@ -177,3 +177,4 @@
+ "Could not forward" = "Não foi possível encaminhar";
+ "You cannot write here" = "Você não pode escrever aqui";
+ "Up to %lld chats at once." = "Até %lld conversas por vez.";
++"Checking for new messages…" = "Buscando mensagens novas…";

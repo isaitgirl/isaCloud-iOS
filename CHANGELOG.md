@@ -2,6 +2,59 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 48) — 28/10/2026
+
+### Adicionado
+- **Importar um banco de dados pelo app (Configurações → App → "Importar do Monal"; a mesma coisa fica em Depuração → "Import Database…" para nós)**, para trocar de cliente sem perder o histórico. O iOS não deixa nenhuma ferramenta de fora escrever na raiz do container compartilhado (onde fica o `sworim.sqlite`) — o serviço de arquivos só aceita `Library`, `Documents` e `tmp` —, então o próprio app copia o arquivo escolhido para `import-sworim.sqlite` e, na abertura seguinte, troca o banco atual por ele antes de qualquer código abrir o banco. A escada de migrations roda normalmente depois. **É uma ferramenta de depuração**, com aviso de que o banco atual será substituído; senhas e a chave OMEMO continuam no keychain de cada app, então o Assistente de Migração pede as senhas.
+
+## 0.0.1 (build 47) — 28/10/2026
+
+### Corrigido
+- **O app congelava e podia ser encerrado pelo sistema por causa do log (`0x8BADF00D`).** Quatro relatórios de crash (builds 40 e 42) mostram a thread principal **parada** em `[DDLog flushLog]`, com o app quase sem CPU, até o iOS matar: *scene-update watchdog* (30 s) e, no último, *"Failed to terminate gracefully after 5.0s"*. O `flushLog` é um `dispatch_sync` **sem timeout** para a fila de log, que fica suspensa com o app em segundo plano; com a rede instável (mais linhas de log) ficou fácil de travar. Agora as **23 chamadas diretas** de flush do app e da extensão de notificação (14 em `MonalAppDelegate.m`, 9 em `NotificationService.m`) passam pelo `HelperTools flushLogsWithTimeout:`, que espera a fila **com timeout** e segue em frente se estourar. A única perda possível são as últimas linhas de log.
+- **Compartilhar um arquivo dava "your account got disconnected while requesting upload slot".** O app abria e subia a foto **antes de a conta conectar**; o pedido do espaço de upload ia por um stream ainda desconectado. Agora, na fila do compartilhar, o app espera a conta ficar ligada e o servidor de upload ser anunciado (até ~30 s) antes de subir arquivo ou imagem.
+- **O compartilhar deixava marcar vários destinos**, embora mandasse para um só: a linha usava `Button`, e o iOS mantinha a linha destacada. Agora é um toque simples, com um destino por vez.
+
+### Adicionado
+- **Responder com áudio mantendo a citação.** Puxar o balão para responder preenche o campo com a citação, e o microfone desaparecia. Agora o microfone fica ao lado do botão de enviar, e a resposta com áudio vai em duas mensagens: a citação num balão com um 🎤 e o áudio em seguida. Gravação com menos de 0,35 s é descartada (não vira áudio vazio).
+
+## 0.0.1 (build 43) — 28/10/2026
+
+### Alterado
+- **A janela de compartilhar do iOS ficou igual à tela de "Encaminhar" do app.** Antes ela era a do Monal — `SLComposeServiceViewController`, uma API depreciada —, com duas linhas de configuração ("Conta" e "Destinatário") abrindo uma tabela de texto sem avatar; no simulador ela aparecia com o campo vazio, um pedaço de imagem sobrando e só a linha "Conta". Agora é uma lista SwiftUI com avatar, nome, endereço e a conta de cada destino, busca, seleção com um toque e o rosa do isaCloud, no desenho do sistema (saiu a compatibilidade forçada do iOS 26 que a extensão pedia).
+- **Grupos e canais entram na lista do compartilhar** (antes só contatos individuais), com os que a pessoa não pode escrever cinza e desabilitados, com "Você não pode escrever aqui", como no Encaminhar.
+- **Campo de mensagem opcional** abaixo da lista: o texto vai como mensagem e o anexo em seguida, como já era.
+
+### Continua igual
+- A extração do que foi compartilhado (fotos, vídeos, arquivos, mapas, contatos, texto), a fila `sharesheet_outbox` e a abertura do app para enviar: só a tela mudou.
+- Cancelar fecha sem enviar e não abre o app.
+
+### Testado
+- No simulador iOS 27: a lista com as três contas e os canais, o canal sem voz não seleciona, cancelar não envia, e o envio de foto + mensagem chegou (o texto e um `aesgcm://` no banco, fila vazia no fim).
+- O build também compila no iOS 18.6 (Xcode 26.2). Falta a mesma passada de UI no 18.6 e no iPhone.
+
+## 0.0.1 (build 42) — 28/10/2026
+
+### Corrigido
+- **Em canal ou grupo em "só menção", o app notificava por qualquer pedaço de texto parecido com o seu nome.** Quem tem um apelido curto (como "isa") recebia notificação de "isafashiondev", "precisa", "analisar", "avisar", "pesquisa" ou "Elisa", porque a regra procurava o apelido, o nome de exibição, a parte local do endereço e o endereço dentro de qualquer palavra. Agora o nome só conta como menção quando aparece como **palavra inteira**, sem diferenciar maiúscula nem acento: "oi isa", "isa, vem aqui", "@isa" e "isa." contam; "isafashiondev", "precisa" e "Elisa" não. Vale para a notificação (inclusive a da extensão de notificação) e para a bolinha vermelha ou cinza da lista de Conversas. Limite conhecido: `.`, `-` e `@` colados ao nome contam como fim de palavra ("isa-dev" ainda casa com "isa"). Era o comportamento do Monal original; o código ficou numa função só, `HelperTools text:mentionsAnyOfNames:`.
+
+## 0.0.1 (build 41) — 28/10/2026
+
+### Corrigido
+- **Ao enviar uma mensagem de texto, a conversa não dá mais um "sobe e desce" rápido** (visto no modo avião, em que a gravação é quase instantânea). A mensagem que aparece na hora (provisória) era trocada na lista pela mensagem gravada, que tem outro id, e a lista fazia isso como apagar uma linha e inserir outra, em duas etapas: três movimentos seguidos. Agora a própria mensagem provisória passa a apontar para a gravada, a lista não vê troca nenhuma e o status (o spinner que vira tique) continua sendo acompanhado. Medido gravando a tela do simulador do iOS 27: 3 surtos de movimento antes, 1 depois (a entrada da mensagem).
+
+## 0.0.1 (build 40) — 28/10/2026
+
+### Adicionado
+- **A mensagem de texto aparece na hora ao enviar, com um spinner no lugar do tique** (PR do Jejê, com uma correção). Antes, a gravação da mensagem no banco rodava na thread principal e esperava o bloqueio de escrita do banco, que outra parte do app segura de vez em quando (medido: 7 segundos parada); a conversa ficava parada e a mensagem só entrava depois, às vezes já com reação de alguém. Agora a mensagem entra na hora, é gravada e enviada em segundo plano, na ordem, e é trocada pela real quando termina (a hora continua sendo a da gravação). Se a gravação falhar, a mensagem sai e o texto volta ao campo. **Enquanto a mensagem está a caminho ela não responde a toque** (sem menu, reações nem ações). Só vale para texto escrito na barra; foto, GIF, arquivo, localização e áudio seguem como antes. O spinner vem do fork do ExyteChat (PR 9 de lá).
+
+### Alterado
+- **Menos notificações fantasma, até a Apple liberar o push filtering.** Sem essa permissão, todo push de alerta virava uma notificação visível ("New Message / New Message?", com som) mesmo quando o app decidia não notificar. Agora a extensão de notificação entrega no lugar um **aviso passivo** (sem som, sem banner, sem texto, com o nome do app como título) e o remove quando consegue: ao fim da extensão, no próximo push e ao abrir o app. Funciona junto com o patch do servidor (push em segundo plano para o que não é importante e um collapse id nos alertas), que já está no ar. Quando a Apple liberar a permissão, basta mudar `ISACLOUD_HAS_PUSH_FILTERING` para `1`. **Ainda não testado no aparelho com o servidor**: ver se o iOS respeita o aviso passivo e se ele some sozinho. Como reverter: `docs/fpush/README.md`. (Estava no build 39, enviado só ao TestFlight; o 40 o inclui.)
+
+## 0.0.1 (build 39) — 28/10/2026
+
+### Alterado
+- **Menos notificações fantasma, até a Apple liberar o push filtering.** Sem essa permissão, todo push de alerta virava uma notificação visível ("New Message / New Message?", com som) mesmo quando o app decidia não notificar. Agora a extensão de notificação entrega no lugar um **aviso passivo** (sem som, sem banner, sem texto, com o nome do app como título) e o remove quando consegue: ao fim da extensão, no próximo push e ao abrir o app. Funciona junto com o patch do servidor (push em segundo plano para o que não é importante e um collapse id nos alertas), que já está no ar. Quando a Apple liberar a permissão, basta mudar `ISACLOUD_HAS_PUSH_FILTERING` para `1`. **Ainda não testado no aparelho com o servidor**: ver se o iOS respeita o aviso passivo e se ele some sozinho. Como reverter: `docs/fpush/README.md`.
+
 ## 0.0.1 (build 38) — 28/10/2026
 
 ### Corrigido

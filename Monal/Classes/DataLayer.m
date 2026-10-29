@@ -2317,9 +2317,9 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
         NSString* text = row[@"message"];
         if(![text isKindOfClass:[NSString class]])
             continue;
-        for(NSString* name in names)
-            if(name.length > 0 && [text localizedCaseInsensitiveContainsString:name])
-                return YES;
+        //isaCloud: whole words only, see HelperTools text:mentionsAnyOfNames:
+        if([HelperTools text:text mentionsAnyOfNames:names])
+            return YES;
     }
     return NO;
 }

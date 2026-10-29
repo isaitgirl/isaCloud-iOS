@@ -348,14 +348,8 @@ typedef NS_ENUM(NSUInteger, MLNotificationState) {
         NSString* ownJid = xmppAccount.connectionProperties.identity.jid;
         NSString* userPart = [HelperTools splitJid:ownJid][@"user"];
         NSString* nick = [[DataLayer sharedInstance] ownNickNameforMuc:message.buddyName forAccount:message.accountID];
-        //isaCloud: an empty name matches every text, so only the names we really have can count as a mention
-        BOOL mentioned = NO;
-        for(NSString* name in @[nick ?: @"", displayName ?: @"", userPart ?: @"", ownJid ?: @""])
-            if(name.length > 0 && [message.messageText localizedCaseInsensitiveContainsString:name])
-            {
-                mentioned = YES;
-                break;
-            }
+        //isaCloud: an empty name matches every text, so only the names we really have can count as a mention; whole words only
+        BOOL mentioned = [HelperTools text:message.messageText mentionsAnyOfNames:@[nick ?: @"", displayName ?: @"", userPart ?: @"", ownJid ?: @""]];
         if(!mentioned)
             muted = YES;
     }

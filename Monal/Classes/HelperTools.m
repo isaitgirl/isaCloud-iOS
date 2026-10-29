@@ -741,6 +741,9 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
 
 +(void) initSystem
 {
+    //isaCloud: a database imported from the debug screen is put in place here, before any code opens the current one
+    [self applyPendingDatabaseImport];
+    
     BOOL enableDefaultLogAndCrashFramework = YES;
 #if TARGET_OS_SIMULATOR
     // Automatically switch between the debug technique of TMolitor and FAltheide
@@ -815,6 +818,36 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
 +(NSArray<NSString*>*) isaCloudServerDomains
 {
     return @[@"isacloud.im", @"xmpp.social.br", @"voz.social.br"];
+}
+
+//isaCloud: a name is a mention only as a whole word, so "isa" does not match "precisa" or "isafashiondev"
++(BOOL) text:(NSString*) text mentionsAnyOfNames:(NSArray<NSString*>*) names
+{
+    if(text.length == 0 || names.count == 0)
+        return NO;
+    NSMutableCharacterSet* wordCharacters = [NSMutableCharacterSet alphanumericCharacterSet];
+    [wordCharacters addCharactersInString:@"_"];
+    for(NSString* rawName in names)
+    {
+        NSString* name = [rawName stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        if(name.length == 0)
+            continue;
+        NSRange search = NSMakeRange(0, text.length);
+        while(search.length > 0)
+        {
+            NSRange found = [text rangeOfString:name options:NSCaseInsensitiveSearch | NSDiacriticInsensitiveSearch range:search];
+            if(found.location == NSNotFound)
+                break;
+            BOOL leftBorder = found.location == 0 || ![wordCharacters characterIsMember:[text characterAtIndex:found.location - 1]];
+            NSUInteger end = NSMaxRange(found);
+            BOOL rightBorder = end >= text.length || ![wordCharacters characterIsMember:[text characterAtIndex:end]];
+            if(leftBorder && rightBorder)
+                return YES;
+            //this occurrence is inside another word, keep looking after its first character
+            search = NSMakeRange(found.location + 1, text.length - found.location - 1);
+        }
+    }
+    return NO;
 }
 
 +(NSString*) getSelectedPushServerBasedOnLocale
@@ -1096,6 +1129,29 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     else if(result == 0 && data1.length > data2.length)
         return 1;
     return result;
+}
+
+//isaCloud: the iOS file service can not write to the root of the app group container (where sworim.sqlite lives), so a database
+//imported from the debug screen is copied there by the app itself as "import-sworim.sqlite" and promoted here, at startup,
+//before DataLayer opens it. The old database and its write-ahead log go away with it.
++(BOOL) applyPendingDatabaseImport
+{
+    NSFileManager* fm = [NSFileManager defaultManager];
+    NSURL* importURL = [self getContainerURLForPathComponents:@[@"import-sworim.sqlite"]];
+    if(importURL == nil || ![fm fileExistsAtPath:importURL.path])
+        return NO;
+    NSURL* dbURL = [self getContainerURLForPathComponents:@[@"sworim.sqlite"]];
+    DDLogWarn(@"Applying imported database at %@", importURL.path);
+    for(NSString* suffix in @[@"", @"-wal", @"-shm"])
+        [fm removeItemAtPath:[dbURL.path stringByAppendingString:suffix] error:nil];
+    NSError* error;
+    if(![fm moveItemAtURL:importURL toURL:dbURL error:&error])
+    {
+        DDLogError(@"Could not apply the imported database: %@", error);
+        return NO;
+    }
+    DDLogWarn(@"Imported database applied, the app will migrate it now");
+    return YES;
 }
 
 +(NSURL*) getContainerURLForPathComponents:(NSArray*) components
@@ -2211,6 +2267,57 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     [[HelperTools defaultsDB] setObject:syncErrorsDisplayed forKey:@"syncErrorsDisplayed"];
 }
 
+//isaCloud: without the com.apple.developer.usernotifications.filtering entitlement, handing an empty
+//content to the NSE contentHandler makes iOS show the ORIGINAL alert of the push ("New Message / New Message?"),
+//in addition to the real notifications MLNotificationManager posts with their own identifiers.
+//So every alert push became a ghost. Instead we hand over a passive (no sound, no banner, no screen wake)
+//placeholder that is marked so we can remove it shortly afterwards (when the appex stays alive long enough), when the
+//next push comes in or when the app is opened. The placeholder has no text of its own (nothing to translate: the appex
+//does not get the isaCloud translations); its title is the name of the app that owns the appex, so "isaCloud" and "isaCloud.dev" differ.
+//HOW TO REVERT (when the entitlement is granted): set ISACLOUD_HAS_PUSH_FILTERING to 1 (empty content again, nothing else changes).
+//To remove it completely: see docs/fpush/README.md ("Patches do push enquanto não há push filtering").
+#define ISACLOUD_HAS_PUSH_FILTERING 0
+#define kIsaCloudPushPlaceholder @"isaCloudPushPlaceholder"
+
++(UNMutableNotificationContent*) isaCloudPushPlaceholderContent
+{
+    UNMutableNotificationContent* content = [UNMutableNotificationContent new];
+#if !ISACLOUD_HAS_PUSH_FILTERING
+    //the appex lives in <app>.app/PlugIns/<name>.appex: the title is the display name of the app ("isaCloud" or "isaCloud.dev")
+    NSBundle* appBundle = [NSBundle mainBundle];
+    if([appBundle.bundlePath.pathExtension isEqualToString:@"appex"])
+        appBundle = [NSBundle bundleWithPath:[[appBundle.bundlePath stringByDeletingLastPathComponent] stringByDeletingLastPathComponent]] ?: appBundle;
+    NSString* appName = appBundle.infoDictionary[@"CFBundleDisplayName"] ?: appBundle.infoDictionary[@"CFBundleName"] ?: @"isaCloud";
+    content.title = appName;
+    content.threadIdentifier = kIsaCloudPushPlaceholder;
+    content.userInfo = @{kIsaCloudPushPlaceholder: @YES};
+    content.interruptionLevel = UNNotificationInterruptionLevelPassive;
+    content.relevanceScore = 0.0;
+    content.sound = nil;
+#endif
+    return content;
+}
+
++(void) removeIsaCloudPushPlaceholdersAfter:(double) delay
+{
+#if !ISACLOUD_HAS_PUSH_FILTERING
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delay * NSEC_PER_SEC)), dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+        UNUserNotificationCenter* center = [UNUserNotificationCenter currentNotificationCenter];
+        [center getDeliveredNotificationsWithCompletionHandler:^(NSArray<UNNotification*>* notifications) {
+            NSMutableArray<NSString*>* ids = [NSMutableArray new];
+            for(UNNotification* notification in notifications)
+                if([notification.request.content.userInfo[kIsaCloudPushPlaceholder] boolValue])
+                    [ids addObject:notification.request.identifier];
+            if(ids.count > 0)
+            {
+                DDLogInfo(@"isaCloud: removing %lu push placeholder notification(s)", (unsigned long)ids.count);
+                [center removeDeliveredNotificationsWithIdentifiers:ids];
+            }
+        }];
+    });
+#endif
+}
+
 +(void) removePendingSyncErrorNotifications
 {
     NSMutableDictionary* syncErrorsDisplayed = [NSMutableDictionary dictionaryWithDictionary:[[HelperTools defaultsDB] objectForKey:@"syncErrorsDisplayed"]];
@@ -2497,7 +2604,15 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
 {
     [_stderrRedirector flushWithTimeout:timeout];
     [_stdoutRedirector flushWithTimeout:timeout];
-    [DDLog flushLog];
+    //isaCloud: [DDLog flushLog] is a dispatch_sync onto the logging queue, which has no timeout. The queue is suspended while
+    //the app is in the background and can be busy for a long time after a network flap, and the caller here is often the main
+    //thread of a background wakeup, which the system kills after 30 s (0x8BADF00D, seen in builds 40 and 42). Wait for the queue
+    //to drain, but never forever: if the timeout passes, the few remaining log lines are lost and the caller goes on.
+    dispatch_semaphore_t drained = dispatch_semaphore_create(0);
+    dispatch_async([DDLog loggingQueue], ^{
+        dispatch_semaphore_signal(drained);
+    });
+    dispatch_semaphore_wait(drained, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(timeout * NSEC_PER_SEC)));
     [MLUDPLogger flushWithTimeout:timeout];
 }
 

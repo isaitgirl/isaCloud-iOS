@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Builds the isaCloud ".dev" variant and installs it on a connected iPhone, using a free Apple ID (Personal Team).
+# Builds the isaCloud ".dev" variant and installs it on a connected iPhone, signed with the team given below (automatic signing).
 #
 # usage (from the repository root):
 #   scripts/isacloud-dev-device.sh <TEAM_ID> [DEVICE_UDID]
@@ -9,9 +9,10 @@
 # - DEVICE_UDID: optional, defaults to the first connected physical iPhone (xcrun devicectl list devices)
 #
 # The .dev variant uses the bundle id br.com.isacloud.messenger.dev (app group and keychain follow it), so it never
-# blocks the real bundle id, and the entitlements in isaCloud/dev-entitlements/ (without push, communication notifications, app groups and the
-# increased memory limit, which free accounts cannot use; the app then keeps its data in its own private directory,
-# so the notification and share extensions do not share it). Builds signed with a free account expire after 7 days.
+# blocks the real bundle id, and the entitlements in isaCloud/dev-entitlements/ (with the app group group.<bundle id>, so the app and its
+# extensions share their data, but without aps-environment (no APNs push; the notifications seen in the .dev are local ones), communication
+# notifications and the increased memory limit, which this variant does not ask for). A free Apple ID would expire after 7 days and could not
+# use the app group; with the paid team the profile lasts a year (security cms -D -i <app>/embedded.mobileprovision shows it).
 
 set -e
 set -o pipefail

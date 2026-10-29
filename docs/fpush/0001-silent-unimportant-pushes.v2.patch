@@ -1,0 +1,437 @@
+diff --git a/fpush-apns/src/push.rs b/fpush-apns/src/push.rs
+index 5c47b4c..2c2ee44 100644
+--- a/fpush-apns/src/push.rs
++++ b/fpush-apns/src/push.rs
+@@ -2,9 +2,15 @@ use std::collections::HashMap;
+ use std::time::SystemTime;
+ 
+ use a2::{
+-    request::payload::PayloadLike, Client, ClientConfig, DefaultNotificationBuilder,
++    request::payload::PayloadLike, Client, ClientConfig, CollapseId, DefaultNotificationBuilder,
+     NotificationBuilder, NotificationOptions, Priority, PushType,
+ };
++
++/// isaCloud: every alert push shares this collapse id, so iOS keeps at most one
++/// placeholder ("New Message?") per app in Notification Center: a new push
++/// replaces the previous one instead of piling up. The real notifications are
++/// posted by the app itself with their own identifiers and are not affected.
++const ISACLOUD_ALERT_COLLAPSE_ID: &str = "isacloud-sync";
+ use fpush_traits::push::{PushError, PushResult, PushTrait};
+ 
+ use async_trait::async_trait;
+@@ -58,21 +64,39 @@ impl FpushApns {
+ #[async_trait]
+ impl PushTrait for FpushApns {
+     #[inline(always)]
+-    async fn send(&self, token: String) -> PushResult<()> {
+-        let notification_builder = DefaultNotificationBuilder::new()
+-            .set_title("New Message")
+-            .set_body("New Message?")
+-            .set_mutable_content()
+-            .set_sound("default");
++    async fn send(&self, token: String, important: bool) -> PushResult<()> {
++        let (notification_builder, priority, push_type, collapse_id) = if important {
++            (
++                DefaultNotificationBuilder::new()
++                    .set_title("New Message")
++                    .set_body("New Message?")
++                    .set_mutable_content()
++                    .set_sound("default"),
++                Priority::High,
++                PushType::Alert,
++                CollapseId::new(ISACLOUD_ALERT_COLLAPSE_ID).ok(),
++            )
++        } else {
++            (
++                // A push without last-message-body is not expected to produce a
++                // visible notification. Use a background push so iOS can wake
++                // the app without displaying the placeholder alert.
++                DefaultNotificationBuilder::new().set_content_available(),
++                Priority::Normal,
++                PushType::Background,
++                None,
++            )
++        };
+         let mut payload = notification_builder.build(
+             &token,
+             NotificationOptions {
+-                apns_priority: Some(Priority::High),
++                apns_priority: Some(priority),
+                 apns_topic: Some(&self.topic),
+                 apns_expiration: Some(
+                     SystemTime::now().elapsed().unwrap().as_secs() + 4 * 7 * 24 * 3600,
+                 ),
+-                apns_push_type: Some(PushType::Alert),
++                apns_push_type: Some(push_type),
++                apns_collapse_id: collapse_id,
+                 ..Default::default()
+             },
+         );
+@@ -85,7 +109,8 @@ impl PushTrait for FpushApns {
+             }
+         }
+         log::debug!(
+-            "Payload send to apple: {}",
++            "Payload send to apple (important={}): {}",
++            important,
+             payload.clone().to_json_string().unwrap()
+         );
+         match self.apns.send(payload).await {
+diff --git a/fpush-demopush/src/lib.rs b/fpush-demopush/src/lib.rs
+index 53c4e16..553430d 100644
+--- a/fpush-demopush/src/lib.rs
++++ b/fpush-demopush/src/lib.rs
+@@ -15,7 +15,7 @@ impl FpushDemoPush {
+ 
+ #[async_trait]
+ impl PushTrait for FpushDemoPush {
+-    async fn send(&self, _token: String) -> PushResult<()> {
++    async fn send(&self, _token: String, _important: bool) -> PushResult<()> {
+         let wait_time;
+         let return_code;
+         {
+diff --git a/fpush-fcm/src/push.rs b/fpush-fcm/src/push.rs
+index f282061..385eaea 100644
+--- a/fpush-fcm/src/push.rs
++++ b/fpush-fcm/src/push.rs
+@@ -104,7 +104,7 @@ enum FcmErrorCode {
+ #[async_trait]
+ impl PushTrait for FpushFcm {
+     #[inline(always)]
+-    async fn send(&self, token: String) -> PushResult<()> {
++    async fn send(&self, token: String, _important: bool) -> PushResult<()> {
+         let req = SendMessageRequest {
+             message: Some(create_push_message(token)),
+             validate_only: None,
+diff --git a/fpush-push/src/lib.rs b/fpush-push/src/lib.rs
+index d78e7ea..bc2dc05 100644
+--- a/fpush-push/src/lib.rs
++++ b/fpush-push/src/lib.rs
+@@ -95,9 +95,14 @@ impl FpushPush {
+     }
+ 
+     #[inline(always)]
+-    pub async fn push(&self, module_id: &str, token: String) -> PushRequestResult<()> {
++    pub async fn push(
++        &self,
++        module_id: &str,
++        token: String,
++        important: bool,
++    ) -> PushRequestResult<()> {
+         if let Some(push_module) = self.push_modules.get(module_id) {
+-            handle_push_request(push_module.value(), token).await
++            handle_push_request(push_module.value(), token, important).await
+         } else {
+             debug!("Unknown push_module requested: {}", module_id);
+             Err(PushRequestError::UnknownPushModule)
+diff --git a/fpush-push/src/push_handler.rs b/fpush-push/src/push_handler.rs
+index 96de2ec..e6c888b 100644
+--- a/fpush-push/src/push_handler.rs
++++ b/fpush-push/src/push_handler.rs
+@@ -9,6 +9,7 @@ use log::{info, warn};
+ pub async fn handle_push_request(
+     push_module: &PushModuleEnum,
+     token: String,
++    important: bool,
+ ) -> PushRequestResult<()> {
+     if push_module.blocklist().is_blocked(&token) {
+         return Err(PushRequestError::TokenBlocked);
+@@ -18,7 +19,10 @@ pub async fn handle_push_request(
+         .lookup_ratelimit(token.to_string())
+         .await
+     {
+-        match push_module.send(token.to_string()).await {
++        // isaCloud: an important push dropped by the ratelimit while this one
++        // was waiting upgrades this one to an alert.
++        let important = push_module.pending_important().remove(&token).is_some() || important;
++        match push_module.send(token.to_string(), important).await {
+             Ok(()) => {
+                 info!(
+                     "{}: Send push message to token {}",
+@@ -56,6 +60,9 @@ pub async fn handle_push_request(
+             }
+         }
+     } else {
++        if important {
++            push_module.pending_important().insert(token.to_string(), ());
++        }
+         info!(
+             "{}: Ignoring push request for token {} due to ratelimit",
+             push_module.identifier(),
+diff --git a/fpush-push/src/push_module.rs b/fpush-push/src/push_module.rs
+index e5ad225..26c4dec 100644
+--- a/fpush-push/src/push_module.rs
++++ b/fpush-push/src/push_module.rs
+@@ -24,14 +24,14 @@ pub enum PushModuleEnum {
+ impl PushModuleEnum {
+     /// dispatch
+     #[inline(always)]
+-    pub async fn send(&self, token: String) -> PushResult<()> {
++    pub async fn send(&self, token: String, important: bool) -> PushResult<()> {
+         match self {
+             #[cfg(feature = "enable_apns_support")]
+-            PushModuleEnum::Apple(push_module) => push_module.send(token).await,
++            PushModuleEnum::Apple(push_module) => push_module.send(token, important).await,
+             #[cfg(feature = "enable_fcm_support")]
+-            PushModuleEnum::Google(push_module) => push_module.send(token).await,
++            PushModuleEnum::Google(push_module) => push_module.send(token, important).await,
+             #[cfg(feature = "enable_demo_support")]
+-            PushModuleEnum::Demo(push_module) => push_module.send(token).await,
++            PushModuleEnum::Demo(push_module) => push_module.send(token, important).await,
+         }
+     }
+ 
+@@ -59,6 +59,18 @@ impl PushModuleEnum {
+         }
+     }
+ 
++    #[inline(always)]
++    pub fn pending_important(&self) -> &Arc<DashMap<String, ()>> {
++        match self {
++            #[cfg(feature = "enable_apns_support")]
++            PushModuleEnum::Apple(push_module) => push_module.pending_important(),
++            #[cfg(feature = "enable_fcm_support")]
++            PushModuleEnum::Google(push_module) => push_module.pending_important(),
++            #[cfg(feature = "enable_demo_support")]
++            PushModuleEnum::Demo(push_module) => push_module.pending_important(),
++        }
++    }
++
+     #[inline(always)]
+     pub fn identifier(&self) -> &str {
+         match self {
+@@ -78,6 +90,11 @@ where
+ {
+     blocklist: Arc<FpushBlocklist>,
+     token_ratelimit: Arc<FpushTokenRateLimit>,
++    /// isaCloud: tokens whose important push was swallowed by the ratelimit
++    /// while another (possibly unimportant) push was waiting; the waiting push
++    /// is upgraded to an alert so a real message is never left with only a
++    /// background push.
++    pending_important: Arc<DashMap<String, ()>>,
+     push: Arc<T>,
+     identifier: String,
+ }
+@@ -153,6 +170,7 @@ where
+         let module = Self {
+             blocklist: Arc::new(blocklist),
+             token_ratelimit: Arc::new(token_ratelimit),
++            pending_important: Arc::new(DashMap::new()),
+             push,
+             identifier,
+         };
+@@ -164,8 +182,8 @@ where
+ 
+     /// trigger push event got provided token
+     #[inline(always)]
+-    async fn send(&self, token: String) -> PushResult<()> {
+-        self.push.send(token).await
++    async fn send(&self, token: String, important: bool) -> PushResult<()> {
++        self.push.send(token, important).await
+     }
+ 
+     fn spawn_blocklist_cleanup(&self) {
+@@ -200,6 +218,11 @@ where
+         &self.token_ratelimit
+     }
+ 
++    #[inline(always)]
++    pub fn pending_important(&self) -> &Arc<DashMap<String, ()>> {
++        &self.pending_important
++    }
++
+     #[inline(always)]
+     pub fn identifier(&self) -> &str {
+         &self.identifier
+diff --git a/fpush-traits/src/push.rs b/fpush-traits/src/push.rs
+index 065dc24..47eea02 100644
+--- a/fpush-traits/src/push.rs
++++ b/fpush-traits/src/push.rs
+@@ -16,5 +16,9 @@ pub enum PushError {
+ #[async_trait]
+ pub trait PushTrait {
+     /// returns false if the token should be blocked
+-    async fn send(&self, token: String) -> PushResult<()>;
++    ///
++    /// `important` is false for pushes without `last-message-body` in the
++    /// XEP-0357 payload. Implementations may use a background/silent push for
++    /// those to avoid showing a placeholder notification on iOS.
++    async fn send(&self, token: String, important: bool) -> PushResult<()>;
+ }
+diff --git a/fpush/src/xmpp/message_loop.rs b/fpush/src/xmpp/message_loop.rs
+index 4eadaa6..f5e7f81 100644
+--- a/fpush/src/xmpp/message_loop.rs
++++ b/fpush/src/xmpp/message_loop.rs
+@@ -148,8 +148,8 @@ async fn handle_iq(conn: &mpsc::Sender<Iq>, push_modules: FpushPushArc, stanza:
+                     return;
+                 }
+             };
+-            let (module_id, token) = match parse_token_and_module_id(iq_payload) {
+-                Ok((module_id, token)) => (module_id, token),
++            let (module_id, token, important) = match parse_token_and_module_id(iq_payload) {
++                Ok((module_id, token, important)) => (module_id, token, important),
+                 Err(e) => {
+                     warn!(
+                         "Could not retrieve token or module_id: {} source: {}",
+@@ -160,11 +160,13 @@ async fn handle_iq(conn: &mpsc::Sender<Iq>, push_modules: FpushPushArc, stanza:
+                 }
+             };
+             debug!(
+-                "Selected push_module {} for JID {} with token {}",
+-                module_id, from, token
++                "Selected push_module {} for JID {} with token {} (important: {})",
++                module_id, from, token, important
+             );
+             // handle_push_request
+-            let push_result = push_modules.push(&module_id, token.clone()).await;
++            let push_result = push_modules
++                .push(&module_id, token.clone(), important)
++                .await;
+             handle_push_result(conn, &module_id, &token, &push_result, from, to, iq.id).await
+         }
+     }
+@@ -210,35 +212,43 @@ async fn handle_push_result(
+ }
+ 
+ #[inline(always)]
+-fn parse_token_and_module_id(iq_payload: Element) -> Result<(String, String)> {
++fn parse_token_and_module_id(iq_payload: Element) -> Result<(String, String, bool)> {
+     if let Ok(pubsub) = PubSub::try_from(iq_payload) {
+         match pubsub {
+             PubSub::Publish {
+-                publish: pubsub_payload,
+-                publish_options: None,
+-            } => Ok(("default".to_string(), pubsub_payload.node.0)),
+-            PubSub::Publish {
+-                publish: pubsub_payload,
+-                publish_options: Some(publish_options),
++                publish,
++                publish_options,
+             } => {
+-                if let Some(data_forms) = publish_options.form {
+-                    if data_forms.fields.len() > 5 {
+-                        return Err(Error::PubSubToManyPublishOptions);
+-                    }
+-                    for field in &data_forms.fields {
+-                        match field.var {
+-                            Some(ref field_var_name) if field_var_name == "pushModule" => {
+-                                if let Some(push_module_id) = field.values.first() {
+-                                    return Ok((push_module_id.to_string(), pubsub_payload.node.0));
++                let token = publish.node.0;
++                let important = publish
++                    .items
++                    .iter()
++                    .filter_map(|item| item.0.payload.as_ref())
++                    .any(payload_has_last_message_body);
++                if let Some(publish_options) = publish_options {
++                    if let Some(data_forms) = publish_options.form {
++                        if data_forms.fields.len() > 5 {
++                            return Err(Error::PubSubToManyPublishOptions);
++                        }
++                        for field in &data_forms.fields {
++                            match field.var {
++                                Some(ref field_var_name) if field_var_name == "pushModule" => {
++                                    if let Some(push_module_id) = field.values.first() {
++                                        return Ok((
++                                            push_module_id.to_string(),
++                                            token.clone(),
++                                            important,
++                                        ));
++                                    }
++                                }
++                                None | Some(_) => {
++                                    return Err(Error::PubSubInvalidPushModuleConfiguration);
+                                 }
+-                            }
+-                            None | Some(_) => {
+-                                return Err(Error::PubSubInvalidPushModuleConfiguration);
+                             }
+                         }
+                     }
+                 }
+-                Ok(("default".to_string(), pubsub_payload.node.0))
++                Ok(("default".to_string(), token, important))
+             }
+             _ => Err(Error::PubSubNonPublish),
+         }
+@@ -246,3 +256,80 @@ fn parse_token_and_module_id(iq_payload: Element) -> Result<(String, String)> {
+         Err(Error::PubSubInvalidFormat)
+     }
+ }
++
++/// XEP-0357 uses `last-message-body` only for pushes that `mod_cloud_notify`
++/// considers important (messages with a body, OMEMO/encrypted payloads and
++/// calls). Pushes without that field are wake-ups for presence, receipts,
++/// chat states, pings and similar events.
++#[inline(always)]
++fn payload_has_last_message_body(payload: &Element) -> bool {
++    let form = match payload.get_child("x", "jabber:x:data") {
++        Some(form) => form,
++        None => return false,
++    };
++    for field in form.children() {
++        if field.is("field", "jabber:x:data") && field.attr("var") == Some("last-message-body") {
++            return field
++                .get_child("value", "jabber:x:data")
++                .map(|value| !value.text().trim().is_empty())
++                .unwrap_or(false);
++        }
++    }
++    false
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    fn parse(xml: &str) -> Result<(String, String, bool)> {
++        let element = Element::from_reader(xml.as_bytes()).unwrap();
++        parse_token_and_module_id(element)
++    }
++
++    #[test]
++    fn parses_important_push() {
++        let (module_id, token, important) = parse(
++            r#"<pubsub xmlns='http://jabber.org/protocol/pubsub'>
++                <publish node='device-token'>
++                    <item>
++                        <notification xmlns='urn:xmpp:push:0'>
++                            <x xmlns='jabber:x:data' type='form'>
++                                <field var='last-message-body' type='text-single'>
++                                    <value>New Message!</value>
++                                </field>
++                            </x>
++                        </notification>
++                    </item>
++                </publish>
++            </pubsub>"#,
++        )
++        .unwrap();
++        assert_eq!(module_id, "default");
++        assert_eq!(token, "device-token");
++        assert!(important);
++    }
++
++    #[test]
++    fn parses_unimportant_push() {
++        let (module_id, token, important) = parse(
++            r#"<pubsub xmlns='http://jabber.org/protocol/pubsub'>
++                <publish node='device-token'>
++                    <item>
++                        <notification xmlns='urn:xmpp:push:0'>
++                            <x xmlns='jabber:x:data' type='form'>
++                                <field var='message-count' type='text-single'>
++                                    <value>1</value>
++                                </field>
++                            </x>
++                        </notification>
++                    </item>
++                </publish>
++            </pubsub>"#,
++        )
++        .unwrap();
++        assert_eq!(module_id, "default");
++        assert_eq!(token, "device-token");
++        assert!(!important);
++    }
++}

@@ -534,6 +534,9 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
 {
     [self updateAppIconIfNeeded];
     
+    //isaCloud: remove push placeholders left in Notification Center (see HelperTools isaCloudPushPlaceholderContent)
+    [HelperTools removeIsaCloudPushPlaceholdersAfter:0];
+    
     if([[MLXMPPManager sharedInstance] connectedXMPP].count > 0)
         [self handleSpinner];
     else
@@ -1032,7 +1035,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
         if(self.bgProcessing != nil)
         {
             DDLogDebug(@"Stopping bg processing task, we are foregrounded now");
-            [DDLog flushLog];
+            [HelperTools flushLogsWithTimeout:0.1];
             BGTask* task = self.bgProcessing;
             self.bgProcessing = nil;
             [task setTaskCompletedWithSuccess:YES];
@@ -1043,7 +1046,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
         if(self.bgRefreshing != nil)
         {
             DDLogDebug(@"Stopping bg refreshing task, we are foregrounded now");
-            [DDLog flushLog];
+            [HelperTools flushLogsWithTimeout:0.1];
             BGTask* task = self.bgRefreshing;
             self.bgRefreshing = nil;
             [task setTaskCompletedWithSuccess:YES];
@@ -1422,7 +1425,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                     if(self->_bgTask != UIBackgroundTaskInvalid)
                     {
                         DDLogDebug(@"stopping UIKit _bgTask");
-                        [DDLog flushLog];
+                        [HelperTools flushLogsWithTimeout:0.1];
                         UIBackgroundTaskIdentifier task = self->_bgTask;
                         self->_bgTask = UIBackgroundTaskInvalid;
                         [[UIApplication sharedApplication] endBackgroundTask:task];
@@ -1431,7 +1434,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                     if(self.bgProcessing != nil)
                     {
                         DDLogDebug(@"stopping backgroundProcessingTask");
-                        [DDLog flushLog];
+                        [HelperTools flushLogsWithTimeout:0.1];
                         BGTask* task = self.bgProcessing;
                         self.bgProcessing = nil;
                         [task setTaskCompletedWithSuccess:YES];
@@ -1440,7 +1443,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                     if(self.bgRefreshing != nil)
                     {
                         DDLogDebug(@"stopping backgroundRefreshingTask");
-                        [DDLog flushLog];
+                        [HelperTools flushLogsWithTimeout:0.1];
                         BGTask* task = self.bgRefreshing;
                         self.bgRefreshing = nil;
                         [task setTaskCompletedWithSuccess:YES];
@@ -1449,7 +1452,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                     if(!stopped)
                     {
                         DDLogError(@"no background tasks running, nothing to stop");
-                        [DDLog flushLog];
+                        [HelperTools flushLogsWithTimeout:0.1];
                     }
                     else
                         [HelperTools signalSuspension];
@@ -1473,7 +1476,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
             //indicate we want to do work even if the app is put into background
             self->_bgTask = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:^(void) {
                 DDLogWarn(@"BG WAKE EXPIRING");
-                [DDLog flushLog];
+                [HelperTools flushLogsWithTimeout:0.1];
                 [self updateBackgroundState];       //make sure we are in the correct state
                 
                 @synchronized(self) {
@@ -1506,7 +1509,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                         DDLogDebug(@"self.bgProcessing != nil || self.bgRefreshing != nil --> not disconnecting");
                     
                     DDLogDebug(@"stopping UIKit _bgTask");
-                    [DDLog flushLog];
+                    [HelperTools flushLogsWithTimeout:0.1];
                     UIBackgroundTaskIdentifier task = self->_bgTask;
                     self->_bgTask = UIBackgroundTaskInvalid;
                     [[UIApplication sharedApplication] endBackgroundTask:task];
@@ -1528,7 +1531,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
     task.expirationHandler = ^{
         strongify(task);
         DDLogWarn(@"*** BGPROCESSING EXPIRED ***");
-        [DDLog flushLog];
+        [HelperTools flushLogsWithTimeout:0.1];
         [self updateBackgroundState];       //make sure we are in the correct state
         
         DDLogVerbose(@"Dispatching to main queue...");
@@ -1566,7 +1569,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                     DDLogDebug(@"!background || _bgTask != UIBackgroundTaskInvalid --> not disconnecting");
                 
                 DDLogDebug(@"stopping backgroundProcessingTask: %@", task);
-                [DDLog flushLog];
+                [HelperTools flushLogsWithTimeout:0.1];
                 self.bgProcessing = nil;
                 //only signal success, if we are not in background anymore (otherwise we *really* expired without being idle)
                 [task setTaskCompletedWithSuccess:!background];
@@ -1601,7 +1604,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
     if(self.bgRefreshing != nil)
     {
         DDLogDebug(@"stopping bg refreshing task, not needed when running a (longer running) bg processing task");
-        [DDLog flushLog];
+        [HelperTools flushLogsWithTimeout:0.1];
         BGTask* refreshingTask = self.bgRefreshing;
         self.bgRefreshing = nil;
         [refreshingTask setTaskCompletedWithSuccess:YES];
@@ -1633,7 +1636,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
     task.expirationHandler = ^{
         strongify(task);
         DDLogWarn(@"*** BGREFRESHING EXPIRED ***");
-        [DDLog flushLog];
+        [HelperTools flushLogsWithTimeout:0.1];
         [self updateBackgroundState];       //make sure we are in the correct state
         
         DDLogVerbose(@"Dispatching to main queue...");
@@ -1671,7 +1674,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                     DDLogDebug(@"!background || _bgTask != UIBackgroundTaskInvalid --> not disconnecting");
                 
                 DDLogDebug(@"stopping backgroundProcessingTask: %@", task);
-                [DDLog flushLog];
+                [HelperTools flushLogsWithTimeout:0.1];
                 self.bgRefreshing = nil;
                 //only signal success, if we are not in background anymore (otherwise we *really* expired without being idle)
                 [task setTaskCompletedWithSuccess:!background];
@@ -1903,7 +1906,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                         
                         //call completion (should be done *after* the idle state check because it could freeze the app)
                         DDLogInfo(@"Calling wakeup completion handler...");
-                        [DDLog flushLog];
+                        [HelperTools flushLogsWithTimeout:0.1];
                         [self->_wakeupCompletions removeObjectForKey:completionId];
                         completionHandler(UIBackgroundFetchResultFailed);
                         
@@ -1937,6 +1940,41 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
 #pragma mark - share sheet added
 
 //send all sharesheet outboxes (this method will be called by AppDelegate if opened via monalOpen:// url)
+//isaCloud: a share opens the app before the account finished connecting, and the upload slot request then fails with
+//"your account got disconnected while requesting upload slot" (seen on 28/10/2026, with a photo shared from Fotos).
+//Wait for the account to be bound and for the upload service to be known, then upload; give up waiting after ~30 s and let
+//the upload fail through the normal error path, so a really broken connection still tells the person what happened.
+//isaCloud: a C function (not a block) so the retry does not capture itself, which the compiler flags as a retain cycle
+static void waitForAccountConnectionPoll(xmpp* account, NSUInteger tries, dispatch_block_t block)
+{
+    BOOL ready = account.accountState >= kStateBound && account.connectionProperties.uploadServer != nil;
+    if(ready)
+    {
+        block();
+        return;
+    }
+    if(tries > 120)     //~30 s
+    {
+        DDLogWarn(@"Outbox: account %@ not ready for upload after 30 s, trying anyway", account.accountID);
+        block();
+        return;
+    }
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.25 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        waitForAccountConnectionPoll(account, tries + 1, block);
+    });
+}
+
+-(void) waitForAccountConnection:(xmpp*) account then:(dispatch_block_t) block
+{
+    if(account.accountState >= kStateBound && account.connectionProperties.uploadServer != nil)
+    {
+        block();
+        return;
+    }
+    DDLogInfo(@"Outbox: waiting for account %@ to be ready for upload (state %d)", account.accountID, (int)account.accountState);
+    waitForAccountConnectionPoll(account, 0, block);
+}
+
 -(void) sendAllOutboxes
 {
     //delay outbox sending until we have an active chats ui
@@ -2012,6 +2050,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                     DDLogInfo(@"Got %@ upload: %@", payload[@"type"], payload[@"data"]);
                     [self.activeChats.currentChatView showUploadHUD];
                     [[MLNotificationQueue currentQueue] postNotificationName:kMonalShareOutboxUpdate object:nil userInfo:@{@"contact": contact, @"uploading": @YES}];
+                    [self waitForAccountConnection:account then:^{
                     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
                         $call(payload[@"data"], $ID(account), $BOOL(encrypted), $ID(completion, (^(NSString* url, NSString* mimeType, NSNumber* size, NSError* error) {
                             dispatch_async(dispatch_get_main_queue(), ^{
@@ -2041,6 +2080,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                             });
                         })));
                     });
+                    }];
                 }
             };
             

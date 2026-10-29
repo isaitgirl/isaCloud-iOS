@@ -998,6 +998,12 @@ class SwiftuiInterface : NSObject {
     }
 
     @objc
+    //isaCloud: the user-facing "bring my Monal history" screen (Settings → App)
+    func makeImportFromMonal() -> UIViewController {
+        return UIHostingController(rootView: ImportFromMonalView())
+    }
+
+    @objc
     func makePasswordMigration(_ needingMigration: [[String:NSObject]]) -> UIViewController {
         let delegate = SheetDismisserProtocol()
         let host = UIHostingController(rootView:AnyView(EmptyView()))
@@ -1809,5 +1815,68 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
         _ = appDelegate?.application?(UIApplication.shared, continue: userActivity, restorationHandler: { _ in })
+    }
+}
+
+//isaCloud: user-facing version of the database import (the debug screen has the same flow for us). It brings the history of
+//Monal over: the app copies the chosen file into the app group and swaps it in on the next start (see HelperTools).
+struct ImportFromMonalView: View {
+    @State private var showImporter = false
+    @State private var showDone = false
+    @State private var showFailed = false
+
+    var body: some View {
+        List {
+            Section {
+                Text("No Monal, abra **Ajustes → Depuração → Arquivos do banco → Banco principal** e escolha **Salvar em Arquivos**.")
+                Text("Volte para cá e toque no botão abaixo para escolher esse arquivo.")
+                Text("Feche e abra o isaCloud. Ele vai migrar o banco importado — as contas, conversas e mensagens de agora serão substituídas.")
+            } header: {
+                Text("Passo a passo")
+            } footer: {
+                Text("As senhas das contas não vêm junto (ficam no chaveiro do Monal). Depois de importar, o isaCloud pede a senha de cada conta uma vez.")
+            }
+            Section {
+                Button {
+                    showImporter = true
+                } label: {
+                    Label("Escolher o arquivo do banco…", systemImage: "doc.badge.plus")
+                }
+            }
+        }
+        .navigationTitle(Text("Importar do Monal"))
+        .navigationBarTitleDisplayMode(.inline)
+        .fileImporter(isPresented: $showImporter, allowedContentTypes: [.data, .item]) { result in
+            switch result {
+                case .success(let url):
+                    let accessing = url.startAccessingSecurityScopedResource()
+                    defer {
+                        if accessing {
+                            url.stopAccessingSecurityScopedResource()
+                        }
+                    }
+                    let destination = HelperTools.getContainerURL(forPathComponents: ["import-sworim.sqlite"])
+                    let fm = FileManager.default
+                    try? fm.removeItem(at: destination)
+                    do {
+                        try fm.copyItem(at: url, to: destination)
+                        showDone = true
+                    } catch {
+                        showFailed = true
+                    }
+                case .failure:
+                    showFailed = true
+            }
+        }
+        .alert("Banco importado", isPresented: $showDone) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Feche e abra o isaCloud para aplicar. O banco atual será substituído e o importado será migrado na abertura.")
+        }
+        .alert("Não foi possível importar", isPresented: $showFailed) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Confira se o arquivo é o banco principal do Monal e tente de novo.")
+        }
     }
 }

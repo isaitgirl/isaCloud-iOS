@@ -35,6 +35,7 @@ NS_ASSUME_NONNULL_BEGIN
 @class xmpp;
 @class XMPPStanza;
 @class UNNotificationRequest;
+@class UNMutableNotificationContent;
 @class DDLogMessage;
 @class DDFileLogger;
 @class UIView;
@@ -115,6 +116,8 @@ NSDictionary* _Nullable dictionaryComprehension(NSDictionary* _Nullable dict, id
 +(NSString*) getSelectedPushServerBasedOnLocale;
 //isaCloud: the servers of the isaCloud network, in the order shown when creating an account
 +(NSArray<NSString*>*) isaCloudServerDomains;
+//isaCloud: true if one of the names (nick, display name, local part or jid) appears in the text as a whole word (any case and accents, no letter, digit or "_" right before or after it)
++(BOOL) text:(NSString*) text mentionsAnyOfNames:(NSArray<NSString*>*) names;
 +(NSDictionary<NSString*, NSString*>*) getAvailablePushServers;
 
 +(void) configureDefaultAudioSession;
@@ -136,6 +139,8 @@ NSDictionary* _Nullable dictionaryComprehension(NSDictionary* _Nullable dict, id
 +(BOOL) isSandboxAPNS;
 +(int) compareIOcted:(NSData*) data1 with:(NSData*) data2;
 +(NSURL*) getContainerURLForPathComponents:(NSArray*) components;
+//isaCloud: swaps a database imported from the debug screen into place, before anything opens it
++(BOOL) applyPendingDatabaseImport;
 +(NSURL*) getSharedDocumentsURLForPathComponents:(NSArray*) components;
 +(NSData*) serializeObject:(id) obj;
 +(id) unserializeData:(NSData*) data;
@@ -164,6 +169,9 @@ NSDictionary* _Nullable dictionaryComprehension(NSDictionary* _Nullable dict, id
 +(void) scheduleBackgroundTask:(BOOL) force;
 +(void) clearSyncErrorsOnAppForeground;
 +(void) removePendingSyncErrorNotifications;
+//isaCloud: placeholder for pushes while we don't have the push filtering entitlement
++(UNMutableNotificationContent*) isaCloudPushPlaceholderContent;
++(void) removeIsaCloudPushPlaceholdersAfter:(double) delay;
 +(void) updateSyncErrorsWithDeleteOnly:(BOOL) removeOnly andWaitForCompletion:(BOOL) waitForCompletion;
 
 +(BOOL) isInBackground;

@@ -7,8 +7,7 @@
 //
 
 #import "ShareViewController.h"
-#import "MLSelectionController.h"
-#import "GeneratedAssetSymbols.h"
+#import "shareSheet-Swift.h"
 
 #import <monalxmpp/MLContact.h>
 #import <monalxmpp/MLConstants.h>
@@ -25,15 +24,10 @@
 
 @interface ShareViewController ()
 
-@property (nonatomic, strong) NSArray<NSDictionary*>* accounts;
-@property (nonatomic, strong) NSArray<MLContact*>* recipients;
-@property (nonatomic, strong) MLContact* recipient;
-@property (nonatomic, strong) NSDictionary* account;
 @property (nonatomic, strong) MLContact* intentContact;
 
 @end
 
-//TODO: use this approach, but with swiftui: https://diamantidis.github.io/2020/01/11/share-extension-custom-ui
 @implementation ShareViewController
 
 +(void) initialize
@@ -56,11 +50,7 @@
 -(void) viewDidLoad
 {
     [super viewDidLoad];
-    [self.navigationController.navigationBar setTintColor:UIColor.systemBackgroundColor];
-    //isaCloud: the isaCloud pink, with a white title, like the rest of the app
-    [self.navigationController.navigationBar setBackgroundColor:[UIColor colorNamed:@"isaCloudPink"]];
-    [self.navigationController.navigationBar setTitleTextAttributes:@{NSForegroundColorAttributeName: UIColor.whiteColor}];
-    self.navigationController.navigationItem.title = NSLocalizedString(@"isaCloud", @"");
+    self.view.backgroundColor = UIColor.systemBackgroundColor;
     
     DDLogInfo(@"Extension context: %@", self.extensionContext);
     DDLogDebug(@"Raw extension context intent: %@", self.extensionContext.intent);
@@ -72,84 +62,30 @@
         DDLogInfo(@"Extracted intent contact: %@", self.intentContact);
         [self.intentContact refresh];       //make sure we are up to date
     }
-}
-
-- (void) presentationAnimationDidFinish
-{
-    // list all contacts, not only active chats
-    // that will clutter the list of selectable contacts, but you can always use sirikit interactions
-    // to get the recently used contacts listed
-    NSArray<MLContact*>* allContacts = [[DataLayer sharedInstance] contactList];
-    NSMutableArray<MLContact*>* contactsToDisplay = [NSMutableArray new];
-    //ignore all contacts not at least in any roster state: e.g. subscribedTo or asking state
-    //OR is subscribedFrom (e.g. we approved them already, but they don't approve us)
-    //order pinned before unpinned ones
-    for(MLContact* contact in allContacts)
-        if(((contact.isSubscribedTo || contact.hasOutgoingContactRequest) || contact.isSubscribedFrom) && contact.isPinned)
-            [contactsToDisplay addObject:contact];
-    for(MLContact* contact in allContacts)
-        if(((contact.isSubscribedTo || contact.hasOutgoingContactRequest) || contact.isSubscribedFrom) && !contact.isPinned)
-            [contactsToDisplay addObject:contact];
-    self.recipients = [contactsToDisplay copy];
-    self.accounts = [[DataLayer sharedInstance] enabledAccountList];
-
-    if(self.intentContact != nil)
-    {
-        DDLogInfo(@"Intent contact given: %@", self.intentContact);
-        //check if intentContact is in enabled account list
-        for(NSDictionary* accountToCheck in self.accounts)
-        {
-            NSNumber* accountID = [accountToCheck objectForKey:@"account_id"];
-            if(accountID.intValue == self.intentContact.accountID.intValue)
-            {
-                self.recipient = self.intentContact;
-                self.account = accountToCheck;
-                break;
-            }
-        }
-    }
     
-    //no intent given or intent contact not found --> select initial recipient (contact with most recent interaction)
-    if(!self.account || !self.recipient)
-    {
-        DDLogInfo(@"No recipient given, selecting the one with the most recent interaction...");
-        BOOL recipientFound = NO;
-        for(MLContact* recipient in self.recipients)
-        {
-            for(NSDictionary* accountToCheck in self.accounts)
-            {
-                NSNumber* accountID = [accountToCheck objectForKey:@"account_id"];
-                if(accountID.intValue == recipient.accountID.intValue)
-                {
-                    self.recipient = recipient;
-                    self.account = accountToCheck;
-                    recipientFound = YES;
-                    break;
-                }
-            }
-            if(recipientFound == YES)
-                break;
-        }
-    }
+    //the picker itself is SwiftUI (same look as the app's "Forward…" screen), this view controller only hosts it
+    __weak __typeof(self) weakSelf = self;
+    UIViewController* picker = [SharePickerBridge makeViewControllerWithSend:^(MLContact* recipient, NSString* message) {
+        [weakSelf enqueuePayloadsForRecipient:recipient message:message];
+    } andCancel:^{
+        [weakSelf cancelShare];
+    } initialRecipient:self.intentContact];
     
-    [self reloadConfigurationItems];
+    [self addChildViewController:picker];
+    picker.view.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.view addSubview:picker.view];
+    [NSLayoutConstraint activateConstraints:@[
+        [picker.view.topAnchor constraintEqualToAnchor:self.view.topAnchor],
+        [picker.view.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor],
+        [picker.view.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
+        [picker.view.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
+    ]];
+    [picker didMoveToParentViewController:self];
 }
 
--(MLContact* _Nullable) getLastContactForAccount:(NSNumber*) accountID
+-(void) cancelShare
 {
-    for(MLContact* recipient in self.recipients) {
-        if(recipient.accountID.intValue == accountID.intValue) {
-            return recipient;
-        }
-    }
-    return nil;
-}
-
--(BOOL) isContentValid
-{
-    if(self.recipient != nil && self.account != nil)
-        return YES;
-    return NO;
+    [self.extensionContext cancelRequestWithError:[NSError errorWithDomain:NSCocoaErrorDomain code:NSUserCancelledError userInfo:nil]];
 }
 
 -(NSExtensionItem*) filterItems:(NSArray*) items
@@ -168,7 +104,8 @@
     return items.firstObject;       //fallback, should normally not be needed
 }
 
--(void) didSelectPost
+//called by the SwiftUI picker with the chosen destination: extract everything that was shared and queue it for the main app
+-(void) enqueuePayloadsForRecipient:(MLContact*) recipient message:(NSString*) shareText
 {
     DDLogVerbose(@"input items: %@", self.extensionContext.inputItems);
     
@@ -193,8 +130,8 @@
             DDLogDebug(@"Got handleUploadItemProvider callback with payload: %@ for provider: %@", payload, provider);
             if(payload == nil)      //short circuit
                 return nil;
-            payload[@"account_id"] = self.recipient.accountID;
-            payload[@"recipient"] = self.recipient.contactJid;
+            payload[@"account_id"] = recipient.accountID;
+            payload[@"recipient"] = recipient.contactJid;
             return PMKManifold(provider, payload);
         //filter out all bplist items already contained in the contentText field (google youtube and google maps apps)
         }).then(^id(NSItemProvider* provider, NSDictionary* payload) {
@@ -209,7 +146,7 @@
                 return payload;
             
             //ignore text shares, if they contain the same contents as the comment field
-            if(self.contentText && [self.contentText length] > 0 && [payload[@"data"] isKindOfClass:[NSString class]] && [self.contentText isEqualToString:payload[@"data"]])
+            if(shareText && [shareText length] > 0 && [payload[@"data"] isKindOfClass:[NSString class]] && [shareText isEqualToString:payload[@"data"]])
             {
                 DDLogWarn(@"Ignoring plain text payload because already sent via comment field");
                 return nil;
@@ -220,7 +157,7 @@
                 [provider loadItemForTypeIdentifier:UTTypePlainText.identifier options:nil completionHandler:^(NSString* item, NSError* _Null_unspecified error) {
                     if(item != nil && item.length > 0 && error == nil)
                     {
-                        if(self.contentText && [self.contentText length] > 0 && item != nil && [self.contentText isEqualToString:item])
+                        if(shareText && [shareText length] > 0 && item != nil && [shareText isEqualToString:item])
                         {
                             DDLogWarn(@"Ignoring serialized NSString payload because already sent via comment field");
                             return resolve(nil);
@@ -228,8 +165,8 @@
                         else
                         {
                             NSMutableDictionary* payload = [NSMutableDictionary new];
-                            payload[@"account_id"] = self.recipient.accountID;
-                            payload[@"recipient"] = self.recipient.contactJid;
+                            payload[@"account_id"] = recipient.accountID;
+                            payload[@"recipient"] = recipient.contactJid;
                             payload[@"type"] = @"text";
                             payload[@"data"] = item;
                             DDLogDebug(@"Adding serialized NSString payload: %@", payload);
@@ -253,14 +190,14 @@
             [uttypes addObject:payload[@"uttype"]];
         
         //add the contentText as normal message payload, if given
-        if(self.contentText && [self.contentText length] > 0)
+        if(shareText && [shareText length] > 0)
         {
             DDLogInfo(@"Adding contentText as text message...");
             NSMutableDictionary* payload = [NSMutableDictionary new];
-            payload[@"account_id"] = self.recipient.accountID;
-            payload[@"recipient"] = self.recipient.contactJid;
+            payload[@"account_id"] = recipient.accountID;
+            payload[@"recipient"] = recipient.contactJid;
             payload[@"type"] = @"text";
-            payload[@"data"] = self.contentText;
+            payload[@"data"] = shareText;
             DDLogDebug(@"Adding shareSheet comment payload: %@", payload);
             [[DataLayer sharedInstance] addShareSheetPayload:payload];
             saved++;
@@ -368,73 +305,6 @@
             }));
         }];
     });
-}
-
--(NSArray*) configurationItems
-{
-    NSMutableArray* toreturn = [NSMutableArray new];
-    if(self.accounts.count > 1)
-    {
-        SLComposeSheetConfigurationItem* accountSelector = [SLComposeSheetConfigurationItem new];
-        accountSelector.title = NSLocalizedString(@"Account", @"ShareViewController: Account");
-
-        accountSelector.value = [NSString stringWithFormat:@"%@@%@", [self.account objectForKey:@"username"], [self.account objectForKey:@"domain"]];
-        accountSelector.tapHandler = ^{
-            UIStoryboard* iosShareStoryboard = [UIStoryboard storyboardWithName:@"iosShare" bundle:nil];
-            MLSelectionController* controller = (MLSelectionController*)[iosShareStoryboard instantiateViewControllerWithIdentifier:@"accounts"];
-            controller.options = self.accounts;
-            controller.completion = ^(NSDictionary* selectedAccount)
-            {
-                if(selectedAccount != nil) {
-                    self.account = selectedAccount;
-                }
-                else {
-                    self.account = self.accounts[0]; // at least one account is present (count > 0)
-                }
-                self.recipient = [self getLastContactForAccount:[self.account objectForKey:@"account_id"]];
-                [self reloadConfigurationItems];
-            };
-            
-            [self pushConfigurationViewController:controller];
-        };
-        [toreturn addObject:accountSelector];
-    }
-    
-    if(!self.account && self.accounts.count > 0)
-        self.account = [self.accounts objectAtIndex:0];
-
-    SLComposeSheetConfigurationItem* recipient = [SLComposeSheetConfigurationItem new];
-    recipient.title = NSLocalizedString(@"Recipient", @"shareViewController: recipient");
-    recipient.value = [NSString stringWithFormat:@"%@ (%@)", self.recipient.contactDisplayName, self.recipient.contactJid];
-    recipient.tapHandler = ^{
-        UIStoryboard* iosShareStoryboard = [UIStoryboard storyboardWithName:@"iosShare" bundle:nil];
-        MLSelectionController* controller = (MLSelectionController *)[iosShareStoryboard instantiateViewControllerWithIdentifier:@"contacts"];
-
-        // Create list of recipients for the selected account
-        NSMutableArray<NSDictionary*>* recipientsToShow = [NSMutableArray new];
-        for (MLContact* contact in self.recipients)
-        {
-            // only show contacts from the selected account
-            NSNumber* accountID = [self.account objectForKey:@"account_id"];
-            if(contact.accountID.intValue == accountID.intValue)
-                [recipientsToShow addObject:@{@"contact": contact}];
-        }
-
-        controller.options = recipientsToShow;
-        controller.completion = ^(NSDictionary* selectedRecipient) {
-            MLContact* contact = [selectedRecipient objectForKey:@"contact"];
-            if(contact)
-                self.recipient = contact;
-            else
-                self.recipient = nil;
-            [self reloadConfigurationItems];
-        };
-        
-        [self pushConfigurationViewController:controller];
-    };
-    [toreturn addObject:recipient];
-    [self validateContent];
-    return toreturn;
 }
 
 -(void) openURL:(NSURL*) url

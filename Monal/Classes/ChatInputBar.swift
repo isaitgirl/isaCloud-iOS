@@ -275,27 +275,36 @@ struct ChatInputBar: View {
 
     @ViewBuilder
     private var trailingButton: some View {
-        switch model.trailingAction {
-        case .microphone:
-            micButton
-        case .send:
-            Button(action: onSend) {
-                Image(systemName: "arrow.up")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 40, height: 40)
-                    .background(Color("isaCloudPink"), in: Circle())
+        //isaCloud: the microphone is ALWAYS the first child of this HStack, in the same position, and only the button after it
+        //changes. The first version swapped the whole branch when the recording started (trailingAction goes from .send to
+        //.microphone), which tore down the view under the finger: the drag ended at once and the app sent an empty audio before
+        //the person could record (seen on 28/10/2026). Keep the microphone's identity stable; changing its branch again breaks it.
+        HStack(spacing: 8) {
+            if model.edit == nil {
+                micButton
             }
-            .accessibilityLabel("arrowSend")
-        case .saveEdit:
-            Button(action: onSaveEdit) {
-                Image(systemName: "checkmark")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 40, height: 40)
-                    .background(Color("isaCloudPink"), in: Circle())
+            switch model.trailingAction {
+            case .send:
+                Button(action: onSend) {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 40, height: 40)
+                        .background(Color("isaCloudPink"), in: Circle())
+                }
+                .accessibilityLabel("arrowSend")
+            case .saveEdit:
+                Button(action: onSaveEdit) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 40, height: 40)
+                        .background(Color("isaCloudPink"), in: Circle())
+                }
+                .accessibilityIdentifier("checkmark")
+            case .microphone:
+                EmptyView()
             }
-            .accessibilityIdentifier("checkmark")
         }
     }
 

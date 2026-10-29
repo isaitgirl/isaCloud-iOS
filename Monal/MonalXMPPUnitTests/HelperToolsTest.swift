@@ -45,4 +45,47 @@ struct HelperToolsTest {
         #expect(abs(utc.timeIntervalSince(before)) < 5)
     }
 
+    //isaCloud: mention = whole word of the names, any case and accents
+    @Test("text mentions a name as a whole word", arguments: ["oi isa", "isa, vem aqui", "@isa pode ver?", "ISA!", "obrigada, isa.", "(isa)", "isa@isacloud.im escreveu", "Isa", "isá aqui"])
+    func testTextMentionsWholeWord(_ text: String) {
+        #expect(HelperTools.text(text, mentionsAnyOfNames: ["isa", "isa@isacloud.im"]))
+    }
+
+    @Test("text does not mention a name inside another word", arguments: ["isafashiondev", "precisa", "analisar", "avisar", "pesquisa", "Elisa", "isaías", "isa_dev", "visão", "íisa"])
+    func testTextIgnoresNameInsideWord(_ text: String) {
+        #expect(!HelperTools.text(text, mentionsAnyOfNames: ["isa", "isa@isacloud.im"]))
+    }
+
+    @Test("text mentions a name ignoring case and accents", arguments: ["oi zé", "ZE aqui", "Zé!"])
+    func testTextMentionIgnoresCaseAndAccents(_ text: String) {
+        #expect(HelperTools.text(text, mentionsAnyOfNames: ["Zé"]))
+    }
+
+    //isaCloud: display name with a space is searched as a whole
+    @Test("text mentions a name with a space as a whole")
+    func testTextMentionsNameWithSpace() {
+        #expect(HelperTools.text("oi Isa Ribeiro!", mentionsAnyOfNames: ["Isa Ribeiro"]))
+        #expect(!HelperTools.text("Elisa Ribeiro", mentionsAnyOfNames: ["Isa Ribeiro"]))
+    }
+
+    //isaCloud: nick with a hyphen is searched as a whole
+    @Test("text mentions a name with a hyphen as a whole")
+    func testTextMentionsNameWithHyphen() {
+        #expect(HelperTools.text("valeu isa-dev", mentionsAnyOfNames: ["isa-dev"]))
+        #expect(!HelperTools.text("pisa-dev", mentionsAnyOfNames: ["isa-dev"]))
+    }
+
+    //isaCloud: empty names never match and a rejected occurrence does not hide a valid one
+    @Test("text never mentions empty names")
+    func testTextIgnoresEmptyNames() {
+        #expect(!HelperTools.text("oi isa", mentionsAnyOfNames: ["", "   "]))
+        #expect(!HelperTools.text("oi isa", mentionsAnyOfNames: []))
+        #expect(!HelperTools.text("", mentionsAnyOfNames: ["isa"]))
+    }
+
+    @Test("text finds a valid occurrence after a rejected one")
+    func testTextFindsValidOccurrenceAfterRejected() {
+        #expect(HelperTools.text("precisa falar com a isa", mentionsAnyOfNames: ["isa"]))
+    }
+
 }

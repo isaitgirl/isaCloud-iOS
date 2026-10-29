@@ -6,7 +6,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: isacloud/fpush:42359ca
+    image: isacloud/fpush:42359ca-isacloud2
     container_name: fpush
     restart: unless-stopped
     init: true
@@ -35,5 +35,5 @@ networks:
   prosody:
     # rede Docker já existente onde está o container do Prosody
     # (descubra o nome com: docker inspect <container-do-prosody> --format '{{json .NetworkSettings.Networks}}')
-    name: ${PROSODY_NETWORK:-prosody}
+    name: ${PROSODY_NETWORK:-prosody_container-net}
     external: true
