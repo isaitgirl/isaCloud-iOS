@@ -115,7 +115,7 @@ A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23
 
 | 97 | "Crashes" no iPhone 11 e no XR eram o vigia de travamento do KSCrash | **corrigido em 29/10/2026** (build 63) | O limiar do vigia é fixo em 250 ms e ele matava o app na abertura a frio, quando a lista decodificava avatares e montava o texto da prévia na main thread. O vigia deixou de ser ligado em produção (só em DEBUG) e a decodificação dos avatares foi para background, com o ícone de reserva aparecendo na hora. Detalhes em `docs/decisoes.md`. |
 
-| 98 | Tempo de abertura medido a cada launch | **feito em 29/10/2026** (no `.dev`, sem bump) | Uma linha por abertura em `metrics/launches-*.jsonl`: `launch_ms` (main() até a tela), `app_delegate_ms`, `list_build_ms`, `list_ready_ms` e `main_ms`. O harness envia para a medida `…_launch` e o Grafana ganhou o painel "Abertura a frio (ms)". Detalhes em `docs/decisoes.md`. |
+| 98 | Tempo de abertura medido a cada launch | **feito em 29/10/2026** (build 64) | Uma linha por abertura em `metrics/launches-*.jsonl`: `launch_ms` (main() até a tela), `app_delegate_ms`, `list_build_ms`, `list_ready_ms` e `main_ms`. O harness envia para a medida `…_launch` e o Grafana ganhou o painel "Abertura a frio (ms)". Detalhes em `docs/decisoes.md`. |
 
 ## Aguardando o Monal
 

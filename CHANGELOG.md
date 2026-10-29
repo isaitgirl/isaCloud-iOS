@@ -2,6 +2,13 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 64) — 29/10/2026
+
+### Adicionado
+- **Medição do tempo de abertura em cada launch**: uma linha por abertura em `metrics/launches-AAAA-MM-DD.jsonl` (e no export de métricas), com `launch_ms` (de `main()` até a tela de conversas aparecer), `app_delegate_ms` (trabalho na thread principal no `didFinishLaunching`), `list_build_ms` (montagem da lista), `list_ready_ms`/`first_frame_ms` e `main_ms`.
+- **Etapas do `didFinishLaunching`** (`stage_<nome>_ms`): `xmpp_manager`, `metrics_start`, `observers`, `notifications`, `appearance`, `audio_session`, `background_task` e `connect`. No `.dev` (Debug) as duas que pesam são o singleton do `MLXMPPManager` e a `configureDefaultAudioSession`.
+- O harness (`tools/metrics-harness`) envia as aberturas para a medida `<measurement>_launch` e o dashboard ganhou o painel **"Abertura a frio (ms)"**.
+
 ## 0.0.1 (build 63) — 29/10/2026
 
 ### Corrigido

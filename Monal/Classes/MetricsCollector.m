@@ -176,10 +176,29 @@ static double _lastStageTime = 0.0;
 
 +(NSString*) metricsDirectoryPath
 {
-    NSURL* directory = [HelperTools getContainerURLForPathComponents:@[@"metrics"]];
+    //isaCloud: inside Library (not at the group root) so `xcrun devicectl device copy from` can read it: the root of the app
+    //group is outside the container directories the device file service allows (Library, Documents and tmp)
+    NSURL* directory = [HelperTools getContainerURLForPathComponents:@[@"Library", @"metrics"]];
     NSFileManager* fileManager = [NSFileManager defaultManager];
     if(directory != nil && ![fileManager fileExistsAtPath:directory.path])
         [fileManager createDirectoryAtURL:directory withIntermediateDirectories:YES attributes:nil error:nil];
+
+    //one time move of what was collected at the old place (group root)
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        NSURL* old = [HelperTools getContainerURLForPathComponents:@[@"metrics"]];
+        if(old == nil || directory == nil || [old.path isEqualToString:directory.path])
+            return;
+        for(NSString* name in [fileManager contentsOfDirectoryAtPath:old.path error:nil])
+        {
+            NSString* from = [old.path stringByAppendingPathComponent:name];
+            NSString* to = [directory.path stringByAppendingPathComponent:name];
+            if([fileManager fileExistsAtPath:to])
+                continue;
+            [fileManager moveItemAtPath:from toPath:to error:nil];
+        }
+        [fileManager removeItemAtURL:old error:nil];
+    });
     return directory.path;
 }
 
