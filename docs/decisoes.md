@@ -5,6 +5,15 @@ Registro do **porquê** das escolhas feitas no fork: decisões de produto, de c�
 - O que está feito, em andamento ou pendente, com datas e resultados de teste, fica no `ROADMAP.md` (toda decisão daqui tem uma linha lá). O histórico de cada build fica no `CHANGELOG.md`.
 - Dados sensíveis ficam em `isaCloud/local/NOTAS-LOCAIS.md`, nunca aqui.
 
+## Importar o banco de outro cliente, o "transplante" do Monal (28/10/2026)
+
+- **Pedido:** trocar o Monal pelo isaCloud sem perder o histórico (133 mil mensagens, 137 conversas).
+- **O obstáculo:** o banco mora na **raiz do container do App Group** (`.../AppGroup/<uuid>/sworim.sqlite`), e o serviço de arquivos do iOS só autoriza `Library`, `Documents` e `tmp` — a raiz é recusada na leitura e na escrita. A cópia de diretório do `devicectl` "passa" (responde com os atributos da raiz) mas **não grava** o arquivo: testado com um arquivo-sonda, ele não aparece nem na raiz nem numa subpasta.
+- **Solução:** **Depuração → "Import Database…"**. O app copia o arquivo escolhido no seletor para `<grupo>/import-sworim.sqlite`; na abertura seguinte, `HelperTools applyPendingDatabaseImport` apaga `sworim.sqlite` (+ `-wal`/`-shm`) e promove o importado **antes de qualquer código abrir o banco**. Depois disso a escada de migrations roda normalmente.
+- **Decisões:** fica só no Depuração (não é recurso de usuário), com aviso de que o banco atual será substituído; o arquivo escolhido só é aplicado na próxima abertura, então nada é trocado com o app rodando; o banco antigo é descartado de propósito (o usuário foi avisado).
+- **O que não vem junto:** senhas e a chave de identidade do OMEMO ficam no **keychain de cada app** (o iOS não deixa um app ler o do outro). O Assistente de Migração pede as senhas (contas com `needs_password_migration`), e as sessões OMEMO se refazem; mensagens antigas continuam legíveis porque o texto já está decifrado no banco.
+- **Testado no simulador iOS 27** com o banco real do Monal beta (6.407, 133.268 mensagens): virou 7.013 + escada do isaCloud, com 137 conversas, 164 contatos e o Assistente de Migração pedindo a conta certa.
+
 ## Responder com áudio mantendo a citação (28/10/2026)
 
 - **Problema:** puxar o balão para responder preenche o campo com a citação; com texto no campo o botão vira "enviar" e o microfone some, então não dava para responder com áudio (visto pela Isadora).

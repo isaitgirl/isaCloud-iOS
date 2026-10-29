@@ -741,6 +741,9 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
 
 +(void) initSystem
 {
+    //isaCloud: a database imported from the debug screen is put in place here, before any code opens the current one
+    [self applyPendingDatabaseImport];
+    
     BOOL enableDefaultLogAndCrashFramework = YES;
 #if TARGET_OS_SIMULATOR
     // Automatically switch between the debug technique of TMolitor and FAltheide
@@ -1126,6 +1129,29 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     else if(result == 0 && data1.length > data2.length)
         return 1;
     return result;
+}
+
+//isaCloud: the iOS file service can not write to the root of the app group container (where sworim.sqlite lives), so a database
+//imported from the debug screen is copied there by the app itself as "import-sworim.sqlite" and promoted here, at startup,
+//before DataLayer opens it. The old database and its write-ahead log go away with it.
++(BOOL) applyPendingDatabaseImport
+{
+    NSFileManager* fm = [NSFileManager defaultManager];
+    NSURL* importURL = [self getContainerURLForPathComponents:@[@"import-sworim.sqlite"]];
+    if(importURL == nil || ![fm fileExistsAtPath:importURL.path])
+        return NO;
+    NSURL* dbURL = [self getContainerURLForPathComponents:@[@"sworim.sqlite"]];
+    DDLogWarn(@"Applying imported database at %@", importURL.path);
+    for(NSString* suffix in @[@"", @"-wal", @"-shm"])
+        [fm removeItemAtPath:[dbURL.path stringByAppendingString:suffix] error:nil];
+    NSError* error;
+    if(![fm moveItemAtURL:importURL toURL:dbURL error:&error])
+    {
+        DDLogError(@"Could not apply the imported database: %@", error);
+        return NO;
+    }
+    DDLogWarn(@"Imported database applied, the app will migrate it now");
+    return YES;
 }
 
 +(NSURL*) getContainerURLForPathComponents:(NSArray*) components

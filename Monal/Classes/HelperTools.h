@@ -139,6 +139,8 @@ NSDictionary* _Nullable dictionaryComprehension(NSDictionary* _Nullable dict, id
 +(BOOL) isSandboxAPNS;
 +(int) compareIOcted:(NSData*) data1 with:(NSData*) data2;
 +(NSURL*) getContainerURLForPathComponents:(NSArray*) components;
+//isaCloud: swaps a database imported from the debug screen into place, before anything opens it
++(BOOL) applyPendingDatabaseImport;
 +(NSURL*) getSharedDocumentsURLForPathComponents:(NSArray*) components;
 +(NSData*) serializeObject:(id) obj;
 +(id) unserializeData:(NSData*) data;

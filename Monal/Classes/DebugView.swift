@@ -6,6 +6,9 @@
 //  Copyright © 2024 monal-im.org. All rights reserved.
 //
 
+import SwiftUI
+import UniformTypeIdentifiers
+
 class DebugDefaultDB: ObservableObject {
     @defaultsDB("udpLoggerEnabled")
     var udpLoggerEnabled: Bool
@@ -37,6 +40,10 @@ struct LogFilesView: View {
     @State private var showShareSheet:Bool = false
     @State private var fileURL: URL?
     @State private var showingDBExportFailedAlert = false
+    //isaCloud: importing a database (the file service can not write to the root of the app group container, see HelperTools)
+    @State private var showDBImporter = false
+    @State private var showingDBImportDoneAlert = false
+    @State private var showingDBImportFailedAlert = false
     
     func refreshSortedLogfiles() {
         if let sortedLogFileInfos = HelperTools.fileLogger?.logFileManager.sortedLogFileInfos {
@@ -73,6 +80,10 @@ struct LogFilesView: View {
                             showingDBExportFailedAlert = true
                         }
                     }
+                    //isaCloud: replaces the main database with a file chosen here; it is applied when the app is opened again
+                    Button("Import Database…") {
+                        showDBImporter = true
+                    }
                 }
             }
             .listStyle(.grouped)
@@ -86,6 +97,41 @@ struct LogFilesView: View {
             if let fileURL = fileURL {
                 ActivityViewController(activityItems: [fileURL])
             }
+        }
+        //isaCloud: the chosen file is copied into the app group as "import-sworim.sqlite" and swapped in when the app opens again
+        .fileImporter(isPresented: $showDBImporter, allowedContentTypes: [.data, .item]) { result in
+            switch result {
+                case .success(let url):
+                    let accessing = url.startAccessingSecurityScopedResource()
+                    defer {
+                        if accessing {
+                            url.stopAccessingSecurityScopedResource()
+                        }
+                    }
+                    let destination = HelperTools.getContainerURL(forPathComponents: ["import-sworim.sqlite"])
+                    let fm = FileManager.default
+                    try? fm.removeItem(at: destination)
+                    do {
+                        try fm.copyItem(at: url, to: destination)
+                        print("Database copied for import: \(destination.path)")
+                        showingDBImportDoneAlert = true
+                    } catch {
+                        print("Could not copy the database for import: \(error)")
+                        showingDBImportFailedAlert = true
+                    }
+                case .failure:
+                    showingDBImportFailedAlert = true
+            }
+        }
+        .alert("Database imported", isPresented: $showingDBImportDoneAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Close and open the app to apply it. The current database (accounts, chats and messages) will be replaced, and the app will migrate the imported one on the next start.")
+        }
+        .alert("Database import failed", isPresented: $showingDBImportFailedAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Check the logfile and try again.")
         }
         .onAppear {
             refreshSortedLogfiles()

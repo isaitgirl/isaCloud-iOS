@@ -35,6 +35,7 @@ enum SettingsAccountRows {
 enum SettingsAppRows {
     GeneralSettingsRow,
     SoundsRow,
+    ImportMonalRow,     //isaCloud: bring the history of Monal over (user-facing; the debug screen has the same flow)
     SettingsAppRowsCnt
 };
 
@@ -265,6 +266,9 @@ enum DummySettingsRows {
                 case SoundsRow:
                     [cell initTapCell:NSLocalizedString(@"Sounds", @"")];
                     break;
+                case ImportMonalRow:
+                    [cell initTapCell:NSLocalizedString(@"Import from Monal", @"")];
+                    break;
                 default:
                     unreachable();
             }
@@ -409,6 +413,11 @@ enum DummySettingsRows {
                 case SoundsRow:
                     [self performSegueWithIdentifier:@"showSounds" sender:self];
                     break;
+                case ImportMonalRow: {
+                    UIViewController* importViewController = [[SwiftuiInterface new] makeImportFromMonal];
+                    [self.navigationController pushViewController:importViewController animated:YES];
+                    break;
+                }
                 default:
                     unreachable();
             }
