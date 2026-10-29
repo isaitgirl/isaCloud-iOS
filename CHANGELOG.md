@@ -2,6 +2,11 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 61) — 29/10/2026
+
+### Mudado
+- **Ícone novo, o desenhado para o Liquid Glass**: o balão virou um tubo arredondado com brilho, as letras ganharam volume e os pontos, formato de pílula. Vale para todos os iOS — no 26+ o sistema aplica o vidro por cima, nas versões anteriores ele aparece nítido. Fontes em `isaCloud/branding/` (`logo-isacloud-im-ios-icon.svg` e `…-1024.png`). O porquê de não existirem dois ícones por versão está em `docs/decisoes.md`.
+
 ## 0.0.1 (build 60) — 29/10/2026
 
 ### Mudado
