@@ -26,6 +26,7 @@ Registro do **porquê** das escolhas feitas no fork: decisões de produto, de c�
 - **Estado vazio:** com o filtro ativo o título vira "Nenhuma conversa com esses filtros" e a imagem/descrição do estado vazio padrão são omitidas (o layout manual antigo escalava a imagem para a tela inteira).
 - **Correção de brinde:** `imageForEmptyDataSet:` montava um dicionário de views que podia conter `nil` e **derrubava o app** quando o estado vazio aparecia; agora há guarda.
 - **v1:** conversa que chega com o filtro fechado não entra nem sai da lista até o filtro mudar (combinado com a Isadora).
+- **A busca também respeita os chips** (pedido da Isadora no mesmo dia): a lista filtra por `chatListFiltersActive`/predicado, e a busca do topo aplica o mesmo predicado nas **duas abas** — nomes (`searchContacts`) e mensagens (FTS, `MessageSearchModel.contactFilter`). Trocar de chip com a busca aberta reexecuta a consulta (`ChatListSearch.refresh`). Limitação conhecida da v1: no FTS o `hasMore` pode ficar impreciso quando uma página inteira é filtrada, e a conversa que chega com o filtro fechado não entra até o filtro mudar.
 - **Testado:** iOS 18.6 no simulador com o estado dirigido por argumento de lançamento (`-chatListFilterTypes contact|group|channel`, `-chatListFilterUnread YES`), porque o `defaults write` do host não chega à suite do App Group. Capturas em `docs/screenshots/2026-10-29-15*-iphone-xr-ios18-filtros-*`.
 
 ## Avisos fantasma do push: filtro no servidor, v2 (29/10/2026)

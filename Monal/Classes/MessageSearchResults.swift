@@ -23,6 +23,8 @@ final class MessageSearchModel: ObservableObject {
     /// below this the search finds nearly every message: it does not run
     static let minLength = 2
 
+    /// isaCloud: used by the chat list search to respect the filter chips (types and unread) of the home screen
+    var contactFilter: ((MLContact) -> Bool)?
     @Published private(set) var hits: [MessageSearchHit] = []
     @Published private(set) var isSearching = false
     @Published private(set) var hasMore = false
@@ -51,7 +53,7 @@ final class MessageSearchModel: ObservableObject {
                 guard let self = self, current == self.generation else {
                     return
                 }
-                self.hits = page.hits
+                self.hits = self.filtered(page.hits)
                 self.hasMore = page.hasMore
                 self.isSearching = false
             }
@@ -59,6 +61,13 @@ final class MessageSearchModel: ObservableObject {
         pending = item
         //a moment after the last key, so typing does not run a search per letter
         DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + (immediately ? 0 : 0.25), execute: item)
+    }
+
+    private func filtered(_ hits: [MessageSearchHit]) -> [MessageSearchHit] {
+        guard let filter = contactFilter else {
+            return hits
+        }
+        return hits.filter { filter($0.contact) }
     }
 
     func loadMore() {
@@ -75,7 +84,7 @@ final class MessageSearchModel: ObservableObject {
                 guard let self = self, current == self.generation else {
                     return
                 }
-                self.hits.append(contentsOf: page.hits)
+                self.hits.append(contentsOf: self.filtered(page.hits))
                 self.hasMore = page.hasMore
                 self.isSearching = false
             }

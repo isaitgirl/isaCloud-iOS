@@ -576,6 +576,10 @@ static BOOL _dnssecWarningDisplayed;
         weakSelf.jumpToHistoryIdOfNextChat = historyId;
         openChat(contact);
     }];
+    //isaCloud: the filter chips apply to the search results too (names and messages)
+    self.chatListSearch.contactFilter = ^BOOL(MLContact* contact) {
+        return [weakSelf contactPassesChatListFilter:contact];
+    };
     UISearchController* searchController = [[UISearchController alloc] initWithSearchResultsController:self.chatListSearch.resultsController];
     searchController.searchResultsUpdater = self;
     searchController.delegate = self;
@@ -719,6 +723,8 @@ static BOOL _dnssecWarningDisplayed;
     self.unpinnedContacts = [NSMutableArray new];
     [self.chatListTable reloadData];
     [self refreshDisplay];
+    //isaCloud: the search results also follow the chips
+    [self.chatListSearch refresh];
 }
 
 -(void) refreshDisplay
