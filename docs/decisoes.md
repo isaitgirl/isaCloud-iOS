@@ -5,6 +5,13 @@ Registro do **porquê** das escolhas feitas no fork: decisões de produto, de c�
 - O que está feito, em andamento ou pendente, com datas e resultados de teste, fica no `ROADMAP.md` (toda decisão daqui tem uma linha lá). O histórico de cada build fica no `CHANGELOG.md`.
 - Dados sensíveis ficam em `isaCloud/local/NOTAS-LOCAIS.md`, nunca aqui.
 
+## Corrida entre as limpezas de abertura e a migration (29/10/2026)
+
+- **Sintoma:** depois de importar um banco (build 50), o app abortava em toda abertura num iPhone 11 com iOS 26.7 — quatro relatórios, todos `EXC_CRASH (SIGABRT)`, com a thread 13 (segundo plano) lançando exceção no `MLSQLite` ao consultar `buddylist`.
+- **Causa:** `willFinishLaunchingWithOptions:` disparava `[[MLImageManager sharedInstance] cleanupHashes]` e `[MLFiletransfer doStartupCleanup]` em segundo plano **antes** de `[MLPromise removeStalePromises]`, que é quem abre o banco — e abrir o banco roda as migrations. Com um banco importado (migração longa, de 6.4xx até 7.0xx), a migration recriava tabelas enquanto a limpeza consultava o banco: `prepareQuery` falhava, o `MLSQLite` lançava `NSException` numa thread sem tratador e o app abortava. No Mac (simulador) a migration é rápida e a corrida não aparecia; no iPhone 11 aparece sempre.
+- **Correção:** as duas limpezas passaram para **depois** do `removeStalePromises`, com comentário no código explicando a dependência. É uma reordenação de 10 linhas no `MonalAppDelegate` (arquivo do Monal, validar no merge).
+- **Descartado:** capturar a exceção no `MLImageManager`/`MLFiletransfer` (esconderia o sintoma e deixaria a limpeza rodando contra tabelas no meio da migração); serializar todo acesso ao banco por uma fila (mudança grande no Monal, risco alto de merge).
+
 ## Importar o banco de outro cliente, o "transplante" do Monal (28/10/2026)
 
 - **Pedido:** trocar o Monal pelo isaCloud sem perder o histórico (133 mil mensagens, 137 conversas).

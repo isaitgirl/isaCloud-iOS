@@ -2,6 +2,11 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 51) — 29/10/2026
+
+### Corrigido
+- **O app fechava sozinho (SIGABRT) na abertura depois de importar um banco de outro cliente.** Na inicialização, o app disparava duas limpezas em segundo plano (cache de transferências e de imagens) **antes** de abrir o banco — e abrir o banco é o que roda as migrations. Com um banco importado (que precisa migrar de uma versão antiga), a migration recria tabelas enquanto essas limpezas consultavam o banco, o `MLSQLite` lançava exceção numa thread sem tratador e o app abortava. No simulador a migration é rápida e a corrida não aparecia; num iPhone 11 (iOS 26.7) ela apareceu em **quatro** aberturas seguidas. Agora as duas limpezas só começam **depois** de o banco estar aberto e migrado.
+
 ## 0.0.1 (build 50) — 28/10/2026
 
 ### Adicionado

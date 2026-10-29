@@ -171,10 +171,19 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
     NSString* writableDBPath = [[HelperTools getContainerURLForPathComponents:@[@"sworim.sqlite"]] path];
     for(NSString* suffix in @[@"", @"-wal", @"-shm", @"-journal"])
         [fileManager removeItemAtPath:[writableDBPath stringByAppendingString:suffix] error:nil];
-#else
+#endif
+    
+    // Remove stale promises left in the DB that weren't consumed last time we ran the app
+    //(this is what opens the database: an imported one can take seconds to migrate, so the cleanups below start only after it)
+    [MLPromise removeStalePromises];
+    
+#ifndef START_CLEAN
     //do MLFiletransfer cleanup tasks (do this in a new thread to parallelize it with our ping to the appex and don't slow down app startup)
     //this will also migrate our old image cache to new MLFiletransfer cache
     //BUT: don't do this if we are sending the sharesheet outbox
+    //isaCloud: both cleanups below query the database, so they have to start after removeStalePromises above: running them while
+    //the migration recreates its tables made MLSQLite throw on a background thread and the app aborted (seen with an imported
+    //database on an iPhone 11, where the migration takes long enough for the race to hit)
     if(launchOptions[UIApplicationLaunchOptionsURLKey] == nil || ![launchOptions[UIApplicationLaunchOptionsURLKey] isEqual:kMonalOpenURL])
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
             [MLFiletransfer doStartupCleanup];
@@ -185,9 +194,6 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
         [[MLImageManager sharedInstance] cleanupHashes];
     });
 #endif
-    
-    // Remove stale promises left in the DB that weren't consumed last time we ran the app
-    [MLPromise removeStalePromises];
 
     //only proceed with launching if the NotificationServiceExtension is *not* running
     if([MLProcessLock checkRemoteRunning:@"NotificationServiceExtension"])
