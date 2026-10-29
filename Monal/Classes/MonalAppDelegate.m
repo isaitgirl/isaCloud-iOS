@@ -186,11 +186,16 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
     //database on an iPhone 11, where the migration takes long enough for the race to hit)
     if(launchOptions[UIApplicationLaunchOptionsURLKey] == nil || ![launchOptions[UIApplicationLaunchOptionsURLKey] isEqual:kMonalOpenURL])
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
+            //isaCloud: sharedInstance blocks until the migrations above are done, so this cleanup can not run
+            //against a database that is being migrated (it did, and MLSQLite threw "database is locked" on a
+            //background thread without a handler, aborting the app)
+            [DataLayer sharedInstance];
             [MLFiletransfer doStartupCleanup];
         });
     
     //do image manager cleanup in a new thread to not slow down app startup
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
+        [DataLayer sharedInstance];     //isaCloud: see the comment above
         [[MLImageManager sharedInstance] cleanupHashes];
     });
 #endif

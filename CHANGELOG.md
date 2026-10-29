@@ -2,6 +2,11 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 53) — 29/10/2026
+
+### Corrigido
+- **O app ainda abortava na abertura depois de importar um banco** (relatórios do build 51 num iPhone 11, iOS 26.7.2). O log do próprio app mostrou o motivo: **"database is locked"** — a limpeza de avatares abria uma transação de leitura enquanto a migration tinha uma de escrita aberta, o `MLSQLite` lançava exceção numa thread de segundo plano sem tratador e o processo abortava. Agora são duas proteções: (1) as duas limpezas de abertura chamam `[DataLayer sharedInstance]` antes de tocar no banco (ele espera a migration terminar, se ainda estiver rodando) e (2) `cleanupHashes` roda dentro de `@try/@catch` — perder uma limpeza de avatares é inofensivo, derrubar o app não é.
+
 ## 0.0.1 (build 52) — 29/10/2026
 
 ### Mudado
