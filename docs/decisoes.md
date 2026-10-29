@@ -5,6 +5,55 @@ Registro do **porquê** das escolhas feitas no fork: decisões de produto, de c�
 - O que está feito, em andamento ou pendente, com datas e resultados de teste, fica no `ROADMAP.md` (toda decisão daqui tem uma linha lá). O histórico de cada build fica no `CHANGELOG.md`.
 - Dados sensíveis ficam em `isaCloud/local/NOTAS-LOCAIS.md`, nunca aqui.
 
+## Métricas do aparelho e do sistema (29/10/2026)
+
+- **Pedido:** avaliar se o app consome recursos acima do esperado (CPU, bateria, memória) **por build**, com arquivos que possam ser copiados de tempo em tempo.
+- **Camada A — MetricKit** (`MetricsCollector.m`): assinante de `MXMetricManager` no app; cada payload (métricas e diagnósticos) é gravado em `<grupo>/metrics/metrickit-<kind>-<data>.json` com o build carimbado na chegada. É a fonte oficial da Apple (CPU, memória, bateria, lançamentos, hangs). **Limite:** os payloads chegam tipicamente 1×/dia (às vezes pulando dias) e trazem a versão curta, não o build — daí o carimbo.
+- **Camada B — amostrador próprio** (`MetricsCollector.m`): uma amostra JSONL em `<grupo>/metrics/samples-<data>.jsonl` na abertura, ao ir para segundo plano e a cada 5 minutos com o app ativo. Campos: `build`, `short`, `ios`, `model`, memória (`HelperTools report_memory` + `os_proc_available_memory`), CPU (delta por `getrusage(RUSAGE_SELF)`), `wall_ms`, térmica, modo de baixa energia, bateria, contas ociosas, último `lastAppexStart`, tamanho do banco e do WAL. Rotação: arquivos com mais de 45 dias são apagados.
+- **CPU:** a primeira versão usava `task_info(TASK_BASIC_INFO_64)`, que devolve **zero** nos simuladores (iOS 18 e 27); trocado por `getrusage`, que é POSIX e público.
+- **Exportação:** Depuração → "Métricas do aparelho" → **"Exportar métricas"** monta um JSON único (`isaCloud-metrics-<build>-<data>.json`, com `exportedAt`, `build`, `samples` e `metrickit`) e abre o compartilhamento. O JSONL bruto continua no container (não é copiável pelo `devicectl` porque fica na raiz do App Group).
+- **Harness:** `tools/metrics-harness/` (Python 3, só biblioteca padrão) lê o JSON exportado **ou** um diretório com os arquivos brutos, converte para line protocol e envia ao InfluxDB 2.x por `POST /api/v2/write`. Credenciais em `.credentials` (ignorado pelo Git; modelo em `.credentials.example`): `INFLUX_URL`, `INFLUX_TOKEN`, `INFLUX_ORG`, `INFLUX_BUCKET`, `INFLUX_MEASUREMENT`. Estado em `.sent-state.json` evita reenvio duplicado; `--dry-run` imprime o line protocol sem enviar.
+- **Dashboard:** `tools/metrics-harness/grafana/isaCloud-metrics-12.0.1.json`, importável no **Grafana 12.0.1**, com **uma única variável** (o datasource InfluxDB) — de propósito, para importar em qualquer instância sem editar painel.
+- **O que ainda falta para medir de verdade:** os dados de MetricKit só aparecem depois de ~1 dia de uso; `mem_available_mb` é 0 no simulador (é 0 também por natureza lá); `model` sai `arm64` no simulador e o identificador real no aparelho.
+
+## Avisos fantasma do push: filtro no servidor, v2 (29/10/2026)
+
+- **Sintoma observado:** notificações "New Message?" com **som** e que **não somem**, em rajada (duas às 11:19). Antes, o mesmo mecanismo produzia avisos **sem som que somem sozinhos** — esse segundo comportamento é o esperado: a extensão entrega um aviso passivo e o app o remove quando o appex desliga (~25 s, visto no log: `removing 1 push placeholder` → `Shutting down appex`).
+- **Causa no servidor:** o `mod_cloud_notify` do Prosody marca como `important` **qualquer mensagem com corpo** — inclusive toda mensagem de canal. O `mod_cloud_notify_quiet` **v1** (perfil `conservative`) nunca bloqueia `important`, então cada mensagem de canal virava **alerta com som**. O log do servidor mostrou 6 alertas em ~50 s de salas movimentadas, um descartado por rate limit do fpush: o iOS desiste da extensão e mostra o payload cru (com som, persistente).
+- **Causa no app:** os pushes chegaram ao aparelho, mas a extensão **inicializou 16 vezes sem nenhum `didReceiveNotificationRequest`** naquela janela (log do app x log da extensão, arquivos separados pelo lock do DDLogger).
+- **Decisão (Isadora, 29/10/2026):** implantar o **v2** do `mod_cloud_notify_quiet` (que era `mod_cloud_notify_quiet.lua.new`, agora promovido a `mod_cloud_notify_quiet.lua`) e **observar**, sem teste de aceitação formal.
+- **Config em produção:**
+  ```lua
+  cloud_notify_quiet_appservers = { "push.isacloud.im" }
+  cloud_notify_quiet_dry_run = false
+  cloud_notify_quiet_log = false
+  cloud_notify_quiet_muc_group = "alert"       -- members-only / não anônima
+  cloud_notify_quiet_muc_channel = "mentions"  -- as demais (canais)
+  cloud_notify_quiet_actions = { ["muc-self"] = "drop" }
+  ```
+- **O que muda:** canal **sem menção** vira push silencioso (não apita; o app vê ao abrir); menção, DM e chamada continuam alerta; read-marker/retract/reaction/correction passam de alerta para silencioso; mensagem do próprio usuário na sala (`muc-self`) não gera push.
+- **Chaves antigas removidas** (o v2 as ignora em silêncio): `profile`, `allow_reasons`, `block_all_unimportant`, `log_allowed`, `muc_self`.
+- **Compatibilidade:** o fpush no ar (`isacloud/fpush:42359ca-isacloud2`) já aplica `0001-silent-unimportant-pushes.v2.patch`, que manda alerta quando há `last-message-body` e push de fundo quando não há — é esse o mecanismo que o v2 usa para "background".
+- **Rollback:** voltar o arquivo anterior do módulo e restaurar as cinco chaves acima.
+- **Como observar:** métrica `prosody_mod_cloud_notify_quiet__decisions_total{action,reason}`; para log linha a linha, `cloud_notify_quiet_log = true` (ou `dry_run = true`, que loga com prefixo `[dry-run]` e não altera nada).
+- **Riscos/limites:** push silencioso pode ser atrasado pelo iOS (canal sem menção deixa de ser "tempo real"); o módulo vive em `~/projects/lua/isacloud-custom-plugins` (fora do repositório do iOS e sem versionamento próprio); a detecção de menção depende de XEP-0372, XEP-0461 ou do nick no texto (este último cobre o `@` do app, que manda texto).
+
+## Destaque da conversa com bolinha vermelha na lista (29/10/2026)
+
+- **Pedido:** quando a conversa tem bolinha vermelha (notificação/menção), o preview fica em negrito e entra um "@" antes do sininho que indica o tipo de notificação do canal.
+- **Cor:** começou como negrito; virou **negrito + cinza quase preto**; ficou **só o cinza quase preto (#373736)**, porque o negrito deixava a fonte visualmente maior que o nome da conversa no iPhone. O `@` é rosa (`isaCloudPink`), a mesma cor do sininho.
+- **Onde aplicar:** o texto do preview é montado em `showStatusText:inboundDir:fromUser:`, que **reescreve** o label a cada atualização e compara com o texto "original" guardado — atributos aplicados depois dele são perdidos. Por isso o destaque é aplicado **dentro** dele, a partir de `_previewHighlight`, calculado no `initCell` antes de montar o texto.
+- **Quem decide a cor final:** o `ActiveChatsViewController` escreve `cell.statusText.textColor` **depois** de `initCell:` (cinza claro, ou branco na conversa selecionada). É ele que dá a última palavra, então a célula expõe `previewHighlighted` e o controlador usa `[MLContactCell previewHighlightColor]` quando é o caso.
+- **Sem regressão de regra:** o destaque usa o mesmo resultado de `shouldShowGrayBadgeForContact` que pinta a bolinha, guardado em `_badgeIsGray` (calculado uma única vez por célula, porque a regra consulta o banco para achar menção).
+- **O "@"** só aparece quando há sininho visível (canal em "só menção" ou silenciado): é o lugar que o pedido descreve. Em conversa 1:1, que não tem sininho, só a cor muda.
+
+## Corrida entre as limpezas de abertura e a migration (29/10/2026)
+
+- **Sintoma:** depois de importar um banco (build 50), o app abortava em toda abertura num iPhone 11 com iOS 26.7 — quatro relatórios, todos `EXC_CRASH (SIGABRT)`, com a thread 13 (segundo plano) lançando exceção no `MLSQLite` ao consultar `buddylist`.
+- **Causa:** `willFinishLaunchingWithOptions:` disparava `[[MLImageManager sharedInstance] cleanupHashes]` e `[MLFiletransfer doStartupCleanup]` em segundo plano **antes** de `[MLPromise removeStalePromises]`, que é quem abre o banco — e abrir o banco roda as migrations. Com um banco importado (migração longa, de 6.4xx até 7.0xx), a migration recriava tabelas enquanto a limpeza consultava o banco: `prepareQuery` falhava, o `MLSQLite` lançava `NSException` numa thread sem tratador e o app abortava. No Mac (simulador) a migration é rápida e a corrida não aparecia; no iPhone 11 aparece sempre.
+- **Correção:** as duas limpezas passaram para **depois** do `removeStalePromises`, com comentário no código explicando a dependência. É uma reordenação de 10 linhas no `MonalAppDelegate` (arquivo do Monal, validar no merge).
+- **Descartado:** capturar a exceção no `MLImageManager`/`MLFiletransfer` (esconderia o sintoma e deixaria a limpeza rodando contra tabelas no meio da migração); serializar todo acesso ao banco por uma fila (mudança grande no Monal, risco alto de merge).
+
 ## Importar o banco de outro cliente, o "transplante" do Monal (28/10/2026)
 
 - **Pedido:** trocar o Monal pelo isaCloud sem perder o histórico (133 mil mensagens, 137 conversas).

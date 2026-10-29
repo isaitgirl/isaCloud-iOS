@@ -22,6 +22,10 @@
 @property (nonatomic, weak) IBOutlet UIImageView* _Nullable mentionBadge;
 @property (weak, nonatomic) IBOutlet UIImageView* _Nullable pinBadge;
 
+//isaCloud: a chat with a red unread counter (notification or mention) shows its preview in bold and near black
+@property (nonatomic) BOOL previewHighlighted;
++(UIColor* _Nonnull) previewHighlightColor;
+
 @property (nonatomic, assign) BOOL isPinned;
 
 -(void) initCell:(MLContact* _Nonnull) contact withLastMessage:(MLMessage* _Nullable) lastMessage;

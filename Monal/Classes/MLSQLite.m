@@ -55,6 +55,17 @@ static int wal_hook(void* arg, sqlite3* database, const char* dbname, int number
     return SQLITE_OK;
 }
 
+#import <os/lock.h>
+
+//isaCloud: lock wait statistics (see consumeLockStatistics in the header)
+static os_unfair_lock _isaCloudLockStatsLock = OS_UNFAIR_LOCK_INIT;
+static uint64_t _isaCloudLockWaits = 0;
+static uint64_t _isaCloudLockMaxMs = 0;
+
+@interface MLSQLite ()
++(void) recordLockWaitCount:(uint64_t) waits durationMs:(double) durationMs;
+@end
+
 @implementation MLSQLite
 
 +(void) initialize
@@ -567,10 +578,13 @@ static int wal_hook(void* arg, sqlite3* database, const char* dbname, int number
     if([threadData[kSQLiteTransactionsRunning][_dbFile] intValue] > 1)
         return;			//begin only outermost transaction
     BOOL retval;
+    uint64_t failedAttempts = 0;
+    CFAbsoluteTime waitStart = CFAbsoluteTimeGetCurrent();
     do {
         retval = [self executeNonQuery:@"BEGIN IMMEDIATE TRANSACTION;" andArguments:@[] withException:NO];
         if(!retval)
         {
+            failedAttempts++;
             [NSThread sleepForTimeInterval:0.001f];		//wait one millisecond and retry again
             @synchronized(currentTransactions) {
                 DDLogWarn(@"Retrying write transaction start: %@", @{
@@ -580,6 +594,9 @@ static int wal_hook(void* arg, sqlite3* database, const char* dbname, int number
             }
         }
     } while(!retval);
+    //isaCloud: metrics (db_lock_waits/db_lock_max_ms no amostrador)
+    if(failedAttempts > 0)
+        [MLSQLite recordLockWaitCount:failedAttempts durationMs:(CFAbsoluteTimeGetCurrent() - waitStart) * 1000.0];
     @synchronized(currentTransactions) {
         currentTransactions[[self getThreadID]] = [NSThread callStackSymbols];
     }
@@ -624,6 +641,27 @@ static int wal_hook(void* arg, sqlite3* database, const char* dbname, int number
     return retval;
 }
 
++(void) recordLockWaitCount:(uint64_t) waits durationMs:(double) durationMs
+{
+    os_unfair_lock_lock(&_isaCloudLockStatsLock);
+    _isaCloudLockWaits += waits;
+    uint64_t rounded = (uint64_t)(durationMs + 0.5);
+    if(rounded > _isaCloudLockMaxMs)
+        _isaCloudLockMaxMs = rounded;
+    os_unfair_lock_unlock(&_isaCloudLockStatsLock);
+}
+
++(NSDictionary*) consumeLockStatistics
+{
+    os_unfair_lock_lock(&_isaCloudLockStatsLock);
+    uint64_t waits = _isaCloudLockWaits;
+    uint64_t maxMs = _isaCloudLockMaxMs;
+    _isaCloudLockWaits = 0;
+    _isaCloudLockMaxMs = 0;
+    os_unfair_lock_unlock(&_isaCloudLockStatsLock);
+    return @{@"waits": @(waits), @"max_ms": @(maxMs)};
+}
+
 -(void) beginReadTransaction
 {
     [self testThreadInstanceForQuery:@"beginReadTransaction" andArguments:nil];
@@ -632,10 +670,13 @@ static int wal_hook(void* arg, sqlite3* database, const char* dbname, int number
     if([threadData[kSQLiteTransactionsRunning][_dbFile] intValue] > 1)
         return;			//begin only outermost transaction
     BOOL retval;
+    uint64_t failedAttempts = 0;
+    CFAbsoluteTime waitStart = CFAbsoluteTimeGetCurrent();
     do {
         retval = [self executeNonQuery:@"BEGIN DEFERRED TRANSACTION;" andArguments:@[] withException:NO];
         if(!retval)
         {
+            failedAttempts++;
             [NSThread sleepForTimeInterval:0.001f];		//wait one millisecond and retry again
             @synchronized(currentTransactions) {
                 DDLogWarn(@"Retrying read transaction start: %@", @{
@@ -645,6 +686,9 @@ static int wal_hook(void* arg, sqlite3* database, const char* dbname, int number
             }
         }
     } while(!retval);
+    //isaCloud: metrics (db_lock_waits/db_lock_max_ms no amostrador)
+    if(failedAttempts > 0)
+        [MLSQLite recordLockWaitCount:failedAttempts durationMs:(CFAbsoluteTimeGetCurrent() - waitStart) * 1000.0];
     threadData[kSQLiteStartedReadStransaction][_dbFile] = @YES;
     @synchronized(currentTransactions) {
         currentTransactions[[self getThreadID]] = [NSThread callStackSymbols];

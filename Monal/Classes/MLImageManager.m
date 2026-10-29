@@ -134,6 +134,21 @@
 
 -(void) cleanupHashes
 {
+    //isaCloud: this runs on a background queue during app startup: a busy/locked database (an imported one has to
+    //be migrated first) made MLSQLite throw here and nobody could catch it, so the app aborted. Losing one cleanup
+    //run is harmless, losing the app is not.
+    @try
+    {
+        [self _cleanupHashes];
+    }
+    @catch(NSException* exception)
+    {
+        DDLogError(@"Could not clean up the avatar hashes (database busy?): %@", exception);
+    }
+}
+
+-(void) _cleanupHashes
+{
     NSFileManager* fileManager = [NSFileManager defaultManager];
     NSArray<MLContact*>* contactList = [[DataLayer sharedInstance] contactList];
     

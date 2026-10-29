@@ -1,0 +1,5 @@
+# O harness foi escrito com a biblioteca padrão do Python (urllib, json, hashlib,
+# argparse): não há dependências de terceiros para instalar.
+#
+# Este arquivo existe para o caso de uma dependência ser adicionada no futuro:
+#   .venv/bin/pip install -r requirements.txt

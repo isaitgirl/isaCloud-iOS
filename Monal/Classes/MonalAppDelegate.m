@@ -11,6 +11,7 @@
 
 #import <BackgroundTasks/BackgroundTasks.h>
 #import "MonalAppDelegate.h"
+#import "MetricsCollector.h"
 #import <monalxmpp/MLConstants.h>
 #import <monalxmpp/HelperTools.h>
 #import "MLNotificationManager.h"
@@ -171,23 +172,34 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
     NSString* writableDBPath = [[HelperTools getContainerURLForPathComponents:@[@"sworim.sqlite"]] path];
     for(NSString* suffix in @[@"", @"-wal", @"-shm", @"-journal"])
         [fileManager removeItemAtPath:[writableDBPath stringByAppendingString:suffix] error:nil];
-#else
+#endif
+    
+    // Remove stale promises left in the DB that weren't consumed last time we ran the app
+    //(this is what opens the database: an imported one can take seconds to migrate, so the cleanups below start only after it)
+    [MLPromise removeStalePromises];
+    
+#ifndef START_CLEAN
     //do MLFiletransfer cleanup tasks (do this in a new thread to parallelize it with our ping to the appex and don't slow down app startup)
     //this will also migrate our old image cache to new MLFiletransfer cache
     //BUT: don't do this if we are sending the sharesheet outbox
+    //isaCloud: both cleanups below query the database, so they have to start after removeStalePromises above: running them while
+    //the migration recreates its tables made MLSQLite throw on a background thread and the app aborted (seen with an imported
+    //database on an iPhone 11, where the migration takes long enough for the race to hit)
     if(launchOptions[UIApplicationLaunchOptionsURLKey] == nil || ![launchOptions[UIApplicationLaunchOptionsURLKey] isEqual:kMonalOpenURL])
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
+            //isaCloud: sharedInstance blocks until the migrations above are done, so this cleanup can not run
+            //against a database that is being migrated (it did, and MLSQLite threw "database is locked" on a
+            //background thread without a handler, aborting the app)
+            [DataLayer sharedInstance];
             [MLFiletransfer doStartupCleanup];
         });
     
     //do image manager cleanup in a new thread to not slow down app startup
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
+        [DataLayer sharedInstance];     //isaCloud: see the comment above
         [[MLImageManager sharedInstance] cleanupHashes];
     });
 #endif
-    
-    // Remove stale promises left in the DB that weren't consumed last time we ran the app
-    [MLPromise removeStalePromises];
 
     //only proceed with launching if the NotificationServiceExtension is *not* running
     if([MLProcessLock checkRemoteRunning:@"NotificationServiceExtension"])
@@ -205,6 +217,17 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
 {
     //this will use the cached values in defaultsDB, if possible
     [[MLXMPPManager sharedInstance] setPushToken:nil];
+    
+    //isaCloud: device metrics for the resource evaluation (samples + MetricKit), exported from the Debug screen
+    [MetricsCollector start];
+    
+    //isaCloud: a message that was on its way when the app died keeps sent=0 and nobody would retry it (the sending indicator would
+    //stay forever): mark it as failed so the chat offers the retry button. Anything younger than a minute may still be in flight.
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
+        NSUInteger stale = [[DataLayer sharedInstance] markStaleOutgoingMessagesAsFailedBefore:[NSDate dateWithTimeIntervalSinceNow:-60]];
+        if(stale > 0)
+            DDLogWarn(@"isaCloud: marked %lu message(s) that stayed unsent as failed", (unsigned long)stale);
+    });
     
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleScheduleBackgroundTaskNotification:) name:kScheduleBackgroundTask object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(nowIdle:) name:kMonalIdle object:nil];

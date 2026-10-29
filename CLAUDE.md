@@ -17,6 +17,7 @@ Fork do Monal (cliente XMPP para iOS) com a marca e os ajustes do isaCloud. Bran
 - Estamos escrevendo o software em pt-br, mas você deve seguir as convenções de código do Monal, usando o idioma padrão dele e usando nosso mecanismo de tradução pro pt-br.
 - Se identificar textos em inglês não traduzidos nos simuladores, você deve avisar o usuário e confirmar qual será a tradução.
 - **Ao final de uma tarefa que atualiza os simuladores, atualizar também o `isaCloud.dev` no iPhone** (`scripts/isacloud-dev-device.sh`), sem esperar pedido, e avisar quando ele tiver código que ainda não está no TestFlight.
+- **Branches**: `isaCloud` é a de trabalho e a única que vai para o TestFlight. `develop` fica no repositório só como **ponto de atualização** para buscar commits do Monal (alpha/upstream) sob demanda — não é para desenvolvimento. `pr10-rebase` é local e fica guardada até a decisão sobre o PR 10 (controles na parte de baixo da tela) ser tomada com o Jejê.
 - **Mudanças de banco do isaCloud** entram na escada própria (`+migrateISACloudDB:` em `DataLayerMigrations.m`, flag `isacloud_dbversion`), nunca como 7.0xx na escada do Monal, e cada passo deve poder rodar de novo sem estragar nada. Detalhes em `docs/decisoes.md`.
 - Busque implementar seguindo as convenções atuais do Monal, é importante respeitarmos esse legado para mantermos a menor fricção possível nos merges futuros.
 
@@ -44,6 +45,8 @@ Fork do Monal (cliente XMPP para iOS) com a marca e os ajustes do isaCloud. Bran
 
 ## Decisões e pendências
 
+- **Nunca apagar nada em `tools/metrics-harness/`** — `.credentials` e `.sent-state.json` são dados de quem usa o harness, não arquivos temporários (já apaguei o `.credentials` da Isadora duas vezes, 29/10/2026). Para testar, usar `--credentials /tmp/<arquivo>` ou `INFLUX_CREDENTIALS`, nunca o arquivo real.
+- **Métricas do aparelho:** o app coleta amostras (memória, CPU, bateria/térmica, banco) e os payloads do MetricKit em `<grupo>/metrics`, exportáveis pelo Depuração ("Métricas do aparelho" → "Exportar métricas"). O harness que envia para o InfluxDB/Grafana fica em `tools/metrics-harness/` (credenciais em `.credentials`, fora do Git); detalhes em `docs/decisoes.md` e no README do harness.
 - **Decisões** (o porquê das escolhas de projeto, de código e do fork, e o que foi descartado): `docs/decisoes.md`. **Funcionalidades e pendências** (feito, em andamento, a fazer, bugs conhecidos): `ROADMAP.md`. Ao tomar uma decisão nova, registre no `docs/decisoes.md` **e** numa linha do roadmap; resultados de teste e pendências ficam só no roadmap. O código temporário de medição, quando existir, não deve ser commitado.
 
 ## Troubleshooting

@@ -47,6 +47,7 @@ extern NSString* const kMessageTypeFiletransfer;
 
 +(DataLayer*) sharedInstance;
 -(NSString* _Nullable) exportDB;
+-(void) clearAvatarHashCache;
 -(void) createTransaction:(monal_void_block_t) block;
 -(void) addEndTransactionTrigger:(monal_void_block_t) trigger withLocation:(NSString*) location;
 -(BOOL) vacuum;
@@ -230,6 +231,10 @@ extern NSString* const kMessageTypeFiletransfer;
  if the server replies with an error for a message, store it
  */
 -(void) setMessageId:(NSString* _Nonnull) messageid andJid:(NSString*) jid errorType:(NSString *_Nonnull) errorType errorReason:(NSString *_Nonnull)errorReason;
+
+/// isaCloud: marks as failed the outgoing messages older than `before` that never got confirmed (a crash in the middle of sending
+/// left them with sent=0 and nobody would retry them, so the chat showed the sending indicator forever). Returns how many changed.
+-(NSUInteger) markStaleOutgoingMessagesAsFailedBefore:(NSDate* _Nonnull) before;
 -(void) clearErrorOfMessageId:(NSString* _Nonnull) messageid;
 
 /**

@@ -1,0 +1,20 @@
+# Segredos e estado local do harness (nunca versionar)
+.credentials
+.sent-state.json
+.sent-state.json.tmp
+
+# Arquivos brutos de métricas do app (podem ser copiados para cá para testes)
+*.jsonl
+*.jsonl.tmp
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Exportações do app que você salvar no diretório (não versionar dados coletados)
+isaCloud-metrics-*-20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]-*.json
+export*.json
+
+# o dashboard é versionado, mesmo com "metrics" no nome
+!grafana/

@@ -183,3 +183,15 @@
 "Moves the account, search and contacts buttons to a bar at the bottom of the screen, within reach of your thumb." = "Leva a conta, a busca e os contatos para uma barra embaixo da tela, ao alcance do polegar.";
 "Back" = "Voltar";
 "Search" = "Buscar";
+
+/* isaCloud: menu de Configurações → App, tela de importar o histórico do Monal */
+"Import from Monal" = "Importar do Monal";
+
+/* isaCloud: Depuração → métricas do aparelho (harness do InfluxDB/Grafana) */
+"Device Metrics" = "Métricas do aparelho";
+"Export Metrics" = "Exportar métricas";
+"Metrics export failed" = "Não foi possível exportar as métricas";
+"The app could not build the metrics file. Try again after using the app for a while." = "O app não conseguiu montar o arquivo de métricas. Tente de novo depois de usar o app por um tempo.";
+
+/* isaCloud: motivo mostrado quando uma mensagem ficou sem confirmação de envio */
+"the app was closed before this message could be sent" = "o app foi fechado antes de esta mensagem ser enviada";

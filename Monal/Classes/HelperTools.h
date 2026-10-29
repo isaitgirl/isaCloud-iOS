@@ -141,6 +141,8 @@ NSDictionary* _Nullable dictionaryComprehension(NSDictionary* _Nullable dict, id
 +(NSURL*) getContainerURLForPathComponents:(NSArray*) components;
 //isaCloud: swaps a database imported from the debug screen into place, before anything opens it
 +(BOOL) applyPendingDatabaseImport;
++(BOOL) gunzipFileAtPath:(NSString*) gzPath toPath:(NSString*) outputPath;
++(void) clearAvatarImageCache;
 +(NSURL*) getSharedDocumentsURLForPathComponents:(NSArray*) components;
 +(NSData*) serializeObject:(id) obj;
 +(id) unserializeData:(NSData*) data;

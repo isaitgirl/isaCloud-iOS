@@ -2,10 +2,59 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
-## 0.0.1 (build 48) — 28/10/2026
+## 0.0.1 (build 58) — 29/10/2026
+
+### Corrigido
+- **O spinner eterno era uma mensagem retratada, não uma mensagem presa.** Com o banco da Isadora (banco real, 133 mil mensagens) a mensagem das 13:24 apareceu como `sent=0`, `received=NULL` **e `retracted=1`**: ela foi apagada antes de ser enviada, e o status só olhava `sent/received/displayed` — caía no caso "enviando" e girava para sempre. Agora mensagem retratada não mostra indicador de envio (não faz sentido "enviando" para o que foi apagado).
+- **A reconciliação do 57 não achava nada por dois motivos**, também descobertos no banco real: `received` é **NULL** nas mensagens que nunca receberam recibo (o filtro `received=0` descartava todas — 157 de 157) e mensagens retratadas não são falha de entrega. O filtro passou a usar `ifnull(received,0)=0`, a ignorar retratadas e a olhar só os últimos 7 dias (para não ressuscitar o histórico antigo importado como "falha").
+
+## 0.0.1 (build 57) — 29/10/2026
+
+### Corrigido
+- **A reconciliação do 56 não achava a mensagem presa** (e podia derrubar o app): o `SELECT` era feito fora de uma transação, e o `MLSQLite` **lança exceção** nesse caso. Agora a leitura vai dentro de `idReadTransaction:`; o filtro também deixou de olhar só os últimos 2000 ids (uma mensagem antiga e ainda presa ficava de fora) — lê todas as não confirmadas e marca só as encontradas. Testado no simulador com uma mensagem de id antigo (marcada) e uma recente (intacta).
+
+## 0.0.1 (build 56) — 29/10/2026
+
+### Corrigido
+- **Mensagem que ficava "enviando" para sempre depois de um crash.** Se o app morresse no meio do envio, a mensagem ficava no banco com `sent = 0` e ninguém voltava a tentar: o indicador de envio não saía mais. Agora, na abertura, mensagens de saída com mais de um minuto que continuam sem confirmação são marcadas como **falha de entrega** — o balão mostra o aviso e o botão **tentar de novo** (que reenvia com o mesmo id). Nada é reenviado sozinho, então não há risco de duplicar.
+
+## 0.0.1 (build 55) — 29/10/2026
+
+### Corrigido
+- **Crash ao abrir uma conversa com mensagem de arquivo sem mimetype** (relatório do build 53, iPhone 12 Pro, iOS 27.0.1): a lista chama `replyQuoteText` para montar a citação, e o wrapper de KVO **lança exceção** quando o campo é nulo (`fileInfo.mimeType` de um anexo ainda não baixado) — o app abortava em `ObservableKVOWrapperCastingError`. A leitura passou a pedir o valor como opcional (com padrão seguro), então anexo sem tipo não derruba mais a tela.
 
 ### Adicionado
-- **Importar um banco de dados pelo app (Configurações → App → "Importar do Monal"; a mesma coisa fica em Depuração → "Import Database…" para nós)**, para trocar de cliente sem perder o histórico. O iOS não deixa nenhuma ferramenta de fora escrever na raiz do container compartilhado (onde fica o `sworim.sqlite`) — o serviço de arquivos só aceita `Library`, `Documents` e `tmp` —, então o próprio app copia o arquivo escolhido para `import-sworim.sqlite` e, na abertura seguinte, troca o banco atual por ele antes de qualquer código abrir o banco. A escada de migrations roda normalmente depois. **É uma ferramenta de depuração**, com aviso de que o banco atual será substituído; senhas e a chave OMEMO continuam no keychain de cada app, então o Assistente de Migração pede as senhas.
+- **Instrumentação das esperas pelo banco.** O `MLSQLite` agora conta quantas vezes uma transação teve que esperar o lock e qual foi a maior espera; isso entra nas amostras de métricas como `db_lock_waits` e `db_lock_max_ms`, e o dashboard ganhou o painel **"Esperas pelo banco (lock)"**. É medição para decidir com dados se vale mexer na contenção (e não uma mudança no comportamento do banco).
+
+## 0.0.1 (build 54) — 29/10/2026
+
+### Adicionado
+- **Métricas do aparelho, por build.** O app passa a coletar o que é preciso para avaliar consumo de recursos nos aparelhos:
+  - **MetricKit** (fonte oficial da Apple): tempo de CPU, memória, bateria, lançamentos, hangs e diagnósticos, gravados em JSON com o build carimbado quando chegam (~1×/dia);
+  - **amostras próprias** a cada abertura, ao ir para segundo plano e a cada 5 minutos com o app ativo: memória, CPU, térmica, modo de baixa energia, bateria, contas ociosas, tamanho do banco e do WAL;
+  - **Depuração → "Métricas do aparelho" → "Exportar métricas"** gera um JSON único e abre o compartilhamento (mesmo caminho dos logs).
+- **Harness `tools/metrics-harness/`** (Python 3, só biblioteca padrão): envia esse JSON para o **InfluxDB 2.x** (credenciais em `.credentials`, fora do Git), com `--dry-run` e controle do que já foi enviado; inclui um script para apagar a measurement quando o schema muda e um **dashboard do Grafana 12.0.1** com séries contínuas e os builds marcados como annotations.
+
+## 0.0.1 (build 53) — 29/10/2026
+
+### Corrigido
+- **O app ainda abortava na abertura depois de importar um banco** (relatórios do build 51 num iPhone 11, iOS 26.7.2). O log do próprio app mostrou o motivo: **"database is locked"** — a limpeza de avatares abria uma transação de leitura enquanto a migration tinha uma de escrita aberta, o `MLSQLite` lançava exceção numa thread de segundo plano sem tratador e o processo abortava. Agora são duas proteções: (1) as duas limpezas de abertura chamam `[DataLayer sharedInstance]` antes de tocar no banco (ele espera a migration terminar, se ainda estiver rodando) e (2) `cleanupHashes` roda dentro de `@try/@catch` — perder uma limpeza de avatares é inofensivo, derrubar o app não é.
+
+## 0.0.1 (build 52) — 29/10/2026
+
+### Mudado
+- **A conversa com bolinha vermelha na lista fica mais fácil de achar:** o preview da última mensagem aparece em **cinza quase preto (#373736)** em vez do cinza claro, e um **`@` rosa** aparece logo antes do sininho que indica o tipo de notificação do canal (só quando há sininho: canal em "só menção" ou silenciado). O nome do canal, a linha da conta e as conversas com bolinha cinza continuam exatamente como eram — a regra do vermelho/cinza não mudou.
+- O negrito chegou a ser usado nesse preview e foi **descartado**: no iPhone a fonte ficava visualmente maior que o nome da conversa.
+
+## 0.0.1 (build 51) — 29/10/2026
+
+### Corrigido
+- **O app fechava sozinho (SIGABRT) na abertura depois de importar um banco de outro cliente.** Na inicialização, o app disparava duas limpezas em segundo plano (cache de transferências e de imagens) **antes** de abrir o banco — e abrir o banco é o que roda as migrations. Com um banco importado (que precisa migrar de uma versão antiga), a migration recria tabelas enquanto essas limpezas consultavam o banco, o `MLSQLite` lançava exceção numa thread sem tratador e o app abortava. No simulador a migration é rápida e a corrida não aparecia; num iPhone 11 (iOS 26.7) ela apareceu em **quatro** aberturas seguidas. Agora as duas limpezas só começam **depois** de o banco estar aberto e migrado.
+
+## 0.0.1 (build 50) — 28/10/2026
+
+### Adicionado
+- **Importar um banco de dados pelo app (Configurações → App → "Importar do Monal"; a mesma coisa fica em Depuração → "Import Database…" para nós)**, para trocar de cliente sem perder o histórico. O iOS não deixa nenhuma ferramenta de fora escrever na raiz do container compartilhado (onde fica o `sworim.sqlite`) — o serviço de arquivos só aceita `Library`, `Documents` e `tmp` —, então o próprio app copia o arquivo escolhido para `import-sworim.sqlite` e, na abertura seguinte, troca o banco atual por ele antes de qualquer código abrir o banco. A escada de migrations roda normalmente depois. Depois de importar, os **avatares** são baixados de novo (as imagens não vêm no banco, só o hash — e com o hash guardado o app nunca baixaria outra vez); o Depuração também ganhou **Reset Avatar Cache**, para o mesmo efeito sem reimportar. Aceita o banco **cru ou comprimido (`.gz`)** — as versões novas do Monal exportam comprimido —, e a linha do menu tem tradução pt-BR. **É uma ferramenta de depuração**, com aviso de que o banco atual será substituído; senhas e a chave OMEMO continuam no keychain de cada app, então o Assistente de Migração pede as senhas.
 
 ## 0.0.1 (build 47) — 28/10/2026
 

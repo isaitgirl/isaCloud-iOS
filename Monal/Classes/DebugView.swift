@@ -44,6 +44,8 @@ struct LogFilesView: View {
     @State private var showDBImporter = false
     @State private var showingDBImportDoneAlert = false
     @State private var showingDBImportFailedAlert = false
+    @State private var showingAvatarResetDoneAlert = false
+    @State private var showingMetricsExportFailedAlert = false
     
     func refreshSortedLogfiles() {
         if let sortedLogFileInfos = HelperTools.fileLogger?.logFileManager.sortedLogFileInfos {
@@ -54,12 +56,26 @@ struct LogFilesView: View {
         }
     }
     
+    //isaCloud: exports the samples collected by MetricsCollector (memory, CPU, battery/thermal, database size)
+    //together with the MetricKit payloads, for the harness in tools/metrics-harness
+    @ViewBuilder private var deviceMetricsSection: some View {
+        Section(header: Text("Device Metrics")) {
+            Button("Export Metrics") {
+                if let url = MetricsCollector.exportMetrics() {
+                    self.fileURL = url
+                } else {
+                    self.showingMetricsExportFailedAlert = true
+                }
+            }
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading) {
             Text("This can be used to export logfiles.\n[Learn how to read them](https://github.com/monal-im/Monal/wiki/Introduction-to-Monal-Logging#view-the-log).")
             List {
                 Section(header: Text("Logfiles")) {
-                    ForEach(sortedLogFileInfos, id: \.self) { logFileInfo in
+                    ForEach(sortedLogFileInfos, id: \.self) { (logFileInfo: DDLogFileInfo) in
                         Button(logFileInfo.fileName) {
                             self.fileURL = HelperTools.compressFile(atPath:logFileInfo.filePath, withLevel:9)
                         }
@@ -83,6 +99,16 @@ struct LogFilesView: View {
                     //isaCloud: replaces the main database with a file chosen here; it is applied when the app is opened again
                     Button("Import Database…") {
                         showDBImporter = true
+                    }
+                }
+                deviceMetricsSection
+                Section(header: Text("Caches")) {
+                    //isaCloud: the cached avatars live outside the database; this makes the app download them again (useful after
+                    //importing a database, which brings the hashes but not the images)
+                    Button("Reset Avatar Cache") {
+                        DataLayer.sharedInstance().clearAvatarHashCache()
+                        HelperTools.clearAvatarImageCache()
+                        showingAvatarResetDoneAlert = true
                     }
                 }
             }
@@ -127,6 +153,16 @@ struct LogFilesView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text("Close and open the app to apply it. The current database (accounts, chats and messages) will be replaced, and the app will migrate the imported one on the next start.")
+        }
+        .alert("Metrics export failed", isPresented: $showingMetricsExportFailedAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("The app could not build the metrics file. Try again after using the app for a while.")
+        }
+        .alert("Avatar cache cleared", isPresented: $showingAvatarResetDoneAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Close and open the app, or wait for the contacts to come online again, so the avatars are downloaded.")
         }
         .alert("Database import failed", isPresented: $showingDBImportFailedAlert) {
             Button("OK", role: .cancel) {}

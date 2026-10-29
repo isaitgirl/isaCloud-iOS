@@ -110,6 +110,17 @@ static NSDateFormatter* dbFormatter;
         [newInstance.db checkpointWal];
         
         DDLogInfo(@"Database version check completed");
+        
+        //isaCloud: an imported database comes without the cached avatars (the images live outside the database, in the app group), so
+        //the stored hashes would keep the app from downloading them again. Clear them once, right after the import.
+        NSString* avatarResetMarker = [[HelperTools getContainerURLForPathComponents:@[@"avatar-reset-needed"]] path];
+        if([[NSFileManager defaultManager] fileExistsAtPath:avatarResetMarker])
+        {
+            DDLogWarn(@"Clearing the avatar cache after a database import");
+            [newInstance clearAvatarHashCache];
+            [HelperTools clearAvatarImageCache];
+            [[NSFileManager defaultManager] removeItemAtPath:avatarResetMarker error:nil];
+        }
     }
     return newInstance;
 }
@@ -125,6 +136,16 @@ static NSDateFormatter* dbFormatter;
 {
     //always return thread-local instance of sqlite class (this is important for performance!)
     return [MLSQLite sharedInstanceForFile:dbPath];
+}
+
+//isaCloud: forgets every avatar hash and every cached avatar image, so the avatars are downloaded again from the servers
+-(void) clearAvatarHashCache
+{
+    [self.db voidWriteTransaction:^{
+        [self.db executeNonQuery:@"UPDATE buddylist SET iconhash='';"];
+        [self.db executeNonQuery:@"UPDATE account SET iconhash='';"];
+        [self.db executeNonQuery:@"DELETE FROM remote_avatar;"];
+    }];
 }
 
 -(NSString* _Nullable) exportDB
@@ -1626,6 +1647,38 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
         DDLogVerbose(@"setting received confrmed %@, %@", messageid, jid);
         [self.db executeNonQuery:query andArguments:@[[NSNumber numberWithBool:received], [NSNumber numberWithBool:YES], messageid, jid]];
     }];
+}
+
+-(NSUInteger) markStaleOutgoingMessagesAsFailedBefore:(NSDate*) before
+{
+    if(before == nil)
+        return 0;
+    //timestamp has no index, but this runs once per launch on a background queue: read the candidates first (a plain read, without
+    //holding the write lock) and update only the few rows found. No id window: a message can be old and still be the one stuck.
+    NSString* limit = [dbFormatter stringFromDate:before];
+    // - received is NULL on messages that never got a receipt: "received=0" would skip them (that is why the first version found nothing);
+    // - a retracted message is deleted, not unsent: it must not become a delivery failure;
+    // - only the last week, so an old history (e.g. an imported database) is not resurrected as failures.
+    NSString* oldest = [dbFormatter stringFromDate:[NSDate dateWithTimeIntervalSinceNow:-7 * 86400]];
+    //every query has to run inside a transaction (MLSQLite throws otherwise), and this one is a plain read
+    NSArray* rows = [self.db idReadTransaction:^{
+        return [self.db executeReader:@"SELECT messageid FROM message_history WHERE sent=0 AND ifnull(received,0)=0 AND ifnull(retracted,0)=0 AND inbound=0 AND timestamp < ? AND timestamp > ? AND (errorType IS NULL OR errorType = '');" andArguments:@[limit, oldest]];
+    }];
+    DDLogInfo(@"isaCloud: %lu outgoing message(s) without confirmation older than the launch", (unsigned long)rows.count);
+    if(rows.count == 0)
+        return 0;
+    __block NSUInteger changed = 0;
+    [self.db voidWriteTransaction:^{
+        for(NSDictionary* row in rows)
+        {
+            if(row[@"messageid"] == nil)
+                continue;
+            [self.db executeNonQuery:@"UPDATE message_history SET errorType=?, errorReason=? WHERE messageid=? AND sent=0 AND (errorType IS NULL OR errorType = '');"
+                        andArguments:@[@"notSent", NSLocalizedString(@"the app was closed before this message could be sent", @""), row[@"messageid"]]];
+            changed++;
+        }
+    }];
+    return changed;
 }
 
 -(void) setMessageId:(NSString* _Nonnull) messageid andJid:(NSString*) jid errorType:(NSString* _Nonnull) errorType errorReason:(NSString* _Nonnull) errorReason

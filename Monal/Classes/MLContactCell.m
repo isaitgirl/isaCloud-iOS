@@ -27,6 +27,12 @@
 {
     //isaCloud: the jid of the account this chat belongs to, under the name, while more than one account is enabled
     UILabel* _accountJid;
+    //isaCloud: the "@" shown before the notification-type bell when the chat has unread notifications/mentions
+    UILabel* _atMark;
+    //isaCloud: cached result of the red/gray badge rule, computed once per cell update (it queries the database for mentions)
+    BOOL _badgeIsGray;
+    //isaCloud: whether the next preview text should be highlighted (red counter: notification or mention)
+    BOOL _previewHighlight;
     NSLayoutConstraint* _statusTopConstraint;
 }
 
@@ -53,6 +59,20 @@
     for(NSLayoutConstraint* constraint in self.contentView.constraints)
         if(constraint.firstItem == self.statusText && constraint.firstAttribute == NSLayoutAttributeTop)
             _statusTopConstraint = constraint;
+    
+    //isaCloud: the "@" that marks a chat with unread notifications/mentions, just before the notification-type bell
+    _atMark = [UILabel new];
+    _atMark.translatesAutoresizingMaskIntoConstraints = NO;
+    _atMark.text = @"@";
+    _atMark.font = [UIFont boldSystemFontOfSize:13];
+    //isaCloud: the same pink as the notification-type bell
+    _atMark.textColor = [UIColor colorNamed:@"isaCloudPink"] ?: [UIColor systemPinkColor];
+    _atMark.hidden = YES;
+    [self.contentView addSubview:_atMark];
+    [NSLayoutConstraint activateConstraints:@[
+        [_atMark.trailingAnchor constraintEqualToAnchor:self.mentionBadge.leadingAnchor constant:-3],
+        [_atMark.centerYAnchor constraintEqualToAnchor:self.mentionBadge.centerYAnchor],
+    ]];
 }
 
 -(void) showAccountJid:(NSString* _Nullable) accountJid
@@ -78,6 +98,9 @@
     [self setPinned:contact.isPinned];
     [self setCount:(long)contact.unreadCount];
     [self setBadgeColorForContact:contact];
+    //isaCloud: the highlight has to be known before the preview is built: showStatusText: rewrites the label and would
+    //throw away attributes applied afterwards (it compares against the label's own original text)
+    _previewHighlight = contact.unreadCount > 0 && !_badgeIsGray;
     [self displayLastMessage:lastMessage forContact:contact];
     
     [[MLImageManager sharedInstance] getIconForContact:contact withCompletion:^(UIImage *image) {
@@ -94,6 +117,34 @@
         self.muteBadge.hidden = !contact.isMuted;
         self.mentionBadge.hidden = YES;
     }
+    
+    //isaCloud: a red unread counter (notification or mention) makes the preview bold and puts a "@" before the bell
+    [self applyUnreadHighlightForContact:contact];
+}
+
+//isaCloud: bold preview + "@" for chats with unread notifications/mentions (the red counter, not the gray one)
+-(void) applyUnreadHighlightForContact:(MLContact*) contact
+{
+    BOOL highlight = contact.unreadCount > 0 && !_badgeIsGray;
+    self.previewHighlighted = highlight;
+    //the "@" only makes sense next to the bell that tells the notification type of the chat:
+    //without that bell (a normal 1:1 chat, for instance) the bold preview is the only marker
+    _atMark.hidden = !(highlight && (!self.muteBadge.hidden || !self.mentionBadge.hidden));
+}
+
+//isaCloud: bold and near black (not pure black, so it does not look like the chat name) for a preview of a chat with a red counter
+//isaCloud: the color of a highlighted preview (Isadora's #373736): near black, but not the same as the chat name
++(UIColor*) previewHighlightColor
+{
+    return [UIColor colorWithRed:0x37/255.0 green:0x37/255.0 blue:0x36/255.0 alpha:1.0];
+}
+
+-(void) highlightPreviewText:(NSMutableAttributedString*) text
+{
+    //isaCloud: only the color changes: bold made the preview look bigger than the chat name on the iPhone
+    //the color has to be an attribute: the chat list sets statusText.textColor after configuring the cell (light gray,
+    //or white for the selected chat), and a label textColor does not override attributes of the attributed string
+    [text addAttribute:NSForegroundColorAttributeName value:[MLContactCell previewHighlightColor] range:NSMakeRange(0, text.length)];
 }
 
 -(void) displayLastMessage:(MLMessage* _Nullable) lastMessage forContact:(MLContact*) contact
@@ -188,6 +239,8 @@
         NSMutableAttributedString* attrStatusText = [[NSMutableAttributedString alloc] initWithString:statusMessage];
         [attrStatusText addAttribute:NSForegroundColorAttributeName value:[UIColor lightGrayColor] range:meAttrRange];
 
+        if(_previewHighlight)
+            [self highlightPreviewText:attrStatusText];
         if(![attrStatusText isEqualToAttributedString:self.statusText.originalAttributedText])
         {
             // only update UI if needed
@@ -287,7 +340,8 @@
 -(void) setBadgeColorForContact:(MLContact*) contact
 {
     UIImage* bubble = [UIImage imageNamed:@"NotificationBubble"];
-    if([self shouldShowGrayBadgeForContact:contact])
+    _badgeIsGray = [self shouldShowGrayBadgeForContact:contact];
+    if(_badgeIsGray)
         bubble = [bubble imageWithTintColor:UIColor.systemGrayColor renderingMode:UIImageRenderingModeAlwaysOriginal];
     [self.badge setBackgroundImage:bubble forState:UIControlStateNormal];
 }
