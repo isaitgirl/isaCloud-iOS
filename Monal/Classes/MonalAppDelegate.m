@@ -411,6 +411,8 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
     }
     */
     
+    //isaCloud: ends the main-thread part of the launch (the rest is the first list render)
+    [MetricsCollector launchMark:@"app_delegate"];
     return YES;
 }
 

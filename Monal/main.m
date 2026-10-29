@@ -11,9 +11,12 @@
 #import "MonalAppDelegate.h"
 #import <monalxmpp/DataLayer.h>
 #import <monalxmpp/MLConstants.h>
+#import "MetricsCollector.h"
 
 int main(int argc, char *argv[]) {
     @autoreleasepool {
+        //isaCloud: the earliest point we control, so the launch time includes the delegate and the first list render
+        [MetricsCollector launchStarted];
         [HelperTools initSystem];
         
         // check start arguments

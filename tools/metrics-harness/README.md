@@ -315,3 +315,21 @@ para comparar builds no mesmo painel sem variável de filtro.
   timestamp são ignorados com aviso (e contados no resumo).
 - `INFLUX_URL` deve ser a URL base; se você colocar `/api/v2` no caminho, o
   endpoint fica duplicado e o InfluxDB responde 404.
+
+## Aberturas a frio (`launches-*.jsonl`)
+
+Desde o build 63 o app grava **uma linha por abertura** em `<grupo>/metrics/launches-AAAA-MM-DD.jsonl`
+(e no campo `launches` do export de métricas). O `send.py` reconhece esses arquivos e envia para a
+medida **`<measurement>_launch`**, com `build`, `ios` e `model` como tags:
+
+| campo | o que é |
+|---|---|
+| `launch_ms` | de `main()` até a tela de conversas aparecer (o que a pessoa espera) |
+| `app_delegate_ms` | trabalho na thread principal no `didFinishLaunching` |
+| `list_build_ms` | montagem da lista no refresh (banco + filtros + reload) |
+| `list_ready_ms` | marco de quando a lista ficou pronta |
+| `first_frame_ms` | marco do primeiro desenho da tela |
+| `main_ms` | `app_delegate_ms + list_build_ms` (o que dá para otimizar na main) |
+| `cold` | sempre `true` (processo novo) |
+
+O painel **"Abertura a frio (ms)"** do dashboard mostra esses campos por build.

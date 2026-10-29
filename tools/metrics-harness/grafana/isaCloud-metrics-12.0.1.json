@@ -1010,6 +1010,59 @@
           "format": "time_series"
         }
       ]
+    },
+    {
+      "id": 92,
+      "type": "timeseries",
+      "title": "Abertura a frio (ms)",
+      "description": "Uma linha por abertura do app: launch_ms (main() até a tela aparecer), app_delegate_ms, list_build_ms e main_ms (trabalho na thread principal).",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "showPoints": "always",
+            "pointSize": 4
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${datasource}"
+          },
+          "refId": "A",
+          "query": "from(bucket: \"isacloud_ios\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"isacloud_metrics_launch\")\n  |> filter(fn: (r) => r[\"_field\"] == \"launch_ms\" or r[\"_field\"] == \"app_delegate_ms\" or r[\"_field\"] == \"list_build_ms\" or r[\"_field\"] == \"main_ms\")\n  |> map(fn: (r) => ({ r with _value: float(v: r._value) }))\n  |> keep(columns: [\"_time\", \"_value\", \"_field\", \"build\"])"
+        }
+      ]
     }
   ],
   "preload": false,

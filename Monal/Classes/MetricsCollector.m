@@ -64,6 +64,92 @@ static const NSTimeInterval kSampleIntervalSeconds = 300;
     });
 }
 
+static double _launchStart = 0.0;
+static NSMutableDictionary* _launchMarks = nil;
+static BOOL _launchFinishedWritten = NO;
+
++(void) launchStarted
+{
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        _launchStart = CACurrentMediaTime();
+        _launchMarks = [NSMutableDictionary new];
+    });
+}
+
++(void) launchMark:(NSString*) label
+{
+    if(label == nil || _launchStart <= 0.0 || _launchMarks[label] != nil)
+        return;
+    _launchMarks[label] = @((CACurrentMediaTime() - _launchStart) * 1000.0);
+}
+
++(void) launchDuration:(NSString*) label milliseconds:(double) milliseconds
+{
+    if(label == nil || _launchStart <= 0.0)
+        return;
+    NSNumber* previous = _launchMarks[label];       //keep the worst case: the refresh that took longer
+    if(previous == nil || milliseconds > previous.doubleValue)
+        _launchMarks[label] = @(milliseconds);
+}
+
++(void) launchFinished
+{
+    //only writes when both the screen appeared and the list was built, whichever happens last
+    if(_launchFinishedWritten || _launchStart <= 0.0 || _launchMarks[@"first_frame"] == nil || _launchMarks[@"chat_list"] == nil)
+        return;
+    _launchFinishedWritten = YES;
+    NSString* directory = [MetricsCollector metricsDirectoryPath];
+    if(directory == nil)
+        return;
+    NSDictionary* info = NSBundle.mainBundle.infoDictionary ?: @{};
+    //launch_ms: total, from main() to the screen appearing (what the user waits)
+    //app_delegate_ms + list_build_ms: the work we do on the main thread during the launch
+    //list_ready_ms: when the list was built (mark); first_frame_ms: when this screen appeared
+    NSNumber* appDelegate = _launchMarks[@"app_delegate"] ?: @(0);
+    NSNumber* listBuild = _launchMarks[@"list_build"] ?: @(0);
+    double total = [_launchMarks[@"first_frame"] doubleValue];
+    NSDictionary* launch = @{
+        @"build": info[@"CFBundleVersion"] ?: @"?",
+        @"short": info[@"CFBundleShortVersionString"] ?: @"?",
+        @"ios": [[UIDevice currentDevice] systemVersion] ?: @"?",
+        @"model": [[self sharedInstance] deviceModel] ?: @"?",
+        @"launch_ms": @(total),
+        @"first_frame_ms": @(total),
+        @"app_delegate_ms": appDelegate,
+        @"list_ready_ms": _launchMarks[@"chat_list"] ?: @(0),
+        @"list_build_ms": listBuild,
+        @"main_ms": @(appDelegate.doubleValue + listBuild.doubleValue),
+        @"cold": @YES,
+        @"at": [[[NSISO8601DateFormatter alloc] init] stringFromDate:[NSDate date]],
+    };
+    NSData* data = [NSJSONSerialization dataWithJSONObject:launch options:0 error:nil];
+    if(data == nil)
+        return;
+    NSDateFormatter* dayFormatter = [NSDateFormatter new];
+    dayFormatter.dateFormat = @"yyyy-MM-dd";
+    dayFormatter.locale = [NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];
+    dayFormatter.timeZone = [NSTimeZone timeZoneForSecondsFromGMT:0];
+    NSString* path = [directory stringByAppendingPathComponent:[NSString stringWithFormat:@"launches-%@.jsonl", [dayFormatter stringFromDate:[NSDate date]]]];
+    NSMutableData* line = [data mutableCopy];
+    [line appendBytes:"\n" length:1];
+    NSFileHandle* handle = [NSFileHandle fileHandleForWritingAtPath:path];
+    if(handle == nil)
+        [line writeToFile:path atomically:YES];
+    else
+    {
+        @try {
+            [handle seekToEndOfFile];
+            [handle writeData:line];
+            [handle closeFile];
+        } @catch(NSException* exception) {
+            DDLogError(@"Could not append to the launch file: %@", exception);
+        }
+    }
+    DDLogInfo(@"isaCloud: abertura a frio: total %.0f ms | didFinishLaunching %.0f ms | montar a lista %.0f ms | na main %.0f ms",
+        total, appDelegate.doubleValue, listBuild.doubleValue, appDelegate.doubleValue + listBuild.doubleValue);
+}
+
 +(void) sampleNow
 {
     [[self sharedInstance] writeSample];
@@ -347,6 +433,7 @@ static const NSTimeInterval kSampleIntervalSeconds = 300;
     NSFileManager* fileManager = [NSFileManager defaultManager];
     NSMutableArray* samples = [NSMutableArray new];
     NSMutableArray* metrickit = [NSMutableArray new];
+    NSMutableArray* launches = [NSMutableArray new];
     for(NSString* name in [fileManager contentsOfDirectoryAtPath:directory error:nil])
     {
         NSString* path = [directory stringByAppendingPathComponent:name];
@@ -363,6 +450,19 @@ static const NSTimeInterval kSampleIntervalSeconds = 300;
                     [samples addObject:sample];
             }
         }
+        else if([name hasPrefix:@"launches-"] && [name hasSuffix:@".jsonl"])
+        {
+            NSString* contents = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:nil];
+            for(NSString* line in [contents componentsSeparatedByString:@"\n"])
+            {
+                if(line.length == 0)
+                    continue;
+                NSData* data = [line dataUsingEncoding:NSUTF8StringEncoding];
+                NSDictionary* launch = data != nil ? [NSJSONSerialization JSONObjectWithData:data options:0 error:nil] : nil;
+                if([launch isKindOfClass:[NSDictionary class]])
+                    [launches addObject:launch];
+            }
+        }
         else if([name hasPrefix:@"metrickit-"] && [name hasSuffix:@".json"])
         {
             NSData* data = [NSData dataWithContentsOfFile:path];
@@ -377,6 +477,7 @@ static const NSTimeInterval kSampleIntervalSeconds = 300;
         @"exportedAt": [collector isoString:[NSDate date]],
         @"build": info[@"CFBundleVersion"] ?: @"?",
         @"samples": samples,
+        @"launches": launches,
         @"metrickit": metrickit,
     };
     NSError* error = nil;

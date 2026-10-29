@@ -14,6 +14,7 @@
 #import "MLNotificationManager.h"
 #import <monalxmpp/MLXMPPManager.h>
 #import "MLContactCell.h"
+#import "MetricsCollector.h"
 #import "MonalAppDelegate.h"
 #import <monalxmpp/MLImageManager.h>
 #import "MLXEPSlashMeHandler.h"
@@ -759,6 +760,7 @@ static BOOL _dnssecWarningDisplayed;
     };
 
     [HelperTools dispatchAsync:YES reentrantOnQueue:dispatch_get_main_queue() withBlock:^{
+        CFTimeInterval launchListStart = CACurrentMediaTime();      //isaCloud: measured on the launch record below
         size_t unpinnedConCntBefore = self.unpinnedContacts.count;
         size_t pinnedConCntBefore = self.pinnedContacts.count;
         NSMutableArray<MLContact*>* newUnpinnedContacts = [[DataLayer sharedInstance] activeContactsWithPinned:NO];
@@ -809,6 +811,17 @@ static BOOL _dnssecWarningDisplayed;
 
         MonalAppDelegate* appDelegate = (MonalAppDelegate*)[UIApplication sharedApplication].delegate;
         [appDelegate updateUnread];
+        //isaCloud: the launch measurement only counts the refresh that actually filled the list (the first ones may be empty and
+        //instant); if the account has no chats at all, it falls back to the first refreshes so the launch is still recorded
+        static NSInteger launchRefreshCount = 0;
+        launchRefreshCount++;
+        BOOL listHasChats = (newPinnedContacts.count + newUnpinnedContacts.count) > 0;
+        if(listHasChats || launchRefreshCount > 3)
+        {
+            [MetricsCollector launchMark:@"chat_list"];
+            [MetricsCollector launchDuration:@"list_build" milliseconds:(CACurrentMediaTime() - launchListStart) * 1000.0];
+            [MetricsCollector launchFinished];
+        }
     }];
 }
 
@@ -1014,6 +1027,9 @@ static BOOL _dnssecWarningDisplayed;
 
 -(void) viewDidAppear:(BOOL) animated
 {
+    //isaCloud: marks the first time this screen is on screen (the end of the launch for the user) and closes the record
+    [MetricsCollector launchMark:@"first_frame"];
+    [MetricsCollector launchFinished];
     DDLogDebug(@"active chats view did appear");
     [super viewDidAppear:animated];
     [self refresh];

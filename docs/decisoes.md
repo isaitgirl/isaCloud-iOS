@@ -34,6 +34,22 @@ Registro do **porquê** das escolhas feitas no fork: decisões de produto, de c�
 - **Testado:** simuladores iOS 18.6 e 27, lista renderizando e sem relatório novo de crash.
 - **Não feito:** cachear o texto atribuído da prévia (`displayLastMessage:` continua montando a cada célula). Fica como otimização futura se ainda aparecer lentidão ao rolar.
 
+## Tempo de abertura medido a cada launch (29/10/2026)
+
+- **Por quê:** muita gente encerra o app no seletor de apps, então quase toda abertura é **a frio** — e é justamente o caminho mais caro (banco, migrations, lista, avatares). Sem medir, otimizar seria chute.
+- **O que é gravado**, uma linha por processo em `<grupo>/metrics/launches-AAAA-MM-DD.jsonl` (e no `launches` do export de métricas):
+  - `launch_ms` — de `main()` (primeira linha do app) até a tela de conversas aparecer: o que a pessoa espera;
+  - `app_delegate_ms` — o trabalho na main thread dentro do `didFinishLaunchingWithOptions:`;
+  - `list_build_ms` — a montagem da lista no refresh (busca no banco + filtro dos chips + reload), medida na main;
+  - `list_ready_ms` — quando a lista ficou pronta (marco, cumulativo);
+  - `first_frame_ms` — quando a tela apareceu (igual ao `launch_ms`; fica explícito no registro);
+  - `main_ms` — `app_delegate_ms + list_build_ms`, o que dá para atacar de trabalho na thread principal;
+  - `cold` — sempre `true` (é um processo novo), mais `build`, `ios`, `model` e `at`.
+- **Por que `main()` e não `didFinishLaunching`:** a parte antes do delegate (carregar o binário, inicializar o runtime) também conta para a pessoa; o MetricKit já mede o total do sistema (`applicationLaunchMetrics`, guardado nos payloads) e serve de conferência.
+- **Só o refresh que enche a lista conta:** as primeiras passadas podem ser vazias e instantâneas; o registro usa o primeiro refresh com conversas (ou o quarto, numa conta sem conversas). A duração da montagem guarda o pior caso.
+- **Harness:** o `send.py` reconhece `launches-*.jsonl` (e o campo `launches` do export) e envia para a medida **`<measurement>_launch`**, separada das amostras, com os mesmos `build`/`ios`/`model` como tags. O painel "Abertura a frio (ms)" do Grafana mostra `launch_ms`, `app_delegate_ms`, `list_build_ms` e `main_ms`.
+- **Primeiros números** (simulador iOS 18.6, 2 conversas, build 63): `launch_ms` 213–256 ms, `app_delegate_ms` 136–167 ms, `list_build_ms` ~0,4 ms. Num iPhone real os valores são maiores — é o que o painel vai mostrar por build.
+
 ## Ícone do app (29/10/2026)
 
 - **Arte nova, em todas as versões de iOS** (decisão da Isadora): o ícone desenhado para o Liquid Glass (balão em tubo arredondado, letras com brilho) passou a ser o único, no lugar do desenho chapado.

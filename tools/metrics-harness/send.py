@@ -45,6 +45,7 @@ DEFAULTS = {"INFLUX_BUCKET": "isacloud_ios", "INFLUX_TIMEOUT": "10"}
 
 # tags que o harness publica em cada tipo de registro (o resto é field/tag do payload)
 SAMPLE_TAGS = ("build", "ios", "model", "thermal", "low_power")
+LAUNCH_TAGS = ("build", "ios", "model")
 METRICKIT_TAGS = ("build", "kind")
 
 # chaves da amostra que nunca viram field (timestamp e tags)
@@ -324,6 +325,43 @@ def build_sample_record(sample: Any, source: str) -> Dict[str, Any]:
     return make_record("sample", tags, fields, ts_ms, source)
 
 
+def build_launch_record(launch: Any, source: str) -> Dict[str, Any]:
+    """Normaliza uma abertura a frio (`launches-*.jsonl` ou `launches` do export).
+
+    Campos: launch_ms (total até a tela aparecer), app_delegate_ms (main thread no
+    didFinishLaunching), list_build_ms (montagem da lista), list_ready_ms, main_ms.
+    """
+    if not isinstance(launch, dict):
+        raise RecordError("abertura não é um objeto JSON")
+
+    ts_raw = launch.get("at")
+    ts_ms = parse_time_ms(ts_raw, f"{source}: campo 'at'") if ts_raw else None
+    if ts_ms is None:
+        raise RecordError("abertura sem timestamp ('at')")
+
+    tags: Dict[str, str] = {}
+    for key in LAUNCH_TAGS:
+        value = launch.get(key)
+        if value is None or value == "" or isinstance(value, (dict, list)):
+            continue
+        tags[key] = _tag_text(value)
+
+    fields: Dict[str, Any] = {}
+    for key, value in launch.items():
+        if key in LAUNCH_TAGS or key in ("at", "short", "cold"):
+            continue
+        if isinstance(value, bool):
+            fields[key] = value
+        elif isinstance(value, (int, float)) and math.isfinite(float(value)):
+            fields[key] = float(value)
+    if "cold" in launch and isinstance(launch["cold"], bool):
+        fields["cold"] = launch["cold"]
+
+    if not fields:
+        raise RecordError("abertura sem fields numéricos")
+    return make_record("launch", tags, fields, ts_ms, source)
+
+
 def flatten_payload(payload: Any, counters: Dict[str, int], prefix: str = "") -> Dict[str, Any]:
     """Achata o payload MetricKit: dicts viram `a_b`, números/bools viram fields."""
     fields: Dict[str, Any] = {}
@@ -452,8 +490,8 @@ def kind_from_filename(name: str) -> str:
     return "metric"
 
 
-def iter_jsonl(path: Path) -> Iterator[Tuple[str, Any, str, None, None]]:
-    """Lê samples-*.jsonl (um JSON por linha)."""
+def iter_jsonl(path: Path, kind: str = "sample") -> Iterator[Tuple[str, Any, str, None, None]]:
+    """Lê um .jsonl do app (samples-* ou launches-*: um JSON por linha)."""
     try:
         text = path.read_text(encoding="utf-8")
     except OSError as exc:
@@ -470,7 +508,7 @@ def iter_jsonl(path: Path) -> Iterator[Tuple[str, Any, str, None, None]]:
             raise HarnessError(
                 f"{path.name}:{number}: JSON inválido ({exc.msg})"
             ) from None
-        yield ("sample", item, f"{path.name}:{number}", None, None)
+        yield (kind, item, f"{path.name}:{number}", None, None)
 
 
 def iter_export(data: Dict[str, Any], name: str) -> Iterator[Tuple[str, Any, str, None, None]]:
@@ -483,6 +521,10 @@ def iter_export(data: Dict[str, Any], name: str) -> Iterator[Tuple[str, Any, str
     if isinstance(metrickit, list):
         for index, item in enumerate(metrickit):
             yield ("metrickit", item, f"{name}:metrickit[{index}]", None, None)
+    launches = data.get("launches")
+    if isinstance(launches, list):
+        for index, item in enumerate(launches):
+            yield ("launch", item, f"{name}:launches[{index}]", None, None)
 
 
 def iter_metrickit_file(path: Path) -> Iterator[Tuple[str, Any, str, Optional[str], int]]:
@@ -504,11 +546,13 @@ def iter_file(path: Path) -> List[Tuple[str, Any, str, Optional[str], Optional[i
     name = path.name
     if name.startswith("metrickit-") and name.endswith(".json"):
         return list(iter_metrickit_file(path))
+    if name.startswith("launches-") and name.endswith(".jsonl"):
+        return list(iter_jsonl(path, kind="launch"))
     if name.endswith(".jsonl"):
         return list(iter_jsonl(path))
 
     data = read_json(path)
-    if isinstance(data, dict) and ("samples" in data or "metrickit" in data):
+    if isinstance(data, dict) and ("samples" in data or "metrickit" in data or "launches" in data):
         return list(iter_export(data, name))
     if isinstance(data, dict) and isinstance(data.get("payload"), dict):
         return [("metrickit", data, name, None, None)]
@@ -542,6 +586,8 @@ def discover_directory(directory: Path) -> List[Tuple[str, Path]]:
         name = entry.name
         if name.startswith("samples-") and name.endswith(".jsonl"):
             found.append(("samples-*.jsonl", entry))
+        elif name.startswith("launches-") and name.endswith(".jsonl"):
+            found.append(("launches-*.jsonl", entry))
         elif name.startswith("metrickit-") and name.endswith(".json"):
             found.append(("metrickit-*.json", entry))
         elif name.endswith(".json") and is_export_file(entry):
@@ -730,6 +776,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         try:
             if kind == "sample":
                 record = build_sample_record(item, source)
+            elif kind == "launch":
+                record = build_launch_record(item, source)
             else:
                 record = build_metrickit_record(
                     item, source, kind_hint=kind_hint, fallback_ts_ms=fallback_ts
@@ -743,8 +791,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         records.append(record)
 
     samples = sum(1 for record in records if record["kind"] == "sample")
-    metrickit = len(records) - samples
-    debug(f"{len(records)} registro(s) válido(s): {samples} amostra(s), {metrickit} MetricKit")
+    launches = sum(1 for record in records if record["kind"] == "launch")
+    metrickit = len(records) - samples - launches
+    debug(f"{len(records)} registro(s) válido(s): {samples} amostra(s), {launches} abertura(s), {metrickit} MetricKit")
 
     # estado de idempotência (dry-run não lê nem grava)
     state: Dict[str, str] = {}
@@ -770,6 +819,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         measurement = config.measurement
         if record["kind"] == "metrickit":
             measurement = f"{config.measurement}_metrickit"
+        elif record["kind"] == "launch":
+            measurement = f"{config.measurement}_launch"
         try:
             line = render_line(measurement, record["tags"], record["fields"], record["ts_ms"])
         except RecordError as exc:
