@@ -189,11 +189,11 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
     //isaCloud: 11 pt with a little negative kerning: the system font has no real condensed variant on iOS, so the horizontal
     //spacing is tightened by hand (the pills get shorter without shrinking the glyphs as much as a smaller size would)
     config.attributedTitle = [[NSAttributedString alloc] initWithString:title attributes:@{
-        NSFontAttributeName: [UIFont systemFontOfSize:10 weight:UIFontWeightMedium],
+        NSFontAttributeName: [UIFont systemFontOfSize:9 weight:UIFontWeightMedium],
         NSKernAttributeName: @(-0.2),
     }];
     button.configuration = config;
-    button.titleLabel.font = [UIFont systemFontOfSize:10 weight:UIFontWeightMedium];
+    button.titleLabel.font = [UIFont systemFontOfSize:9 weight:UIFontWeightMedium];
     [button addTarget:self action:@selector(toggle:) forControlEvents:UIControlEventTouchUpInside];
     [button.heightAnchor constraintEqualToConstant:28].active = YES;
     return button;
