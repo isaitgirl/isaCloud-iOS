@@ -1161,29 +1161,19 @@ private final class KeyboardDismissTapHandler: NSObject, UIGestureRecognizerDele
 final class ChatListSearchModel : ObservableObject {
     @Published var query = ""
     @Published var results: [MLContact] = []
-    /// isaCloud: the filter chips of the home screen apply to the search results too (names and messages)
-    var contactFilter: ((MLContact) -> Bool)? {
-        didSet { messages.contactFilter = contactFilter }
-    }
     /// the list shows the messages found instead of the names
     @Published var showMessages = false
     let messages = MessageSearchModel()
 
     func update(query: String) {
         self.query = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        let found = self.query.isEmpty ? [] : (DataLayer.sharedInstance().searchContacts(with: self.query) as? [MLContact] ?? [])
-        results = found.filter { contactFilter?($0) ?? true }
+        results = self.query.isEmpty ? [] : (DataLayer.sharedInstance().searchContacts(with: self.query) as? [MLContact] ?? [])
         if self.query.isEmpty {
             showMessages = false
             messages.search("")
         } else if showMessages {
             messages.search(self.query)
         }
-    }
-
-    /// isaCloud: re-runs the search (used when the filter chips change while the search is open)
-    func refresh() {
-        update(query: query)
     }
 
     func setShowMessages(_ show: Bool) {
@@ -1257,18 +1247,6 @@ class ChatListSearch : NSObject {
         model.update(query: query)
     }
 
-    /// isaCloud: the filter chips of the home screen; nil keeps every result
-    @objc
-    var contactFilter: ((MLContact) -> Bool)? {
-        get { model.contactFilter }
-        set { model.contactFilter = newValue }
-    }
-
-    /// isaCloud: re-runs the current search (the chips changed while the search is open)
-    @objc
-    func refresh() {
-        model.refresh()
-    }
 }
 
 /// isaCloud: scene lifecycle (required on iOS 27). The window is still owned by the app delegate, so the scene only hands it over.
