@@ -109,9 +109,22 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
     NSMutableDictionary<NSString*, UIButton*>* _types;
 }
 
--(UIColor*) pink
+-(void) refreshLook:(UIButton*) button
 {
-    return [UIColor colorNamed:@"isaCloudPink"] ?: [UIColor systemPinkColor];
+    //isaCloud: gray instead of pink: filled means selected, outline only means not selected (the same in light and dark mode).
+    //A UIButton draws its background through its configuration (the plain backgroundColor is covered by the tint), so the look
+    //is set on the configuration.
+    UIColor* gray = [UIColor systemGrayColor];
+    UIButtonConfiguration* config = button.configuration ?: [UIButtonConfiguration plainButtonConfiguration];
+    config.baseForegroundColor = button.isSelected ? [UIColor whiteColor] : gray;
+    config.background.backgroundColor = button.isSelected ? gray : [UIColor clearColor];
+    config.background.cornerRadius = 14;
+    config.contentInsets = NSDirectionalEdgeInsetsMake(3, 11, 3, 11);
+    button.configuration = config;
+    button.layer.borderWidth = 1;
+    button.layer.cornerRadius = 14;
+    button.layer.borderColor = gray.CGColor;
+    [button setAccessibilityTraits:button.isSelected ? (UIAccessibilityTraitButton | UIAccessibilityTraitSelected) : UIAccessibilityTraitButton];
 }
 
 -(instancetype) initWithUnread:(BOOL) unread types:(NSSet<NSString*>*) types
@@ -123,12 +136,16 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
     UIScrollView* scrollView = [UIScrollView new];
     scrollView.showsHorizontalScrollIndicator = NO;
     scrollView.translatesAutoresizingMaskIntoConstraints = NO;
+    //the content view is at least as wide as the screen (so a short row is centered) and grows with the chips (so a long one scrolls)
+    UIView* contentView = [UIView new];
+    contentView.translatesAutoresizingMaskIntoConstraints = NO;
     UIStackView* stack = [UIStackView new];
     stack.axis = UILayoutConstraintAxisHorizontal;
     stack.spacing = 8;
     stack.translatesAutoresizingMaskIntoConstraints = NO;
     [self addSubview:scrollView];
-    [scrollView addSubview:stack];
+    [scrollView addSubview:contentView];
+    [contentView addSubview:stack];
 
     _unread = [self makeButton:NSLocalizedString(@"Unread", @"filter of the chat list: only chats with unread messages")];
     [_unread setSelected:unread];
@@ -148,12 +165,18 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
     [NSLayoutConstraint activateConstraints:@[
         [scrollView.topAnchor constraintEqualToAnchor:self.topAnchor],
         [scrollView.bottomAnchor constraintEqualToAnchor:self.bottomAnchor],
-        [scrollView.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:16],
-        [scrollView.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16],
-        [stack.topAnchor constraintEqualToAnchor:scrollView.topAnchor constant:6],
-        [stack.bottomAnchor constraintEqualToAnchor:scrollView.bottomAnchor constant:-6],
-        [stack.leadingAnchor constraintEqualToAnchor:scrollView.leadingAnchor],
-        [stack.trailingAnchor constraintEqualToAnchor:scrollView.trailingAnchor],
+        [scrollView.leadingAnchor constraintEqualToAnchor:self.leadingAnchor],
+        [scrollView.trailingAnchor constraintEqualToAnchor:self.trailingAnchor],
+        [contentView.topAnchor constraintEqualToAnchor:scrollView.contentLayoutGuide.topAnchor],
+        [contentView.bottomAnchor constraintEqualToAnchor:scrollView.contentLayoutGuide.bottomAnchor],
+        [contentView.leadingAnchor constraintEqualToAnchor:scrollView.contentLayoutGuide.leadingAnchor],
+        [contentView.trailingAnchor constraintEqualToAnchor:scrollView.contentLayoutGuide.trailingAnchor],
+        [contentView.heightAnchor constraintEqualToAnchor:scrollView.frameLayoutGuide.heightAnchor],
+        [contentView.widthAnchor constraintGreaterThanOrEqualToAnchor:scrollView.frameLayoutGuide.widthAnchor],
+        [stack.centerXAnchor constraintEqualToAnchor:contentView.centerXAnchor],
+        [stack.centerYAnchor constraintEqualToAnchor:contentView.centerYAnchor],
+        [stack.leadingAnchor constraintGreaterThanOrEqualToAnchor:contentView.leadingAnchor constant:16],
+        [stack.trailingAnchor constraintLessThanOrEqualToAnchor:contentView.trailingAnchor constant:-16],
     ]];
     return self;
 }
@@ -162,34 +185,16 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
 {
     UIButton* button = [UIButton buttonWithType:UIButtonTypeSystem];
     [button setTitle:title forState:UIControlStateNormal];
-    button.titleLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightMedium];
-    button.layer.cornerRadius = 15;
-    button.layer.borderWidth = 1;
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    button.contentEdgeInsets = UIEdgeInsetsMake(4, 12, 4, 12);
-#pragma clang diagnostic pop
+    UIButtonConfiguration* config = [UIButtonConfiguration plainButtonConfiguration];
+    config.title = title;
+    config.attributedTitle = [[NSAttributedString alloc] initWithString:title attributes:@{
+        NSFontAttributeName: [UIFont systemFontOfSize:13 weight:UIFontWeightMedium],
+    }];
+    button.configuration = config;
+    button.titleLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightMedium];
     [button addTarget:self action:@selector(toggle:) forControlEvents:UIControlEventTouchUpInside];
-    [button.heightAnchor constraintEqualToConstant:30].active = YES;
+    [button.heightAnchor constraintEqualToConstant:28].active = YES;
     return button;
-}
-
--(void) refreshLook:(UIButton*) button
-{
-    UIColor* pink = [self pink];
-    if(button.isSelected)
-    {
-        button.backgroundColor = pink;
-        [button setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-        button.layer.borderColor = pink.CGColor;
-    }
-    else
-    {
-        button.backgroundColor = [UIColor clearColor];
-        [button setTitleColor:pink forState:UIControlStateNormal];
-        button.layer.borderColor = pink.CGColor;
-    }
-    [button setAccessibilityTraits:button.isSelected ? (UIAccessibilityTraitButton | UIAccessibilityTraitSelected) : UIAccessibilityTraitButton];
 }
 
 -(void) toggle:(UIButton*) button
