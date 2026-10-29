@@ -16,6 +16,13 @@ Registro do **porquê** das escolhas feitas no fork: decisões de produto, de c�
 - **Dashboard:** `tools/metrics-harness/grafana/isaCloud-metrics-12.0.1.json`, importável no **Grafana 12.0.1**, com **uma única variável** (o datasource InfluxDB) — de propósito, para importar em qualquer instância sem editar painel.
 - **O que ainda falta para medir de verdade:** os dados de MetricKit só aparecem depois de ~1 dia de uso; `mem_available_mb` é 0 no simulador (é 0 também por natureza lá); `model` sai `arm64` no simulador e o identificador real no aparelho.
 
+## Ícone do app (29/10/2026)
+
+- **Arte nova, em todas as versões de iOS** (decisão da Isadora): o ícone desenhado para o Liquid Glass (balão em tubo arredondado, letras com brilho) passou a ser o único, no lugar do desenho chapado.
+- **Por que não dois ícones por versão**: o iOS **não permite** escolher o ícone do bundle pela versão do sistema — o ícone é compilado junto com o app. As alternativas eram o ícone alternativo em tempo de execução (`setAlternateIconName:` + `CFBundleAlternateIcons`), que mostra o alerta do sistema "Você alterou o ícone" a cada troca (e exigiria swizzle para esconder, com risco em review), ou o documento `.icon` do Icon Composer, cujo fallback para iOS antigo é o **mesmo desenho** achatado, não outro ícone. As duas foram descartadas por não valerem a complexidade.
+- **Testado nos simuladores**: iOS 18.6 (aparece nítido, sem o vidro) e iOS 27 (o sistema aplica o Liquid Glass por cima). Capturas em `docs/screenshots/2026-10-29-1620-iphone-xr-ios18-icone-novo.png` e `…-iphone-ios27-icone-novo.png`.
+- **Fontes no repositório**: `isaCloud/branding/logo-isacloud-im-ios-icon.svg` (vetor) e `…-1024.png` (usado no `Assets.xcassets`). O PNG é RGB, sem alfa, como a App Store exige.
+
 ## Filtros da lista de conversas (29/10/2026)
 
 - **Pedido:** chips abaixo da busca na tela inicial, com multi-seleção e estado guardado entre aberturas: **Não lidas, Contatos, Grupos e Canais**.
