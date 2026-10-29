@@ -2,6 +2,18 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 59) — 29/10/2026
+
+### Adicionado
+- **Filtros na lista de conversas**: chips abaixo da busca, com multi-seleção e estado guardado entre aberturas — **Não lidas, Contatos, Grupos e Canais**. Contatos/Grupos/Canais são mutuamente exclusivos por conversa, então formam um conjunto ("nenhum marcado = todos"); "Não lidas" é independente e conta também a bolinha cinza de canal silenciado. A lista segue os filtros **ao vivo** (uma conversa que fica não lida entra; uma que é lida sai) e a **busca** (nomes e FTS de mensagens) usa o mesmo filtro. Estado vazio com o filtro ativo: "Nenhuma conversa com esses filtros".
+
+### Corrigido
+- **Estado vazio da lista podia derrubar o app**: `imageForEmptyDataSet:` montava um dicionário de views que podia conter `nil`.
+- **Conversa fora do filtro entrava na lista** quando chegava mensagem: `insertOrMoveContact:` não olhava os chips.
+
+### Visual
+- Chips em cinza (preenchido = marcado, contorno = desmarcado), fonte 7 com kerning −0,2, pílulas de altura 24 e centralizadas (scroll horizontal se não couber). O visual é aplicado pela `UIButtonConfiguration` — o `backgroundColor` era coberto pelo `tintColor` do botão do sistema.
+
 ## 0.0.1 (build 58) — 29/10/2026
 
 ### Corrigido
