@@ -694,11 +694,17 @@ static BOOL _dnssecWarningDisplayed;
 }
 
 //isaCloud: a chat passes when it is unread (if the filter asks for that) and its type is one of the selected ones: with no type
-//selected every type passes, so the screen never looks empty just because of the filter
--(BOOL) contactPassesChatListFilter:(MLContact*) contact
+//selected every type passes, so the screen never looks empty just because of the filter.
+//The unread chats come from one grouped query for the whole list: asking contact.unreadCount per chat ran a count query per chat
+//(4.8 ms each, 650 ms for the 135 chats of the Isadora's database) and that was the delay felt when turning "Unread" on.
+-(BOOL) contactPassesChatListFilter:(MLContact*) contact unreadChats:(NSSet<NSString*>*) unreadChats
 {
-    if([self chatListFilterUnread] && contact.unreadCount == 0)
-        return NO;
+    if([self chatListFilterUnread] && unreadChats != nil)
+    {
+        NSString* key = [NSString stringWithFormat:@"%@:%@", contact.accountID, contact.contactJid];
+        if(![unreadChats containsObject:key])
+            return NO;
+    }
     NSSet<NSString*>* types = [self chatListFilterTypes];
     if(types.count == 0)
         return YES;
@@ -708,9 +714,10 @@ static BOOL _dnssecWarningDisplayed;
 
 -(NSMutableArray<MLContact*>*) filteredChatList:(NSArray<MLContact*>*) contacts
 {
+    NSSet<NSString*>* unreadChats = [self chatListFilterUnread] ? [[DataLayer sharedInstance] chatsWithUnreadMessages] : nil;
     NSMutableArray<MLContact*>* filtered = [NSMutableArray new];
     for(MLContact* contact in contacts)
-        if([self contactPassesChatListFilter:contact])
+        if([self contactPassesChatListFilter:contact unreadChats:unreadChats])
             [filtered addObject:contact];
     return filtered;
 }
@@ -761,8 +768,11 @@ static BOOL _dnssecWarningDisplayed;
         if(!newPinnedContacts)
             newPinnedContacts = [NSMutableArray new];
         //isaCloud: the chips above the list decide what is shown (pinned chats included)
+        CFTimeInterval filterStart = CACurrentMediaTime();
         newUnpinnedContacts = [self filteredChatList:newUnpinnedContacts];
         newPinnedContacts = [self filteredChatList:newPinnedContacts];
+        if([self chatListFiltersActive])
+            DDLogDebug(@"isaCloud: filtro dos chips levou %.1f ms (%lu + %lu conversas)", (CACurrentMediaTime() - filterStart) * 1000.0, (unsigned long)newUnpinnedContacts.count, (unsigned long)newPinnedContacts.count);
 
         int unpinnedCntDiff = (int)unpinnedConCntBefore - (int)newUnpinnedContacts.count;
         int pinnedCntDiff = (int)pinnedConCntBefore - (int)newPinnedContacts.count;
@@ -912,7 +922,7 @@ static BOOL _dnssecWarningDisplayed;
 {
     //isaCloud: a chat that does not pass the filter chips does not enter the list (a new message in a channel must not show up
     //while "Contacts" is the only filter, for instance). Chats already on screen keep updating through the normal paths.
-    if(![self contactPassesChatListFilter:contact])
+    if(![self contactPassesChatListFilter:contact unreadChats:([self chatListFilterUnread] ? [[DataLayer sharedInstance] chatsWithUnreadMessages] : nil)])
     {
         if(completion) completion(YES);
         return;

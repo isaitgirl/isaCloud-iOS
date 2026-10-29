@@ -289,6 +289,8 @@ extern NSString* const kMessageTypeFiletransfer;
 
 #pragma mark active contacts
 -(NSMutableArray<MLContact*>*) activeContactsWithPinned:(BOOL) pinned;
+//isaCloud: one grouped pass instead of one count query per chat (the per-chat count cost 4.8 ms each, 650 ms for 135 chats)
+-(NSSet<NSString*>*) chatsWithUnreadMessages;
 -(NSArray<MLContact*>*) activeContactDict;
 -(void) removeActiveBuddy:(NSString*) buddyname forAccount:(NSNumber*) accountID;
 -(void) addActiveBuddies:(NSString*) buddyname forAccount:(NSNumber*) accountID;

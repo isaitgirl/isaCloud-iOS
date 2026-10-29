@@ -2266,6 +2266,21 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
     return toReturn;
 }
 
+-(NSSet<NSString*>*) chatsWithUnreadMessages
+{
+    NSArray* rows = [self.db idReadTransaction:^{
+        return [self.db executeReader:@"SELECT h.account_id, h.buddy_name, COUNT(*) AS cnt FROM message_history AS h JOIN buddylist AS b ON (b.account_id = h.account_id AND b.buddy_name = h.buddy_name) WHERE h.unread=1 AND h.inbound=1 AND h.message_history_id > COALESCE(b.latest_read_message_history_id, 0) GROUP BY h.account_id, h.buddy_name;"];
+    }];
+    NSMutableSet* chats = [NSMutableSet new];
+    for(NSDictionary* row in rows)
+    {
+        if(row[@"account_id"] == nil || row[@"buddy_name"] == nil)
+            continue;
+        [chats addObject:[NSString stringWithFormat:@"%@:%@", row[@"account_id"], row[@"buddy_name"]]];
+    }
+    return chats;
+}
+
 -(NSArray<MLContact*>*) activeContactDict
 {
     return [self.db idReadTransaction:^{

@@ -31,6 +31,13 @@ Fork do Monal (cliente XMPP para iOS) com a marca e os ajustes do isaCloud. Bran
 - Não apague nem sobrescreva capturas antigas; elas registram como o app estava em cada momento.
 - As capturas feitas pela Isadora no app Simulator (⌘S) também caem nessa pasta, com o nome padrão do Simulator.
 
+## Simuladores: banco antes de reinstalar
+
+- **Antes de `simctl uninstall`, `install` de um app novo ou qualquer coisa que apague o contêiner**, fazer backup do banco e do histórico dos simuladores (29/10/2026: três reinstalações para testar o ícone apagaram as contas e o histórico do simulador do iOS 18.6 e do 27).
+- Comando: pegar o grupo do app (`xcrun simctl get_app_container <udid> br.com.isacloud.messenger groups`) e copiar, para uma pasta de backup fora do repositório (`~/Library/Application Support/isacloud-sim-backups/<udid>-<data>/`), o `sworim.sqlite`, o `sworim.sqlite-wal` e o `sworim.sqlite-shm` — os três juntos, senão o banco abre corrompido. Vale a pena levar também `remoteavatars/`, `buddyicons/` e `metrics/` quando o assunto for avatar ou métrica.
+- **Restaurar**: instalar o app (ele cria o grupo), fechar o app, apagar `sworim.sqlite`, `-wal` e `-shm` do grupo, copiar os do backup e só então abrir. O `-wal` do backup e o do app não podem se misturar.
+- **O backup não traz as senhas**: as contas continuam precisando de um login novo no simulador (as senhas ficam no keychain, que não vai junto). O histórico, os avatares e as configurações voltam.
+
 ## Notas locais (fora do Git)
 
 - Dados sensíveis ou pessoais (UDID de aparelhos, números de pedidos da Apple, contas de teste, caminhos de segredos) ficam em `isaCloud/local/NOTAS-LOCAIS.md`, que está no `.gitignore`. Modelo em `docs/NOTAS-LOCAIS.exemplo.md`.

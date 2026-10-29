@@ -16,6 +16,14 @@ Registro do **porquê** das escolhas feitas no fork: decisões de produto, de c�
 - **Dashboard:** `tools/metrics-harness/grafana/isaCloud-metrics-12.0.1.json`, importável no **Grafana 12.0.1**, com **uma única variável** (o datasource InfluxDB) — de propósito, para importar em qualquer instância sem editar painel.
 - **O que ainda falta para medir de verdade:** os dados de MetricKit só aparecem depois de ~1 dia de uso; `mem_available_mb` é 0 no simulador (é 0 também por natureza lá); `model` sai `arm64` no simulador e o identificador real no aparelho.
 
+## Filtro "Não lidas" sem travar (29/10/2026)
+
+- **Sintoma:** ligar o chip "Não lidas" na tela inicial demorava ~2 s no iPhone da Isadora; desligar era instantâneo, e os chips de tipo (Contatos/Grupos/Canais) eram rápidos.
+- **Causa medida:** `MLContact.unreadCount` é cacheado por objeto, mas `activeContactsWithPinned:` **cria objetos novos** a cada refresh (`_unreadCount = -1`), então o filtro disparava **uma query de contagem por conversa** (`countUserUnreadMessages:forAccount:`, com subconsulta em `message_history`). No banco real dela (133 mil mensagens, 135 conversas ativas): **4,8 ms por conversa, 649 ms no total** no Mac — no iPhone vira ~2 s, que é o que ela sentia. Desligar o filtro não precisa de contagem; os tipos só olham `isMuc`/`mucType`, em memória.
+- **Correção:** `DataLayer.chatsWithUnreadMessages` faz **uma consulta agrupada** (`GROUP BY account_id, buddy_name` com `unread=1`, `inbound=1` e `message_history_id > latest_read_message_history_id`), calculada uma vez por passada do filtro e passada como `NSSet` para o predicado. Custo: **19,9 ms** no mesmo banco (sqlite3) e **27,9 ms** medido dentro do app no simulador — cerca de 20 a 30 vezes menos que o caminho antigo.
+- **Como validar de novo:** `xcrun simctl spawn <udid> log show --predicate 'eventMessage CONTAINS "filtro dos chips"'` mostra o tempo de cada passada (log em nível debug, `DDLogDebug`), e a consulta pode ser cronometrada direto no banco exportado com `sqlite3`.
+- **Não mexido:** as células continuam usando `unreadCount` para o selo (uma query por conversa visível, como antes); se um dia isso incomodar, o mesmo `NSSet` serve de base para um cache por passada.
+
 ## Ícone do app (29/10/2026)
 
 - **Arte nova, em todas as versões de iOS** (decisão da Isadora): o ícone desenhado para o Liquid Glass (balão em tubo arredondado, letras com brilho) passou a ser o único, no lugar do desenho chapado.
