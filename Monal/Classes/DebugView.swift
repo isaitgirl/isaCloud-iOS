@@ -44,6 +44,7 @@ struct LogFilesView: View {
     @State private var showDBImporter = false
     @State private var showingDBImportDoneAlert = false
     @State private var showingDBImportFailedAlert = false
+    @State private var showingAvatarResetDoneAlert = false
     
     func refreshSortedLogfiles() {
         if let sortedLogFileInfos = HelperTools.fileLogger?.logFileManager.sortedLogFileInfos {
@@ -83,6 +84,15 @@ struct LogFilesView: View {
                     //isaCloud: replaces the main database with a file chosen here; it is applied when the app is opened again
                     Button("Import Database…") {
                         showDBImporter = true
+                    }
+                }
+                Section(header: Text("Caches")) {
+                    //isaCloud: the cached avatars live outside the database; this makes the app download them again (useful after
+                    //importing a database, which brings the hashes but not the images)
+                    Button("Reset Avatar Cache") {
+                        DataLayer.sharedInstance().clearAvatarHashCache()
+                        HelperTools.clearAvatarImageCache()
+                        showingAvatarResetDoneAlert = true
                     }
                 }
             }
@@ -127,6 +137,11 @@ struct LogFilesView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text("Close and open the app to apply it. The current database (accounts, chats and messages) will be replaced, and the app will migrate the imported one on the next start.")
+        }
+        .alert("Avatar cache cleared", isPresented: $showingAvatarResetDoneAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Close and open the app, or wait for the contacts to come online again, so the avatars are downloaded.")
         }
         .alert("Database import failed", isPresented: $showingDBImportFailedAlert) {
             Button("OK", role: .cancel) {}

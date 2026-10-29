@@ -1131,6 +1131,18 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     return result;
 }
 
+//isaCloud: removes the cached avatar images (contacts and room occupants) so they are downloaded again
++(void) clearAvatarImageCache
+{
+    NSFileManager* fileManager = [NSFileManager defaultManager];
+    for(NSString* directory in @[@"buddyicons", @"remoteavatars"])
+    {
+        NSURL* url = [self getContainerURLForPathComponents:@[directory]];
+        if(url != nil)
+            [fileManager removeItemAtURL:url error:nil];
+    }
+}
+
 //isaCloud: the iOS file service can not write to the root of the app group container (where sworim.sqlite lives), so a database
 //imported from the debug screen is copied there by the app itself as "import-sworim.sqlite" and promoted here, at startup,
 //before DataLayer opens it. The old database and its write-ahead log go away with it.
@@ -1172,6 +1184,8 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     }
     if(isGzip)
         [fm removeItemAtURL:importURL error:nil];
+    //the images did not come with the database: ask for the avatar cache to be cleared after this import
+    [fm createFileAtPath:[self getContainerURLForPathComponents:@[@"avatar-reset-needed"]].path contents:nil attributes:nil];
     DDLogWarn(@"Imported database applied, the app will migrate it now");
     return YES;
 }

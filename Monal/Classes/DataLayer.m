@@ -110,6 +110,17 @@ static NSDateFormatter* dbFormatter;
         [newInstance.db checkpointWal];
         
         DDLogInfo(@"Database version check completed");
+        
+        //isaCloud: an imported database comes without the cached avatars (the images live outside the database, in the app group), so
+        //the stored hashes would keep the app from downloading them again. Clear them once, right after the import.
+        NSString* avatarResetMarker = [[HelperTools getContainerURLForPathComponents:@[@"avatar-reset-needed"]] path];
+        if([[NSFileManager defaultManager] fileExistsAtPath:avatarResetMarker])
+        {
+            DDLogWarn(@"Clearing the avatar cache after a database import");
+            [newInstance clearAvatarHashCache];
+            [HelperTools clearAvatarImageCache];
+            [[NSFileManager defaultManager] removeItemAtPath:avatarResetMarker error:nil];
+        }
     }
     return newInstance;
 }
@@ -125,6 +136,16 @@ static NSDateFormatter* dbFormatter;
 {
     //always return thread-local instance of sqlite class (this is important for performance!)
     return [MLSQLite sharedInstanceForFile:dbPath];
+}
+
+//isaCloud: forgets every avatar hash and every cached avatar image, so the avatars are downloaded again from the servers
+-(void) clearAvatarHashCache
+{
+    [self.db voidWriteTransaction:^{
+        [self.db executeNonQuery:@"UPDATE buddylist SET iconhash='';"];
+        [self.db executeNonQuery:@"UPDATE account SET iconhash='';"];
+        [self.db executeNonQuery:@"DELETE FROM remote_avatar;"];
+    }];
 }
 
 -(NSString* _Nullable) exportDB
