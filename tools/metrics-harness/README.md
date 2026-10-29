@@ -37,6 +37,8 @@ um arquivo JSON único, com esta forma (resumida):
       "accounts_idle": true,
       "last_appex_start": "2026-10-29T14:05:00Z",
       "db_mb": 37.2,
+      "db_lock_waits": 0,
+      "db_lock_max_ms": 0,
       "wal_mb": 0.4
     }
   ],

@@ -1670,16 +1670,19 @@ class ChatViewMessage: ExyteChat.Message {
         guard mlMessage.messageType == kMessageTypeFiletransfer, let fileInfo = fileInfo else {
             return nil
         }
-        if fileInfo.mimeType == "image/gif" {
+        //isaCloud: these fields are nullable on a file transfer that has not been downloaded yet, and the KVO wrapper *throws*
+        //when a member is nil (it was the crash of 29/10/2026: replyQuoteText -> fileInfo.mimeType -> ObservableKVOWrapperCastingError).
+        //Asking for an optional keeps the cast safe.
+        if (fileInfo.mimeType as String?) == "image/gif" {
             return QuoteFormatting.attachmentLabel(.gif)
-        } else if fileInfo.isImage {
+        } else if (fileInfo.isImage as Bool?) == true {
             return QuoteFormatting.attachmentLabel(.photo)
-        } else if fileInfo.isVideo {
+        } else if (fileInfo.isVideo as Bool?) == true {
             return QuoteFormatting.attachmentLabel(.video)
-        } else if fileInfo.isAudio {
+        } else if (fileInfo.isAudio as Bool?) == true {
             return QuoteFormatting.attachmentLabel(.audio)
         }
-        return QuoteFormatting.attachmentLabel(.file(name: fileInfo.filename))
+        return QuoteFormatting.attachmentLabel(.file(name: (fileInfo.filename as String?) ?? ""))
     }
     /// isaCloud: the label line of a forwarded message, in bold (white in our own bubbles)
     private func forwardLabelText(_ label: String) -> AttributedString {

@@ -27,6 +27,7 @@
 #import <sys/utsname.h>
 
 #import <monalxmpp/HelperTools.h>
+#import <monalxmpp/MLSQLite.h>
 #import <monalxmpp/MLXMPPManager.h>
 
 //keep the samples for a while, but never let this grow without a limit
@@ -178,6 +179,8 @@ static const NSTimeInterval kSampleIntervalSeconds = 300;
     NSNumber* battery = UIDevice.currentDevice.batteryLevel >= 0 ? @(UIDevice.currentDevice.batteryLevel) : nil;
     NSDate* lastAppexStart = [[HelperTools defaultsDB] objectForKey:@"lastAppexStart"];
     NSURL* dbURL = [HelperTools getContainerURLForPathComponents:@[@"sworim.sqlite"]];
+    //isaCloud: how much this sample's window had to wait for the database lock (see MLSQLite consumeLockStatistics)
+    NSDictionary* lockStats = [MLSQLite consumeLockStatistics];
 
     NSMutableDictionary* sample = [@{
         @"ts": [self isoString:now],
@@ -193,6 +196,8 @@ static const NSTimeInterval kSampleIntervalSeconds = 300;
         @"low_power": @(NSProcessInfo.processInfo.isLowPowerModeEnabled),
         @"accounts_idle": @([[MLXMPPManager sharedInstance] allAccountsIdle]),
         @"db_mb": @([self fileSizeInMegabytes:dbURL]),
+        @"db_lock_waits": lockStats[@"waits"] ?: @0,
+        @"db_lock_max_ms": lockStats[@"max_ms"] ?: @0,
         @"wal_mb": @([self fileSizeInMegabytes:[NSURL fileURLWithPath:[dbURL.path stringByAppendingString:@"-wal"]]]),
     } mutableCopy];
     if(battery != nil)

@@ -18,6 +18,10 @@ typedef BOOL (^monal_sqlite_bool_operations_t)(void);
 
 +(id) sharedInstanceForFile:(NSString*) dbFile;
 
+/// isaCloud: lock waits since the last call (used by the metrics sampler): number of retries and the longest wait in ms.
+/// Consuming resets the counters, so every sample reports only what happened since the previous one.
++(NSDictionary*) consumeLockStatistics;
+
 -(void) addEndTransactionTrigger:(monal_void_block_t) trigger withLocation:(NSString*) location;
 
 -(void) voidReadTransaction:(monal_void_block_t) operations;
