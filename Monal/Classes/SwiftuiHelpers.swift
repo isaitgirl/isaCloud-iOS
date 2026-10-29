@@ -1501,6 +1501,7 @@ final class BottomBarNavigation : NSObject, UINavigationControllerDelegate {
             //back is on the left; whatever else the screen has (close, cancel, confirm, save) is on the right
             items.append(contentsOf: record.left + record.right)
             viewController.toolbarItems = items.count > 1 ? items : nil
+            setCapsuleRoom(viewController.toolbarItems != nil, for: viewController)
         } else if record.adopted {
             record.observations = []
             record.adopted = false
@@ -1512,6 +1513,7 @@ final class BottomBarNavigation : NSObject, UINavigationControllerDelegate {
             record.left = []
             record.right = []
             viewController.toolbarItems = nil
+            setCapsuleRoom(false, for: viewController)
         }
         if navigation.topViewController === viewController {
             navigation.setToolbarHidden(viewController.toolbarItems?.isEmpty ?? true, animated: animated)
@@ -1521,6 +1523,16 @@ final class BottomBarNavigation : NSObject, UINavigationControllerDelegate {
         DispatchQueue.main.async { [weak navigation] in
             navigation?.navigationBar.setNeedsLayout()
             navigation?.navigationBar.layoutIfNeeded()
+        }
+    }
+
+    /// from iOS 26 the buttons of the toolbar are glass capsules taller than the bar and they float over the end of the screen: the screen gets
+    /// that much more room at the bottom, so the last lines can be scrolled above them
+    private func setCapsuleRoom(_ needed: Bool, for viewController: UIViewController) {
+        guard #available(iOS 26.0, *) else { return }
+        let room: CGFloat = needed ? 28 : 0
+        if viewController.additionalSafeAreaInsets.bottom != room {
+            viewController.additionalSafeAreaInsets.bottom = room
         }
     }
 
