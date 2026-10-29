@@ -2,6 +2,15 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 54) — 29/10/2026
+
+### Adicionado
+- **Métricas do aparelho, por build.** O app passa a coletar o que é preciso para avaliar consumo de recursos nos aparelhos:
+  - **MetricKit** (fonte oficial da Apple): tempo de CPU, memória, bateria, lançamentos, hangs e diagnósticos, gravados em JSON com o build carimbado quando chegam (~1×/dia);
+  - **amostras próprias** a cada abertura, ao ir para segundo plano e a cada 5 minutos com o app ativo: memória, CPU, térmica, modo de baixa energia, bateria, contas ociosas, tamanho do banco e do WAL;
+  - **Depuração → "Métricas do aparelho" → "Exportar métricas"** gera um JSON único e abre o compartilhamento (mesmo caminho dos logs).
+- **Harness `tools/metrics-harness/`** (Python 3, só biblioteca padrão): envia esse JSON para o **InfluxDB 2.x** (credenciais em `.credentials`, fora do Git), com `--dry-run` e controle do que já foi enviado; inclui um script para apagar a measurement quando o schema muda e um **dashboard do Grafana 12.0.1** com séries contínuas e os builds marcados como annotations.
+
 ## 0.0.1 (build 53) — 29/10/2026
 
 ### Corrigido
