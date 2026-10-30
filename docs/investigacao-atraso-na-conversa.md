@@ -112,7 +112,7 @@ A mensagem recebida pode chegar tarde ao app (parser preso no lock de escrita), 
   ingrediente que falta é atividade real de canal — e é uma pista de que o problema pode estar no caminho do
   **recebimento**, não só na renderização.
 
-## 7. Estado em 30/10/2026, build 72
+## 7. Estado em 30/10/2026 (build 71 no TestFlight e no `.dev`)
 
 **Provado com medição**
 - O envio é rápido (26–57 ms, mensagem pendente presente) e o banco não trava a main.

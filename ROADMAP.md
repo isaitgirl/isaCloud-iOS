@@ -5,7 +5,7 @@ Todas as funcionalidades do isaCloud numa tabela só: o que está **feito** (ris
 A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23/10/2026 sobre a `develop` (Monal 7), base atual do fork. As reações (XEP-0444), que eram o item mais trabalhoso, saíram da lista porque já existem na `develop`.
 
 **Total de features no roadmap:** 96
-**Features concluídas:** 91
+**Features concluídas:** 90
 
 | # | Funcionalidade | Esforço | Observações |
 |---|---|---|---|
@@ -116,7 +116,7 @@ A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23
 | 97 | ~~"Crashes" no iPhone 11 e no XR eram o vigia de travamento do KSCrash~~ | **corrigido em 29/10/2026** (build 63) | O limiar do vigia é fixo em 250 ms e ele matava o app na abertura a frio, quando a lista decodificava avatares e montava o texto da prévia na main thread. O vigia deixou de ser ligado em produção (só em DEBUG) e a decodificação dos avatares foi para background, com o ícone de reserva aparecendo na hora. Detalhes em `docs/decisoes.md`. |
 
 | 98 | ~~Tempo de abertura medido a cada launch~~ | **feito em 29/10/2026** (build 64) | Uma linha por abertura em `metrics/launches-*.jsonl`: `launch_ms` (main() até a tela), `app_delegate_ms`, `list_build_ms`, `list_ready_ms` e `main_ms`. O harness envia para a medida `…_launch` e o Grafana ganhou o painel "Abertura a frio (ms)". Detalhes em `docs/decisoes.md`. |
-| 99 | ~~GIF enviado é cortado: o balão tem tamanho fixo e não acompanha a proporção do arquivo~~ | **feito em 30/10/2026** (build 71 do `.dev`, conferido pela Isadora) | O balão era 220×220 fixo com o `FLAnimatedImageView` em `.scaleAspectFill` + `clipsToBounds`, então GIF fora do quadrado aparecia cortado. Agora o balão lê o tamanho real do arquivo (`GifLayout.pixelSize`), calcula a proporção dentro de uma caixa máxima de 220×280 (`GifLayout.fittedSize`) e desenha em `.scaleAspectFit`; a mesma correção vale para as miniaturas do seletor. Matemática conferida em teste à parte (400×150 → 220×83; 150×400 → 105×280; 200×200 → 220×220). Conferido com GIF real no `.dev`. |
+| 99 | GIF enviado é cortado: o balão tem tamanho fixo e não acompanha a proporção do arquivo | **correção revertida de propósito em 30/10/2026; pendente** (funcionou no `.dev`, mas o build de Release estourou o type-checker do Swift no `body` do `ChatView`; refazer depois de dividir o `body`, ver `docs/estado-atual.md`) | O balão era 220×220 fixo com o `FLAnimatedImageView` em `.scaleAspectFill` + `clipsToBounds`, então GIF fora do quadrado aparecia cortado. Agora o balão lê o tamanho real do arquivo (`GifLayout.pixelSize`), calcula a proporção dentro de uma caixa máxima de 220×280 (`GifLayout.fittedSize`) e desenha em `.scaleAspectFit`; a mesma correção vale para as miniaturas do seletor. Matemática conferida em teste à parte (400×150 → 220×83; 150×400 → 105×280; 200×200 → 220×220). Conferido com GIF real no `.dev`. |
 | 100 | PR 11 do Jejê: tamanho do texto nas conversas em cinco degraus | **em revisão (30/10/2026)** | Cinco degraus relativos ao tamanho do sistema, com prévia na tela de Aparência; a barra de digitação fica no tamanho do sistema (decisão da Isadora). Depende do PR par no fork (`setMessageTimeFont`, `c50da8d`) e o `Package.resolved` só pode apontar para a revisão **mesclada** do fork. Não mesclar enquanto houver trabalho não commitado no `ChatView.swift` (conflito garantido). |
 
 ## Aguardando o Monal
