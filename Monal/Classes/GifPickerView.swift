@@ -184,7 +184,7 @@ struct GifMessageBubble: View {
                 }
                 // isaCloud: the reactions under the GIF, as the footer of the other messages; the space is reserved only when there are some
                 if !reactionItems.isEmpty {
-                    GifReactionsFooter(reactions: reactionItems, width: gifSize.width, isCurrentUser: isCurrentUser, onTap: onReactionsTap)
+                    GifReactionsFooter(reactions: reactionItems, width: gifSize.width, onTap: onReactionsTap)
                 }
                 timeView
             }
@@ -292,12 +292,12 @@ enum IsaCloudBubbleColors {
 
 /// isaCloud: the reactions of a GIF, drawn like the footer of the other messages (ExyteChat fork, MessageReactionView.swift): a row of
 /// capsule buttons, one per emoji with its count, up to five; the ones that do not fit become a "+N" capsule. A tap opens who reacted with what.
+/// The footer always sits outside any bubble (the gray bubble of a group wraps only the picture), so it uses the palette of the
+/// fork's media-only reactions: gray for all, pink with pink text for my own reaction, whoever sent the GIF.
 struct GifReactionsFooter: View {
     let reactions: [(emoji: String, isMine: Bool)]
     /// the width of the GIF: the footer is centered under it
     let width: CGFloat
-    /// my message: the capsules are white on the pink of my bubbles
-    let isCurrentUser: Bool
     /// opens the list of who reacted with what
     let onTap: () -> Void
     @Environment(\.chatTheme) private var theme
@@ -325,23 +325,19 @@ struct GifReactionsFooter: View {
         .accessibilityAddTraits(.isButton)
     }
 
-    /// one capsule: solid white on my pink bubbles, so it can be seen; gray on the others, pink for my own reaction
+    /// one capsule: gray for the reactions in general, pink with pink text for my own reaction (no bubble behind it)
     @ViewBuilder
     private func capsule(_ text: String, isMine: Bool) -> some View {
         let button = Button(action: onTap) {
             Text(verbatim: text)
                 .font(.footnote.weight(.semibold))
-                .foregroundStyle(isCurrentUser ? theme.colors.messageMyBG : theme.colors.mainText)
+                .foregroundStyle(isMine ? theme.colors.messageMyBG : theme.colors.mainText)
                 .lineLimit(1)
                 .fixedSize()
         }
         .buttonBorderShape(.capsule)
         .controlSize(.mini)
-        if isCurrentUser {
-            button.buttonStyle(.borderedProminent).tint(.white)
-        } else {
-            button.buttonStyle(.bordered).tint(isMine ? theme.colors.messageMyBG : theme.colors.mainText)
-        }
+        button.buttonStyle(.bordered).tint(isMine ? theme.colors.messageMyBG : theme.colors.mainText)
     }
 
     /// one capsule per emoji; it is mine when I reacted with that emoji

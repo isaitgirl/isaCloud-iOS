@@ -459,6 +459,11 @@ No iOS 27, "Adicionar contato ou canal" (`AddContactMenu`) e "Convidar para o is
 - **GIF (reações):** `GifReactionsFooter` repete o desenho das reações da imagem do fork (`reactionsFooterView`/`reactionCapsule`): cápsulas centralizadas na largura da prévia, a minha em rosa com fundo branco, até 5 e "+N", abaixo do GIF e acima da hora. O balão de GIF é desenhado pelo app (`GifMessageBubble`, via `messageBuilder`), por isso é uma reimplementação e não reaproveita o código do fork; se o desenho das reações da imagem mudar no fork, **atualizar os dois**.
 - **Type-checker:** depois do merge do PR 11, o `xcodebuild archive` de Release passou com o GIF novo. A divisão do `body` do `ChatView` prevista em `docs/estado-atual.md` não foi necessária por ora; se o erro `unable to type-check this expression in reasonable time` voltar, é lá que se corta.
 
+## Cores das pílulas de reação (30/10/2026)
+- **Regra:** a pílula (cápsula do rodapé) tem duas paletas, conforme o que está por trás dela. **Sobre balão** (texto, arquivo, gravação, ou o balão cinza do nome em grupo): minha mensagem = pílula **branca** sólida com texto rosa (sobre o balão rosa); mensagem dos outros = pílula **cinza** (translúcida, tint do texto); a **minha reação** na mensagem dos outros = **rosa claro** com texto rosa. **Sem balão** (mensagem só com imagem, vídeo ou GIF, que ficam sobre o fundo do chat): **cinza** para todas as reações e **rosa claro com texto rosa** para a minha, para qualquer remetente.
+- **Por quê:** a branca só aparece sobre o rosa; em mídia minha ela sumia no fundo branco (só os emojis soltos). A paleta sem balão não depende do fundo e é a mesma dos dois lados.
+- **Código:** no fork, `MessageView.hasBubbleBackground` (a mesma condição de `bubbleBackground`) e `reactionCapsule(..., onBubble:)` em `MessageReactionView.swift`; no app, `GifReactionsFooter` (o rodapé do GIF fica sempre fora de balão) usa só a paleta sem balão. Se a mídia passar a ficar dentro de balão (ideia em avaliação), `hasBubbleBackground` passa a ser verdadeiro para ela e a pílula volta à paleta do balão, sem outra mudança.
+
 ## Descartado
 - **Código de afiliado** (Tela "Tenho um código", `mod_invites` do Prosody): removido do roadmap por decisão da Isadora em 26/10/2026.
 - **Aviso de privacidade ao ligar a foto pública** e **"usar o apelido em todas as salas"**: ver as seções acima.
