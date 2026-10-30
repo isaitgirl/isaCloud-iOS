@@ -8,8 +8,8 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 | | |
 |---|---|
 | Commit | o do **build 72** na `isaCloud` (logo acima de `11aa6e7e9`, a mescla do PR 11 do Jejê); `git log --oneline -3` |
-| TestFlight | **71** — o 72 **não foi enviado** (decisão da Isadora: acumular correções) |
-| `.dev` no iPhone | **72**, com código que **ainda não está no TestFlight** |
+| TestFlight | **72** (enviado em 30/10/2026, 16:52; o commit `875ac8f48` é o conteúdo dele, tag `build-72`) |
+| `.dev` no iPhone | **72** (igual ao TestFlight) |
 | Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o build 72 e as 3 contas de teste |
 | ExyteChat | `67ea80e` (fork PR 11: texto não é mais cortado com o cadeado) |
 | Instrumentação temporária | **removida** do código |

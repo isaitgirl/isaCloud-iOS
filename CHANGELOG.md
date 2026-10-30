@@ -13,7 +13,7 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 - **Tamanho do texto nas conversas** (PR 11 do Jejê): Configurações → Interface do Usuário → Aparência, com Pequeno, Padrão, Grande, Maior e Gigante e uma prévia. "Padrão" acompanha o tamanho do sistema; a barra de digitação não muda.
 
 ### Nota
-- Build 72 está nos simuladores (iOS 18.6 e 27) e no `.dev` do iPhone; **não foi enviado ao TestFlight** (lá continua o 71).
+- Build 72 enviado ao TestFlight em 30/10/2026 (16:52) e instalado nos simuladores (iOS 18.6 e 27) e no `.dev` do iPhone.
 
 ## 0.0.1 (build 71) — 30/10/2026
 
