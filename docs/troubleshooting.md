@@ -204,3 +204,22 @@ Depois de mudar um trait de pacote (como o `ENABLE_FTS5` do `sqlite3-package`), 
 ## Relatório de crash do Xcode (.mcrash) com "Watchdog"
 - O arquivo salvo do Organizer (`CrashReport-1.mcrash-N`) é texto: o relatório da Apple no início e o JSON do KSCrash depois. `grep -n -E "Triggered by|Exception Type|exit_reason|monitor_id|app_start_time" arquivo` mostra o essencial; a pilha da thread 0 vem logo no começo.
 - `"monitor_id": "Watchdog"` e `exit_reason.code` **2343432205** (0x8BADF00D) querem dizer que a thread principal ficou presa e o iOS matou o app. O que importa é a pilha da **thread 0**. O `EXC_BAD_ACCESS` da thread do `watchdogTimerFired` é o KSCrash caindo ao escrever o relatório, não a causa. Exemplo: 28/10/2026, `linkify` na comparação de mensagens depois do pulo da busca (ver `docs/decisoes.md`).
+
+## 10. Ler os logs e métricas do app de produção (TestFlight) pelo cabo
+
+Funciona (30/10/2026) para o grupo do app de **produção**, não só do `.dev`: `--domain-identifier group.br.com.isacloud.messenger`.
+
+```bash
+# listar
+xcrun devicectl device info files --device <UDID> --domain-type appGroupDataContainer --domain-identifier group.br.com.isacloud.messenger
+# copiar (os .rawlog passam de 100 MB; o canal de arquivos às vezes fecha o socket e a cópia sai cortada em ~20-30 MB: repita)
+xcrun devicectl device copy from --device <UDID> --domain-type appGroupDataContainer --domain-identifier group.br.com.isacloud.messenger --source "Library/logs/<arquivo>.rawlog" --destination /tmp/x.rawlog
+# relatórios do sistema (os recentes ficam em Retired/)
+xcrun devicectl device copy from --device <UDID> --domain-type systemCrashLogs --source / --destination /tmp/crashes
+```
+
+- O `.rawlog` é uma sequência de objetos JSON (`{"context"...`) com `message`, `timestamp` e `queueLabel`; separe por `{"context"` e leia com regex. A hora é local, mas o **nome do arquivo está em UTC**.
+- **Quem segura o banco:** procure `Retrying write transaction`; a mensagem traz `currentTransactions` com a pilha de quem abriu a transação e `currentlyAt` com onde essa thread está parada agora (foi assim que o deadlock do `MLFiletransfer` apareceu: `objc_sync_enter` em `checkMimeTypeAndSizeForHistoryID:`).
+- `Library/metrics/metrickit-diagnostic-*.json`: diagnósticos do MetricKit (`crashDiagnostics`, com `terminationReason` e pilhas só por deslocamento, sem símbolos). `0xdead10cc` = app morto por segurar um arquivo bloqueado ao ir para segundo plano.
+- `Library/metrics/samples-AAAA-MM-DD.jsonl`: amostras (`thermal`, `cpu_ms`, memória, `db_lock_*`). Estado térmico `serious` deixa o iPhone lento.
+- O `.ips` do `0x8BADF00D` mostra na thread 0 o que a thread principal esperava; o `termination.reasons` diz o prazo (`scene-update watchdog`, 10 s ou 30 s) e a visibilidade (`Background`).

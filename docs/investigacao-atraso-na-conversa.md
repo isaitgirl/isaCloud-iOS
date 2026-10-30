@@ -129,3 +129,13 @@ A mensagem recebida pode chegar tarde ao app (parser preso no lock de escrita), 
 3. só então corrigir, com antes e depois medidos.
 
 **Instrumentação** (toda em `#if DEBUG`, fora do build de produção): `sends-*.jsonl` (envio, render, `ui_rows` com `offset`, `main_hang`), `kvo-*.jsonl`, `main-waits-*.jsonl`.
+
+## 8. Resultado (30/10/2026, à noite, build 75)
+
+**O "pular" era, na verdade, piscar, e a causa foi achada e corrigida.** A sonda de rolagem (só DEBUG, fora do Git) mostrou que a posição (`contentOffset`) **não oscila**; o que muda sozinho é a altura total (`contentSize`) e uma linha de 32 pt que liga e desliga logo depois de cada reavaliação do corpo do chat. Um log temporário no `UIList.updateUIView` do ExyteChat (qual campo das linhas mudou, qual caminho rodou) mostrou: 38 de 49 atualizações eram só "reações mudaram" em 4 mensagens de texto, sem mensagem nova, 44 pelo caminho animado. Causa: `ChatViewMessage.reactions` criava `Reaction` com `id` (UUID) novo a cada leitura. Corrigido com id estável; 27 reações em 2 s geraram 0 atualizações espúrias. Detalhes em `docs/decisoes.md` ("Lista que piscava").
+
+- **H1 (fila de atualizações)** continua derrubada como causa da demora, mas a lista **refazia o diff a cada reavaliação** em chats com reações (o churn de 3 a 4 renders por segundo se transformava em 3 a 4 `performBatchUpdates` por segundo).
+- **A demora de 10 a 15 s no envio** (H3) tem agora uma pista forte, separada da tela: reconexão em loop por limite de envio do servidor (`c2s` 6 kb/s) com mensagens OMEMO de ~15 KB (grupo com 54 chaves). Registrado em `docs/decisoes.md` e no roadmap (linha 105). Não foi corrigido nem medido em um canal comum.
+- **Travamento (`0x8BADF00D`)** que estava "sem pilha simbolizada" ganhou causa em produção: deadlock no `MLFiletransfer` (linha 103 do roadmap).
+- **Lição de método:** a primeira sonda interceptava métodos da `UITableView` e derrubou o app (`Invalid number of sections`); sondas passivas (observar valores) bastam. E antes de interpretar "msgs 0 -> 50" como recriação do chat, cruzar com o log do app (era só a Isadora abrindo chats).
+- **Como reativar a sonda:** `git apply isaCloud/local/chatjump-app.patch` (app, só DEBUG) e aplicar `isaCloud/local/chatjump-exytechat.patch` nos checkouts do SwiftPM (`build/dev-device/SourcePackages/checkouts/ExyteChat`; precisa de `chmod u+w` no `UIList.swift`). Nunca commitar.

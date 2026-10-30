@@ -1,4 +1,4 @@
-# Estado atual e handoff (30/10/2026, fim do dia)
+# Estado atual e handoff (30/10/2026, noite, build 75)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,14 +7,20 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 74** (mensagem "Build 74 ..."), tag `build-74`; `git log --oneline -3` |
-| TestFlight | **74** (30/10/2026; o 73 foi o anterior, tag `build-73`; a tag `build-74` fica no commit do 74) |
-| `.dev` no iPhone | **74** (igual ao TestFlight) |
-| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o build 74 e as 3 contas de teste |
-| ExyteChat | `9131c62` (fork PR 12: pílulas de reação em mídia sem balão) |
-| Instrumentação temporária | **removida** do código |
+| Commit | o do **build 75** (mensagem "Build 75 ..."), tag `build-75`; `git log --oneline -3` |
+| TestFlight | **75** (30/10/2026; o 74 foi o anterior, tag `build-74`) |
+| `.dev` no iPhone | **75** (igual ao TestFlight, sem a sonda) |
+| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o build 75 e as 3 contas de teste |
+| ExyteChat | `9131c62` (sem mudança neste build) |
+| Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
+
+## O que entrou no build 75 (sobre o 74)
+
+- **Deadlock no download de imagens** (produção travada por mais de 2 min depois de uma rajada de fotos): `MLFiletransfer` grava o estado fora do lock, de forma assíncrona (PR 13 do app).
+- **Conversa piscando em canais com reações**: id estável nas reações (PR 14 do app).
+- Quem desligou o "Download automático de arquivos e mídias" na produção para abrir o app pode religar depois de instalar o 75.
 
 ## O que entrou no build 74 (sobre o 73)
 
@@ -44,18 +50,15 @@ Documentos: [`plano-estabilidade-appex.md`](plano-estabilidade-appex.md), [`inve
 
 ## O que está em aberto (em ordem de prioridade)
 
-### 1. Conversa "pulando" e mensagens demorando a aparecer (canais movimentados)
+### 1. Conversa "pulando"/piscando e demora no envio — **piscar resolvido no 75**
 
-**O que já foi medido e está provado**
-
-- O envio é rápido: `append` 18–48 ms, banco+envio 17–64 ms, confirmação 33–69 ms, com a mensagem pendente presente na lista.
-- A **tabela acompanha o modelo**: `ui_rows` = `mensagens` em todos os pontos medidos (63→63 … 68→68). A hipótese da fila de atualização do ExyteChat está **derrubada**.
-- Em canal movimentado o corpo do chat é reavaliado ~3×/s, e as notificações de **participantes** são ~7× as de mensagens (520 × 70 num teste).
-- O travamento real (`0x8BADF00D`, main presa > 5 s) existe, mas ainda não tem pilha simbolizada.
-
-**Próximo passo (o dado que falta)**
-
-Medir a **posição da rolagem** (`contentOffset`) no momento do pulo. O instrumento já foi escrito uma vez (sonda de `ui_rows` com `offset`, em `#if DEBUG`) e validado no simulador; precisa ser reaplicado e rodado no `.dev` com o pulo acontecendo. Se o `offset` oscilar, o caminho é o `UIList` (`updateTableNoAnimation` → `reloadData`, e `performInsertPreservingOffset`); se ficar estável, o pulo é outra coisa (animação de inserção/altura de célula).
+- **Resolvido:** o piscar era a lista refazendo o diff a cada reavaliação porque as reações tinham `id` novo a cada leitura; ver `docs/investigacao-atraso-na-conversa.md` §8 e `docs/decisoes.md`.
+- **Resolvido:** o travamento da produção com rajada de imagens (deadlock no `MLFiletransfer`).
+- **Em aberto (próximos passos, nesta ordem):**
+  1. **Rajada de envios** em grupo OMEMO com muitos dispositivos: limite `c2s` de 6 kb/s no servidor + 54 chaves por mensagem causam reconexão em loop e spinner de ~90 s (roadmap 105). Decidir: subir o limite/`burst` no Prosody, limpar dispositivos OMEMO antigos das contas de teste, e/ou o app não reconectar por ping atrasado durante um envio.
+  2. **Escrita no banco na thread principal** ao abrir um chat (`addActiveBuddies:`) e o `0xdead10cc` da produção às 19:46 (roadmap 106). Medir antes de mexer (arquivos do Monal).
+  3. **Camada 2 do deadlock** só se a rajada voltar a pesar: `checkMimeTypeAndSizeForHistoryID:` fora da transação do parser (`MLMessageProcessor.m`).
+  4. Confirmar com a Isadora, em canal movimentado, que o piscar não voltou (a medição foi no Guia XMPP, com chat quase parado).
 
 ### 2. GIF: tamanho e reações — **resolvido no build 72** (histórico abaixo)
 
@@ -84,6 +87,10 @@ Era: em revisão, **não mesclar** sem antes considerar: depende de PR par no fo
 5. **Dados injetados no banco** precisam dos campos obrigatórios (mensagens de canal exigem `occupant_id`), senão o app quebra por causa do teste.
 6. **A tela do iPhone pode ser capturada** sem a Isadora: `xcrun devicectl device capture screenshot --device <udid> --destination <arquivo>`.
 7. `xcrun devicectl device info processes` lista os processos; o `.dev` e o de produção rodam ao mesmo tempo — conferir **qual** está na frente antes de concluir qualquer coisa sobre a tela.
+
+## Branches pendentes de apagar (pedir confirmação)
+
+`fix/deadlock-filetransfer` e `fix/reacoes-id-estavel` (mesclados nos PRs 13 e 14; remoto e local), `pr10-rebase`, `rebase/pr10-59` e o local `diag/chat-jump` (só tem a sonda; os patches estão em `isaCloud/local/`).
 
 ## Se precisar reativar o diagnóstico na próxima sessão
 

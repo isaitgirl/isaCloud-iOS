@@ -2,6 +2,15 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 75) — 30/10/2026 (enviado ao TestFlight às 20:27)
+
+### Corrigido
+- **App de produção travava ao abrir depois de uma rajada de imagens** (deadlock no download automático: a fila de recebimento e a thread de download esperavam uma à outra, e a tela ficava no spinner até o iOS matar o app). O estado dos downloads agora é gravado fora do bloqueio, de forma assíncrona. Quem desligou "Download automático de arquivos e mídias" para escapar do travamento pode ligar de novo.
+- **A conversa piscava em canais com reações** (a lista refazia a atualização inteira 3 a 4 vezes por segundo porque as reações ganhavam um identificador novo a cada leitura). Agora o identificador é estável.
+
+### Nota
+- Medido no `.dev` do iPhone: rajada de 15 fotos sem esperas de banco e sem reconexões; 27 reações em 2 s sem nenhuma atualização desnecessária da lista.
+
 ## 0.0.1 (build 74) — 30/10/2026
 
 ### Corrigido
