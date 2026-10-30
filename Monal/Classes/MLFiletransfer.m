@@ -30,6 +30,10 @@ static NSObject* _hardlinkingSyncObject;
 static NSObject* _stateSyncObject;
 static NSMutableDictionary<NSString*, NSNumber*>* _expectedDownloadSizes;
 static NSMutableSet* _currentlyTransfering;
+//isaCloud: the state is persisted on this serial queue, never while holding _stateSyncObject (see storeState)
+static dispatch_queue_t _storeStateQueue;
+static NSDictionary* _pendingStoreState;            //newest state snapshot waiting to be persisted, protected by _stateSyncObject
+static BOOL _storeStateScheduled;                   //a persist block is queued and will pick up _pendingStoreState, protected by _stateSyncObject
 
 @implementation MLFiletransfer
 
@@ -48,6 +52,7 @@ static NSMutableSet* _currentlyTransfering;
     
     _currentlyTransfering = [NSMutableSet new];
     _expectedDownloadSizes = [NSMutableDictionary new];
+    _storeStateQueue = dispatch_queue_create("im.monal.filetransfer.storeState", dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL, QOS_CLASS_UTILITY, 0));
 }
 
 +(void) loadState
@@ -68,17 +73,32 @@ static NSMutableSet* _currentlyTransfering;
     }
 }
 
+//isaCloud: callers may hold the database write transaction (e.g. the xmpp receive queue while processing a message),
+//so this must never write to the database while holding _stateSyncObject, and never block on the persist queue:
+//we only take a snapshot here and persist it asynchronously, coalescing writes (the newest snapshot is always written)
 +(void) storeState
 {
     @synchronized(_stateSyncObject) {
-        NSDictionary* state = @{
+        _pendingStoreState = @{
             @"version": CURRENT_FILETRANSFER_DATA_VERSION,
-            @"currentlyTransfering": _currentlyTransfering,
-            @"expectedDownloadSizes": _expectedDownloadSizes,
+            @"currentlyTransfering": [_currentlyTransfering copy],
+            @"expectedDownloadSizes": [_expectedDownloadSizes copy],
         };
+        //a queued persist block that has not read its snapshot yet will write this one
+        if(_storeStateScheduled)
+            return;
+        _storeStateScheduled = YES;
+    }
+    dispatch_async(_storeStateQueue, ^{
+        NSDictionary* state;
+        @synchronized(_stateSyncObject) {
+            state = _pendingStoreState;
+            _pendingStoreState = nil;
+            _storeStateScheduled = NO;
+        }
         //DDLogVerbose(@"Storing MLFileTransfer state: %@", state);
         [[DataLayer sharedInstance] setFiletransferState:state];
-    }
+    });
 }
 
 +(BOOL) isIdle
@@ -140,10 +160,12 @@ static NSMutableSet* _currentlyTransfering;
         return;
     }
     url = [self genCanonicalUrl:msg.messageText];
+    //isaCloud: read the database value before taking _stateSyncObject (fileInfo reads the database)
+    NSNumber* expectedSize = msg.fileInfo.size;
     @synchronized(_stateSyncObject) {
         if(_expectedDownloadSizes[url] == nil)
         {
-            _expectedDownloadSizes[url] = msg.fileInfo.size;
+            _expectedDownloadSizes[url] = expectedSize;
             [self storeState];
         }
     }
