@@ -622,3 +622,4 @@ public class XmlParserBridge : NSObject {
         }
     }
 }
+

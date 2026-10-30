@@ -18,6 +18,7 @@
 //
 
 #import "MetricsCollector.h"
+#import <objc/message.h>
 
 #import <MetricKit/MetricKit.h>
 #import <UIKit/UIKit.h>
@@ -67,6 +68,11 @@ static const NSTimeInterval kSampleIntervalSeconds = 300;
 static double _launchStart = 0.0;
 static NSMutableDictionary* _launchMarks = nil;
 static BOOL _launchFinishedWritten = NO;
+
+//isaCloud: a hang on the main thread used to be invisible: the first version of this watchdog only recorded the stall when the
+//main queue ran again, so a permanent hang (the app frozen, then killed by iOS) produced nothing. This one keeps a "heartbeat"
+//updated by the main queue and, when it stops for 5 s, aborts the process on purpose: KSCrash then writes a report with the
+//stack of every thread, which is exactly what we need to find the deadlock.
 
 +(void) launchStarted
 {
@@ -136,6 +142,9 @@ static double _lastStageTime = 0.0;
         @"list_build_ms": listBuild,
         @"main_ms": @(appDelegate.doubleValue + listBuild.doubleValue),
         @"cold": @YES,
+        //isaCloud: a launch in the background (push, background task) shows its first frame much later; those must not be mixed
+        //with a cold start the user asked for
+        @"background": @([HelperTools appState] == 2),   //2 = UIApplicationStateBackground (inactive happens on a normal launch too)
         @"at": [[[NSISO8601DateFormatter alloc] init] stringFromDate:[NSDate date]],
     } mutableCopy];
     //the stages of didFinishLaunching, as stage_<nome>_ms (they add up to app_delegate_ms)
@@ -306,6 +315,13 @@ static double _lastStageTime = 0.0;
     //isaCloud: how much this sample's window had to wait for the database lock (see MLSQLite consumeLockStatistics)
     NSDictionary* lockStats = [MLSQLite consumeLockStatistics];
 
+    NSString* lockWaiterText = lockStats[@"max_waiter"] ?: @"";
+    if(lockWaiterText.length > 1200)
+        lockWaiterText = [lockWaiterText substringToIndex:1200];
+    NSString* lockHoldersText = lockStats[@"max_holders"] ?: @"";
+    if(lockHoldersText.length > 1200)
+        lockHoldersText = [lockHoldersText substringToIndex:1200];
+
     NSMutableDictionary* sample = [@{
         @"ts": [self isoString:now],
         @"build": info[@"CFBundleVersion"] ?: @"?",
@@ -322,6 +338,13 @@ static double _lastStageTime = 0.0;
         @"db_mb": @([self fileSizeInMegabytes:dbURL]),
         @"db_lock_waits": lockStats[@"waits"] ?: @0,
         @"db_lock_max_ms": lockStats[@"max_ms"] ?: @0,
+        //isaCloud: only on the worst wait of the window: who waited and who was holding the write lock
+        //isaCloud: flags for the numbers above: background = the app was not active when the wait ended (suspension inflates it),
+        //suspect = over 3 s, which is almost certainly suspension and not lock contention
+        @"db_lock_max_background": lockStats[@"max_background"] ?: @NO,
+        @"db_lock_max_suspect": lockStats[@"max_suspect"] ?: @NO,
+        @"db_lock_waiter": lockWaiterText,
+        @"db_lock_holders": lockHoldersText,
         @"wal_mb": @([self fileSizeInMegabytes:[NSURL fileURLWithPath:[dbURL.path stringByAppendingString:@"-wal"]]]),
     } mutableCopy];
     if(battery != nil)

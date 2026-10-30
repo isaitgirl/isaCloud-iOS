@@ -257,6 +257,10 @@ NSDictionary* _Nullable dictionaryComprehension(NSDictionary* _Nullable dict, id
 
 +(NSArray*) getBacktraceForThreadID:(NSNumber*) tid;
 
+//isaCloud: -1 unknown, 0 active, 1 inactive, 2 background (same values as UIApplicationState). Works in app extensions,
+//where UIApplication.sharedApplication is not available.
++(NSInteger) appState;
+
 @end
 
 NS_ASSUME_NONNULL_END

@@ -2,6 +2,61 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 71) — 30/10/2026
+
+### Corrigido
+- **Reversão do fechamento de banco na extensão de notificação.** O build 66 passou a fechar as conexões do SQLite ao entregar a notificação para resolver o `0xdead10cc`; o efeito colateral foi pior: um único log de 30/10 tem **29 exceções `SQLite3Exception: 7: out of memory`** na appex. O padrão é sempre o mesmo — fecha, algo escreve 300–800 ms depois (janela de encerramento de 1,5 s), a reconexão precisa alocar memória com a extensão em ~35 MB de 59 MB disponíveis e o SQLite devolve `NOMEM`, que vira `SIGABRT`. A extensão voltou ao comportamento anterior: o lock fica até o processo sair (`killAppex`).
+- A API `closeDatabasesForCurrentThread`/`closeAllDatabases` foi **removida** do `MLSQLite` para não ser reaproveitada sem contexto.
+
+### Documentação
+- `docs/plano-estabilidade-appex.md`: o diagnóstico com a evidência, a decisão da reversão e o **plano de controle** (reproduzir com `simctl push`, medir a memória por etapa, uma mudança por build, `.dev` como campo de provas antes do TestFlight).
+
+### Mantido do que já estava pronto
+- Logs, métricas e relatórios de crash em `Library` (legíveis pelo `devicectl`), teto de 2 MB na cópia do log no crash (profile de cobertura inteiro), remoção do atraso de 1 s na limpeza do placeholder, correção do `disconnectAll` × conta congelada e vigia do KSCrash desligado em produção.
+
+## 0.0.1 (build 70) — 30/10/2026
+
+### Corrigido
+- **Extensão morrendo com `SQLite3Exception: 7: out of memory`** (5 relatórios de 30/10, build 68, todos da appex): a extensão inicializa a pilha inteira do XMPP (`MLXMPPManager`) num processo com orçamento de memória minúsculo e, no momento do crash, **copiava o log para o relatório** — 45 MB num dos casos (e 6 GB num anterior). Agora a cópia leva **só os últimos 2 MB** do log (o profile de cobertura continua indo inteiro, senão corromperia).
+- **`0xdead10cc` na extensão**: ela agendava a remoção da notificação-placeholder com **1 s de atraso** e ficava viva esse tempo com o arquivo do SQLite aberto. Esse agendamento saiu da extensão; o placeholder continua sendo removido quando o app abre e no começo do próximo push. O banco também é fechado antes de o processo sair (`killAppex`).
+
+### Nota de engenharia
+- Uma tentativa de fechar **todas** as conexões do banco na extensão (`closeAllDatabases`, inclusive de outras threads) foi **descartada**: `prepareQuery` usa `_database` sem checar `NULL`, então fechar a conexão de outra thread poderia virar uso de ponteiro nulo. Ficou o fechamento por thread, que é seguro.
+
+## 0.0.1 (build 69) — 30/10/2026
+
+### Adicionado
+- **Relatórios de crash dentro de `Library/CrashReports`** (com migração dos que estão na raiz do grupo, feita na primeira abertura): a raiz do grupo não é legível pelo `xcrun devicectl device copy from`, então os arquivos de crash (relatório + log copiado + profile) só saíam pelo e-mail do app, que às vezes não entrega 24 MB. Agora dá para puxar direto do aparelho, como já acontece com as métricas e os logs.
+
+## 0.0.1 (build 68) — 30/10/2026
+
+### Corrigido
+- **Crash `SIGABRT` ao ir para o fundo**: o `MLAssert` "receive queue suspended while trying to disconnect!" matava o app quando o caminho de encerramento (`MLXMPPManager disconnectAll`) encontrava a conta **congelada** pelo app em segundo plano (relatório de 30/10, build 67, durante uma atualização de apps). Agora o `disconnectAll` pula contas congeladas e, se um disconnect chegar com a fila congelada por outro caminho, ele registra e retorna em vez de derrubar o app.
+- **Extensão de notificação ainda morta com `0xdead10cc`**: no 66/67 ela fechava só as conexões da thread atual — e abre o banco em outra thread. Agora `MLSQLite closeAllDatabases` fecha **todas** as conexões vivas do processo (instâncias fracas registradas) antes de a extensão ser suspensa.
+
+### Adicionado
+- **Logs dentro de `Library/logs`** (com migração dos antigos, que ficavam na raiz do grupo e não podiam ser lidos pelo `devicectl`): agora o log da extensão também é acessível para diagnóstico.
+- **Flags nas esperas pelo banco**: `db_lock_max_background` e `db_lock_max_suspect` (acima de 3 s). As esperas enormes (759 s, 33 s) eram **tempo com o app suspenso**, não contenção real — o relógio continua correndo enquanto o processo está congelado.
+- **Abertura em segundo plano identificada**: o registro de abertura ganhou o campo `background` (uma abertura por notificação/tarefa mostra a primeira tela muito depois e inflava o `launch_ms` — foi o caso dos 24.984 ms de uma amostra do 67).
+- `HelperTools.appState`: estado do app que também funciona na extensão (`UIApplication.sharedApplication` não existe lá).
+
+## 0.0.1 (build 67) — 29/10/2026
+
+### Corrigido
+- **O checkpoint da extensão não bloqueia mais o app**: o 66 fechava o banco da extensão com `wal_checkpoint(TRUNCATE)`, que exige que ninguém esteja escrevendo — com o app ativo ele ficava no `busy_timeout` por até 1 s e as mensagens do app esperavam o lock (esperas de 1,1 a 2,8 s medidas no XMPP, sempre com `db_lock_holders` vazio: o lock estava em outro processo, a extensão). Agora é `PASSIVE`, que nunca espera.
+- **Fechamento sem deixar conexão órfã**: `sqlite3_close_v2` (adia o fechamento até o último statement ser finalizado) e o ponteiro só é zerado quando o fechamento realmente acontece — antes, um `sqlite3_close` que voltasse "busy" deixava a conexão viva segurando o lock, que é justamente o que mantém o `0xdead10cc`.
+- **Log para cruzar os dois processos**: a extensão registra quando abre e quando fecha o banco, com horário.
+
+## 0.0.1 (build 66) — 29/10/2026
+
+### Corrigido
+- **Extensão de notificação morta pelo sistema (`0xdead10cc`)**: os diagnósticos do MetricKit do iPhone da Isadora mostraram seis mortes do `notificationService` (builds 54, 57 e 63) com `Namespace RUNNINGBOARD, Code 0xdead10cc` — a extensão ficava **suspensa com o arquivo do SQLite aberto**, segurando o lock de arquivo. Agora ela fecha as conexões do banco assim que entrega o conteúdo da notificação (`MLSQLite.closeDatabasesForCurrentThread`, com `wal_checkpoint(TRUNCATE)` antes do `sqlite3_close`) e também quando o tempo expira. O banco é reaberto sozinho na próxima notificação.
+
+## 0.0.1 (build 65) — 29/10/2026
+
+### Adicionado
+- **Origem da pior espera pelo banco**: além de `db_lock_waits`/`db_lock_max_ms`, a amostra passa a trazer `db_lock_waiter` (a pilha de quem esperou) e `db_lock_holders` (a pilha de quem estava segurando o lock de escrita naquele instante), limitadas a 1200 caracteres. Foi o que faltava para responder "quem prendeu o lock por 10 s" — as amostras do oficial mostravam `db_lock_max_ms` de até 10.625 ms sem dizer a origem.
+
 ## 0.0.1 (build 64) — 29/10/2026
 
 ### Adicionado

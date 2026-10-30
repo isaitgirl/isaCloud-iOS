@@ -117,6 +117,8 @@ typedef void (^monal_iq_handler_t)(XMPPIQ* _Nullable);
 -(void) freezeParseQueue;
 -(void) unfreezeParseQueue;
 -(void) freeze;
+//isaCloud: a frozen account has its receive queue suspended (see freeze/unfreeze)
+-(BOOL) isFrozen;
 -(void) unfreeze;
 
 -(void) connect;
