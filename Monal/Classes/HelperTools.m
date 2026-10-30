@@ -211,7 +211,9 @@ static bool isDebugerActive(void)
 }
 
 //see https://stackoverflow.com/a/2180788
-static int asyncSafeCopyFile(const char* from, const char* to)
+//isaCloud: maxBytes > 0 copies only the last maxBytes of the file (the tail of a log is what matters and a 45 MB copy inside
+//the appex at crash time is a memory bomb). maxBytes == 0 copies the whole file, which is required for the coverage profile.
+static int asyncSafeCopyFile(const char* from, const char* to, off_t maxBytes)
 {
     int fd_to, fd_from;
     char buf[1024];
@@ -221,6 +223,15 @@ static int asyncSafeCopyFile(const char* from, const char* to)
     fd_from = open(from, O_RDONLY);
     if (fd_from < 0)
         return -1;
+
+    if(maxBytes > 0)
+    {
+        off_t fileSize = lseek(fd_from, 0, SEEK_END);
+        if(fileSize > maxBytes)
+            lseek(fd_from, fileSize - maxBytes, SEEK_SET);
+        else
+            lseek(fd_from, 0, SEEK_SET);
+    }
 
     fd_to = open(to, O_WRONLY | O_CREAT | O_EXCL, 0660);
     if (fd_to < 0)
@@ -289,7 +300,7 @@ static void crash_callback(const KSCrash_ExceptionHandlingPlan *const _Nonnull p
     if(plan->crashedDuringExceptionHandling)
         return;
     //copy current logfile
-    int logfileCopyRetval = asyncSafeCopyFile(_origLogfilePath, _logfilePath);
+    int logfileCopyRetval = asyncSafeCopyFile(_origLogfilePath, _logfilePath, 2 * 1024 * 1024);
     int errnoLogfileCopy = errno;
     writer->addStringElement(writer, "logfileCopied", "YES");
     writer->addIntegerElement(writer, "logfileCopyResult", logfileCopyRetval);
@@ -299,7 +310,7 @@ static void crash_callback(const KSCrash_ExceptionHandlingPlan *const _Nonnull p
     addFilePathWithSize(writer, "currentLogfile", _origLogfilePath);
     
     //copy current profiling file (see https://leodido.dev/demystifying-profraw/)
-    int profileCopyRetval = asyncSafeCopyFile(_origProfilePath, _profilePath);
+    int profileCopyRetval = asyncSafeCopyFile(_origProfilePath, _profilePath, 0);        //the profile must be copied whole
     int errnoProfileCopy = errno;
     writer->addStringElement(writer, "profileCopied", "YES");
     writer->addIntegerElement(writer, "profileCopyResult", profileCopyRetval);
@@ -543,6 +554,22 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
 @end
 
 @implementation HelperTools
+
++(NSInteger) appState
+{
+    Class appClass = NSClassFromString(@"UIApplication");
+    if(appClass == nil)
+        return -1;
+    SEL sharedSelector = NSSelectorFromString(@"sharedApplication");
+    SEL stateSelector = NSSelectorFromString(@"applicationState");
+    if(![appClass respondsToSelector:sharedSelector])
+        return -1;
+    id app = ((id (*)(id, SEL))objc_msgSend)(appClass, sharedSelector);
+    if(app == nil || ![app respondsToSelector:stateSelector])
+        return -1;
+    return ((NSInteger (*)(id, SEL))objc_msgSend)(app, stateSelector);
+}
+
 
 +(void) load
 {
@@ -2767,7 +2794,26 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     }
     */
     
-    NSString* containerUrl = [[HelperTools getContainerURLForPathComponents:@[]] path];
+    //isaCloud: logs inside Library/logs (not at the group root): the root is outside the directories the device file service
+    //allows (Library, Documents, tmp), so `xcrun devicectl device copy from` could not read them — the appex log was invisible
+    NSString* containerUrl = [[HelperTools getContainerURLForPathComponents:@[@"Library", @"logs"]] path];
+    NSFileManager* fileManagerForLogs = [NSFileManager defaultManager];
+    [fileManagerForLogs createDirectoryAtPath:containerUrl withIntermediateDirectories:YES attributes:nil error:nil];
+    //one time move of the logs written at the old place
+    static dispatch_once_t onceLogMigration;
+    dispatch_once(&onceLogMigration, ^{
+        NSString* oldPath = [[HelperTools getContainerURLForPathComponents:@[]] path];
+        for(NSString* name in [fileManagerForLogs contentsOfDirectoryAtPath:oldPath error:nil])
+        {
+            if(![name hasSuffix:@".rawlog"] && ![name hasSuffix:@".rawlog.gz"] && ![name containsString:@".rawlog."])
+                continue;
+            NSString* from = [oldPath stringByAppendingPathComponent:name];
+            NSString* to = [containerUrl stringByAppendingPathComponent:name];
+            if([fileManagerForLogs fileExistsAtPath:to])
+                continue;
+            [fileManagerForLogs moveItemAtPath:from toPath:to error:nil];
+        }
+    });
     DDLogInfo(@"Logfile dir: %@", containerUrl);
     
     //file logger
@@ -2826,7 +2872,7 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     if(handler.reportStore == nil)
         return;
     NSSet* reportIds = [NSSet setWithArray:[handler.reportStore reportIDs]];
-    NSString* reportpath = [[HelperTools getContainerURLForPathComponents:@[@"CrashReports", @"Reports"]] path];
+    NSString* reportpath = [[HelperTools getContainerURLForPathComponents:@[@"Library", @"CrashReports", @"Reports"]] path];
     NSArray* directoryContentsReports = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:reportpath error:&error];
     if(error != nil)
     {
@@ -2859,12 +2905,35 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     }
 }
 
+//isaCloud: the crash reports used to live at the group root, which `xcrun devicectl device copy from` cannot read (only Library,
+//Documents and tmp are allowed). They are moved to Library/CrashReports here, before KSCrash installs with the new path.
++(void) migrateCrashReportsIntoLibrary
+{
+    NSFileManager* fileManager = [NSFileManager defaultManager];
+    NSURL* oldRoot = [[HelperTools getContainerURLForPathComponents:@[]] URLByAppendingPathComponent:@"CrashReports"];
+    NSURL* newRoot = [HelperTools getContainerURLForPathComponents:@[@"Library", @"CrashReports"]];
+    if(oldRoot == nil || newRoot == nil || ![fileManager fileExistsAtPath:oldRoot.path])
+        return;
+    [fileManager createDirectoryAtURL:newRoot withIntermediateDirectories:YES attributes:nil error:nil];
+    for(NSString* sub in [fileManager contentsOfDirectoryAtPath:oldRoot.path error:nil])
+    {
+        NSString* from = [[oldRoot URLByAppendingPathComponent:sub] path];
+        NSString* to = [[newRoot URLByAppendingPathComponent:sub] path];
+        if([fileManager fileExistsAtPath:to])
+            continue;
+        [fileManager moveItemAtPath:from toPath:to error:nil];
+    }
+    [fileManager removeItemAtURL:oldRoot error:nil];
+    DDLogInfo(@"isaCloud: crash reports migrated to %@", newRoot.path);
+}
+
 +(void) installCrashHandlerWithRecording:(BOOL) recordCrashes
 {
     NSError* error = nil;
     DDLogVerbose(@"KSCrash installing handler with callback: %p", crash_callback);
+    [HelperTools migrateCrashReportsIntoLibrary];
     KSCrashConfiguration* config = [KSCrashConfiguration new];
-    config.installPath = [[HelperTools getContainerURLForPathComponents:@[@"CrashReports"]] path];
+    config.installPath = [[HelperTools getContainerURLForPathComponents:@[@"Library", @"CrashReports"]] path];
     //default is no hang monitor (and no almost-empty termination reports)
     config.monitors = KSCrashMonitorTypeProductionSafe & (~KSCrashMonitorTypeTermination) & (~KSCrashMonitorTypeWatchdog);
     //watch the mainthread for hangs and log them in the hang observer below (but not in the appex)
@@ -2947,9 +3016,9 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     //clean up orphan rawlog copies
     [self cleanupRawlogCrashcopies];
     
-    NSArray* directoryContentsData = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:[[HelperTools getContainerURLForPathComponents:@[@"CrashReports", @"Data"]] path] error:nil];
+    NSArray* directoryContentsData = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:[[HelperTools getContainerURLForPathComponents:@[@"Library", @"CrashReports", @"Data"]] path] error:nil];
     DDLogDebug(@"KSCrash data files: %@", directoryContentsData);
-    NSArray* directoryContentsReports = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:[[HelperTools getContainerURLForPathComponents:@[@"CrashReports", @"Reports"]] path] error:nil];
+    NSArray* directoryContentsReports = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:[[HelperTools getContainerURLForPathComponents:@[@"Library", @"CrashReports", @"Reports"]] path] error:nil];
     DDLogDebug(@"KSCrash report files: %@", directoryContentsReports);
     
     //[[KSCrash sharedInstance] reportUserException:@"test" reason:@"dummy test" language:@"dylang" lineOfCode:nil stackTrace:nil logAllThreads:NO terminateProgram:YES];
@@ -2957,7 +3026,7 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
 
 +(void) updateCurrentLogfilePath:(NSString*) logfilePath
 {
-    NSString* basePath = [[HelperTools getContainerURLForPathComponents:@[@"CrashReports"]] path];
+    NSString* basePath = [[HelperTools getContainerURLForPathComponents:@[@"Library", @"CrashReports"]] path];
     
     //store data globally for later retrieval by our crash_callback() (_origLogfilePath and _logfilePath)
     strncpy(_origLogfilePath, logfilePath.UTF8String, sizeof(_logfilePath)-1);

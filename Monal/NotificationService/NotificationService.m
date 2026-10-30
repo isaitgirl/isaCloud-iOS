@@ -53,10 +53,9 @@
         {
             //isaCloud: passive placeholder instead of empty content (see HelperTools isaCloudPushPlaceholderContent)
             self.handler([HelperTools isaCloudPushPlaceholderContent]);
-            //the appex usually keeps running a while (other pushes or the 1.5s shutdown wait), so this often removes it, but it is not
-            //guaranteed (Apple limits what we can do after the last handler, and the expiration path exits right away): the placeholder is
-            //also removed when the next push comes in and when the app is opened
-            [HelperTools removeIsaCloudPushPlaceholdersAfter:1.0];
+            //isaCloud: the 1s removal is NOT scheduled here anymore. It kept this extension alive for another second with the SQLite
+            //file open, which is exactly what made iOS kill it with 0xdead10cc. The placeholder is removed when the app opens and by
+            //the next push (see 'removeIsaCloudPushPlaceholdersAfter:0' below).
         }
         self.expirationTimer = nil;
         self.handler = nil;
@@ -259,7 +258,7 @@
         //now connect all enabled accounts
         [[MLXMPPManager sharedInstance] connectIfNecessary];
         
-        //isaCloud: clean up placeholders left by earlier runs (the appex may have been killed before removing them)
+        //isaCloud: clean up placeholders left by earlier runs, right away (no delay: nothing may keep this extension alive)
         [HelperTools removeIsaCloudPushPlaceholdersAfter:0];
         
         //this will delay the delivery of such notifications until 60 seconds after our last sync attempt failed

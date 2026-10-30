@@ -51,6 +51,7 @@ typedef BOOL (^monal_sqlite_bool_operations_t)(void);
 -(BOOL) vacuum;
 -(BOOL) vacuumInto:(NSString*) newFile;
 
+
 @end
 
 NS_ASSUME_NONNULL_END

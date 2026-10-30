@@ -61,12 +61,17 @@ static int wal_hook(void* arg, sqlite3* database, const char* dbname, int number
 static os_unfair_lock _isaCloudLockStatsLock = OS_UNFAIR_LOCK_INIT;
 static uint64_t _isaCloudLockWaits = 0;
 static uint64_t _isaCloudLockMaxMs = 0;
+static NSString* _isaCloudLockMaxWaiter = nil;      //who waited (stack) on the longest wait
+static NSString* _isaCloudLockMaxHolders = nil;     //who was holding the write lock at that moment
 
 @interface MLSQLite ()
-+(void) recordLockWaitCount:(uint64_t) waits durationMs:(double) durationMs;
++(void) recordLockWaitCount:(uint64_t) waits durationMs:(double) durationMs waiter:(NSArray*) waiter holders:(NSDictionary*) holders;
 @end
 
 @implementation MLSQLite
+
+//isaCloud: records the moments the MAIN thread had to wait for the database, in a small file (the rawlog is too big to be pulled
+//from the phone and these events were invisible: a 10 s wait froze the chat while the model had already updated).
 
 +(void) initialize
 {
@@ -104,6 +109,8 @@ static uint64_t _isaCloudLockMaxMs = 0;
         if(threadData[kSQLiteInstancesForThread] && threadData[kSQLiteInstancesForThread][dbFile])
             return threadData[kSQLiteInstancesForThread][dbFile];
         MLSQLite* newInstance = [[self alloc] initWithFile:dbFile];
+        if([HelperTools isAppExtension])
+            DDLogInfo(@"isaCloud: appex opened the database %@ at %@", dbFile, [NSDate date]);
         //init dictionaries if neccessary
         if(!threadData[kSQLiteInstancesForThread])
             threadData[kSQLiteInstancesForThread] = [NSMutableDictionary new];
@@ -594,9 +601,16 @@ static uint64_t _isaCloudLockMaxMs = 0;
             }
         }
     } while(!retval);
-    //isaCloud: metrics (db_lock_waits/db_lock_max_ms no amostrador)
+    //isaCloud: the main thread waiting for the write lock is what freezes the chat (recorded in Library/metrics/main-waits-*.jsonl)
+    //isaCloud: metrics (db_lock_waits/db_lock_max_ms no amostrador), with the culprit of the longest wait
     if(failedAttempts > 0)
-        [MLSQLite recordLockWaitCount:failedAttempts durationMs:(CFAbsoluteTimeGetCurrent() - waitStart) * 1000.0];
+    {
+        NSDictionary* holders = nil;
+        @synchronized(currentTransactions) {
+            holders = [currentTransactions copy];
+        }
+        [MLSQLite recordLockWaitCount:failedAttempts durationMs:(CFAbsoluteTimeGetCurrent() - waitStart) * 1000.0 waiter:[NSThread callStackSymbols] holders:holders];
+    }
     @synchronized(currentTransactions) {
         currentTransactions[[self getThreadID]] = [NSThread callStackSymbols];
     }
@@ -641,13 +655,40 @@ static uint64_t _isaCloudLockMaxMs = 0;
     return retval;
 }
 
-+(void) recordLockWaitCount:(uint64_t) waits durationMs:(double) durationMs
+//keeps the stack readable and short: only the frames that matter for "who waited" and "who was holding it"
+static NSString* _isaCloudShortStack(NSArray* symbols)
 {
+    if(![symbols isKindOfClass:[NSArray class]])
+        return nil;
+    NSMutableArray* frames = [NSMutableArray new];
+    for(NSString* line in symbols)
+    {
+        [frames addObject:line];
+        if(frames.count >= 8)
+            break;
+    }
+    return [frames componentsJoinedByString:@" <- "];
+}
+
++(void) recordLockWaitCount:(uint64_t) waits durationMs:(double) durationMs waiter:(NSArray*) waiter holders:(NSDictionary*) holders
+{
+    NSString* waiterText = _isaCloudShortStack(waiter);
+    NSMutableArray* holderTexts = [NSMutableArray new];
+    for(NSNumber* tid in holders)
+    {
+        NSString* text = _isaCloudShortStack(holders[tid]);
+        if(text != nil)
+            [holderTexts addObject:[NSString stringWithFormat:@"thread %@: %@", tid, text]];
+    }
     os_unfair_lock_lock(&_isaCloudLockStatsLock);
     _isaCloudLockWaits += waits;
     uint64_t rounded = (uint64_t)(durationMs + 0.5);
-    if(rounded > _isaCloudLockMaxMs)
+    if(rounded > _isaCloudLockMaxMs)        //only the worst wait keeps its stacks
+    {
         _isaCloudLockMaxMs = rounded;
+        _isaCloudLockMaxWaiter = waiterText;
+        _isaCloudLockMaxHolders = holderTexts.count > 0 ? [holderTexts componentsJoinedByString:@" || "] : nil;
+    }
     os_unfair_lock_unlock(&_isaCloudLockStatsLock);
 }
 
@@ -656,12 +697,30 @@ static uint64_t _isaCloudLockMaxMs = 0;
     os_unfair_lock_lock(&_isaCloudLockStatsLock);
     uint64_t waits = _isaCloudLockWaits;
     uint64_t maxMs = _isaCloudLockMaxMs;
+    NSString* waiter = _isaCloudLockMaxWaiter;
+    NSString* holders = _isaCloudLockMaxHolders;
     _isaCloudLockWaits = 0;
     _isaCloudLockMaxMs = 0;
+    _isaCloudLockMaxWaiter = nil;
+    _isaCloudLockMaxHolders = nil;
     os_unfair_lock_unlock(&_isaCloudLockStatsLock);
-    return @{@"waits": @(waits), @"max_ms": @(maxMs)};
+    NSMutableDictionary* statistics = [@{@"waits": @(waits), @"max_ms": @(maxMs)} mutableCopy];
+    //isaCloud: a wait can be inflated by the app being suspended in the middle (the clock keeps running): a wait of several
+    //seconds with the app in background is not real contention, it is suspension time
+    if(maxMs > 0)
+    {
+        statistics[@"max_background"] = @([HelperTools appState] == 2);
+        statistics[@"max_suspect"] = @(maxMs > 3000);
+    }
+    if(maxMs > 0 && waiter != nil)
+        statistics[@"max_waiter"] = waiter;
+    if(maxMs > 0 && holders != nil)
+        statistics[@"max_holders"] = holders;
+    return statistics;
 }
 
+//isaCloud: the notification extension keeps the SQLite file open while suspended and iOS kills it with 0xdead10cc ("held a file
+//lock while suspended"). Closing the thread's connections releases the file lock; the appex is single threaded for this work.
 -(void) beginReadTransaction
 {
     [self testThreadInstanceForQuery:@"beginReadTransaction" andArguments:nil];
@@ -686,9 +745,15 @@ static uint64_t _isaCloudLockMaxMs = 0;
             }
         }
     } while(!retval);
-    //isaCloud: metrics (db_lock_waits/db_lock_max_ms no amostrador)
+    //isaCloud: metrics (db_lock_waits/db_lock_max_ms no amostrador), with the culprit of the longest wait
     if(failedAttempts > 0)
-        [MLSQLite recordLockWaitCount:failedAttempts durationMs:(CFAbsoluteTimeGetCurrent() - waitStart) * 1000.0];
+    {
+        NSDictionary* holders = nil;
+        @synchronized(currentTransactions) {
+            holders = [currentTransactions copy];
+        }
+        [MLSQLite recordLockWaitCount:failedAttempts durationMs:(CFAbsoluteTimeGetCurrent() - waitStart) * 1000.0 waiter:[NSThread callStackSymbols] holders:holders];
+    }
     threadData[kSQLiteStartedReadStransaction][_dbFile] = @YES;
     @synchronized(currentTransactions) {
         currentTransactions[[self getThreadID]] = [NSThread callStackSymbols];

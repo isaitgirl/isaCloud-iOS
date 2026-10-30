@@ -4,8 +4,8 @@ Todas as funcionalidades do isaCloud numa tabela só: o que está **feito** (ris
 
 A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23/10/2026 sobre a `develop` (Monal 7), base atual do fork. As reações (XEP-0444), que eram o item mais trabalhoso, saíram da lista porque já existem na `develop`.
 
-**Total de features no roadmap:** 94
-**Features concluídas:** 90
+**Total de features no roadmap:** 96
+**Features concluídas:** 91
 
 | # | Funcionalidade | Esforço | Observações |
 |---|---|---|---|
@@ -113,10 +113,11 @@ A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23
 
 | 96 | ~~Ícone do app com a arte nova (Liquid Glass) em todos os iOS~~ | **feito em 29/10/2026** (entra no próximo build) | Um ícone só: o desenho com volume desenhado para o Liquid Glass substituiu o chapado. Testado no iOS 18.6 (nítido) e no 27 (com o vidro do sistema). Detalhes e o porquê de não haver dois ícones por versão em `docs/decisoes.md`. |
 
-| 97 | "Crashes" no iPhone 11 e no XR eram o vigia de travamento do KSCrash | **corrigido em 29/10/2026** (build 63) | O limiar do vigia é fixo em 250 ms e ele matava o app na abertura a frio, quando a lista decodificava avatares e montava o texto da prévia na main thread. O vigia deixou de ser ligado em produção (só em DEBUG) e a decodificação dos avatares foi para background, com o ícone de reserva aparecendo na hora. Detalhes em `docs/decisoes.md`. |
+| 97 | ~~"Crashes" no iPhone 11 e no XR eram o vigia de travamento do KSCrash~~ | **corrigido em 29/10/2026** (build 63) | O limiar do vigia é fixo em 250 ms e ele matava o app na abertura a frio, quando a lista decodificava avatares e montava o texto da prévia na main thread. O vigia deixou de ser ligado em produção (só em DEBUG) e a decodificação dos avatares foi para background, com o ícone de reserva aparecendo na hora. Detalhes em `docs/decisoes.md`. |
 
-| 98 | Tempo de abertura medido a cada launch | **feito em 29/10/2026** (build 64) | Uma linha por abertura em `metrics/launches-*.jsonl`: `launch_ms` (main() até a tela), `app_delegate_ms`, `list_build_ms`, `list_ready_ms` e `main_ms`. O harness envia para a medida `…_launch` e o Grafana ganhou o painel "Abertura a frio (ms)". Detalhes em `docs/decisoes.md`. |
-| 99 | Tamanho do texto nas conversas (Padrão, Pequeno, Grande, Maior, Gigante) | **feito em 30/10/2026** (na branch `feature/chat-text-size`, ainda sem PR; testado no iPhone XR iOS 18.6) | Passo relativo ao Dynamic Type do sistema (Padrão = o tamanho do sistema, igual ao de antes): `ChatTextSize` em `ChatView.swift`, prévia na tela de Aparência, fonte da hora pela API nova `setMessageTimeFont` do fork (commit `c50da8d`). Ver `docs/decisoes.md`. |
+| 98 | ~~Tempo de abertura medido a cada launch~~ | **feito em 29/10/2026** (build 64) | Uma linha por abertura em `metrics/launches-*.jsonl`: `launch_ms` (main() até a tela), `app_delegate_ms`, `list_build_ms`, `list_ready_ms` e `main_ms`. O harness envia para a medida `…_launch` e o Grafana ganhou o painel "Abertura a frio (ms)". Detalhes em `docs/decisoes.md`. |
+| 99 | GIF enviado é cortado: o balão tem tamanho fixo e não acompanha a proporção do arquivo | **correção revertida de propósito em 30/10/2026; pendente** (funcionou no `.dev`, mas o build de Release estourou o type-checker do Swift no `body` do `ChatView`; refazer depois de dividir o `body`, ver `docs/estado-atual.md`) | O balão era 220×220 fixo com o `FLAnimatedImageView` em `.scaleAspectFill` + `clipsToBounds`, então GIF fora do quadrado aparecia cortado. Agora o balão lê o tamanho real do arquivo (`GifLayout.pixelSize`), calcula a proporção dentro de uma caixa máxima de 220×280 (`GifLayout.fittedSize`) e desenha em `.scaleAspectFit`; a mesma correção vale para as miniaturas do seletor. Matemática conferida em teste à parte (400×150 → 220×83; 150×400 → 105×280; 200×200 → 220×220). Conferido com GIF real no `.dev`. |
+| 100 | ~~PR 11 do Jejê: tamanho do texto nas conversas em cinco degraus~~ | **feito e mesclado em 30/10/2026** (PR 11 do app e PR 10 do fork; testado nos simuladores iOS 18.6 e iOS 27) | Opção em Configurações → Interface do Usuário → Aparência: Pequeno, **Padrão** (o tamanho do sistema, igual ao de antes), Grande, Maior e Gigante, com prévia de duas bolhas. É um passo relativo ao Dynamic Type do sistema (`ChatTextSize` em `ChatView.swift`); a fonte da hora vem pela API `setMessageTimeFont` do fork, e a barra de digitação fica no tamanho do sistema (decisão da Isadora). O balão de GIF usa `.caption2` na hora. Ver `docs/decisoes.md`. |
 
 ## Aguardando o Monal
 

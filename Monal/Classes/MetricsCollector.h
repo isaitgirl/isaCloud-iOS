@@ -23,6 +23,7 @@ NS_ASSUME_NONNULL_BEGIN
 //isaCloud: launch instrumentation. One line per cold start, written when the chat list is on screen:
 //launch_ms (main() ate a lista pronta), app_delegate_ms (tempo na main thread no didFinishLaunching),
 //first_frame_ms (primeiro desenho da tela) e chat_list_ms (montagem da lista).
+
 +(void) launchStarted;
 +(void) launchMark:(NSString*) label;
 +(void) launchDuration:(NSString*) label milliseconds:(double) milliseconds;

@@ -1969,7 +1969,6 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
     }];
 }
 
-
 #pragma mark - share sheet added
 
 //send all sharesheet outboxes (this method will be called by AppDelegate if opened via monalOpen:// url)

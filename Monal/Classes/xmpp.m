@@ -822,6 +822,12 @@ static NSRegularExpression* fastTokenRemovalRegex;
     }
 }
 
+//isaCloud: used by MLXMPPManager disconnectAll to leave frozen accounts alone
+-(BOOL) isFrozen
+{
+    return _receiveQueue.suspended;
+}
+
 -(void) freeze
 {
     @synchronized(self) {
@@ -1100,7 +1106,14 @@ static NSRegularExpression* fastTokenRemovalRegex;
         return;
     }
     
-    MLAssert(!_receiveQueue.suspended, @"receive queue suspended while trying to disconnect!");
+    //isaCloud: this used to be an MLAssert. A shutdown path (MLXMPPManager disconnectAll) racing with the app freeze can get here
+    //with the receive queue suspended and the app died with SIGABRT on iOS 27 while the phone was updating apps (30/10/2026).
+    //Being frozen already means "not connected for now": unfreezing happens on the next foreground and reconnects by itself.
+    if(_receiveQueue.suspended)
+    {
+        DDLogWarn(@"disconnect requested while the receive queue is frozen (account %@), ignoring the disconnect", self);
+        return;
+    }
     
     //this has to be synchronous because we want to wait for the disconnect to complete before continuing and unlocking the process in the NSE
     [self dispatchOnReceiveQueue: ^{

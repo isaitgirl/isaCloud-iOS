@@ -671,6 +671,12 @@ static const int pingFreqencyMinutes = 5;       //about the same Conversations u
     {
         //disconnect to prevent endless loops trying to connect
         dispatch_async(queue, ^{
+            //isaCloud: a frozen account already has its receive queue suspended and disconnecting there used to trip an assert
+            if([xmppAccount isFrozen])
+            {
+                DDLogWarn(@"manager: account %@ is frozen, skipping disconnect", xmppAccount.accountID);
+                return;
+            }
             DDLogVerbose(@"manager disconnecting: %@", xmppAccount.accountID);
             [xmppAccount disconnect];
             DDLogVerbose(@"manager disconnected: %@", xmppAccount.accountID);
