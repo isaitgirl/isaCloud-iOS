@@ -1860,7 +1860,10 @@ class ChatViewMessage: ExyteChat.Message {
             let reactions: [MLReactionsEntry] = (innerMessage.reactions as [MLReactionsEntry]).sorted(by: { $0.user < $1.user })
             for reactionsInfo in reactions {
                 for reaction in reactionsInfo.reactions {
+                    //isaCloud: a stable id (the default is a new UUID on every call, which made the same reactions compare as different
+                    //on every render, so ExyteChat redid the whole list update several times per second in busy channels)
                     retval.append(Reaction(
+                        id: "\(reactionsInfo.contact.id)|\(reaction as! String)",
                         user: ChatViewUser(reactionsInfo.contact as! NSObject&MLContactProtocol),
                         createdAt: reactionsInfo.timestamp,
                         type: .emoji(reaction as! String),
