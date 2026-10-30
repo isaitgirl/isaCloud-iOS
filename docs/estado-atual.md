@@ -7,13 +7,22 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | `b3dd12ce6` — "Build 71: extensão de notificação sem fechar o banco, diagnóstico em Library e plano de estabilidade" |
-| TestFlight | **71** (é o mesmo conteúdo do commit) |
-| `.dev` no iPhone | **71**, sem nenhum código de diagnóstico |
-| Árvore de trabalho | **limpa** |
-| Instrumentação temporária | **removida** do código (só existe no histórico desta conversa) |
+| Commit | o do **build 72** na `isaCloud` (logo acima de `11aa6e7e9`, a mescla do PR 11 do Jejê); `git log --oneline -3` |
+| TestFlight | **71** — o 72 **não foi enviado** (decisão da Isadora: acumular correções) |
+| `.dev` no iPhone | **72**, com código que **ainda não está no TestFlight** |
+| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o build 72 e as 3 contas de teste |
+| ExyteChat | `67ea80e` (fork PR 11: texto não é mais cortado com o cadeado) |
+| Instrumentação temporária | **removida** do código |
 
-Comando para conferir: `git log --oneline -1 && git status --porcelain`.
+Comando para conferir: `git log --oneline -3 && git status --porcelain`.
+
+## O que entrou no build 72
+
+- **Texto cortado com "…"** (causa: cadeado fora da conta da hora + `.lineLimit(1)`), corrigido no fork.
+- **GIF inteiro e com reações** como as das imagens (`GifLayout`, `GifReactionsFooter`); o Release **passou no type-checker** depois do merge do PR 11, então a divisão do `body` do `ChatView` **não** é mais pré-requisito.
+- **PR 11 do Jejê** (tamanho do texto nas conversas) mesclado.
+
+Detalhes e o porquê em [`decisoes.md`](decisoes.md) ("Texto cortado com …" e GIF).
 
 ## O que entrou nos builds 65–71
 
@@ -39,23 +48,23 @@ Documentos: [`plano-estabilidade-appex.md`](plano-estabilidade-appex.md), [`inve
 
 Medir a **posição da rolagem** (`contentOffset`) no momento do pulo. O instrumento já foi escrito uma vez (sonda de `ui_rows` com `offset`, em `#if DEBUG`) e validado no simulador; precisa ser reaplicado e rodado no `.dev` com o pulo acontecendo. Se o `offset` oscilar, o caminho é o `UIList` (`updateTableNoAnimation` → `reloadData`, e `performInsertPreservingOffset`); se ficar estável, o pulo é outra coisa (animação de inserção/altura de célula).
 
-### 2. GIF: tamanho e reações (código revertido de propósito)
+### 2. GIF: tamanho e reações — **resolvido no build 72** (histórico abaixo)
 
 O que foi tentado e **por que não entrou**:
 
 - Correção do corte (tamanho proporcional em vez de 220×220 + `.scaleAspectFill`) e reações no padrão das imagens — funcionou no `.dev`, mas **o build de Release passou a estourar o type-checker do Swift** (`unable to type-check this expression in reasonable time`) no `body` do `ChatView`.
 - O problema **não era o GIF**: com o GIF revertido o erro continuou, e cada corte (extrair o builder, extrair o bloco de moderação) só empurrava o erro para o trecho seguinte. É o tamanho do `body` do `ChatView` (herdado do Monal, com toolbar + alerts + sheets numa expressão só) no limite do compilador.
 
-**Próximo passo**: dividir o `body` do `ChatView` em pedaços com nome (conteúdo, apresentações/sheets, toolbar) **antes** de recolocar o GIF. Com o 71 commitado, dá para fazer isso com calma e validar cada corte com um `archive` de Release.
+**Próximo passo (superado: o Release passou depois do merge do PR 11, sem dividir)**: dividir o `body` do `ChatView` em pedaços com nome (conteúdo, apresentações/sheets, toolbar) **antes** de recolocar o GIF. Com o 71 commitado, dá para fazer isso com calma e validar cada corte com um `archive` de Release.
 
 Decisões de desenho que continuam valendo (registradas em [`decisoes.md`](decisoes.md)):
 
 - **Texto**: reações dentro do balão, em pills — rosa quando é reação minha em mensagem de outra pessoa, branca na minha própria mensagem.
 - **Imagem e GIF**: sem balão; imagem, reações centralizadas **na largura da prévia** e sem pill (por enquanto), e hora/status abaixo à direita.
 
-### 3. PR 11 do Jejê (tamanho do texto nas conversas)
+### 3. PR 11 do Jejê — **mesclado em 30/10/2026** (histórico abaixo)
 
-Em revisão, **não mesclar** sem antes considerar: depende de PR par no fork (`setMessageTimeFont`), o `Package.resolved` só pode apontar para a revisão mesclada, e ele mexe no `ChatView.swift` — o mesmo arquivo que precisa ser dividido no item 2. Fazer o item 2 primeiro reduz o conflito.
+Era: em revisão, **não mesclar** sem antes considerar: depende de PR par no fork (`setMessageTimeFont`), o `Package.resolved` só pode apontar para a revisão mesclada, e ele mexe no `ChatView.swift` — o mesmo arquivo que precisa ser dividido no item 2. Fazer o item 2 primeiro reduz o conflito.
 
 ## Armadilhas que custaram tempo hoje (não repetir)
 

@@ -11,17 +11,20 @@ import FLAnimatedImage
 import SwiftUI
 
 /// an animated GIF from a local file or from the network. With `loops`, it plays that many times and then stays on the
-/// last frame; changing `replayToken` plays it again from the first frame.
+/// last frame; changing `replayToken` plays it again from the first frame. With `fit`, the whole GIF shows inside the frame
+/// (the chat bubble); without it, the GIF fills the frame and is cropped (the picker thumbnails).
 struct AnimatedGifView: View {
     let url: URL
     var loops: Int? = nil
     var replayToken: Int = 0
+    // isaCloud: the chat shows the whole GIF (fit), the picker thumbnails fill their square (fill)
+    var fit: Bool = false
     @State private var data: Data?
 
     var body: some View {
         Group {
             if let data {
-                AnimatedGifRepresentable(data: data, loops: loops, replayToken: replayToken)
+                AnimatedGifRepresentable(data: data, loops: loops, replayToken: replayToken, fit: fit)
             } else {
                 Color(uiColor: .secondarySystemBackground)
             }
@@ -36,6 +39,7 @@ private struct AnimatedGifRepresentable: UIViewRepresentable {
     let data: Data
     let loops: Int?
     let replayToken: Int
+    let fit: Bool
 
     /// keeps the decoded GIF and the count of finished loops between updates
     final class Coordinator {
@@ -50,7 +54,8 @@ private struct AnimatedGifRepresentable: UIViewRepresentable {
 
     func makeUIView(context: Context) -> FLAnimatedImageView {
         let view = FLAnimatedImageView()
-        view.contentMode = .scaleAspectFill
+        // isaCloud: the chat bubble shows the whole GIF; the thumbnails keep filling their square
+        view.contentMode = fit ? .scaleAspectFit : .scaleAspectFill
         view.clipsToBounds = true
         // taps belong to the SwiftUI view around the GIF, not to the image
         view.isUserInteractionEnabled = false
@@ -84,10 +89,48 @@ private struct AnimatedGifRepresentable: UIViewRepresentable {
     }
 }
 
+/// isaCloud: the size of a GIF in the chat. It is as big as fits in a box, keeping its proportions, so the whole GIF shows.
+enum GifLayout {
+    /// the side of the square used when the size of the GIF is not known
+    static let defaultSide: CGFloat = 220
+    private static let defaultSize = CGSize(width: defaultSide, height: defaultSide)
+    private static let pixelSizes = NSCache<NSURL, NSValue>()
+
+    /// the width and height in pixels, read from the file header (no frame is decoded); nil when it cannot be read
+    static func pixelSize(of url: URL) -> CGSize? {
+        if let cached = pixelSizes.object(forKey: url as NSURL) {
+            return cached.cgSizeValue
+        }
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.doubleValue,
+              let height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.doubleValue else {
+            return nil
+        }
+        let size = CGSize(width: width, height: height)
+        pixelSizes.setObject(NSValue(cgSize: size), forKey: url as NSURL)
+        return size
+    }
+
+    /// the largest size, with the proportions of `pixel`, that fits in `box` (small GIFs grow up to the box). Never zero;
+    /// without a usable size, the default square.
+    static func fittedSize(for pixel: CGSize, in box: CGSize = CGSize(width: 220, height: 280)) -> CGSize {
+        guard pixel.width > 0, pixel.height > 0 else {
+            return defaultSize
+        }
+        let scale = min(box.width / pixel.width, box.height / pixel.height)
+        return CGSize(width: max(1, (pixel.width * scale).rounded()), height: max(1, (pixel.height * scale).rounded()))
+    }
+
+    /// the size the GIF is shown at in the chat
+    static func chatSize(for url: URL) -> CGSize {
+        return fittedSize(for: pixelSize(of: url) ?? defaultSize)
+    }
+}
+
 /// a GIF sent in the chat: plays twice, then stays still until it is tapped. Around it the same things the other messages have: the sender's
-/// avatar beside it, the time (with the lock of an encrypted message) below it, the delivery status icon beside it (own messages), the
-/// reactions over its top edge, on the same side as the other messages do (left for the own messages, right for the others), and the
-/// message menu (with the reactions to choose from) on a long press.
+/// avatar beside it, the reactions below it (as the footer of the other messages), the time (with the lock of an encrypted message) below
+/// them, the delivery status icon beside it (own messages), and the message menu (with the reactions to choose from) on a long press.
 struct GifMessageBubble: View {
     let url: URL
     @ObservedObject var message: ExyteChat.Message
@@ -130,6 +173,10 @@ struct GifMessageBubble: View {
                 } else {
                     gif
                 }
+                // isaCloud: the reactions under the GIF, as the footer of the other messages; the space is reserved only when there are some
+                if !reactionItems.isEmpty {
+                    GifReactionsFooter(reactions: reactionItems, width: gifSize.width, isCurrentUser: isCurrentUser, onTap: onReactionsTap)
+                }
                 timeView
             }
             if isCurrentUser, let status = message.status {
@@ -145,9 +192,14 @@ struct GifMessageBubble: View {
         .padding(.vertical, 2)
     }
 
+    /// isaCloud: the whole GIF, at the size that fits the chat (see GifLayout)
+    private var gifSize: CGSize {
+        return GifLayout.chatSize(for: url)
+    }
+
     private var gif: some View {
-        AnimatedGifView(url: url, loops: 2, replayToken: replayToken)
-            .frame(width: 220, height: 220)
+        AnimatedGifView(url: url, loops: 2, replayToken: replayToken, fit: true)
+            .frame(width: gifSize.width, height: gifSize.height)
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .contentShape(RoundedRectangle(cornerRadius: 14))
             .onTapGesture {
@@ -155,12 +207,6 @@ struct GifMessageBubble: View {
             }
             .onLongPressGesture(minimumDuration: 0.3) {      //same time as the other messages (ExyteChat fork, UIList.swift)
                 showContextMenu()
-            }
-            .overlay(alignment: isCurrentUser ? .topLeading : .topTrailing) {
-                GifReactionsView(reactions: reactionItems)
-                    .contentShape(Rectangle())
-                    .onTapGesture(perform: onReactionsTap)
-                    .offset(x: isCurrentUser ? -8 : 8, y: -10)
             }
     }
 
@@ -235,42 +281,61 @@ enum IsaCloudBubbleColors {
     static let mineTime = Color.white.opacity(0.85)
 }
 
-/// the reaction bubbles of a GIF, drawn like the ones of the other messages: a circle with the emoji, overlapping each other.
-/// When more than one person reacted with the same emoji, a small circle with the count sits on the bubble.
-struct GifReactionsView: View {
+/// isaCloud: the reactions of a GIF, drawn like the footer of the other messages (ExyteChat fork, MessageReactionView.swift): a row of
+/// capsule buttons, one per emoji with its count, up to five; the ones that do not fit become a "+N" capsule. A tap opens who reacted with what.
+struct GifReactionsFooter: View {
     let reactions: [(emoji: String, isMine: Bool)]
+    /// the width of the GIF: the footer is centered under it
+    let width: CGFloat
+    /// my message: the capsules are white on the pink of my bubbles
+    let isCurrentUser: Bool
+    /// opens the list of who reacted with what
+    let onTap: () -> Void
+    @Environment(\.chatTheme) private var theme
+
+    private static let maxCapsules = 5
 
     var body: some View {
-        HStack(spacing: -6) {
-            ForEach(groups, id: \.emoji) { item in
-                Text(verbatim: item.emoji)
-                    .font(.body)
-                    .padding(6)
-                    .background(
-                        ZStack {
-                            // the same colours as the reactions of the other messages: mine or the other person's
-                            Circle()
-                                .fill(item.isMine ? IsaCloudBubbleColors.mine : ChatTheme().colors.messageFriendBG)
-                            Circle()
-                                .stroke(Color(uiColor: .systemBackground), lineWidth: 2)
-                        }
-                    )
-                    .overlay(alignment: .bottomTrailing) {
-                        if item.count > 1 {
-                            Text(verbatim: "\(item.count)")
-                                .font(.caption2.weight(.bold))
-                                .foregroundStyle(Color(uiColor: .systemBackground))
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 1)
-                                .background(Circle().fill(Color(uiColor: .label)))
-                                .offset(x: 4, y: 4)
-                        }
-                    }
+        let all = groups
+        let shown = Array(all.prefix(Self.maxCapsules))
+        let hidden = all.count - shown.count
+        HStack(spacing: 6) {
+            ForEach(shown, id: \.emoji) { item in
+                capsule(item.count > 1 ? "\(item.emoji) \(item.count)" : item.emoji, isMine: item.isMine)
             }
+            if hidden > 0 {
+                // the reactions that did not fit: one more capsule, it opens the same list
+                capsule("+\(hidden)", isMine: false)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.top, 2)
+        .frame(width: width)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: all.map { "\($0.emoji) \($0.count)" }.joined(separator: ", ")))
+        .accessibilityAddTraits(.isButton)
+    }
+
+    /// one capsule: solid white on my pink bubbles, so it can be seen; gray on the others, pink for my own reaction
+    @ViewBuilder
+    private func capsule(_ text: String, isMine: Bool) -> some View {
+        let button = Button(action: onTap) {
+            Text(verbatim: text)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(isCurrentUser ? theme.colors.messageMyBG : theme.colors.mainText)
+                .lineLimit(1)
+                .fixedSize()
+        }
+        .buttonBorderShape(.capsule)
+        .controlSize(.mini)
+        if isCurrentUser {
+            button.buttonStyle(.borderedProminent).tint(.white)
+        } else {
+            button.buttonStyle(.bordered).tint(isMine ? theme.colors.messageMyBG : theme.colors.mainText)
         }
     }
 
-    /// one bubble per emoji; it is mine when I reacted with that emoji
+    /// one capsule per emoji; it is mine when I reacted with that emoji
     private var groups: [(emoji: String, count: Int, isMine: Bool)] {
         return GifReactionCounts.counts(of: reactions.map { $0.emoji }).map { item in
             (emoji: item.emoji, count: item.count, isMine: reactions.contains { $0.emoji == item.emoji && $0.isMine })

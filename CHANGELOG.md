@@ -2,6 +2,19 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 72) — 30/10/2026
+
+### Corrigido
+- **Mensagem de uma linha cortada com "…"** (TestFlight 71: "Que ele ia usar sem o cor…"). A conta que decide se a hora cabe ao lado do texto não contava o cadeado das mensagens criptografadas e o texto era limitado a uma linha; agora o cadeado entra na conta e o que não couber quebra em duas linhas. Correção na biblioteca de chat (ExyteChat, PR 11 do fork).
+- **GIF cortado:** o GIF aparece inteiro, na proporção do arquivo, dentro de uma caixa de 220×280 (balão e miniaturas do seletor).
+- **Reações nos GIFs voltaram**, iguais às das imagens (cápsulas centralizadas sob o GIF, a minha em rosa, até 5 e "+N").
+
+### Adicionado
+- **Tamanho do texto nas conversas** (PR 11 do Jejê): Configurações → Interface do Usuário → Aparência, com Pequeno, Padrão, Grande, Maior e Gigante e uma prévia. "Padrão" acompanha o tamanho do sistema; a barra de digitação não muda.
+
+### Nota
+- Build 72 está nos simuladores (iOS 18.6 e 27) e no `.dev` do iPhone; **não foi enviado ao TestFlight** (lá continua o 71).
+
 ## 0.0.1 (build 71) — 30/10/2026
 
 ### Corrigido
