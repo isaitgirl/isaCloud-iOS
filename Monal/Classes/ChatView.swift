@@ -99,10 +99,62 @@ class ChatViewDefaultsDB: ObservableObject {
     //(Settings > User Interface > Appearance)
     @defaultsDB("reactionsAboveMessages")
     var reactionsAboveMessages: Bool
+
+    //isaCloud: text size inside the chats, a step relative to the system text size (see ChatTextSize)
+    @defaultsDB("chatTextSizeStep")
+    var chatTextSizeStep: Int
+}
+
+/// isaCloud: the text size inside the chats (bubbles, names, quotes, reactions, time, input bar), as a step relative to the
+/// system text size: 0 ("Padrão") is the size the system has, -1 one category smaller, 3 three categories bigger.
+/// The steps stop at the smallest and the biggest category the system has.
+enum ChatTextSize {
+    /// the steps offered in Settings > User Interface > Appearance, in order
+    static let steps = [-1, 0, 1, 2, 3]
+
+    static func dynamicTypeSize(system: DynamicTypeSize, step: Int) -> DynamicTypeSize {
+        let all = DynamicTypeSize.allCases
+        let index = (all.firstIndex(of: system) ?? 3) + step
+        return all[min(max(index, 0), all.count - 1)]
+    }
+
+    /// the font of the text of a message (15 pt at the system size, like the library's default)
+    static func messageFont(system: DynamicTypeSize, step: Int) -> UIFont {
+        scaledFont(15, system: system, step: step)
+    }
+
+    /// the font of the time under a message (10 pt at the system size, like the library's default)
+    static func timeFont(system: DynamicTypeSize, step: Int) -> UIFont {
+        scaledFont(10, system: system, step: step)
+    }
+
+    private static func scaledFont(_ size: CGFloat, system: DynamicTypeSize, step: Int) -> UIFont {
+        let category = contentSizeCategory(dynamicTypeSize(system: system, step: step))
+        return UIFontMetrics.default.scaledFont(for: UIFont.systemFont(ofSize: size), compatibleWith: UITraitCollection(preferredContentSizeCategory: category))
+    }
+
+    private static func contentSizeCategory(_ size: DynamicTypeSize) -> UIContentSizeCategory {
+        switch size {
+        case .xSmall: return .extraSmall
+        case .small: return .small
+        case .medium: return .medium
+        case .large: return .large
+        case .xLarge: return .extraLarge
+        case .xxLarge: return .extraExtraLarge
+        case .xxxLarge: return .extraExtraExtraLarge
+        case .accessibility1: return .accessibilityMedium
+        case .accessibility2: return .accessibilityLarge
+        case .accessibility3: return .accessibilityExtraLarge
+        case .accessibility4: return .accessibilityExtraExtraLarge
+        case .accessibility5: return .accessibilityExtraExtraExtraLarge
+        @unknown default: return .large
+        }
+    }
 }
 
 struct ChatView: View {
     @Environment(\.presentationMode) private var presentationMode
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize      //isaCloud: the system text size, see ChatTextSize
     @ObservedObject var chatViewDefaultsDB = ChatViewDefaultsDB()
     
     private var account: xmpp
@@ -1008,7 +1060,9 @@ struct ChatView: View {
                 params.defaultMessageView()
             }
         }, inputViewBuilder: { _ in
+            //isaCloud: the field where a new message is typed keeps the system text size (the chat text size is for the messages)
             makeInputBar()
+                .dynamicTypeSize(dynamicTypeSize)
         }, messageMenuAction: { (action: MessageAction, defaultActionClosure, message) in
             let mlMessage = (message as! ChatViewMessage).innerMessage.obj
             let messageDBId = mlMessage.messageDBId
@@ -1177,6 +1231,8 @@ struct ChatView: View {
         .scrollTo(jumpScrollParams)      //isaCloud: see jumpToSearchedMessage()
         .messageMenuAnimationDuration(0.15)      //isaCloud: the message menu (reactions, actions) opens sooner than the library's 0.3 s
         .reactionsBelowBubble(!chatViewDefaultsDB.reactionsAboveMessages)       //isaCloud: in the footer, unless the setting asks for the old place
+        .setMessageFont(ChatTextSize.messageFont(system: dynamicTypeSize, step: chatViewDefaultsDB.chatTextSizeStep))      //isaCloud: see ChatTextSize
+        .setMessageTimeFont(ChatTextSize.timeFont(system: dynamicTypeSize, step: chatViewDefaultsDB.chatTextSizeStep))
         .tapAvatarClosure { user, _ in
             // mentions use only the nick: the verified emoji of the name is not part of it
             inputModel.setText(inputModel.text + "\(ChatNameWithHats.nick(from: user.name)), ")
@@ -1209,6 +1265,9 @@ struct ChatView: View {
                     .init(sent: Image(uiImage: IsaCloudStatusIcons.sentToServer))
             )
         )
+        //isaCloud: the SwiftUI text inside the chat (names, quotes, reactions, input bar) follows the same step as the fonts above.
+        //Only the chat's subtree gets it: the sheets and the toolbar, attached after this modifier, keep the system size
+        .dynamicTypeSize(ChatTextSize.dynamicTypeSize(system: dynamicTypeSize, step: chatViewDefaultsDB.chatTextSizeStep))
         .sheet(isPresented: $showMediaPicker) {
             //isaCloud: the system picker (see SystemMediaPicker)
             SystemMediaPicker(isPresented: $showMediaPicker, onPicked: { medias in

@@ -167,6 +167,9 @@ static const int pingFreqencyMinutes = 5;       //about the same Conversations u
     
     //isaCloud: reactions as round bubbles over the corner of the message bubble (Settings > User Interface > Appearance), off: capsules in the footer
     [self upgradeBoolUserSettingsIfUnset:@"reactionsAboveMessages" toDefault:NO];
+
+    //isaCloud: text size inside the chats, a step relative to the system text size (0 = Padrão, the system's own size; see ChatTextSize)
+    [self upgradeIntegerUserSettingsIfUnset:@"chatTextSizeStep" toDefault:0];
     
     [self upgradeBoolUserSettingsIfUnset:@"showNewChatView" toDefault:YES];
     
