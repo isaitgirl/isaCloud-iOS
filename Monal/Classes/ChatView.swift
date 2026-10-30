@@ -1060,7 +1060,9 @@ struct ChatView: View {
                 params.defaultMessageView()
             }
         }, inputViewBuilder: { _ in
+            //isaCloud: the field where a new message is typed keeps the system text size (the chat text size is for the messages)
             makeInputBar()
+                .dynamicTypeSize(dynamicTypeSize)
         }, messageMenuAction: { (action: MessageAction, defaultActionClosure, message) in
             let mlMessage = (message as! ChatViewMessage).innerMessage.obj
             let messageDBId = mlMessage.messageDBId
