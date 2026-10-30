@@ -172,7 +172,7 @@ struct GifMessageBubble: View {
             }
             Text(message.createdAt, style: .time)
         }
-        .font(.system(size: 11))
+        .font(.caption2)      //isaCloud: 11 pt at the default size, and it follows the chat text size (see ChatTextSize)
         .foregroundStyle(.secondary)
         .padding(.horizontal, 4)
     }

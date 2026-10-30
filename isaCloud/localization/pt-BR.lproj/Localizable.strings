@@ -193,3 +193,14 @@
 /* isaCloud: filtros da lista de conversas (chips abaixo da busca) */
 "Unread" = "Não lidas";
 "No conversations with these filters" = "Nenhuma conversa com esses filtros";
+
+/* isaCloud: tamanho do texto nas conversas (Configurações Gerais > Interface do Usuário > Aparência) */
+"Text size in chats" = "Tamanho do texto nas conversas";
+"Small" = "Pequeno";
+"Default" = "Padrão";
+"Large" = "Grande";
+"Larger" = "Maior";
+"Largest" = "Gigante";
+"Adjusts the text size inside chats, relative to the system text size. Default follows the system." = "Ajusta o tamanho do texto dentro das conversas, em relação ao tamanho de texto do sistema. Padrão acompanha o sistema.";
+"Hi, how are you?" = "Oi, tudo bem?";
+"Fine, thanks! And you?" = "Tudo bem, e você?";

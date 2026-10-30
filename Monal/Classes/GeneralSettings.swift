@@ -7,6 +7,7 @@
 //
 
 import ViewExtractor
+import ExyteChat      //isaCloud: ChatTheme, the color of the messages of others in the preview
 struct SettingsToggle<T>: View where T: View {
     let value: Binding<Bool>
     let contents: T
@@ -134,7 +135,11 @@ class GeneralSettingsDefaultsDB: ObservableObject {
     //isaCloud: reactions as round bubbles over the corner of the message bubble instead of capsules in its footer
     @defaultsDB("reactionsAboveMessages")
     var reactionsAboveMessages: Bool
-    
+
+    //isaCloud: text size inside the chats, a step relative to the system text size (see ChatTextSize)
+    @defaultsDB("chatTextSizeStep")
+    var chatTextSizeStep: Int
+
     @defaultsDB("preventLeaksBeforeAuth")
     var preventLeaksBeforeAuth: Bool
     
@@ -241,7 +246,43 @@ struct GeneralSettings: View {
 
 struct UserInterfaceSettings: View {
     @ObservedObject var generalSettingsDefaultsDB = GeneralSettingsDefaultsDB()
-    
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize      //isaCloud: the system text size, see ChatTextSize
+
+    private func textSizeName(_ step: Int) -> LocalizedStringKey {
+        switch step {
+        case -1: return "Small"
+        case 0: return "Default"
+        case 1: return "Large"
+        case 2: return "Larger"
+        default: return "Largest"
+        }
+    }
+
+    //isaCloud: two bubbles with the chat text size chosen, the same colors as the chats
+    private var textSizePreview: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                previewBubble("Hi, how are you?", isMine: false)
+                Spacer(minLength: 40)
+            }
+            HStack {
+                Spacer(minLength: 40)
+                previewBubble("Fine, thanks! And you?", isMine: true)
+            }
+        }
+        .padding(.vertical, 4)
+        .environment(\.dynamicTypeSize, ChatTextSize.dynamicTypeSize(system: dynamicTypeSize, step: generalSettingsDefaultsDB.chatTextSizeStep))
+    }
+
+    private func previewBubble(_ text: LocalizedStringKey, isMine: Bool) -> some View {
+        Text(text)
+            .font(Font(ChatTextSize.messageFont(system: dynamicTypeSize, step: generalSettingsDefaultsDB.chatTextSizeStep)))
+            .foregroundStyle(isMine ? IsaCloudBubbleColors.mineText : Color.primary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(RoundedRectangle(cornerRadius: 16).fill(isMine ? IsaCloudBubbleColors.mine : ChatTheme().colors.messageFriendBG))
+    }
+
     var body: some View {
         Form {
             Section(header: Text("Previews")) {
@@ -280,6 +321,19 @@ struct UserInterfaceSettings: View {
                 SettingsToggle(isOn: $generalSettingsDefaultsDB.reactionsAboveMessages) {
                     Text("Reactions above the messages")
                     Text("Shows the reactions of a message as round bubbles over the corner of its bubble, instead of capsules in its footer.")
+                }
+                //isaCloud: a step relative to the system text size, 0 (Default) is the system's own size (see ChatTextSize)
+                VStack(alignment: .leading, spacing: 0) {
+                    Picker(selection: $generalSettingsDefaultsDB.chatTextSizeStep, label: Text("Text size in chats")) {
+                        ForEach(ChatTextSize.steps, id: \.self) { step in
+                            Text(textSizeName(step)).tag(step)
+                        }
+                    }
+                    textSizePreview
+                    Text("Adjusts the text size inside chats, relative to the system text size. Default follows the system.")
+                        .foregroundColor(Color(UIColor.secondaryLabel))
+                        .font(.footnote)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 SettingsToggle(isOn: $generalSettingsDefaultsDB.showAdvancedUI) {
                     Text("Show advanced options in UI")
