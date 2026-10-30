@@ -74,6 +74,16 @@ Os testadores são **internos**: o build fica disponível no app TestFlight assi
 - **`exportArchive Failed to Use Accounts` / "App Store Connect access for K8Y6S5RF2S is required"** (visto em 26/10/2026, com a conta aparecendo normalmente em Xcode > Settings > Accounts; **resolvido saindo e entrando de novo na conta no Xcode**, depois o envio funcionou): o `xcodebuild` de linha de comando usa um token de sessão do App Store Connect que pode ficar inválido sem aviso. Primeiro tente sair e entrar de novo na conta (Settings > Accounts). Outras saídas: (a) abrir o archive no Organizer (`open build/isaCloud-AppStore.xcarchive`) e usar **Distribute App > App Store Connect > Upload**, onde o Xcode renova a sessão; (b) conferir o papel da conta na equipe (precisa de Admin, App Manager ou Developer com acesso ao App Store Connect); (c) para o envio por linha de comando funcionar sempre, criar uma chave da API do App Store Connect (Users and Access > Integrations) e usar `-authenticationKeyPath`, `-authenticationKeyID` e `-authenticationKeyIssuerID` no `xcodebuild -exportArchive`; o caminho do `.p8` e os ids ficam em `isaCloud/local/NOTAS-LOCAIS.md`, nunca aqui.
 - **Build sem push**: o build de distribuição tem push. O build `.dev` para o iPhone (`scripts/isacloud-dev-device.sh`) não tem push **por escolha nossa** (os entitlements de `isaCloud/dev-entitlements/` não pedem `aps-environment`), e não por limite da conta: ele é assinado com a conta paga e tem o App Group do `.dev`. Detalhes em `docs/troubleshooting.md`, seção "Instalar e abrir o isaCloud.dev no iPhone".
 
+## Marcar o build no Git
+
+Depois do envio, a tag fica no commit que tem exatamente o que foi enviado (o commit com o número do build, e o `CHANGELOG.md` com a seção "Não publicado" fechada com esse número):
+
+```bash
+git tag -a build-N <commit> -m "Build N (TestFlight, <data>)" && git push origin isaCloud build-N
+```
+
+Para saber o que ainda não entrou num build: `git log build-N..isaCloud --oneline` (código: `git diff --stat build-N isaCloud -- Monal`). Não suba o número do build a cada commit; só quando for enviar.
+
 ## Depois do envio
 
 O commit e o push só acontecem quando a Isadora pede ("fazer novo build e push"; com "fazer novo build" só o envio, o iPhone e os docs). A rotina completa está em `CLAUDE.md`.
