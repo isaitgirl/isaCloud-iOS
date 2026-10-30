@@ -2,6 +2,12 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## Não publicado (depois do build 72)
+
+### Corrigido
+- **GIF ainda aparecia cortado** (o do cinema, do Giphy, sem o teto e sem as laterais): a view do GIF mantinha o tamanho do arquivo dentro do balão menor e só o meio aparecia. Agora ela assume o tamanho do balão e o GIF mostra inteiro. Vale também para as miniaturas do seletor. Conferido com GIFs reais nos simuladores iOS 18.6 e 27.
+- No `.dev` do iPhone; **não está no TestFlight** (lá o 72 tem o balão na proporção certa, mas com o GIF ainda cortado).
+
 ## 0.0.1 (build 72) — 30/10/2026
 
 ### Corrigido

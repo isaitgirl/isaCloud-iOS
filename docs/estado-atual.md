@@ -9,7 +9,7 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 |---|---|
 | Commit | o do **build 72** na `isaCloud` (logo acima de `11aa6e7e9`, a mescla do PR 11 do Jejê); `git log --oneline -3` |
 | TestFlight | **72** (enviado em 30/10/2026, 16:52; o commit `875ac8f48` é o conteúdo dele, tag `build-72`) |
-| `.dev` no iPhone | **72** (igual ao TestFlight) |
+| `.dev` no iPhone | **72 + correção do corte do GIF** (ainda não está no TestFlight; ver CHANGELOG "Não publicado") |
 | Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o build 72 e as 3 contas de teste |
 | ExyteChat | `67ea80e` (fork PR 11: texto não é mais cortado com o cadeado) |
 | Instrumentação temporária | **removida** do código |
@@ -19,7 +19,8 @@ Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 ## O que entrou no build 72
 
 - **Texto cortado com "…"** (causa: cadeado fora da conta da hora + `.lineLimit(1)`), corrigido no fork.
-- **GIF inteiro e com reações** como as das imagens (`GifLayout`, `GifReactionsFooter`); o Release **passou no type-checker** depois do merge do PR 11, então a divisão do `body` do `ChatView` **não** é mais pré-requisito.
+- **GIF com reações** como as das imagens (o corte do GIF **só foi resolvido depois do 72**, com `sizeThatFits`, ver `decisoes.md`)
+- (antes da correção) **GIF inteiro e com reações** como as das imagens (`GifLayout`, `GifReactionsFooter`); o Release **passou no type-checker** depois do merge do PR 11, então a divisão do `body` do `ChatView` **não** é mais pré-requisito.
 - **PR 11 do Jejê** (tamanho do texto nas conversas) mesclado.
 
 Detalhes e o porquê em [`decisoes.md`](decisoes.md) ("Texto cortado com …" e GIF).

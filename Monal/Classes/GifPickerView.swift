@@ -62,6 +62,15 @@ private struct AnimatedGifRepresentable: UIViewRepresentable {
         return view
     }
 
+    // isaCloud: the view takes the size SwiftUI offers. Without this it kept the natural size of the GIF (a 387x290 GIF inside a
+    // 220x165 bubble) and the clip showed only its middle, which is what cut the GIFs
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: FLAnimatedImageView, context: Context) -> CGSize? {
+        guard let width = proposal.width, let height = proposal.height else {
+            return nil
+        }
+        return CGSize(width: width, height: height)
+    }
+
     func updateUIView(_ view: FLAnimatedImageView, context: Context) {
         let coordinator = context.coordinator
         if coordinator.animated == nil {
