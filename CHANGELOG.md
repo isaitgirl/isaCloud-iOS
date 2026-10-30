@@ -2,10 +2,10 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
-## Não publicado (depois do build 73)
+## 0.0.1 (build 74) — 30/10/2026
 
 ### Corrigido
-- **Pílulas de reação em imagem, vídeo e GIF** agora aparecem nas mídias que eu mando (antes a pílula branca sumia no fundo branco). Sem balão, as reações ficam em cinza e a minha em rosa claro; no texto nada mudou.
+- **Pílulas de reação em imagem, vídeo e GIF** agora aparecem nas mídias que eu mando (antes a pílula branca sumia no fundo branco). Sem balão, as reações ficam em cinza e a minha em rosa claro; no texto nada mudou. Enviado ao TestFlight em 30/10/2026.
 
 ## 0.0.1 (build 73) — 30/10/2026
 

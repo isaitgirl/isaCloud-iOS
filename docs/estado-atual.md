@@ -7,16 +7,16 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 73** (mensagem "Build 73 ..."), tag `build-73`; `git log --oneline -3` |
-| TestFlight | **73** (30/10/2026; o 72 foi o anterior, tag `build-72`; a tag `build-73` fica no commit do 73) |
-| `.dev` no iPhone | **73 + pílulas de reação em mídia** (PR 12 mesclado; ainda não está no TestFlight, ver CHANGELOG "Não publicado") |
-| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o build 73 e as 3 contas de teste |
+| Commit | o do **build 74** (mensagem "Build 74 ..."), tag `build-74`; `git log --oneline -3` |
+| TestFlight | **74** (30/10/2026; o 73 foi o anterior, tag `build-73`; a tag `build-74` fica no commit do 74) |
+| `.dev` no iPhone | **74** (igual ao TestFlight) |
+| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o build 74 e as 3 contas de teste |
 | ExyteChat | `9131c62` (fork PR 12: pílulas de reação em mídia sem balão) |
 | Instrumentação temporária | **removida** do código |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 
-## Depois do build 73 (ainda não publicado)
+## O que entrou no build 74 (sobre o 73)
 
 - **Pílulas de reação em mídia/GIF** (cinza; a minha em rosa claro): PR 12 do app e do fork, ver `decisoes.md`.
 
