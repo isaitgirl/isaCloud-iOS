@@ -392,6 +392,14 @@ No iOS 27, "Adicionar contato ou canal" (`AddContactMenu`) e "Convidar para o is
 - **Descartado por ora:** mexer no `MLSQLite`/`DataLayer` do Monal (nova tentativa sem limite, hora do toque) e achar o culpado do bloqueio longo (vira pendência no roadmap); anexos e localização seguem no caminho antigo.
 - **Cuidados do código:** o `ChatViewMessage` provisório precisa de `reactions = []` (a lista compara mensagens lendo as reações; sem isso o app cai); ao trocar pela real, qualquer cópia da mesma mensagem que tenha chegado à lista por outro caminho é removida (ExyteChat aborta com dois ids iguais).
 
+## Tamanho do texto nas conversas: passos relativos ao sistema (30/10/2026)
+- **Decisão:** Configurações → Interface do Usuário → Aparência ganha "Tamanho do texto nas conversas" com cinco degraus (Pequeno, Padrão, Grande, Maior, Gigante) e uma prévia de duas bolhas. Guardado em `chatTextSizeStep` (inteiro: -1, 0, 1, 2, 3; padrão 0). "Padrão" é exatamente o tamanho do sistema (o visual de antes); os outros são deslocamentos de categorias do Dynamic Type a partir do sistema, limitados ao intervalo que o sistema tem (`ChatTextSize` em `ChatView.swift`).
+- **Como funciona:** no `ExyteChatView` o app aplica `.dynamicTypeSize(...)` ao deslocado (chega às células de `UIHostingConfiguration`, confirmado no spike; a fonte semântica de nomes, citações, reações e barra de digitação segue) e passa as fontes UIKit da mensagem (15 pt) e da hora (10 pt) calculadas pelo `UIFontMetrics` com a mesma categoria. A hora usa a API nova do fork `setMessageTimeFont` (o fork já tinha `timeFont`, sem setter). O balão de GIF usa `caption2` em vez de 11 pt fixos (igual no tamanho padrão).
+- **Por quê relativo:** quem já ajustou o tamanho do sistema continua vendo a conversa no tamanho que escolheu, e o "Padrão" não muda nada para ninguém. Multiplicar por cima do sistema foi descartado, porque o "Padrão" deixaria de ser o sistema.
+- **Descartado:** controle deslizante contínuo (muitos valores para pouca diferença visível); um valor fixo em pontos (ignoraria o tamanho escolhido no sistema e a acessibilidade); mudar o tamanho só da fonte do texto (nomes e citações ficariam pequenos).
+- **Limite:** o tamanho do cabeçalho, os ícones de tamanho fixo (18/20/28 pt) da barra de digitação e a tela antiga em UIKit ficam como estão. Com o chat já aberto, a mudança vale na próxima abertura da conversa (o `ChatView` é recriado).
+- **Fork:** commit `c50da8d` (`setMessageTimeFont`) na branch `feature/chat-text-size` do ExyteChat; o app aponta para ele no `Package.resolved` até o merge.
+
 ## Descartado
 - **Código de afiliado** (Tela "Tenho um código", `mod_invites` do Prosody): removido do roadmap por decisão da Isadora em 26/10/2026.
 - **Aviso de privacidade ao ligar a foto pública** e **"usar o apelido em todas as salas"**: ver as seções acima.
