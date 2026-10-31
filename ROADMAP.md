@@ -4,8 +4,8 @@ Todas as funcionalidades do isaCloud numa tabela só: o que está **feito** (ris
 
 A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23/10/2026 sobre a `develop` (Monal 7), base atual do fork. As reações (XEP-0444), que eram o item mais trabalhoso, saíram da lista porque já existem na `develop`.
 
-**Total de features no roadmap:** 108
-**Features concluídas:** 101
+**Total de features no roadmap:** 109
+**Features concluídas:** 102
 
 | # | Funcionalidade | Esforço | Observações |
 |---|---|---|---|
@@ -130,6 +130,7 @@ A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23
 | 110 | ~~Sem popup de erro no envio de arquivo~~ | **feito em 30/10/2026** (aguarda build; compila nos simuladores) | O alerta "Não foi possível enviar o arquivo" (`ChatView.swift` e `chatViewController.m`) deixou de aparecer; o erro só vai para o log. Efeito: a falha fica silenciosa até a linha 111 (balão de envio com tentar de novo). |
 | 111 | Balão de envio de mídia com spinner, erro e "tentar de novo" | médio | Hoje, durante o upload de imagem, vídeo ou GIF só aparece o "Enviando..." acima do campo de texto; a mensagem só entra na conversa depois do upload. Proposta: balão provisório (só em memória) com a prévia do arquivo e spinner, que vira o balão real ao terminar ou mostra erro com ícone de tentar de novo (o `ChatViewMessage` já tem `isPending` e o estado `.error` com reenvio para texto). |
 | 112 | ~~Sem popup nem banner para erro técnico (grupo 1)~~ | **feito em 30/10/2026** (aguarda build; compila nos simuladores) | Avisos "Account …" de servidor sem MAM/Stream Management/push, "Could not fetch messages" e o banner de erro não grave passam a ir só para o log. Nove erros graves de sincronização em segundo plano também viraram só log; falhas de ação da pessoa (grupos, moderação) seguem como estavam. Custo conhecido em `docs/decisoes.md`. |
+| 113 | ~~Hora e cadeado sobre o texto da mensagem~~ | **feito em 31/10/2026** (aguarda build; compila nos simuladores) | Em frases cuja última linha, pela quebra simples, era uma palavra curta ("sozinhos."), a conta de `timeViewArrangement` achava a última linha curta e punha a hora em cima do texto, que o `Text` desenhava com a última linha mais longa (`.pushOut`). A medida do fork agora usa `lineBreakStrategy = .pushOut`. Antes e depois em `docs/screenshots/2026-10-31-1004-…` e `…-1010-…`. |
 
 ## Aguardando o Monal
 
