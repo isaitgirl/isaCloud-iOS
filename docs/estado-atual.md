@@ -16,6 +16,10 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 
+## Em andamento: FTS5 à prova de falha (branch `chore/fts5-a-prova-de-falha`, não publicado)
+
+Fase de build "[isaCloud] Check FTS5", `scripts/archive-testflight.sh` e `MLMessageSearch isAvailable` (detalhes em `decisoes.md` e `troubleshooting.md`). Testado: build nos simuladores (iOS 27 e 18.6), falha provocada de propósito (build quebra com a mensagem) e 15 testes de busca passando no iOS 27.
+
 ## O que entrou no build 78 (sobre o 77)
 
 Só a correção do **crash do build 77** (PR 20): abrir conversa individual com "visto por último" derrubava o app (`contact.lastInteractionTime != nil` sem tipo explícito: o `ObservableKVOWrapper` inferia `Any.Type` e o cast da `NSDate` lançava exceção). Achado pelo relatório de queda do iPhone e pelo rawlog de produção. **Lição:** membro do `ObservableKVOWrapper` sempre com tipo explícito (`let d: Date? = contact.x`) e testar o cabeçalho com um contato que tenha `buddylist.lastInteraction` preenchido.

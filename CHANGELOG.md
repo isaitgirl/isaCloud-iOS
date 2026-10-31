@@ -4,6 +4,9 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## Não publicado
 
+### Alterado
+- **Proteção contra build sem a busca de mensagens (FTS5).** O Xcode às vezes compila a SQLite sem o módulo de busca, sem avisar (aconteceu nos builds 32 e 77). Agora o build **falha com uma mensagem clara** se isso acontecer (fase "[isaCloud] Check FTS5"), o novo `scripts/archive-testflight.sh` arquiva numa pasta limpa e confere o arquivo antes de enviar, e o app registra no log, a cada abertura, se a SQLite dele não tem FTS5. Nada muda para quem usa o app.
+
 ## 0.0.1 (build 78) — 31/10/2026
 
 ### Corrigido

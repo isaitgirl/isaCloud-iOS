@@ -1777,6 +1777,7 @@
 				261E542723A0A1D300394F59 /* Embed Frameworks */,
 				C19CC5E028E85527007AD33E /* Fix catalyst aps-enviromnent */,
 				00ECAB17EED643B191C9FDF0 /* [isaCloud] Merge localizations */,
+				7F5A1C3B2D4E4A6F9B8C0D1E /* [isaCloud] Check FTS5 */,
 				E09BC3B194F91D0DE538C310 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
@@ -2143,6 +2144,25 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "bash \"${SRCROOT}/../scripts/isacloud-merge-localizations.sh\"\n";
+		};
+		7F5A1C3B2D4E4A6F9B8C0D1E /* [isaCloud] Check FTS5 */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "[isaCloud] Check FTS5";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "bash \"${SRCROOT}/../scripts/isacloud-check-fts5.sh\" \"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/monalxmpp.framework\"\n";
 		};
 		0105BB524F492059A59FAB32 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;

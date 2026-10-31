@@ -19,6 +19,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface MLMessageSearch : NSObject
 
+/// Whether the SQLite of this build has FTS5. A build without it (Xcode reusing an old compiled SQLite, see docs/troubleshooting.md)
+/// still works, only the search finds nothing; this is the one place that says so, and it is logged as an error at every start.
++(BOOL) isAvailable;
+
 /// The FTS5 query for what the person typed: every word is a prefix ("lul" finds "lula"), all words must be there, accents and
 /// case do not matter. Returns nil if there is nothing to look for (empty, or only punctuation).
 +(NSString* _Nullable) matchStringForQuery:(NSString*) query;

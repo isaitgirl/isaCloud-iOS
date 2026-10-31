@@ -8,6 +8,7 @@
 //
 
 #import <monalxmpp/MLMessageSearch.h>
+#import <sqlite3.h>
 #import <monalxmpp/MLSQLite.h>
 #import <monalxmpp/HelperTools.h>
 
@@ -28,6 +29,12 @@
 static const NSTimeInterval kPurgeInterval = 24 * 60 * 60;
 
 @implementation MLMessageSearch
+
++(BOOL) isAvailable
+{
+    //the compile options of the SQLite this build was linked with (the same strings the build check looks for in the binary)
+    return sqlite3_compileoption_used("ENABLE_FTS5") != 0;
+}
 
 +(NSString* _Nullable) matchStringForQuery:(NSString*) query
 {
@@ -66,6 +73,12 @@ static const NSTimeInterval kPurgeInterval = 24 * 60 * 60;
 
 +(void) catchUpIndexInDatabase:(MLSQLite*) db
 {
+    if(![self isAvailable])
+    {
+        //a build without FTS5 (stale compiled SQLite): leave the database as it is, a build that has it will create and fill the index
+        DDLogError(@"Search index: FTS5 MISSING in the SQLite of this build, the message search is off (see docs/troubleshooting.md)");
+        return;
+    }
     @try {
         [db executeNonQuery:kCreateSearchTable];
 
