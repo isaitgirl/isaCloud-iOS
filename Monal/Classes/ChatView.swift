@@ -1376,25 +1376,53 @@ struct ChatView: View {
                                     .scaledToFill()
                                     .frame(width: 35, height: 35)
 
+                                //isaCloud: with more than one account, a line under the name tells which account this chat belongs to (same as in the chats and contacts lists)
+                                let accountJid = HelperTools.accountJidToShow(forAccountID: contact.accountID)
+                                let isTyping = contact.isTyping as Bool
+                                //the number of people sits next to the name of a group or channel, so it is not a line of its own
+                                let hasPersonCount = contact.isMuc && mucPersonCount > 0
+                                //in a group or channel "Typing..." takes the place of the account line, so the title keeps two lines
+                                let showsAccountLine = accountJid != nil && !(contact.isMuc && isTyping)
+                                let hasDetailLine = isTyping || (!hasPersonCount && contact.lastInteractionTime != nil)
+                                //only a one-to-one chat can get three lines (name, account, last seen); they need smaller fonts to fit the 44 pt navigation bar of iOS 18
+                                let isCompact = showsAccountLine && hasDetailLine
                                 VStack(alignment: .leading, spacing: 0) {
-                                    Text(contact.contactDisplayName as String)
-                                        .fontWeight(.semibold)
-                                        .font(.headline)
-                                        .foregroundColor(.primary)
-                                    
-                                    if (contact.isTyping as Bool) {
+                                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                                        Text(contact.contactDisplayName as String)
+                                            .fontWeight(.semibold)
+                                            .font(isCompact ? .subheadline : .headline)
+                                            .foregroundColor(.primary)
+                                            .lineLimit(1)
+                                        if hasPersonCount {
+                                            //isaCloud: how many people are in the group or channel
+                                            Text("(\(mucPersonCount))")
+                                                .font(.footnote)
+                                                .foregroundColor(Color(hex: "AFB3B8"))
+                                                .fixedSize()
+                                                .accessibilityLabel(Text(mucPersonCountLabel(isGroup: contact.obj.mucType == kMucTypeGroup, count: mucPersonCount)))
+                                        }
+                                    }
+
+                                    if showsAccountLine, let accountJid {
+                                        HStack(spacing: 3) {
+                                            Image(systemName: "person.crop.circle")
+                                                .imageScale(.small)     //the circle glyph looks bigger than the letters at the same font size
+                                            Text(accountJid)
+                                                .lineLimit(1)
+                                                .truncationMode(.middle)
+                                        }
+                                        .foregroundColor(Color(UIColor.secondaryLabel))
+                                        .font(isCompact ? .caption2 : .caption)
+                                    }
+
+                                    if isTyping {
                                         Text("Typing...")
-                                            .font(.footnote)
+                                            .font(isCompact ? .caption2 : .footnote)
                                             .foregroundColor(Color(hex: "AFB3B8"))
-                                    } else if contact.isMuc && mucPersonCount > 0 {
-                                        //isaCloud: how many people are in the group or channel
-                                        Text(mucPersonCountLabel(isGroup: contact.obj.mucType == kMucTypeGroup, count: mucPersonCount))
-                                            .font(.footnote)
-                                            .foregroundColor(Color(hex: "AFB3B8"))
-                                    } else if let lastInteractionDate:Date = contact.lastInteractionTime {
+                                    } else if !hasPersonCount, let lastInteractionDate:Date = contact.lastInteractionTime {
                                         TimelineView(.periodic(from: lastInteractionDate, by: 60.0)) { _ in
                                             Text(HelperTools.formatLastInteraction(contact.lastInteractionTime))
-                                                .font(.footnote)
+                                                .font(isCompact ? .caption2 : .footnote)
                                                 .foregroundColor(Color(hex: "AFB3B8"))
                                         }
                                     }

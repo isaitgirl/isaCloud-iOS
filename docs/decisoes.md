@@ -521,6 +521,15 @@ No iOS 27, "Adicionar contato ou canal" (`AddContactMenu`) e "Convidar para o is
 - **Limite conhecido:** com imagem de fundo na conversa, a cápsula segue branca/preta (cor do sistema), não a imagem.
 - **Como ver no simulador sem enviar nada:** há um truque de teste, não commitado: `UserDefaults.standard.bool(forKey: "isaTmpShowSending")` somado a `model.isUploading` e o argumento de lançamento `-isaTmpShowSending YES` em `simctl launch`.
 
+## Conta da conversa: ícone na lista e linha no topo do chat (31/10/2026)
+- **Pedido:** na lista de conversas, o endereço da conta ganha o mesmo ícone de pessoinha da lista de contatos; dentro da conversa (contato, grupo ou canal) a mesma identificação aparece embaixo do nome, e o número de participantes sai da linha própria e vai para o lado do nome, entre parênteses, cinza e menor.
+- **Regra de exibição:** a mesma da lista de conversas: só com mais de uma conta ativa (`HelperTools.accountJidToShowForAccountID:`). Com uma conta só, nada muda.
+- **Lista (`MLContactCell`):** o ícone é uma `UIImageView` com `tintColor` igual à cor do endereço, e não um símbolo dentro do `NSAttributedString`: o símbolo no texto era desenhado em preto, mais escuro que o endereço. A imagem com tint dinâmico acompanha o modo escuro sem código extra.
+- **Topo do chat (`ChatView`, item `.principal` da barra):** nome + `(N)` numa `HStack` (nome com `lineLimit(1)`, o número com `fixedSize`: o nome vira "…" e o número continua visível), linha da conta com o ícone (`imageScale(.small)`: o círculo do símbolo parecia maior que as letras na mesma fonte) e, quando existe, "digitando…" ou "visto por último". Em grupo ou canal "digitando…" ocupa o lugar da linha da conta, para o título não ganhar uma terceira linha.
+- **Por que as fontes só diminuem na conversa individual:** a barra do iOS 18 tem 44 pt e três linhas (nome, conta e "visto por último") só cabiam com `.subheadline` e `.caption2`; no iOS 27 a barra é mais alta e cabia. Grupo e canal ficam com duas linhas e a fonte original.
+- **Limite conhecido:** no iOS 27 o título tem menos largura útil que antes (o número divide a linha com o nome): um nome como "Prosody IM Chatroom" já aparece como "Prosody IM Chatro… (394)".
+- **Descartado:** manter o número de participantes numa terceira linha (não cabia no iOS 18 sem encolher todas as fontes).
+
 ## Descartado
 - **Código de afiliado** (Tela "Tenho um código", `mod_invites` do Prosody): removido do roadmap por decisão da Isadora em 26/10/2026.
 - **Aviso de privacidade ao ligar a foto pública** e **"usar o apelido em todas as salas"**: ver as seções acima.

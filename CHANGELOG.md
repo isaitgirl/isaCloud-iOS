@@ -9,6 +9,8 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 - **"Enviando…" ao mandar mídia ou GIF virou uma cápsula flutuante**, na cor do fundo da conversa (branca no modo claro, preta no escuro) com uma sombra leve, logo acima da caixa de texto, e o texto dela acompanha o tamanho de fonte escolhido para a conversa (Aparência). Antes era uma cápsula cinza dentro da barra, que empurrava a conversa para cima enquanto o arquivo subia.
 
+- **Com mais de uma conta, a conversa mostra a que conta ela pertence também no topo do chat.** Na lista de conversas o endereço da conta ganhou o mesmo ícone de pessoinha da lista de contatos, no mesmo cinza do endereço. Dentro da conversa, o endereço da conta (com o ícone) aparece embaixo do nome, e o número de participantes de grupo ou canal saiu da linha própria e foi para o lado do nome, entre parênteses, cinza e menor. Nome comprido nunca quebra: termina em "…" e o número continua visível. Só a conversa individual com "visto por último" tem três linhas e usa fontes um pouco menores para caber na barra do iOS 18.
+
 ### Corrigido
 - **A hora e o cadeado não caem mais em cima do texto** da mensagem (aparecia em frases cuja última linha termina numa palavra curta, como "revolução sozinhos."; valia para qualquer tamanho de fonte da conversa). O SwiftUI evita deixar uma palavra sozinha na última linha e a conta da hora não sabia disso; agora a conta usa a mesma regra. Mudança no fork do ExyteChat (PR 13). Com a hora sempre embaixo (item acima), essa conta deixou de decidir a posição da hora.
 

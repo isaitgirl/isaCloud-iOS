@@ -4,8 +4,8 @@ Todas as funcionalidades do isaCloud numa tabela só: o que está **feito** (ris
 
 A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23/10/2026 sobre a `develop` (Monal 7), base atual do fork. As reações (XEP-0444), que eram o item mais trabalhoso, saíram da lista porque já existem na `develop`.
 
-**Total de features no roadmap:** 111
-**Features concluídas:** 104
+**Total de features no roadmap:** 112
+**Features concluídas:** 105
 
 | # | Funcionalidade | Esforço | Observações |
 |---|---|---|---|
@@ -133,6 +133,7 @@ A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23
 | 113 | ~~Hora e cadeado sobre o texto da mensagem~~ | **feito em 31/10/2026** (aguarda build; compila nos simuladores) | Em frases cuja última linha, pela quebra simples, era uma palavra curta ("sozinhos."), a conta de `timeViewArrangement` achava a última linha curta e punha a hora em cima do texto, que o `Text` desenhava com a última linha mais longa (`.pushOut`). A medida do fork agora usa `lineBreakStrategy = .pushOut`. Antes e depois em `docs/screenshots/2026-10-31-1004-…` e `…-1010-…`. |
 | 114 | ~~Hora e cadeado sempre embaixo do texto~~ | **feito em 31/10/2026** (aguarda build; compila nos simuladores e está no `.dev`) | Pedido da Isadora: como nas mídias, a hora e o cadeado vão numa linha própria sob o texto, em qualquer tamanho de fonte. Opção `timeAlwaysBelowText` no fork (commit direto na `isaCloud` do fork, `349d33b`), ligada em `ChatView.swift`. Resolve também a hora sobre o texto quando a mensagem termina em emoji com fonte "Grande" (a conta de largura errava; a causa exata não foi medida, porque a opção a dispensa). A hora já escala com o nível de fonte, na mesma proporção do texto (10 pt contra 15 pt no Padrão). |
 | 115 | ~~"Enviando…" como cápsula flutuante na cor do fundo~~ | **feito em 31/10/2026** (aguarda build; compila nos simuladores e está no `.dev`) | Pedido da Isadora: o aviso de envio de mídia (`ChatInputBar.sendingHint`) tinha fundo cinza (`secondarySystemBackground`) dentro da barra e empurrava a conversa. Agora é uma sobreposição acima da barra (`.overlay(alignment: .top)` com `.offset`), cápsula em `systemBackground` com contorno fino e sombra, sem ocupar espaço. A linha 111 (balão provisório de envio com tentar de novo) segue pendente. |
+| 116 | ~~Conta da conversa com ícone na lista e no topo do chat~~ | **feito em 31/10/2026** (aguarda build; compila nos simuladores e está no `.dev`) | Pedido da Isadora: na lista de conversas o endereço da conta ganha o ícone `person.crop.circle` da lista de contatos (`MLContactCell`, `UIImageView` com a cor do texto); no topo do chat (`ChatView`) o endereço da conta fica sob o nome (só com mais de uma conta, `HelperTools.accountJidToShow`) e o número de participantes vai para o lado do nome, entre parênteses. Três linhas só na conversa individual com "visto por último" (fontes menores, por causa da barra de 44 pt do iOS 18). |
 
 ## Aguardando o Monal
 
