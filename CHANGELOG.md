@@ -2,7 +2,7 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
-## Não publicado
+## 0.0.1 (build 76) — 30/10/2026 (enviado ao TestFlight às 21:14)
 
 ### Alterado
 - **Menos avisos**: sem a notificação "Problemas de conexão" fora do app; sem popup de erro quando o envio de um arquivo falha (fica só no log, por enquanto).

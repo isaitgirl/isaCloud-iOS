@@ -1,4 +1,4 @@
-# Estado atual e handoff (30/10/2026, noite, build 75)
+# Estado atual e handoff (30/10/2026, noite, build 76)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,14 +7,23 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 75** (mensagem "Build 75 ..."), tag `build-75`; `git log --oneline -3` |
-| TestFlight | **75** (30/10/2026; o 74 foi o anterior, tag `build-74`) |
-| `.dev` no iPhone | **75** (igual ao TestFlight, sem a sonda) |
-| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o build 75 e as 3 contas de teste |
+| Commit | o do **build 76** (mensagem "Build 76 ..."), tag `build-76`; `git log --oneline -3` |
+| TestFlight | **76** (30/10/2026; o 75 foi o anterior, tag `build-75`) |
+| `.dev` no iPhone | **76** (igual ao TestFlight, sem a sonda) |
+| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o build 76 e as 3 contas de teste |
 | ExyteChat | `9131c62` (sem mudança neste build) |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
+
+## O que entrou no build 76 (sobre o 75)
+
+Tema: **menos avisos técnicos ao usuário** (PR 15 do app; princípio: o WhatsApp não avisa de problema de conexão). Detalhes e o custo conhecido em `decisoes.md` ("Menos avisos ao usuário").
+- Sem a notificação "Problemas de conexão" (e sem o toggle nas configurações).
+- Canal **não some** dos favoritos e dos bookmarks por erro de servidor remoto (`recipient-unavailable`...): só `forbidden`, `registration-required` e `not-authorized` removem. **Não testado em execução** (precisa de login completo com um favorito de domínio inexistente).
+- Tela de contas: símbolo laranja de "reconectando" no lugar do ponto.
+- Sem popup quando o envio de arquivo falha (só log; a falha fica silenciosa até o balão de envio, roadmap 111).
+- Só log, sem popup nem banner: servidor sem MAM/smacks/push, falha ao buscar mensagens antigas, banner de erro não grave, nove erros graves de sincronização.
 
 ## O que entrou no build 75 (sobre o 74)
 
@@ -60,6 +69,13 @@ Documentos: [`plano-estabilidade-appex.md`](plano-estabilidade-appex.md), [`inve
   3. **Camada 2 do deadlock** só se a rajada voltar a pesar: `checkMimeTypeAndSizeForHistoryID:` fora da transação do parser (`MLMessageProcessor.m`).
   4. Confirmar com a Isadora, em canal movimentado, que o piscar não voltou (a medição foi no Guia XMPP, com chat quase parado).
 
+### 1b. Próximos passos da frente "menos avisos" (build 76)
+
+1. **Balão de envio de mídia** com spinner, erro e "tentar de novo" (roadmap 111): hoje só há o "Enviando..." acima do campo de texto e a falha de upload é silenciosa. O `ChatViewMessage` já tem `isPending` e o estado `.error` com reenvio de texto.
+2. **Testar o item dos canais** com login completo (sem retomada de sessão) e um favorito de domínio inexistente; ver se o canal fica e não há banner.
+3. **Erros que eram o único retorno de uma ação** e agora ficam sem aviso (apelido inválido, falha ao bloquear contato, publicar avatar/apelido): decidir se voltam como estado na tela.
+4. Falhas de ação grave (criar/configurar/destruir grupo, moderar mensagem) ainda viram banner e notificação; avaliar junto com o item 1.
+
 ### 2. GIF: tamanho e reações — **resolvido no build 72** (histórico abaixo)
 
 O que foi tentado e **por que não entrou**:
@@ -90,7 +106,7 @@ Era: em revisão, **não mesclar** sem antes considerar: depende de PR par no fo
 
 ## Branches pendentes de apagar (pedir confirmação)
 
-`fix/deadlock-filetransfer` e `fix/reacoes-id-estavel` (mesclados nos PRs 13 e 14; remoto e local), `pr10-rebase`, `rebase/pr10-59` e o local `diag/chat-jump` (só tem a sonda; os patches estão em `isaCloud/local/`).
+`fix/deadlock-filetransfer`, `fix/reacoes-id-estavel` e `fix/avisos-de-conexao` (mesclados nos PRs 13, 14 e 15; remoto e local), `pr10-rebase`, `rebase/pr10-59` e o local `diag/chat-jump` (só tem a sonda; os patches estão em `isaCloud/local/`).
 
 ## Se precisar reativar o diagnóstico na próxima sessão
 
