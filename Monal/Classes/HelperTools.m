@@ -2434,6 +2434,13 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     [[HelperTools defaultsDB] setObject:syncErrorsDisplayed forKey:@"syncErrorsDisplayed"];
 }
 
+//isaCloud: the "Connectivity issues" notification (syncError::<jid>, posted 60 seconds after the app left the foreground)
+//is off: a push already shows a passive isaCloud notice when it can't be retrieved, and WhatsApp never warns about
+//connection problems either: when the app is reconnecting or offline, the user only learns about it by opening the app
+//(the account list shows the reconnecting state). Removing already posted sync error notifications is NOT affected.
+//HOW TO REVERT: set ISACLOUD_SHOW_SYNC_ERROR_NOTIFICATIONS to 1 (and the Settings toggle in GeneralSettings.swift comes back)
+#define ISACLOUD_SHOW_SYNC_ERROR_NOTIFICATIONS 0
+
 +(void) updateSyncErrorsWithDeleteOnly:(BOOL) removeOnly andWaitForCompletion:(BOOL) waitForCompletion
 {
     monal_void_block_t updateSyncErrors = ^{
@@ -2456,7 +2463,7 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
                         [[HelperTools defaultsDB] setObject:syncErrorsDisplayed forKey:@"syncErrorsDisplayed"];
                     }
                 }
-                else if(!removeOnly && [self isNotInFocus])
+                else if(ISACLOUD_SHOW_SYNC_ERROR_NOTIFICATIONS && !removeOnly && [self isNotInFocus])
                 {
                     if([syncErrorsDisplayed[account.connectionProperties.identity.jid] boolValue])
                     {

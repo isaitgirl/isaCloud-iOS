@@ -1231,24 +1231,13 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
         DDLogWarn(@"Not showing error banner: quiet error");
         return;
     }
-    //isaCloud: the same minor error of the same account is shown at most once every 10 minutes (a failing retry would repeat it forever)
+    //isaCloud: minor (non-severe) errors never show a banner, only the log: they are technical messages the person can do nothing about
+    //(the screens that wait for them, like login or registration, listen for kXMPPError by themselves)
+    //(this replaces the old rule "the same minor error of the same account at most once every 10 minutes", see docs/decisoes.md)
     if(![notification.userInfo[@"isSevere"] boolValue])
     {
-        static NSMutableDictionary* lastShown;
-        static dispatch_once_t onceToken;
-        dispatch_once(&onceToken, ^{
-            lastShown = [NSMutableDictionary new];
-        });
-        NSString* key = [NSString stringWithFormat:@"%@|%@", ((xmpp*)notification.object).accountID, notification.userInfo[@"message"]];
-        @synchronized(lastShown) {
-            NSDate* last = lastShown[key];
-            if(last != nil && [[NSDate date] timeIntervalSinceDate:last] < 600)
-            {
-                DDLogWarn(@"Not showing error banner: shown less than 10 minutes ago");
-                return;
-            }
-            lastShown[key] = [NSDate date];
-        }
+        DDLogWarn(@"Not showing error banner: minor error: %@", notification.userInfo[@"message"]);
+        return;
     }
     if(![HelperTools isNotInFocus])
     {

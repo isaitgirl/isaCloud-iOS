@@ -109,7 +109,12 @@
         }
         else
         {
-            accessory.image = [UIImage imageNamed:@"Disconnected"];
+            //isaCloud: enabled but not connected means Monal is trying to (re)connect: show a warning symbol instead of the grey dot
+            UIImageSymbolConfiguration* symbolConfig = [UIImageSymbolConfiguration configurationWithPointSize:22 weight:UIImageSymbolWeightSemibold];
+            accessory.image = [[UIImage systemImageNamed:@"exclamationmark.arrow.triangle.2.circlepath" withConfiguration:symbolConfig] imageWithTintColor:[UIColor systemOrangeColor] renderingMode:UIImageRenderingModeAlwaysOriginal];
+            accessory.contentMode = UIViewContentModeCenter;
+            accessory.isAccessibilityElement = YES;
+            accessory.accessibilityLabel = NSLocalizedString(@"Reconnecting...", @"");
             cell.accessoryView = accessory;
         }
     }

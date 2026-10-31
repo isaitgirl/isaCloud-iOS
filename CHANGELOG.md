@@ -2,6 +2,16 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## Não publicado
+
+### Alterado
+- **Menos avisos**: sem a notificação "Problemas de conexão" fora do app; sem popup de erro quando o envio de um arquivo falha (fica só no log, por enquanto).
+- **Sem popup nem banner para erro técnico**: avisos de servidor sem MAM, Stream Management ou push; falha ao buscar mensagens antigas; e o banner de erro não grave (só log). Também só no log: nove erros de sincronização em segundo plano (buscar mensagens novas, carbons, push, bookmarks). Login, banimento e falhas de ações suas continuam avisando.
+- **Tela de contas**: conta habilitada e ainda não conectada mostra um símbolo laranja de "reconectando" no lugar do ponto.
+
+### Corrigido
+- **Canais sumindo da lista** depois de erro de servidor remoto (por exemplo `recipient-unavailable` ao entrar numa sala de outro domínio): o canal não é mais removido dos favoritos e dos bookmarks, nem gera banner ou notificação.
+
 ## 0.0.1 (build 75) — 30/10/2026 (enviado ao TestFlight às 20:27)
 
 ### Corrigido
