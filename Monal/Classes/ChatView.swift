@@ -1382,11 +1382,13 @@ struct ChatView: View {
                                 //the number of people sits next to the name of a group or channel, so it is not a line of its own
                                 let hasPersonCount = contact.isMuc && mucPersonCount > 0
                                 //in a group or channel "Typing..." takes the place of the account line, so the title keeps two lines
-                                let showsAccountLine = accountJid != nil && !(contact.isMuc && isTyping)
+                                //TODO: the account line is off for now in one-to-one chats (name, account and last seen are three lines and it does not look good there): to bring it back, use the commented condition below
+                                //let showsAccountLine = accountJid != nil && !(contact.isMuc && isTyping)
+                                let showsAccountLine = contact.isMuc && accountJid != nil && !isTyping
                                 //read with an explicit type: in `contact.lastInteractionTime != nil` Swift infers `Any.Type` for the wrapper's generic subscript and the cast throws as soon as the contact has a last interaction
                                 let lastInteractionDate: Date? = contact.lastInteractionTime
                                 let hasDetailLine = isTyping || (!hasPersonCount && lastInteractionDate != nil)
-                                //only a one-to-one chat can get three lines (name, account, last seen); they need smaller fonts to fit the 44 pt navigation bar of iOS 18
+                                //only a one-to-one chat can get three lines (name, account, last seen; the account line is off for now there, see above); they need smaller fonts to fit the 44 pt navigation bar of iOS 18
                                 let isCompact = showsAccountLine && hasDetailLine
                                 VStack(alignment: .leading, spacing: 0) {
                                     HStack(alignment: .firstTextBaseline, spacing: 4) {
@@ -1423,9 +1425,28 @@ struct ChatView: View {
                                             .foregroundColor(Color(hex: "AFB3B8"))
                                     } else if !hasPersonCount, let lastInteractionDate {
                                         TimelineView(.periodic(from: lastInteractionDate, by: 60.0)) { _ in
-                                            Text(HelperTools.formatLastInteraction(contact.lastInteractionTime))
-                                                .font(isCompact ? .caption2 : .footnote)
+                                            let lastSeen = HelperTools.formatLastInteraction(contact.lastInteractionTime)
+                                            //isaCloud: "Last seen: 2 hours ago" loses the label and gets an eye in a circle (same size as the account icon);
+                                            //the translated text is cut after its colon, so no new strings are needed. "Just seen" and "Online" have no colon and stay as they are.
+                                            if let colon = lastSeen.firstIndex(where: { $0 == ":" || $0 == "：" }) {
+                                                HStack(spacing: 3) {
+                                                    //an outlined circle with a solid eye inside (no SF Symbol is like that; eye.fill is too small here and its pupil looks like an outlined eye): the circle has the size of the account icon
+                                                    Image(systemName: "circle")
+                                                        .imageScale(.small)
+                                                        .font(isCompact ? .caption2 : .caption)
+                                                        .overlay(SolidEyeShape().fill(style: FillStyle(eoFill: true)))
+                                                    Text(lastSeen[lastSeen.index(after: colon)...].trimmingCharacters(in: .whitespaces))
+                                                        .font(isCompact ? .caption2 : .footnote)
+                                                        .lineLimit(1)
+                                                }
                                                 .foregroundColor(Color(hex: "AFB3B8"))
+                                                .accessibilityElement(children: .ignore)
+                                                .accessibilityLabel(Text(lastSeen))
+                                            } else {
+                                                Text(lastSeen)
+                                                    .font(isCompact ? .caption2 : .footnote)
+                                                    .foregroundColor(Color(hex: "AFB3B8"))
+                                            }
                                         }
                                     }
                                 }
@@ -2096,5 +2117,24 @@ class ChatViewUser: ExyteChat.User {
     }
     public var description: String {
         return "ChatViewUser<\(String(describing:self.innerContact))>"
+    }
+}
+
+
+//isaCloud: the solid eye inside the circle of the "last seen" icon: an almond with a small hole for the pupil (even-odd fill), drawn in the box of the circle
+private struct SolidEyeShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let w = rect.width
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        let halfWidth = w * 0.31
+        let curve = w * 0.34
+        var path = Path()
+        path.move(to: CGPoint(x: center.x - halfWidth, y: center.y))
+        path.addQuadCurve(to: CGPoint(x: center.x + halfWidth, y: center.y), control: CGPoint(x: center.x, y: center.y - curve))
+        path.addQuadCurve(to: CGPoint(x: center.x - halfWidth, y: center.y), control: CGPoint(x: center.x, y: center.y + curve))
+        path.closeSubpath()
+        let pupil = w * 0.085
+        path.addEllipse(in: CGRect(x: center.x - pupil, y: center.y - pupil, width: pupil * 2, height: pupil * 2))
+        return path
     }
 }
