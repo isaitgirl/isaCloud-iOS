@@ -23,6 +23,8 @@ struct ChatInputBar: View {
     var onSendRecording: (URL) -> Void
     /// isaCloud: the nicks offered for "@" in a group or channel (none in a 1:1 chat)
     var mentionCandidates: () -> [String] = { [] }
+    /// isaCloud: the text size of the chat (see ChatTextSize), used by the floating "sending" capsule; the field keeps the system size
+    var sendingHintTypeSize: DynamicTypeSize = .large
     @State private var pressStart: Date?
     @State private var showNoClipboardImage = false
     @State private var showMicrophoneDenied = false
@@ -39,7 +41,6 @@ struct ChatInputBar: View {
             if !model.attachments.isEmpty {
                 attachmentsRow
             }
-            sendingHint
             if model.recording == nil {
                 mentionSuggestions
             }
@@ -58,6 +59,12 @@ struct ChatInputBar: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
         .background(.bar)
+        //isaCloud: the "sending" hint floats above the bar, so the chat does not move up and down while a file goes out
+        .overlay(alignment: .top) {
+            if model.isUploading {
+                SendingHint().dynamicTypeSize(sendingHintTypeSize)
+            }
+        }
     }
 
     /// isaCloud: while a "@" word is typed, the matching people of the group or channel; tapping one puts the nick in its place
@@ -83,23 +90,6 @@ struct ChatInputBar: View {
                     .padding(.horizontal, 12)
                 }
             }
-        }
-    }
-
-    /// isaCloud: while a file is uploaded to be sent, a hint above the input says so (the top spinner alone is easy to miss)
-    @ViewBuilder
-    private var sendingHint: some View {
-        if model.isUploading {
-            HStack(spacing: 8) {
-                ProgressView()
-                    .controlSize(.small)
-                Text("Sending...")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(Color(uiColor: .secondarySystemBackground), in: Capsule())
         }
     }
 
@@ -383,5 +373,30 @@ struct ChatInputBar: View {
 
     private func thumbnail(for url: URL) -> UIImage {
         return UIImage(contentsOfFile: url.path) ?? UIImage(systemName: "photo") ?? UIImage()
+    }
+}
+
+/// isaCloud: while a file is uploaded to be sent, a capsule floating above the input says so (the top spinner alone is easy to miss).
+/// It is filled with the chat background color (white, black in dark mode), with a soft shadow, and takes no room in the layout.
+/// Its text follows the text size of the chat, which the caller sets with `dynamicTypeSize`.
+private struct SendingHint: View {
+    /// how far above the top of the bar the capsule floats (its height plus a gap), scaled with the text size
+    @ScaledMetric private var lift: CGFloat = 38
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ProgressView()
+                .controlSize(.small)
+            Text("Sending...")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color(uiColor: .systemBackground), in: Capsule())
+        .overlay(Capsule().strokeBorder(Color(uiColor: .separator), lineWidth: 0.5))
+        .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
+        .offset(y: -lift)
+        .allowsHitTesting(false)
     }
 }
