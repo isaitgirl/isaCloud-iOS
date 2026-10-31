@@ -27,6 +27,8 @@
 {
     //isaCloud: the jid of the account this chat belongs to, under the name, while more than one account is enabled
     UILabel* _accountJid;
+    //isaCloud: the little person icon before the account jid, the same one the contacts list shows
+    UIImageView* _accountIcon;
     //isaCloud: the "@" shown before the notification-type bell when the chat has unread notifications/mentions
     UILabel* _atMark;
     //isaCloud: cached result of the red/gray badge rule, computed once per cell update (it queries the database for mentions)
@@ -51,8 +53,19 @@
     _accountJid.lineBreakMode = NSLineBreakByTruncatingMiddle;
     _accountJid.hidden = YES;
     [self.contentView addSubview:_accountJid];
+    //a template image tinted with the text color (a symbol inside the text would be drawn black)
+    _accountIcon = [[UIImageView alloc] initWithImage:[UIImage systemImageNamed:@"person.crop.circle" withConfiguration:[UIImageSymbolConfiguration configurationWithFont:_accountJid.font]]];
+    _accountIcon.translatesAutoresizingMaskIntoConstraints = NO;
+    _accountIcon.tintColor = _accountJid.textColor;
+    _accountIcon.contentMode = UIViewContentModeScaleAspectFit;
+    _accountIcon.hidden = YES;
+    [self.contentView addSubview:_accountIcon];
     [NSLayoutConstraint activateConstraints:@[
-        [_accountJid.leadingAnchor constraintEqualToAnchor:self.displayName.leadingAnchor],
+        [_accountIcon.leadingAnchor constraintEqualToAnchor:self.displayName.leadingAnchor],
+        [_accountIcon.centerYAnchor constraintEqualToAnchor:_accountJid.centerYAnchor],
+        [_accountIcon.widthAnchor constraintEqualToConstant:13],
+        [_accountIcon.heightAnchor constraintEqualToConstant:13],
+        [_accountJid.leadingAnchor constraintEqualToAnchor:_accountIcon.trailingAnchor constant:3],
         [_accountJid.trailingAnchor constraintEqualToAnchor:self.displayName.trailingAnchor],
         [_accountJid.topAnchor constraintEqualToAnchor:self.displayName.bottomAnchor constant:1],
     ]];
@@ -80,11 +93,13 @@
     if(accountJid.length == 0)
     {
         _accountJid.hidden = YES;
+        _accountIcon.hidden = YES;
         _statusTopConstraint.constant = 2;
         return;
     }
     //the line sits next to the name; the last message keeps a bit more distance, below it
     _accountJid.text = accountJid;
+    _accountIcon.hidden = NO;
     _accountJid.hidden = NO;
     _statusTopConstraint.constant = 19;
     //without a last message the name is centered: use the top aligned one to leave room for the line
