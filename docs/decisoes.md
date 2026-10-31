@@ -530,6 +530,8 @@ No iOS 27, "Adicionar contato ou canal" (`AddContactMenu`) e "Convidar para o is
 - **Limite conhecido:** no iOS 27 o título tem menos largura útil que antes (o número divide a linha com o nome): um nome como "Prosody IM Chatroom" já aparece como "Prosody IM Chatro… (394)".
 - **Descartado:** manter o número de participantes numa terceira linha (não cabia no iOS 18 sem encolher todas as fontes).
 
+- **Regressão no build 77 (corrigida no 78, PR 20):** a linha de detalhe do cabeçalho usava `contact.lastInteractionTime != nil`. O subscript genérico do `ObservableKVOWrapper` (`subscript<T>(dynamicMember:)`) faz `as? T` e lança exceção se o cast falha; comparado com `nil`, o Swift inferia `T = Any.Type` e o `NSDate` não passa no cast (o `nil` passa, por isso só caía com contato que tinha "visto por último"). **Regra:** ler membros do wrapper sempre com tipo explícito (`let d: Date? = contact.lastInteractionTime`) e, ao mexer no cabeçalho, testar com um contato com última interação.
+
 ## Descartado
 - **Código de afiliado** (Tela "Tenho um código", `mod_invites` do Prosody): removido do roadmap por decisão da Isadora em 26/10/2026.
 - **Aviso de privacidade ao ligar a foto pública** e **"usar o apelido em todas as salas"**: ver as seções acima.

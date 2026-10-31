@@ -1,4 +1,4 @@
-# Estado atual e handoff (31/10/2026, build 77)
+# Estado atual e handoff (31/10/2026, build 78)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,14 +7,18 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 77** (mensagem "Build 77 ..."), tag `build-77`; `git log --oneline -3` |
-| TestFlight | **77** (31/10/2026; o 76 foi o anterior, tag `build-76`) |
-| `.dev` no iPhone | **77** (igual ao TestFlight, sem a sonda) |
-| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o build 77 e as 3 contas de teste |
+| Commit | o do **build 78** (mensagem "Build 78 ..."), tag `build-78`; `git log --oneline -3` |
+| TestFlight | **78** (31/10/2026; o 77 tinha o crash do "visto por último" e foi substituído, tag `build-77`) |
+| `.dev` no iPhone | **78** (igual ao TestFlight, sem a sonda) |
+| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o build 78 e as 3 contas de teste |
 | ExyteChat | `349d33b` na `isaCloud` (a hora sobre o texto, PR 13, e a hora sempre embaixo; **está no build 77**) |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
+
+## O que entrou no build 78 (sobre o 77)
+
+Só a correção do **crash do build 77** (PR 20): abrir conversa individual com "visto por último" derrubava o app (`contact.lastInteractionTime != nil` sem tipo explícito: o `ObservableKVOWrapper` inferia `Any.Type` e o cast da `NSDate` lançava exceção). Achado pelo relatório de queda do iPhone e pelo rawlog de produção. **Lição:** membro do `ObservableKVOWrapper` sempre com tipo explícito (`let d: Date? = contact.x`) e testar o cabeçalho com um contato que tenha `buddylist.lastInteraction` preenchido.
 
 ## O que entrou no build 77 (sobre o 76)
 

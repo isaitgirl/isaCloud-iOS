@@ -4,6 +4,11 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## Não publicado
 
+## 0.0.1 (build 78) — 31/10/2026
+
+### Corrigido
+- **O app fechava ao abrir uma conversa individual com "visto por último"** (build 77, regressão minha no cabeçalho com a conta da conversa). O Swift lia a data da última interação com o tipo errado e a leitura falhava assim que o contato tinha uma data; sem data tudo funcionava, por isso passou nos testes. Agora a leitura usa tipo explícito. Quem abriu o build 77 e caiu na abertura volta ao normal no 78.
+
 ## 0.0.1 (build 77) — 31/10/2026 (enviado ao TestFlight às 11:16)
 
 ### Alterado
