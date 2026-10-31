@@ -4,6 +4,8 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## Não publicado
 
+## 0.0.1 (build 77) — 31/10/2026 (enviado ao TestFlight às 11:16)
+
 ### Alterado
 - **A hora e o cadeado ficam sempre embaixo do texto**, numa linha própria, como já era nas imagens, GIFs e vídeos. Antes eles dividiam a linha com a última palavra quando cabiam, e com fonte maior ou com emoji no fim da mensagem (por exemplo "…pode ignorar 🙂") a hora caía por cima do texto. A hora continua crescendo junto com o tamanho de texto escolhido em Aparência, na mesma proporção do texto. Mudança no fork do ExyteChat (opção `timeAlwaysBelowText`, ligada pelo app).
 

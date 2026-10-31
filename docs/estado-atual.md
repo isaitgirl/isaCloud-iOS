@@ -1,4 +1,4 @@
-# Estado atual e handoff (30/10/2026, noite, build 76)
+# Estado atual e handoff (31/10/2026, build 77)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,14 +7,23 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 76** (mensagem "Build 76 ..."), tag `build-76`; `git log --oneline -3` |
-| TestFlight | **76** (30/10/2026; o 75 foi o anterior, tag `build-75`) |
-| `.dev` no iPhone | **76** (igual ao TestFlight, sem a sonda) |
-| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o build 76 e as 3 contas de teste |
-| ExyteChat | `349d33b` na `isaCloud` (a hora sobre o texto, PR 13, e a hora sempre embaixo; **não está no build 76**, vai no próximo) |
+| Commit | o do **build 77** (mensagem "Build 77 ..."), tag `build-77`; `git log --oneline -3` |
+| TestFlight | **77** (31/10/2026; o 76 foi o anterior, tag `build-76`) |
+| `.dev` no iPhone | **77** (igual ao TestFlight, sem a sonda) |
+| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o build 77 e as 3 contas de teste |
+| ExyteChat | `349d33b` na `isaCloud` (a hora sobre o texto, PR 13, e a hora sempre embaixo; **está no build 77**) |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
+
+## O que entrou no build 77 (sobre o 76)
+
+Tema: **acabamento do chat** (PRs 16, 17, 18 e 19 do app, PR 13 e commit `349d33b` do fork). Detalhes em `decisoes.md`.
+- **Hora e cadeado** não caem mais em cima do texto e ficam sempre embaixo dele, numa linha própria (fork: `.pushOut` no cálculo e `timeAlwaysBelowText`).
+- **"Enviando…"** é uma cápsula flutuante, na cor do fundo da conversa e no tamanho de fonte do chat; não empurra mais o chat.
+- **Conta da conversa** (só com mais de uma conta ativa): ícone de pessoinha na lista, e no topo do chat o endereço da conta embaixo do nome com o número de participantes ao lado do nome, entre parênteses. Conversa individual com "visto por último" usa fontes menores para caber no iOS 18.
+- **Avaliação** (sem código) de criar canal público e moderação: `docs/avaliacao-canais-e-moderacao.md`. Decisões em aberto: notificação do canal criado pela própria pessoa ("tudo" ou "só menção") e o texto do aviso quando a sala não tem occupant-id/MAM.
+- Pendências que seguem: balão de envio com tentar de novo (roadmap 111), teste em execução do canal que não some (108), crash raro no `ObservableKVOWrapper.addObserverForMember` ao abrir um chat com muitos links (visto uma vez no simulador iOS 18.6 em 31/10, não reproduziu na segunda tentativa).
 
 ## O que entrou no build 76 (sobre o 75)
 
