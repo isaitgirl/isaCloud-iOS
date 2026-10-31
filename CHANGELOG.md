@@ -4,6 +4,8 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## Não publicado
 
+## 0.0.1 (build 79) — 31/10/2026 (enviado ao TestFlight às 12:28)
+
 ### Alterado
 - **A linha da conta no topo da conversa individual foi desligada por enquanto**: nome, conta e "visto por último" eram três linhas e não ficaram bem. Continua na lista de conversas e no topo de grupos e canais. O código está comentado em `ChatView.swift` (marcado com TODO) para voltar depois.
 
