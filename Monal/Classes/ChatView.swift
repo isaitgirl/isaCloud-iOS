@@ -793,7 +793,8 @@ struct ChatView: View {
                     await uploadAndSendFile(url)
                 }
             },
-            mentionCandidates: mentionNicks
+            mentionCandidates: mentionNicks,
+            sendingHintTypeSize: ChatTextSize.dynamicTypeSize(system: dynamicTypeSize, step: chatViewDefaultsDB.chatTextSizeStep)       //isaCloud: the "sending" capsule follows the chat text size
         )
     }
 

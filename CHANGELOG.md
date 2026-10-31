@@ -7,6 +7,8 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 ### Alterado
 - **A hora e o cadeado ficam sempre embaixo do texto**, numa linha própria, como já era nas imagens, GIFs e vídeos. Antes eles dividiam a linha com a última palavra quando cabiam, e com fonte maior ou com emoji no fim da mensagem (por exemplo "…pode ignorar 🙂") a hora caía por cima do texto. A hora continua crescendo junto com o tamanho de texto escolhido em Aparência, na mesma proporção do texto. Mudança no fork do ExyteChat (opção `timeAlwaysBelowText`, ligada pelo app).
 
+- **"Enviando…" ao mandar mídia ou GIF virou uma cápsula flutuante**, na cor do fundo da conversa (branca no modo claro, preta no escuro) com uma sombra leve, logo acima da caixa de texto, e o texto dela acompanha o tamanho de fonte escolhido para a conversa (Aparência). Antes era uma cápsula cinza dentro da barra, que empurrava a conversa para cima enquanto o arquivo subia.
+
 ### Corrigido
 - **A hora e o cadeado não caem mais em cima do texto** da mensagem (aparecia em frases cuja última linha termina numa palavra curta, como "revolução sozinhos."; valia para qualquer tamanho de fonte da conversa). O SwiftUI evita deixar uma palavra sozinha na última linha e a conta da hora não sabia disso; agora a conta usa a mesma regra. Mudança no fork do ExyteChat (PR 13). Com a hora sempre embaixo (item acima), essa conta deixou de decidir a posição da hora.
 

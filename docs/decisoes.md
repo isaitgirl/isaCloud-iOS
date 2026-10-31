@@ -513,6 +513,14 @@ No iOS 27, "Adicionar contato ou canal" (`AddContactMenu`) e "Convidar para o is
 - **Cadeado de texto não aparece em tudo:** ele reflete `encrypted` gravado no envio; texto em canal público e texto enviado com a criptografia desligada não têm cadeado, e é o esperado (dúvida da Isadora, esclarecida pelo banco do simulador).
 - **Armadilha do SwiftPM nos checkouts de teste:** ao trocar a revisão do ExyteChat no `Package.resolved`, o `xcodebuild` refaz o checkout e **descarta** as alterações locais; aplicar o patch de novo depois da primeira resolução (aconteceu no `.dev` e no simulador do iOS 27).
 
+## "Enviando…" flutuante, na cor do fundo (31/10/2026, só app, `ChatInputBar.swift`)
+- **Pedido (Isadora):** o aviso de envio de mídia tinha fundo cinza, diferente da conversa (branca no claro, preta no escuro), e empurrava o chat para cima; queria uma cápsula "floating" perto da caixa de texto.
+- **Escolha:** `sendingHint` saiu do `VStack` da barra e virou `.overlay(alignment: .top)` da barra, deslocada para cima por `.offset(y: -sendingHintLift)` (`@ScaledMetric`, 38 pt, para acompanhar o tamanho de texto), sem `allowsHitTesting`. Fundo `Color(uiColor: .systemBackground)` (a cor do chat sem imagem de fundo), contorno `separator` de 0,5 pt e sombra de 12%.
+- **Descartado:** (1) tirar só o fundo da cápsula dentro da barra: a barra continua cinza (`.bar`), e no modo escuro o texto ficava sobre um cinza diferente do preto do chat; (2) `alignmentGuide(.top)` para subir a cápsula: o SwiftUI não deslocou e ela cobria o campo de texto, por isso o `offset`.
+- **Tamanho:** o campo de texto continua no tamanho do sistema (decisão antiga), mas a cápsula segue o tamanho escolhido para o chat: `ChatView` passa `sendingHintTypeSize` (`ChatTextSize.dynamicTypeSize`) e a barra aplica `.dynamicTypeSize` só ao `SendingHint` (struct própria, para o `@ScaledMetric` do deslocamento acompanhar também).
+- **Limite conhecido:** com imagem de fundo na conversa, a cápsula segue branca/preta (cor do sistema), não a imagem.
+- **Como ver no simulador sem enviar nada:** há um truque de teste, não commitado: `UserDefaults.standard.bool(forKey: "isaTmpShowSending")` somado a `model.isUploading` e o argumento de lançamento `-isaTmpShowSending YES` em `simctl launch`.
+
 ## Descartado
 - **Código de afiliado** (Tela "Tenho um código", `mod_invites` do Prosody): removido do roadmap por decisão da Isadora em 26/10/2026.
 - **Aviso de privacidade ao ligar a foto pública** e **"usar o apelido em todas as salas"**: ver as seções acima.
