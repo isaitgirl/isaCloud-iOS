@@ -1226,6 +1226,7 @@ struct ChatView: View {
         .reactionsBelowBubble(!chatViewDefaultsDB.reactionsAboveMessages)       //isaCloud: in the footer, unless the setting asks for the old place
         .setMessageFont(ChatTextSize.messageFont(system: dynamicTypeSize, step: chatViewDefaultsDB.chatTextSizeStep))      //isaCloud: see ChatTextSize
         .setMessageTimeFont(ChatTextSize.timeFont(system: dynamicTypeSize, step: chatViewDefaultsDB.chatTextSizeStep))
+        .timeAlwaysBelowText(true)      //isaCloud: the time and the lock under the text, like under the media
         .tapAvatarClosure { user, _ in
             // mentions use only the nick: the verified emoji of the name is not part of it
             inputModel.setText(inputModel.text + "\(ChatNameWithHats.nick(from: user.name)), ")

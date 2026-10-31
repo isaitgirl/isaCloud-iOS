@@ -505,6 +505,14 @@ No iOS 27, "Adicionar contato ou canal" (`AddContactMenu`) e "Convidar para o is
 - **Teste:** os prints do canal real mostravam gente de verdade (repositório público), então a reprodução para o PR foi feita numa conversa de teste (`poli`), com linhas de teste inseridas no banco do simulador e removidas depois. Frase que reproduz no XR (iOS 18.6): "A gente nunca faz uma revolução sozinhos."
 - **Armadilha para o próximo:** `simctl pbcopy` e o `text` da ferramenta do simulador não colam neste Mac; para ter texto no chat sem digitar, inserir a linha em `message_history` com o app fechado (copiar as colunas de uma mensagem enviada).
 
+## Hora sempre embaixo do texto (31/10/2026, fork do ExyteChat, commit `349d33b` direto na `isaCloud`)
+- **Pedido (Isadora):** depois do ajuste da medida (PR 13), com a fonte "Grande" uma mensagem terminada em emoji ainda tinha a hora por cima do texto; ela pediu que a hora e o cadeado fossem sempre abaixo, "como é nas mídias".
+- **Escolha:** em vez de continuar corrigindo a conta de larguras (`timeViewArrangement`: `.hstack`, `.overlay`, `.vstack`), uma opção da biblioteca, `timeAlwaysBelowText`, desligada por padrão (como `reactionsBelowBubble`): ligada, devolve `.vstack` sem medir nada. O app liga em `ChatView.swift` (`.timeAlwaysBelowText(true)`), sem ajuste nas Configurações porque o pedido foi "sempre".
+- **Custo:** mensagens curtas ("Teste") ficam com duas linhas e o balão mais alto. A medida com `.pushOut` (PR 13) fica, porque ainda vale para os outros usos da conta (largura do balão, reação).
+- **Fonte da hora:** já escala com o nível de fonte (`ChatTextSize.timeFont`: 10 pt contra 15 pt do texto, mesma escala do `UIFontMetrics`). Não foi mudada. Se a hora parecer pequena em níveis altos, o ajuste é o tamanho-base em `timeFont`.
+- **Cadeado de texto não aparece em tudo:** ele reflete `encrypted` gravado no envio; texto em canal público e texto enviado com a criptografia desligada não têm cadeado, e é o esperado (dúvida da Isadora, esclarecida pelo banco do simulador).
+- **Armadilha do SwiftPM nos checkouts de teste:** ao trocar a revisão do ExyteChat no `Package.resolved`, o `xcodebuild` refaz o checkout e **descarta** as alterações locais; aplicar o patch de novo depois da primeira resolução (aconteceu no `.dev` e no simulador do iOS 27).
+
 ## Descartado
 - **Código de afiliado** (Tela "Tenho um código", `mod_invites` do Prosody): removido do roadmap por decisão da Isadora em 26/10/2026.
 - **Aviso de privacidade ao ligar a foto pública** e **"usar o apelido em todas as salas"**: ver as seções acima.

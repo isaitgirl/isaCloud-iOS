@@ -11,7 +11,7 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 | TestFlight | **76** (30/10/2026; o 75 foi o anterior, tag `build-75`) |
 | `.dev` no iPhone | **76** (igual ao TestFlight, sem a sonda) |
 | Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o build 76 e as 3 contas de teste |
-| ExyteChat | `c6af686` na `isaCloud` (a hora sobre o texto, PR 13; **não está no build 76**, vai no próximo) |
+| ExyteChat | `349d33b` na `isaCloud` (a hora sobre o texto, PR 13, e a hora sempre embaixo; **não está no build 76**, vai no próximo) |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
