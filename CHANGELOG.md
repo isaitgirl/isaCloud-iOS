@@ -5,6 +5,11 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 ## Não publicado
 
 ### Alterado
+- **A linha da conta no topo da conversa individual foi desligada por enquanto**: nome, conta e "visto por último" eram três linhas e não ficaram bem. Continua na lista de conversas e no topo de grupos e canais. O código está comentado em `ChatView.swift` (marcado com TODO) para voltar depois.
+
+- **"Visto pela última vez" virou um ícone de olhinho.** No topo da conversa individual, o rótulo "Visto pela última vez:" foi trocado por um olho preenchido dentro de um círculo vazado, do mesmo tamanho e cinza do ícone da pessoinha da conta, e o texto fica só "19 horas atrás". Também resolve o texto cortado ("Visto pela última vez: 2 hor…") no iOS 27. "Visto agora" e "Online" continuam como eram.
+
+### Alterado
 - **Proteção contra build sem a busca de mensagens (FTS5).** O Xcode às vezes compila a SQLite sem o módulo de busca, sem avisar (aconteceu nos builds 32 e 77). Agora o build **falha com uma mensagem clara** se isso acontecer (fase "[isaCloud] Check FTS5"), o novo `scripts/archive-testflight.sh` arquiva numa pasta limpa e confere o arquivo antes de enviar, e o app registra no log, a cada abertura, se a SQLite dele não tem FTS5. Nada muda para quem usa o app.
 
 ## 0.0.1 (build 78) — 31/10/2026
