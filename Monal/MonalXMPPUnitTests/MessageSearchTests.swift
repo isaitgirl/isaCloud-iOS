@@ -12,6 +12,13 @@ import monalxmpp
 
 struct MessageSearchTests {
 
+    // MARK: the build
+
+    @Test("the SQLite of this build has FTS5 (a stale compiled SQLite loses it without any warning)")
+    func sqliteHasFTS5() {
+        #expect(MLMessageSearch.isAvailable())
+    }
+
     // MARK: the query
 
     @Test("every word becomes a prefix in quotes, all of them are needed")

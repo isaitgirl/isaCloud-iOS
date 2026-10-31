@@ -28,6 +28,8 @@ Ajuste o número do build na mesma conta toda vez. Se a versão de marketing (`M
 
 ## 2. Arquivar
 
+**Caminho recomendado: `scripts/archive-testflight.sh`** (`--upload` para enviar também). Ele confere que o número do build é o mesmo nos 25 lugares, apaga `/tmp/ddarch`, arquiva, confere número, bundle id e **FTS5** do arquivo e só então envia. Os passos abaixo são o que o script faz, para o caso de precisar fazer à mão.
+
 Use a configuração `AppStore`. A configuração `Release` não existe no projeto.
 
 ```bash
