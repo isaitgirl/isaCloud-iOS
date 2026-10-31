@@ -365,7 +365,8 @@ $$class_handler(handleBookmarks2FetchResult, $$ID(xmpp*, account), $$BOOL(succes
         else
         {
             DDLogWarn(@"Could not fetch bookmarks from pep prior to publishing!");
-            [self handleErrorWithDescription:NSLocalizedString(@"Failed to save groupchat bookmarks", @"") andAccount:account andErrorIq:errorIq andErrorReason:errorReason andIsSevere:YES];
+            //isaCloud: a background sync problem the person can do nothing about: only the log (no banner, no notification)
+            [self handleErrorWithDescription:NSLocalizedString(@"Failed to save groupchat bookmarks", @"") andAccount:account andErrorIq:errorIq andErrorReason:errorReason andIsSevere:NO];
             return;
         }
     }
@@ -606,7 +607,8 @@ $$class_handler(bookmarks2Published, $$ID(xmpp*, account), $$ID(NSString*, room)
     if(!success)
     {
         DDLogWarn(@"Could not publish bookmark for muc '%@' to pep!", room);
-        [self handleErrorWithDescription:[NSString stringWithFormat:NSLocalizedString(@"Failed to save bookmark for Group/Channel: %@", @""), room] andAccount:account andErrorIq:errorIq andErrorReason:errorReason andIsSevere:YES];
+        //isaCloud: a background sync problem the person can do nothing about: only the log (no banner, no notification)
+        [self handleErrorWithDescription:[NSString stringWithFormat:NSLocalizedString(@"Failed to save bookmark for Group/Channel: %@", @""), room] andAccount:account andErrorIq:errorIq andErrorReason:errorReason andIsSevere:NO];
         return;
     }
     DDLogDebug(@"Published bookmark for muc '%@' to pep", room);
@@ -621,7 +623,8 @@ $$class_handler(bookmarks2Retracted, $$ID(xmpp*, account), $$ID(NSString*, room)
             return;
         }
         DDLogWarn(@"Could not retract bookmark for muc '%@' from pep!", room);
-        [self handleErrorWithDescription:[NSString stringWithFormat:NSLocalizedString(@"Failed to remove bookmark for Group/Channel: %@", @""), room] andAccount:account andErrorIq:errorIq andErrorReason:errorReason andIsSevere:YES];
+        //isaCloud: a background sync problem the person can do nothing about: only the log (no banner, no notification)
+        [self handleErrorWithDescription:[NSString stringWithFormat:NSLocalizedString(@"Failed to remove bookmark for Group/Channel: %@", @""), room] andAccount:account andErrorIq:errorIq andErrorReason:errorReason andIsSevere:NO];
         return;
     }
     DDLogDebug(@"Retracted bookmark for muc '%@' from pep", room);

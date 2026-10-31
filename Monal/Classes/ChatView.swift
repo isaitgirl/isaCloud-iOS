@@ -560,11 +560,8 @@ struct ChatView: View {
                 }
             }
             .catch { error in
-                alertPrompt = AlertPrompt(
-                    title: Text("Could not fetch messages"),
-                    message: Text(error.localizedDescription),
-                    dismissLabel: Text("Close")
-                )
+                //isaCloud: no pop-up when the older messages can't be fetched (a technical message, usually a connection that is reconnecting): only the log
+                DDLogError("Got backscrolling mam error: \(error.localizedDescription)")
             }
             .finally {
                 self.isLoadingMamHistory = false
@@ -755,12 +752,8 @@ struct ChatView: View {
                 messages.append(ChatViewMessage(newMLMessage))
             }
         } catch {
+            //isaCloud: no pop-up for a failed upload (a technical message, often just a connection that is reconnecting): only the log
             DDLogError("Couldn't upload file! error:  \(error.localizedDescription)")
-            alertPrompt = AlertPrompt(
-                title: Text("Could not upload file"),
-                message: Text(error.localizedDescription),
-                dismissLabel: Text("Close")
-            )
         }
         inputModel.isUploading = false
     }

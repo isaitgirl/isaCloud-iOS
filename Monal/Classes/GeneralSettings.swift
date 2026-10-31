@@ -8,6 +8,10 @@
 
 import ViewExtractor
 import ExyteChat      //isaCloud: ChatTheme, the color of the messages of others in the preview
+
+//isaCloud: the "Connectivity issues" notification is off (ISACLOUD_SHOW_SYNC_ERROR_NOTIFICATIONS in HelperTools.m), so this toggle does nothing and is hidden
+let isaCloudShowSyncErrorNotifications = false
+
 struct SettingsToggle<T>: View where T: View {
     let value: Binding<Bool>
     let contents: T
@@ -579,6 +583,7 @@ struct NotificationSettings: View {
                     Text("Show notifications if users react to your messages.")
                 }
                 
+                if isaCloudShowSyncErrorNotifications {
                 SettingsToggle(isOn: $generalSettingsDefaultsDB.showSyncErrorNotificationForIncomingPush) {
                     Text("Show warning notification if a push can't be retrieved")
                     Text(
@@ -593,6 +598,7 @@ You can turn them off here, if so, but be warned, that you might not get notifie
 and thus might miss messages.
 """
                     )
+                }
                 }
             }
             

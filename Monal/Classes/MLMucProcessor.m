@@ -331,6 +331,16 @@ static NSString* const kIsaCloudGuideRoom = @"guiaxmpp@conference.isacloud.cc";
     }
 }
 
+//isaCloud: only these errors mean "you can't be in this room" (banned, members only, wrong password).
+//Everything else (remote-server-not-found, recipient-unavailable, service-unavailable, s2s hiccups...) can be temporary
+//and must not delete the room from our favorites and bookmarks
+-(BOOL) isDefinitiveMucJoinError:(XMPPStanza*) node
+{
+    return [node check:@"/<type=error>/error/{urn:ietf:params:xml:ns:xmpp-stanzas}forbidden"] ||
+        [node check:@"/<type=error>/error/{urn:ietf:params:xml:ns:xmpp-stanzas}registration-required"] ||
+        [node check:@"/<type=error>/error/{urn:ietf:params:xml:ns:xmpp-stanzas}not-authorized"];
+}
+
 -(void) processPresence:(XMPPPresence*) presenceNode
 {
     //isaCloud: hats of the occupant (XEP-0317); a presence without hats (e.g. when leaving) removes them
@@ -378,6 +388,15 @@ static NSString* const kIsaCloudGuideRoom = @"guiaxmpp@conference.isacloud.cc";
         //--> allow users to read the last messages before the muc got broken
         
         //isaCloud: this is only temporary and does not stop the app from being used: no banner and no notification (only the log)
+        [self handleBackgroundError:[NSString stringWithFormat:NSLocalizedString(@"Temporary failure to enter Group/Channel: %@", @""), presenceNode.fromUser] forMuc:presenceNode.fromUser withNode:presenceNode];
+        return;
+    }
+    else if([presenceNode check:@"/<type=error>"] && ([self isJoining:presenceNode.fromUser] || [self isJoined:presenceNode.fromUser]) && [self getUIHandlerForMuc:presenceNode.fromUser] == nil && ![self isDefinitiveMucJoinError:presenceNode])
+    {
+        //isaCloud: a non-definitive error while we are not waiting for the user (background join): handle it like the transient error above
+        //(no deleteMuc, no bookmarks update: the room stays in favorites and a muc ping/next login retries the join)
+        DDLogError(@"Got non-definitive muc error presence of %@ in background: %@", presenceNode.fromUser, [presenceNode findFirst:@"error"]);
+        [self removeRoomFromJoining:presenceNode.fromUser];
         [self handleBackgroundError:[NSString stringWithFormat:NSLocalizedString(@"Temporary failure to enter Group/Channel: %@", @""), presenceNode.fromUser] forMuc:presenceNode.fromUser withNode:presenceNode];
         return;
     }
@@ -1675,6 +1694,15 @@ $$instance_handler(handleDiscoResponse, account.mucProcessor, $$ID(xmpp*, accoun
         [self handleBackgroundError:[NSString stringWithFormat:NSLocalizedString(@"Temporary failure to enter Group/Channel: %@", @""), roomJid] forMuc:roomJid withNode:iqNode];
         return;
     }
+    else if([iqNode check:@"/<type=error>"] && [self getUIHandlerForMuc:roomJid] == nil && ![self isDefinitiveMucJoinError:iqNode])
+    {
+        //isaCloud: same as the non-definitive error presence above: a background query must not delete the room
+        DDLogError(@"Querying muc info returned a non-definitive error in background: %@", [iqNode findFirst:@"error"]);
+        [self decrementNameChange:iqNode.fromUser];
+        [self removeRoomFromJoining:iqNode.fromUser];
+        [self handleBackgroundError:[NSString stringWithFormat:NSLocalizedString(@"Temporary failure to enter Group/Channel: %@", @""), roomJid] forMuc:roomJid withNode:iqNode];
+        return;
+    }
     else if([iqNode check:@"/<type=error>"])
     {
         DDLogError(@"Querying muc info returned a persistent error: %@", [iqNode findFirst:@"error"]);
@@ -2081,7 +2109,8 @@ $$instance_handler(handleMamResponseWithLatestId, account.mucProcessor, $$ID(xmp
     if([iqNode check:@"/<type=error>"])
     {
         DDLogWarn(@"Muc mam latest stanzaid query %@ returned error: %@", iqNode.id, [iqNode findFirst:@"error"]);
-        [HelperTools postError:[NSString stringWithFormat:NSLocalizedString(@"Failed to query newest stanzaid for Group/Channel %@", @""), iqNode.fromUser] withNode:iqNode andAccount:_account andIsSevere:YES];
+        //isaCloud: a background sync problem the person can do nothing about: only the log (no banner, no notification)
+        [HelperTools postQuietError:[NSString stringWithFormat:NSLocalizedString(@"Failed to query newest stanzaid for Group/Channel %@", @""), iqNode.fromUser] withNode:iqNode andAccount:_account];
         [_account mamFinishedFor:iqNode.fromUser];
         return;
     }
@@ -2151,7 +2180,8 @@ $$instance_handler(handleCatchup, account.mucProcessor, $$ID(xmpp*, account), $$
         }
         else
         {
-            [HelperTools postError:[NSString stringWithFormat:NSLocalizedString(@"Failed to query for new messages for Group/Channel (catchup) %@", @""), iqNode.fromUser] withNode:iqNode andAccount:_account andIsSevere:YES];
+            //isaCloud: a background sync problem the person can do nothing about: only the log (no banner, no notification)
+            [HelperTools postQuietError:[NSString stringWithFormat:NSLocalizedString(@"Failed to query for new messages for Group/Channel (catchup) %@", @""), iqNode.fromUser] withNode:iqNode andAccount:_account];
             [_account mamFinishedFor:iqNode.fromUser];
         }
         return;

@@ -216,7 +216,8 @@ $$class_handler(handleCatchup, $$ID(xmpp*, account), $$ID(XMPPIQ*, iqNode), $$BO
         }
         else
         {
-            [HelperTools postError:[NSString stringWithFormat:NSLocalizedString(@"Failed to query for new messages on account %@", @""), account.connectionProperties.identity.jid] withNode:iqNode andAccount:account andIsSevere:YES];
+            //isaCloud: a background sync problem the person can do nothing about: only the log (no banner, no notification)
+            [HelperTools postQuietError:[NSString stringWithFormat:NSLocalizedString(@"Failed to query for new messages on account %@", @""), account.connectionProperties.identity.jid] withNode:iqNode andAccount:account];
             [account mamFinishedFor:account.connectionProperties.identity.jid];
         }
         return;
@@ -241,7 +242,8 @@ $$class_handler(handleMamResponseWithLatestId, $$ID(xmpp*, account), $$ID(XMPPIQ
     if([iqNode check:@"/<type=error>"])
     {
         DDLogWarn(@"Mam latest stanzaid query %@ returned error: %@", iqNode.id, [iqNode findFirst:@"error"]);
-        [HelperTools postError:[NSString stringWithFormat:NSLocalizedString(@"Failed to query newest stanzaid for account %@", @""), account.connectionProperties.identity.jid] withNode:iqNode andAccount:account andIsSevere:YES];
+        //isaCloud: a background sync problem the person can do nothing about: only the log (no banner, no notification)
+        [HelperTools postQuietError:[NSString stringWithFormat:NSLocalizedString(@"Failed to query newest stanzaid for account %@", @""), account.connectionProperties.identity.jid] withNode:iqNode andAccount:account];
         return;
     }
     DDLogVerbose(@"Got latest stanza id to prime database with: %@", [iqNode findFirst:@"{urn:xmpp:mam:2}fin/{http://jabber.org/protocol/rsm}set/last#"]);
@@ -383,7 +385,8 @@ $$class_handler(handleCarbonsEnabled, $$ID(xmpp*, account), $$ID(XMPPIQ*, iqNode
     if([iqNode check:@"/<type=error>"])
     {
         DDLogWarn(@"carbon enable iq returned error: %@", [iqNode findFirst:@"error"]);
-        [HelperTools postError:[NSString stringWithFormat:NSLocalizedString(@"Failed to enable carbons for account %@", @""), account.connectionProperties.identity.jid] withNode:iqNode andAccount:account andIsSevere:YES];
+        //isaCloud: a background sync problem the person can do nothing about: only the log (no banner, no notification)
+        [HelperTools postQuietError:[NSString stringWithFormat:NSLocalizedString(@"Failed to enable carbons for account %@", @""), account.connectionProperties.identity.jid] withNode:iqNode andAccount:account];
         return;
     }
     DDLogInfo(@"Carbons now enabled via legacy mechanism...");
@@ -834,7 +837,8 @@ $$class_handler(handlePushEnabled, $$ID(xmpp*, account), $$ID(XMPPIQ*, iqNode), 
     if([iqNode check:@"/<type=error>"])
     {
         DDLogError(@"Enabling push returned an error: %@", [iqNode findFirst:@"error"]);
-        [HelperTools postError:NSLocalizedString(@"Error registering push", @"") withNode:iqNode andAccount:account andIsSevere:YES];
+        //isaCloud: a background sync problem the person can do nothing about: only the log (no banner, no notification)
+        [HelperTools postQuietError:NSLocalizedString(@"Error registering push", @"") withNode:iqNode andAccount:account];
         account.connectionProperties.pushEnabled = NO;
         return;
     }

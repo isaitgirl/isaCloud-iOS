@@ -2820,12 +2820,8 @@ enum msgSentState {
             else
                 [self insertOldMessages:[[messages reverseObjectEnumerator] allObjects]];
         }).catch(^(NSError *error) {
+            //isaCloud: no pop-up when the older messages can't be fetched (a technical message, usually a connection that is reconnecting): only the log
             DDLogError(@"Got backscrolling mam error: %@", error.localizedDescription);
-            UIAlertController* alert = [UIAlertController alertControllerWithTitle:NSLocalizedString(@"Could not fetch messages", @"") message:error.localizedDescription preferredStyle:UIAlertControllerStyleAlert];
-            [alert addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"Close", @"") style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-                [alert dismissViewControllerAnimated:YES completion:nil];
-            }]];
-            [self presentViewController:alert animated:YES completion:nil];
         }).ensure(^{
             //allow next mam fetch
             self.isLoadingMam = NO;
@@ -3329,12 +3325,8 @@ enum msgSentState {
 {
     if(error)
     {
+        //isaCloud: no pop-up for a failed upload (a technical message, often just a connection that is reconnecting): only the log
         DDLogError(@"Could not send attachment: %@", error);
-        UIAlertController* alert = [UIAlertController alertControllerWithTitle:NSLocalizedString(@"Could not upload file", @"") message:[NSString stringWithFormat:@"%@", error.localizedDescription] preferredStyle:UIAlertControllerStyleAlert];
-        [alert addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"Close", @"") style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-            [alert dismissViewControllerAnimated:YES completion:nil];
-        }]];
-        [self presentViewController:alert animated:YES completion:nil];
     }
 }
 
