@@ -2,6 +2,11 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## Não publicado
+
+### Corrigido
+- **A hora e o cadeado não caem mais em cima do texto** da mensagem (aparecia em frases cuja última linha termina numa palavra curta, como "revolução sozinhos."; valia para qualquer tamanho de fonte da conversa). O SwiftUI evita deixar uma palavra sozinha na última linha e a conta da hora não sabia disso; agora a conta usa a mesma regra. Mudança no fork do ExyteChat (PR 13).
+
 ## 0.0.1 (build 76) — 30/10/2026 (enviado ao TestFlight às 21:14)
 
 ### Alterado
