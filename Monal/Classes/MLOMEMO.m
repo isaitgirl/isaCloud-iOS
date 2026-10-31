@@ -39,6 +39,8 @@ static NSDictionary* trustLevels2Text = nil;
 @property (nonatomic, strong) MLSignalStore* monalSignalStore;
 @property (nonatomic, strong) SignalContext* signalContext;
 @property (nonatomic, strong) NSMutableSet<NSNumber*>* ownDeviceList;
+//isaCloud: jid -> "access" / "notFound" / "other" (last failed devicelist fetch, in memory only)
+@property (nonatomic, strong) NSMutableDictionary<NSString*, NSString*>* devicelistFetchErrors;
 @end
 
 @implementation MLOMEMO
@@ -364,6 +366,8 @@ $$
         DDLogInfo(@"Deduplicated devicelist fetches from %@", jid);
     else
     {
+        //isaCloud: a new fetch starts, forget the error of the previous one
+        [self setDevicelistFetchError:nil forJid:jid];
         //fetch newest devicelist (this is needed even after a subscribe on at least prosody)
         [self.account.pubsub fetchNode:@"eu.siacs.conversations.axolotl.devicelist" from:jid withItemsList:nil andHandler:$newHandlerWithInvalidation(self, handleDevicelistFetch, handleDevicelistFetchInvalidation, $BOOL(subscribe))];
         [self.state.openDevicelistFetches addObject:jid];
@@ -424,10 +428,19 @@ $$instance_handler(handleDevicelistFetch, account.omemo, $$ID(xmpp*, account), $
         else
         {
             // TODO: improve error handling
+            //isaCloud: remember why the contact's devicelist could not be fetched (shown in the encryption switch of the contact)
+            NSString* fetchError = @"other";
+            if([errorIq check:@"error/{urn:ietf:params:xml:ns:xmpp-stanzas}not-authorized"] || [errorIq check:@"error/{urn:ietf:params:xml:ns:xmpp-stanzas}forbidden"] || [errorIq check:@"error/{http://jabber.org/protocol/pubsub#errors}presence-subscription-required"])
+                fetchError = @"access";
+            else if([errorIq check:@"error/{urn:ietf:params:xml:ns:xmpp-stanzas}item-not-found"])
+                fetchError = @"notFound";
+            [self setDevicelistFetchError:fetchError forJid:jid];
         }
     }
     else
     {
+        //isaCloud: successful fetch --> no error anymore
+        [self setDevicelistFetchError:nil forJid:jid];
         if(subscribe && ![self.account.connectionProperties.identity.jid isEqualToString:jid])
         {
             DDLogInfo(@"Successfully fetched devicelist, now subscribing to this node for updates...");
@@ -1375,8 +1388,28 @@ $$
     NSMutableDictionary<NSString*, NSMutableSet<NSNumber*>*>* recipientDeviceMap = [self createRecipientDeviceMapFromContactDeviceMap:contactDeviceMap withOutgoing:NO];
     if(![recipientDeviceMap[senderJid] containsObject:sid])
     {
-        DDLogWarn(@"Received message from '%@' (possibly in muc: %@) device %@, but not trusted: ignoring!", senderJid, mucJid, sid);
-        return !returnErrorString ? nil : [NSString stringWithFormat:NSLocalizedString(@"Could not decrypt because you didn't trust the sender's device %u.", @""), sid.unsignedIntValue];
+        //isaCloud: a device we don't know yet (no identity stored, e.g. first message of a non-contact in a group) is accepted via ToFU
+        //if the sender has no explicit trust decisions, mixed trust is allowed and the message is a PreKeyMessage for our device
+        //(only a PreKeyMessage can create a session without a bundle)
+        SignalAddress* unknownDeviceAddress = [[SignalAddress alloc] initWithName:senderJid deviceId:(uint32_t)sid.unsignedIntValue];
+        BOOL deviceIsUnknown = [self.monalSignalStore getIdentityForAddress:unknownDeviceAddress] == nil;
+        BOOL deviceIsPreKeyForUs = [[envelope findFirst:@"header/key<rid=%u>@prekey|bool", self.monalSignalStore.deviceid] boolValue];
+        BOOL senderHasExplicitTrust = [MLContact createContactFromJid:senderJid andAccountID:self.account.accountID].hasExplicitOmemoTrustActivated;
+        if(deviceIsUnknown && [[HelperTools defaultsDB] boolForKey:@"allowMixedTrustInGroups"] && !senderHasExplicitTrust && deviceIsPreKeyForUs)
+        {
+            DDLogInfo(@"Accepting prekey message from unknown device %@ of '%@' (possibly in muc: %@) via ToFU...", sid, senderJid, mucJid);
+            //continue with decryption, the identity of this device gets stored as ToFU while decrypting
+        }
+        else if(deviceIsUnknown)
+        {
+            DDLogWarn(@"Received message from '%@' (possibly in muc: %@) unknown device %@: ignoring!", senderJid, mucJid, sid);
+            return !returnErrorString ? nil : [NSString stringWithFormat:NSLocalizedString(@"Could not decrypt because the sender's device %u is not known yet.", @""), sid.unsignedIntValue];
+        }
+        else
+        {
+            DDLogWarn(@"Received message from '%@' (possibly in muc: %@) device %@, but not trusted: ignoring!", senderJid, mucJid, sid);
+            return !returnErrorString ? nil : [NSString stringWithFormat:NSLocalizedString(@"Could not decrypt because you didn't trust the sender's device %u.", @""), sid.unsignedIntValue];
+        }
     }
     
     SignalAddress* address = [[SignalAddress alloc] initWithName:senderJid deviceId:(uint32_t)sid.unsignedIntValue];
@@ -1723,13 +1756,38 @@ $$
 -(void) sendFetchUpdateNotificationForJid:(NSString*) jid
 {
     BOOL isFetching = self.state.openBundleFetches[jid] != nil || [self.state.openDevicelistFetches containsObject:jid] || [self.state.openDevicelistSubscriptions containsObject:jid];
-    [[MLNotificationQueue currentQueue] postNotificationName:kMonalOmemoFetchingStateUpdate object:self.account userInfo:@{
+    NSMutableDictionary* userInfo = [@{
         @"jid": jid,
         @"isFetching": @(isFetching),
         @"fetchingBundle": @(self.state.openBundleFetches[jid] != nil),
         @"fetchingDevicelist": @([self.state.openDevicelistFetches containsObject:jid]),
         @"subscribingDevicelist": @([self.state.openDevicelistSubscriptions containsObject:jid]),
-    }];
+    } mutableCopy];
+    //isaCloud: only present if the last devicelist fetch of this jid failed
+    NSString* fetchError = [self lastDevicelistFetchErrorForJid:jid];
+    if(fetchError != nil)
+        userInfo[@"fetchError"] = fetchError;
+    [[MLNotificationQueue currentQueue] postNotificationName:kMonalOmemoFetchingStateUpdate object:self.account userInfo:userInfo];
+}
+
+//isaCloud: devicelist fetch error bookkeeping (nil error --> remove entry)
+-(void) setDevicelistFetchError:(NSString* _Nullable) fetchError forJid:(NSString*) jid
+{
+    @synchronized(self) {
+        if(self.devicelistFetchErrors == nil)
+            self.devicelistFetchErrors = [[NSMutableDictionary<NSString*, NSString*> alloc] init];
+        if(fetchError == nil)
+            [self.devicelistFetchErrors removeObjectForKey:jid];
+        else
+            self.devicelistFetchErrors[jid] = fetchError;
+    }
+}
+
+-(NSString* _Nullable) lastDevicelistFetchErrorForJid:(NSString*) jid
+{
+    @synchronized(self) {
+        return self.devicelistFetchErrors[jid];
+    }
 }
 
 @end

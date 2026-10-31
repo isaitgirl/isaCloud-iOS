@@ -204,3 +204,8 @@
 "Adjusts the text size inside chats, relative to the system text size. Default follows the system." = "Ajusta o tamanho do texto dentro das conversas, em relação ao tamanho de texto do sistema. Padrão acompanha o sistema.";
 "Hi, how are you?" = "Oi, tudo bem?";
 "Fine, thanks! And you?" = "Tudo bem, e você?";
+
+/* isaCloud: criptografia com contato que ainda não tem dispositivos conhecidos (busca da lista de aparelhos) */
+"Could not decrypt because the sender's device %u is not known yet." = "Não é possível descriptografar pois o dispositivo %u do remetente ainda não é conhecido.";
+"Encryption Not Possible" = "Criptografia indisponível";
+"The server of this contact does not allow people who are not contacts to read the list of devices, so encrypted messages are not possible." = "O servidor desta pessoa não permite que quem não é contato leia a lista de aparelhos, por isso não é possível criptografar as mensagens.";
