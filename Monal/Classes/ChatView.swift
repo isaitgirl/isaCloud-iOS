@@ -1383,7 +1383,9 @@ struct ChatView: View {
                                 let hasPersonCount = contact.isMuc && mucPersonCount > 0
                                 //in a group or channel "Typing..." takes the place of the account line, so the title keeps two lines
                                 let showsAccountLine = accountJid != nil && !(contact.isMuc && isTyping)
-                                let hasDetailLine = isTyping || (!hasPersonCount && contact.lastInteractionTime != nil)
+                                //read with an explicit type: in `contact.lastInteractionTime != nil` Swift infers `Any.Type` for the wrapper's generic subscript and the cast throws as soon as the contact has a last interaction
+                                let lastInteractionDate: Date? = contact.lastInteractionTime
+                                let hasDetailLine = isTyping || (!hasPersonCount && lastInteractionDate != nil)
                                 //only a one-to-one chat can get three lines (name, account, last seen); they need smaller fonts to fit the 44 pt navigation bar of iOS 18
                                 let isCompact = showsAccountLine && hasDetailLine
                                 VStack(alignment: .leading, spacing: 0) {
@@ -1419,7 +1421,7 @@ struct ChatView: View {
                                         Text("Typing...")
                                             .font(isCompact ? .caption2 : .footnote)
                                             .foregroundColor(Color(hex: "AFB3B8"))
-                                    } else if !hasPersonCount, let lastInteractionDate:Date = contact.lastInteractionTime {
+                                    } else if !hasPersonCount, let lastInteractionDate {
                                         TimelineView(.periodic(from: lastInteractionDate, by: 60.0)) { _ in
                                             Text(HelperTools.formatLastInteraction(contact.lastInteractionTime))
                                                 .font(isCompact ? .caption2 : .footnote)
