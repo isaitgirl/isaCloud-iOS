@@ -29,6 +29,9 @@ struct ContactDetails: View {
     @State private var showingResetOmemoSessionConfirmation = false
     @State private var showingCannotEncryptAlert = false
     @State private var showingShouldDisableEncryptionAlert = false
+    @State private var showingNoDeviceListAccessAlert = false   //isaCloud: the contact's server does not share its devicelist with non-contacts
+    @State private var waitingForDevices = false                //isaCloud: waiting for the devicelist answer before enabling encryption
+    @State private var encryptionWaitId = 0                     //isaCloud: identifies the current wait (its timeout must not end a newer one)
     @State private var isEditingNickname = false
     @State private var inputImage: UIImage?
     @State private var showingImagePicker = false
@@ -53,6 +56,22 @@ struct ContactDetails: View {
 
     private func loadMucPersonCount() {
         mucPersonCount = isaCloudMucPersonCount()
+    }
+
+    //isaCloud: no devices of the contact known yet --> the devicelist fetch is started, the switch waits for its answer
+    //(kMonalOmemoFetchingStateUpdate) and gives up after 15 seconds
+    private func startWaitingForDevices() {
+        waitingForDevices = true
+        encryptionWaitId += 1
+        let waitId = encryptionWaitId
+        //this only starts the fetch (returns NO), the answer arrives via the notification
+        _ = contact.obj.toggleEncryption(true)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 15) {
+            if waitingForDevices && encryptionWaitId == waitId {
+                waitingForDevices = false
+                showingCannotEncryptAlert = true
+            }
+        }
     }
 
     private func isaCloudMucPersonCount() -> Int {
@@ -399,24 +418,58 @@ struct ContactDetails: View {
                     Button {
                         if contact.isEncrypted {
                             showingShouldDisableEncryptionAlert = true
+                        } else if !contact.obj.isMuc && account.omemo.knownDevices(forAddressName: contact.obj.contactJid).isEmpty {
+                            //isaCloud: no devices known yet --> wait for the server's answer before telling the user
+                            startWaitingForDevices()
                         } else {
                             showingCannotEncryptAlert = !contact.obj.toggleEncryption(!contact.isEncrypted)
                         }
                     } label: {
-                        if contact.isEncrypted {
-                            Label {
-                                Text("Messages are encrypted")
-                            } icon: {
-                                Image(systemName: "lock.fill")
+                        HStack {
+                            if contact.isEncrypted {
+                                Label {
+                                    Text("Messages are encrypted")
+                                } icon: {
+                                    Image(systemName: "lock.fill")
+                                }
+                                .foregroundStyle(Color.green)
+                            } else {
+                                Label {
+                                    Text("Messages are NOT encrypted")
+                                } icon: {
+                                    Image(systemName: "lock.open.fill")
+                                }
+                                .foregroundStyle(Color.red)
                             }
-                            .foregroundStyle(Color.green)
+                            if waitingForDevices {
+                                Spacer()
+                                ProgressView()
+                                    .controlSize(.small)
+                            }
+                        }
+                        //isaCloud: on another view than the alert below, because two alerts on the same view can hide each other
+                        .alert(isPresented: $showingNoDeviceListAccessAlert) {
+                            Alert(title: Text("Encryption Not Possible"), message: Text("The server of this contact does not allow people who are not contacts to read the list of devices, so encrypted messages are not possible."), dismissButton: .default(Text("Close")))
+                        }
+                    }
+                    .disabled(waitingForDevices)
+                    .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kMonalOmemoFetchingStateUpdate)).receive(on: RunLoop.main)) { notification in
+                        //isaCloud: devicelist fetch of this contact finished --> try to enable encryption once more
+                        guard waitingForDevices,
+                              let xmppAccount = notification.object as? xmpp,
+                              xmppAccount.accountID == contact.obj.accountID,
+                              notification.userInfo?["jid"] as? String == contact.obj.contactJid,
+                              let isFetching = notification.userInfo?["isFetching"] as? Bool,
+                              !isFetching
+                        else { return }
+                        waitingForDevices = false
+                        if contact.obj.toggleEncryption(true) {
+                            return
+                        }
+                        if notification.userInfo?["fetchError"] as? String == "access" {
+                            showingNoDeviceListAccessAlert = true
                         } else {
-                            Label {
-                                Text("Messages are NOT encrypted")
-                            } icon: {
-                                Image(systemName: "lock.open.fill")
-                            }
-                            .foregroundStyle(Color.red)
+                            showingCannotEncryptAlert = true
                         }
                     }
                     .alert(isPresented: $showingCannotEncryptAlert) {

@@ -53,6 +53,8 @@ NS_ASSUME_NONNULL_BEGIN
 -(void) subscribeAndFetchDevicelistIfNoSessionExistsForJid:(NSString*) buddyJid;
 -(void) checkIfSessionIsStillNeeded:(NSString*) buddyJid isMuc:(BOOL) isMuc;
 -(NSNumber*) getDeviceId;
+//isaCloud: last devicelist fetch error of a jid ("access", "notFound", "other") or nil if the last fetch succeeded (in memory only)
+-(NSString* _Nullable) lastDevicelistFetchErrorForJid:(NSString*) jid;
 
 -(void) untrustAllDevicesFrom:(NSString*) jid;
 
