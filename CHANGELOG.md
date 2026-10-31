@@ -4,6 +4,12 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## Não publicado
 
+## 0.0.1 (build 80) — 31/10/2026 (enviado ao TestFlight às 13:10)
+
+### Corrigido
+- **Mensagens de quem não é contato (em grupos) não são mais recusadas como "você não confiou no dispositivo"** quando é a primeira mensagem de um aparelho que o app ainda não conhecia. O app já confiava sozinho nesses aparelhos, mas a mensagem chegava antes da busca da lista de aparelhos. Mensagens que já falharam continuam com o erro. Quando o motivo é "aparelho ainda desconhecido", o texto diz isso.
+- **Interruptor de criptografia na tela do contato espera o servidor** em vez de mostrar erro no primeiro toque, e liga sozinho quando a lista de aparelhos chega. Se o servidor da pessoa não deixa quem não é contato ler a lista, aparece um aviso explicando.
+
 ## 0.0.1 (build 79) — 31/10/2026 (enviado ao TestFlight às 12:28)
 
 ### Alterado

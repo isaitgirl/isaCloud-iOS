@@ -540,6 +540,13 @@ No iOS 27, "Adicionar contato ou canal" (`AddContactMenu`) e "Convidar para o is
 - **Sem dois-pontos** ("Visto agora", "Online"): fica o texto inteiro, sem ícone, porque ele já diz o que é. VoiceOver continua lendo a frase completa.
 - **Descartado:** chaves novas só com o tempo ("%d horas atrás"): exigiriam tradução em todos os idiomas, e o `chatViewController.m` (UIKit antigo) ainda usa a frase completa.
 
+## OMEMO com quem não é contato (31/10/2026, build 80)
+- **Sintoma:** mensagens de pessoas fora dos contatos, em grupos, vinham como "não foi possível descriptografar porque você não confiou no dispositivo X"; na tela do contato o interruptor de criptografia 1:1 dava erro no 1º toque.
+- **Análise (log de produção):** o ToFU já confia sozinho em quem não é contato (aparelhos de não-contatos aparecem com nível 100). A falha era de ordem: `decryptOmemoEnvelope` só aceita o aparelho se ele já estiver no mapa de aparelhos conhecidos (identidade gravada), e o app só busca lista e bundle depois da 1ª mensagem; a mensagem recusada nunca é reprocessada. Mesmo código do Monal original.
+- **Correção:** aparelho sem identidade + PreKeyMessage para o nosso aparelho + remetente sem confiança explícita (`hasExplicitOmemoTrustActivated`) + `allowMixedTrustInGroups` ligado (padrão) → segue para a descriptografia, e `saveIdentity:` grava ToFU. Fora dessas condições a recusa continua, com texto próprio ("aparelho ainda desconhecido"). Não relaxei com confiança mista desligada nem para quem já teve confiança manual: são os casos de segurança alta.
+- **Interruptor 1:1:** espera a resposta (`kMonalOmemoFetchingStateUpdate`, até 15 s) e liga sozinho. `MLOMEMO` guarda em memória o motivo da falha da lista (`access` para not-authorized/forbidden/presence-subscription-required, `notFound`, `other`) e o passa na notificação (`fetchError`); `access` mostra "o servidor desta pessoa não permite que quem não é contato leia a lista de aparelhos".
+- **Não coberto:** mensagem que já foi recusada continua com o erro (o app não guarda o envelope para tentar de novo); grupos anônimos (sem JID real); e não foi testado em uso real (o simulador não reproduz aparelho desconhecido nem o erro de acesso). Mudança em `MLOMEMO.m`, ponto sensível de merge: aditiva e comentada com `isaCloud:`; vale propor ao Monal.
+
 ## Descartado
 - **Código de afiliado** (Tela "Tenho um código", `mod_invites` do Prosody): removido do roadmap por decisão da Isadora em 26/10/2026.
 - **Aviso de privacidade ao ligar a foto pública** e **"usar o apelido em todas as salas"**: ver as seções acima.

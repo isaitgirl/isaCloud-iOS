@@ -1,4 +1,4 @@
-# Estado atual e handoff (31/10/2026, build 79)
+# Estado atual e handoff (31/10/2026, build 80)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,14 +7,18 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 78** (mensagem "Build 78 ..."), tag `build-79`; `git log --oneline -3` |
-| TestFlight | **79** (31/10/2026; o 78 corrigiu o crash do "visto por último" do 77, tag `build-78`) |
-| `.dev` no iPhone | **79** (igual ao TestFlight, sem a sonda) |
-| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o build 79 e as 3 contas de teste |
+| Commit | o do **build 78** (mensagem "Build 78 ..."), tag `build-80`; `git log --oneline -3` |
+| TestFlight | **80** (31/10/2026; o 79 foi o anterior, tag `build-79`) |
+| `.dev` no iPhone | **80** (igual ao TestFlight, sem a sonda) |
+| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o build 80 e as 3 contas de teste |
 | ExyteChat | `349d33b` na `isaCloud` (a hora sobre o texto, PR 13, e a hora sempre embaixo; **está no build 77**) |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
+
+## O que entrou no build 80 (sobre o 79)
+
+- **OMEMO com quem não é contato** (PR 23): 1ª mensagem de aparelho desconhecido aceita sob ToFU; interruptor de criptografia 1:1 espera o servidor e avisa quando o servidor não deixa não-contatos lerem a lista de aparelhos. **Falta testar em uso real** (grupo com não-contato, no iPhone ou TestFlight): conferir no log `Accepting prekey message from unknown device`. Detalhes em `decisoes.md`.
 
 ## O que entrou no build 79 (sobre o 78)
 

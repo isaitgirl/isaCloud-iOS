@@ -4,8 +4,8 @@ Todas as funcionalidades do isaCloud numa tabela só: o que está **feito** (ris
 
 A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23/10/2026 sobre a `develop` (Monal 7), base atual do fork. As reações (XEP-0444), que eram o item mais trabalhoso, saíram da lista porque já existem na `develop`.
 
-**Total de features no roadmap:** 113
-**Features concluídas:** 106
+**Total de features no roadmap:** 114
+**Features concluídas:** 107
 
 | # | Funcionalidade | Esforço | Observações |
 |---|---|---|---|
@@ -135,6 +135,7 @@ A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23
 | 115 | ~~"Enviando…" como cápsula flutuante na cor do fundo~~ | **feito em 31/10/2026** (build 77; compila nos simuladores e está no `.dev`) | Pedido da Isadora: o aviso de envio de mídia (`ChatInputBar.sendingHint`) tinha fundo cinza (`secondarySystemBackground`) dentro da barra e empurrava a conversa. Agora é uma sobreposição acima da barra (`.overlay(alignment: .top)` com `.offset`), cápsula em `systemBackground` com contorno fino e sombra, sem ocupar espaço. A linha 111 (balão provisório de envio com tentar de novo) segue pendente. |
 | 116 | ~~Conta da conversa com ícone na lista e no topo do chat~~ | **feito em 31/10/2026** (build 77; compila nos simuladores e está no `.dev`) | Pedido da Isadora: na lista de conversas o endereço da conta ganha o ícone `person.crop.circle` da lista de contatos (`MLContactCell`, `UIImageView` com a cor do texto); no topo do chat (`ChatView`) o endereço da conta fica sob o nome (só com mais de uma conta, `HelperTools.accountJidToShow`) e o número de participantes vai para o lado do nome, entre parênteses. Três linhas só na conversa individual com "visto por último" (fontes menores, por causa da barra de 44 pt do iOS 18). **Atualização (build 79):** a linha da conta no topo da conversa **individual** foi comentada por enquanto (nome, conta e "visto por último" são três linhas e não ficaram bem); segue na lista e no topo de grupos e canais. Volta quando houver um desenho melhor. |
 | 117 | ~~"Visto por último" como ícone de olhinho no topo do chat~~ | **feito em 31/10/2026** (build 79; compila nos simuladores e está no `.dev`) | Pedido da Isadora: o rótulo "Visto pela última vez:" some e entra um olho cheio num círculo vazado, do tamanho do ícone da conta, antes do tempo ("2 horas atrás"). Detalhes em `docs/decisoes.md`. |
+| 118 | ~~OMEMO com quem não é contato: aparelho desconhecido sob ToFU e interruptor 1:1 que espera o servidor~~ | **feito em 31/10/2026** (build 80; compila nos simuladores e está no `.dev`; **falta testar em uso real**) | A 1ª mensagem de um aparelho ainda desconhecido (típico: não-contato em grupo) não é mais recusada como "não confiou"; o interruptor de criptografia da tela do contato espera a lista de aparelhos e liga sozinho, e avisa quando o servidor da pessoa não deixa não-contatos lerem a lista. Detalhes em `docs/decisoes.md`. |
 
 ## Aguardando o Monal
 
