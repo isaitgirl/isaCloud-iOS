@@ -1546,6 +1546,8 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
 
 -(void) handleBackgroundProcessingTask:(BGTask*) task
 {
+    //isaCloud: the push placeholder is also removed when we wake up in background, not only when the app opens (see HelperTools isaCloudPushPlaceholderContent)
+    [HelperTools removeIsaCloudPushPlaceholdersAfter:0];
     DDLogInfo(@"RUNNING BGPROCESSING SETUP HANDLER");
     
     self.bgProcessing = task;
@@ -1554,10 +1556,10 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
         strongify(task);
         DDLogWarn(@"*** BGPROCESSING EXPIRED ***");
         [HelperTools flushLogsWithTimeout:0.1];
-        [self updateBackgroundState];       //make sure we are in the correct state
         
         DDLogVerbose(@"Dispatching to main queue...");
-        [HelperTools dispatchAsync:NO reentrantOnQueue:dispatch_get_main_queue() withBlock:^{
+        [self runOnMainQueue:^{
+            if([NSThread isMainThread]) [self updateBackgroundState];       //make sure we are in the correct state (only the main thread may ask UIApplication)
             BOOL background = [HelperTools isInBackground];
             DDLogVerbose(@"Waiting for @synchronized(self)...");
             @synchronized(self) {
@@ -1599,7 +1601,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                 if(stopped)
                     [HelperTools signalSuspension];
             }
-        }];
+        } withTimeout:1.0];
     };
     
     //only proceed with our BGTASK if the NotificationServiceExtension is not running
@@ -1651,6 +1653,8 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
 
 -(void) handleBackgroundRefreshingTask:(BGTask*) task
 {
+    //isaCloud: the push placeholder is also removed when we wake up in background, not only when the app opens (see HelperTools isaCloudPushPlaceholderContent)
+    [HelperTools removeIsaCloudPushPlaceholdersAfter:0];
     DDLogInfo(@"RUNNING BGREFRESHING SETUP HANDLER");
     
     self.bgRefreshing = task;
@@ -1659,10 +1663,10 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
         strongify(task);
         DDLogWarn(@"*** BGREFRESHING EXPIRED ***");
         [HelperTools flushLogsWithTimeout:0.1];
-        [self updateBackgroundState];       //make sure we are in the correct state
         
         DDLogVerbose(@"Dispatching to main queue...");
-        [HelperTools dispatchAsync:NO reentrantOnQueue:dispatch_get_main_queue() withBlock:^{
+        [self runOnMainQueue:^{
+            if([NSThread isMainThread]) [self updateBackgroundState];       //make sure we are in the correct state (only the main thread may ask UIApplication)
             BOOL background = [HelperTools isInBackground];
             DDLogVerbose(@"Waiting for @synchronized(self)...");
             @synchronized(self) {
@@ -1704,7 +1708,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                 if(stopped)
                     [HelperTools signalSuspension];
             }
-        }];
+        } withTimeout:1.0];
     };
     
     //only proceed with our BGTASK if the NotificationServiceExtension is not running
@@ -1855,6 +1859,8 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
 
 -(void) incomingWakeupWithCompletionHandler:(void (^)(UIBackgroundFetchResult result)) completionHandler
 {
+    //isaCloud: the push placeholder is also removed when we wake up in background, not only when the app opens (see HelperTools isaCloudPushPlaceholderContent)
+    [HelperTools removeIsaCloudPushPlaceholdersAfter:0];
     //resume logging and other core tasks
     [HelperTools signalResumption];
     [self updateBackgroundState];       //make sure we are in the correct state
@@ -1892,8 +1898,8 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
             @"handler": completionHandler,
             @"timer": createTimer([self getGracefulTimeoutFor:MLGracefulTimeoutTypeWakeup], (^{
                 DDLogWarn(@"### Wakeup timer triggered for ID %@ ###", completionId);
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    [self updateBackgroundState];       //make sure we are in the correct state
+                [self runOnMainQueue:^{
+                    if([NSThread isMainThread]) [self updateBackgroundState];       //make sure we are in the correct state (only the main thread may ask UIApplication)
                     @synchronized(self) {
                         DDLogInfo(@"Handling wakeup completion %@", completionId);
                         BOOL background = [HelperTools isInBackground];
@@ -1941,7 +1947,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                                 [self checkIfBackgroundTaskIsStillNeeded];
                             });
                     }
-                });
+                } withTimeout:1.0];
             }))
         };
         DDLogInfo(@"Added timer %@ to wakeup completion list...", completionId);
@@ -1956,6 +1962,50 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
         else
             [[MLXMPPManager sharedInstance] nowForegrounded];
     }];
+}
+
+//isaCloud: runs block on the main queue like before, but never waits for the main queue longer than timeout seconds.
+//The expiration handlers of our background tasks used to wait synchronously for the main thread. When the main thread was busy
+//(hundreds of MUC presences updating the UI) the freeze never ran in time and iOS suspended us with an open write transaction (0xdead10cc,
+//seen on 02/11/2026). If the main queue is too slow we run the block on the calling thread instead.
+//NOTE: only the main thread may ask UIApplication for its state, so blocks must not do that when [NSThread isMainThread] is NO.
+-(void) runOnMainQueue:(monal_void_block_t) block withTimeout:(NSTimeInterval) timeout
+{
+    if([NSThread isMainThread])
+    {
+        block();
+        return;
+    }
+    __block BOOL started = NO;
+    NSObject* lock = [NSObject new];
+    dispatch_semaphore_t finished = dispatch_semaphore_create(0);
+    monal_void_block_t runOnce = ^{
+        BOOL first;
+        @synchronized(lock) {
+            first = !started;
+            started = YES;
+        }
+        if(first)
+            block();
+        dispatch_semaphore_signal(finished);
+    };
+    dispatch_async(dispatch_get_main_queue(), runOnce);
+    if(dispatch_semaphore_wait(finished, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(timeout * NSEC_PER_SEC))) != 0)
+    {
+        //the main queue did not run our block in time: take over, unless it has already started the block
+        BOOL first;
+        @synchronized(lock) {
+            first = !started;
+            started = YES;
+        }
+        if(first)
+        {
+            DDLogWarn(@"Main queue did not run our block within %.1f seconds, running it on this thread instead...", timeout);
+            block();
+        }
+        else
+            dispatch_semaphore_wait(finished, DISPATCH_TIME_FOREVER);       //main queue is already progressing, wait for it
+    }
 }
 
 #pragma mark - share sheet added
