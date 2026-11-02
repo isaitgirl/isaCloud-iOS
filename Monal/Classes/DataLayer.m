@@ -414,7 +414,12 @@ static NSDateFormatter* dbFormatter;
 {
     if(accountID == nil || !state)
         return;
+    //isaCloud: measure the serialization (it runs inside the write transaction of the stanza being processed): log only the slow ones
+    CFAbsoluteTime serializeStart = CFAbsoluteTimeGetCurrent();
     NSData* data = [HelperTools serializeObject:state];
+    double serializeMs = (CFAbsoluteTimeGetCurrent() - serializeStart) * 1000.0;
+    if(serializeMs > 50.0)
+        DDLogWarn(@"isaCloud: slow persistState serialization for account %@: %.0f ms, %lu bytes", accountID, serializeMs, (unsigned long)data.length);
     [self.db voidWriteTransaction:^{
         NSString* query = @"UPDATE account SET state=? WHERE account_id=?;";
         NSArray* params = @[data, accountID];
@@ -1608,6 +1613,9 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
                     DDLogDebug(@"Updating stanzaid of message_history_id %@ to %@ for (account=%@, messageid=%@, inbound=%d)...", historyId, stanzaId, accountID, messageId, inbound);
                     //this entry needs an update of its stanzaid
                     [self.db executeNonQuery:@"UPDATE message_history SET stanzaid=? WHERE message_history_id=?" andArguments:@[stanzaId, historyId]];
+                    //isaCloud: the group has our message (see isReflectedGroupMessage:andJid:), so a delivery error that came in before the reflection is void
+                    //(not the errors of a file transfer, they have nothing to do with the delivery)
+                    [self.db executeNonQuery:@"UPDATE message_history SET errorType='', errorReason='' WHERE message_history_id=? AND ifnull(errorType,'')!='' AND ifnull(received,0)=0 AND messageType!=? AND EXISTS(SELECT 1 FROM buddylist WHERE buddy_name=? AND account_id=? AND Muc);" andArguments:@[historyId, kMessageTypeFiletransfer, jid, accountID]];
                 }
                 if(occupantId!=nil)
                 {
@@ -1658,11 +1666,12 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
     NSString* limit = [dbFormatter stringFromDate:before];
     // - received is NULL on messages that never got a receipt: "received=0" would skip them (that is why the first version found nothing);
     // - a retracted message is deleted, not unsent: it must not become a delivery failure;
-    // - only the last week, so an old history (e.g. an imported database) is not resurrected as failures.
+    // - only the last week, so an old history (e.g. an imported database) is not resurrected as failures;
+    // - a message that already has a stanzaid was accepted by the server (reflection or archive copy), so it is not stuck.
     NSString* oldest = [dbFormatter stringFromDate:[NSDate dateWithTimeIntervalSinceNow:-7 * 86400]];
     //every query has to run inside a transaction (MLSQLite throws otherwise), and this one is a plain read
     NSArray* rows = [self.db idReadTransaction:^{
-        return [self.db executeReader:@"SELECT messageid FROM message_history WHERE sent=0 AND ifnull(received,0)=0 AND ifnull(retracted,0)=0 AND inbound=0 AND timestamp < ? AND timestamp > ? AND (errorType IS NULL OR errorType = '');" andArguments:@[limit, oldest]];
+        return [self.db executeReader:@"SELECT messageid FROM message_history WHERE sent=0 AND ifnull(received,0)=0 AND ifnull(retracted,0)=0 AND inbound=0 AND timestamp < ? AND timestamp > ? AND (errorType IS NULL OR errorType = '') AND ifnull(stanzaid,'') = '';" andArguments:@[limit, oldest]];
     }];
     DDLogInfo(@"isaCloud: %lu outgoing message(s) without confirmation older than the launch", (unsigned long)rows.count);
     if(rows.count == 0)
@@ -1673,7 +1682,7 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
         {
             if(row[@"messageid"] == nil)
                 continue;
-            [self.db executeNonQuery:@"UPDATE message_history SET errorType=?, errorReason=? WHERE messageid=? AND sent=0 AND (errorType IS NULL OR errorType = '');"
+            [self.db executeNonQuery:@"UPDATE message_history SET errorType=?, errorReason=? WHERE messageid=? AND sent=0 AND (errorType IS NULL OR errorType = '') AND ifnull(stanzaid,'') = '';"
                         andArguments:@[@"notSent", NSLocalizedString(@"the app was closed before this message could be sent", @""), row[@"messageid"]]];
             changed++;
         }
@@ -1694,6 +1703,16 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
         DDLogVerbose(@"setting message error %@, %@ [%@, %@]", messageid, jid, errorType, errorReason);
         [self.db executeNonQuery:query andArguments:@[errorType, errorReason, messageid, jid]];
     }];
+}
+
+//isaCloud: a group never sends receipts (received stays empty), but the room reflecting our message (stanzaid known) proves it accepted and
+//redistributed it. A delivery error that comes in later is a bounce for some session of ours that is gone (e.g. the server dropping the old
+//session of an iPhone that iOS suspended), not a failure of this message: it must not turn it into a "!" with a resend button.
+-(BOOL) isReflectedGroupMessage:(NSString* _Nonnull) messageid andJid:(NSString* _Nonnull) jid
+{
+    return [[self.db idReadTransaction:^{
+        return @([self.db executeScalar:@"SELECT m.message_history_id FROM message_history AS m JOIN buddylist AS b ON b.buddy_name=m.buddy_name AND b.account_id=m.account_id WHERE m.messageid=? AND m.buddy_name=? AND m.inbound=0 AND ifnull(m.stanzaid,'')!='' AND b.Muc;" andArguments:@[messageid, jid]] != nil);
+    }] boolValue];
 }
 
 -(void) clearErrorOfMessageId:(NSString* _Nonnull) messageid

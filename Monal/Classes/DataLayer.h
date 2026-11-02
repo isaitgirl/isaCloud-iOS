@@ -231,6 +231,7 @@ extern NSString* const kMessageTypeFiletransfer;
  if the server replies with an error for a message, store it
  */
 -(void) setMessageId:(NSString* _Nonnull) messageid andJid:(NSString*) jid errorType:(NSString *_Nonnull) errorType errorReason:(NSString *_Nonnull)errorReason;
+-(BOOL) isReflectedGroupMessage:(NSString* _Nonnull) messageid andJid:(NSString* _Nonnull) jid;     //isaCloud
 
 /// isaCloud: marks as failed the outgoing messages older than `before` that never got confirmed (a crash in the middle of sending
 /// left them with sent=0 and nobody would retry them, so the chat showed the sending indicator forever). Returns how many changed.
