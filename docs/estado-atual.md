@@ -1,4 +1,4 @@
-# Estado atual e handoff (02/11/2026, build 84)
+# Estado atual e handoff (02/11/2026, build 85)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,14 +7,21 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 84** (mensagem "Build 84 ..."), tag `build-84`; `git log --oneline -3` |
-| TestFlight | **84** (02/11/2026, 17:19; o 83 foi o anterior, tag `build-83`, enviado às 16:51) |
-| `.dev` no iPhone | **84** (igual ao TestFlight, sem a sonda; **sem push**, então a extensão de notificação não roda nele) |
+| Commit | o do **build 85** (mensagem "Build 85 ..."), tag `build-85`; `git log --oneline -3` |
+| TestFlight | **85** (02/11/2026, 18:17; o 84 foi o anterior, tag `build-84`, enviado às 17:19) |
+| `.dev` no iPhone | **85** (igual ao TestFlight, sem a sonda; **sem push**, então a extensão de notificação não roda nele) |
 | Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com a build de testes de 02/11/2026 (ad-hoc, por cima do banco, que tem backup do dia em `~/Library/Application Support/isacloud-sim-backups/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
 | ExyteChat | `f5eb80a` na `isaCloud` (cor do texto do meu balão na pílula de reação e na seta de responder, PR 18; antes `1429d6c` = toque longo só no balão + link ignorado com o menu aberto, PR 17; `b7de90e` = toque ignorado com o menu aberto, PR 16; **os três estão no build 83**; `d2ece12` e `583d960`, PR 15 e 14, estão desde o 82) |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
+
+## O que entrou no build 85 (sobre o 84)
+
+- **Estabilidade do `0xdead10cc`** (roadmap 128, 130, 131; PRs 33 e 35): a thread de timeouts só abre transação quando há iq handlers/idle timers e pula contas congeladas; o disconnect faz a parte de rede fora da transação, com prazo de 2 s por espera; o log passa a registrar salvamentos de estado acima de 50 ms (`isaCloud: slow realPersistState`, `slow persistState serialization`). Script novo `scripts/classificar-crashes.py` (receita em `docs/troubleshooting.md`).
+- **Mensagem de grupo entregue não vira "!"/"Reenviar" por erro tardio** (roadmap 129, PR 34, outra sessão). O caso de reconexão não foi reproduzido de ponta a ponta; **validar no iPhone**.
+- **Para validar com dados do 85:** `0xdead10cc` por dia (rodar o script no iPhone), "New Message?" e `EXTENSION_CHECK_IN_TIMEOUT` (fix do 84), linhas "slow ..." e "did not finish within ... while disconnecting" nos logs de produção.
+- **Em estudo, sem código:** botão "Câmera" no clipe (foto/vídeo direto, `UIImagePickerController`; só testável no iPhone).
 
 ## O que entrou no build 82 (sobre o 81)
 

@@ -4,6 +4,8 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## Não publicado
 
+## 0.0.1 (build 85) — 02/11/2026 (enviado ao TestFlight às 18:17)
+
 ### Corrigido
 - **Mensagem de grupo entregue não fica mais com "!" e "Reenviar" por um erro tardio do servidor.** Quando o iOS suspendia o app e o servidor descartava a sessão antiga, ele devolvia um erro `recipient-unavailable` com o id de uma mensagem que a sala já tinha aceitado e redistribuído, e o app a marcava como falha (caso de 02/11/2026 16:43, grupo com OMEMO). Agora o erro é ignorado quando a sala já refletiu a mensagem (o `stanzaid` está gravado), e um erro que chega antes do eco é desfeito quando o eco chega. A marcação de "mensagem presa" da abertura do app também deixa em paz mensagens que já têm `stanzaid`.
 - **Menos chance de o iOS encerrar o app (`0xdead10cc`) ao suspendê-lo.** A thread de timeouts abria uma transação de escrita no banco para cada conta a cada segundo, mesmo sem nada a fazer e mesmo com o app congelando; se o iOS suspendesse o app nesse instante, o banco ficava travado. Agora ela só abre a transação quando há iq handlers ou idle timers pendentes, e pula contas congeladas (`xmpp.m` `updateIqHandlerTimeouts`, `DataLayer hasIdleTimersForAccount:`).
