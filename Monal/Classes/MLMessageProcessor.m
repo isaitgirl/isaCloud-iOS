@@ -85,6 +85,13 @@ static NSMutableDictionary* _typingNotifications;
         if(!errorText)
             errorText = NSLocalizedString(@"No further error description", @"");
         
+        //isaCloud: ignore a late bounce for a group message the room already reflected (it was delivered, see DataLayer)
+        if([[DataLayer sharedInstance] isReflectedGroupMessage:messageNode.id andJid:messageNode.fromUser])
+        {
+            DDLogInfo(@"isaCloud: ignoring late error for group message '%@', the room already reflected it", messageNode.id);
+            return nil;
+        }
+        
         //update db
         [[DataLayer sharedInstance]
             setMessageId:messageNode.id

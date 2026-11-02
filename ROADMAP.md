@@ -4,8 +4,8 @@ Todas as funcionalidades do isaCloud numa tabela só: o que está **feito** (ris
 
 A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23/10/2026 sobre a `develop` (Monal 7), base atual do fork. As reações (XEP-0444), que eram o item mais trabalhoso, saíram da lista porque já existem na `develop`.
 
-**Total de features no roadmap:** 124
-**Features concluídas:** 117
+**Total de features no roadmap:** 125
+**Features concluídas:** 118
 
 | # | Funcionalidade | Esforço | Observações |
 |---|---|---|---|
@@ -146,6 +146,7 @@ A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23
 | 126 | ~~Crash "Messages can not have duplicate ids" ao compartilhar um link de outro app para o isaCloud~~ | **feito em 02/11/2026** (defeito do build 81, corrigido para o build 83; relatório do TestFlight, iOS 27.2) | O aviso `kMonalShareOutboxUpdate` inseria a mensagem com `messages.append`, sem checar duplicata; se um refresh já a tivesse lido do banco, o ExyteChat abortava o app. A mensagem já tinha sido enviada. Agora usa `enqueueNewMessages` (`ChatView.swift`). Detalhes em `docs/decisoes.md`. |
 | 127 | ~~Notificação "New Message?": extensão de notificação morta na inicialização (check-in timeout)~~ | **feito em 02/11/2026** (build 84; causa provável, falta validar no aparelho com "New Message?" no TestFlight) | Log do sistema do iPhone (`log collect`): o launchd matou a extensão com `XPC_EXIT_REASON_EXTENSION_CHECK_IN_TIMEOUT` após 5 s e o iOS entregou o texto cru do fpush. Travou no `+[NotificationService initialize]`, depois do flush dos logs e antes do `-init`. Suspeita: `+[MLUDPLogger flushWithTimeout:]` (arquivo do Monal) espera um `NSCondition` sem predicado e pode perder o sinal e esperar para sempre (o UDP logger está sempre ativo). Correção: flag + `waitUntilDate:` com prazo (timeout + 50 ms) no `MLUDPLogger.m`, comentada com "isaCloud:". Receita em `docs/troubleshooting.md`. As notificações vazias são o placeholder esperado sem push filtering. |
 | 128 | ~~Thread de timeouts sem transação de escrita vazia a cada segundo~~ | **feito em 02/11/2026** (para o build 85; compila em iOS 18.6 e 27, testado abrindo o app no XR) | Primeiro item da análise de estabilidade (`docs/decisoes.md`, "Análise dos `0xdead10cc`"): `updateIqHandlerTimeouts` abria `BEGIN IMMEDIATE` por conta a cada 1 s, mesmo sem handlers e com o app congelando. Agora sai cedo se a fila de parse está congelada ou se não há iq handlers nem idle timers (leitura só). Próximos itens da análise: tirar a rede do `disconnect` de dentro da transação e medir o `realPersistState`. |
+| 129 | ~~Mensagem de grupo já entregue aparecia com "!" e "Reenviar" por um erro tardio do servidor~~ | **feito em 02/11/2026** (para o build 85; compila em iOS 18.6 e 27, queries validadas no banco de produção; **falta** ver no aparelho, o caso é raro) | Caso da Isadora (build 84, 02/11/2026 16:43): a mensagem foi confirmada e refletida pela sala em 1 s (`stanzaid` gravado), o Thiago respondeu, mas 10 min depois, na reconexão depois de o iOS suspender o app, o servidor entregou um `<message type=error>` `recipient-unavailable` (`by` = servidor da conta, com `<delay>`) com o id dela e o app marcou a bolha como falha. A guarda do Monal só olha `received`, que em grupo nunca é 1. **Correção:** `isReflectedGroupMessage:andJid:` (grupo + `stanzaid` conhecido) faz o `MLMessageProcessor` ignorar o erro; o dedup limpa um erro que chegou antes do eco (menos erros de transferência de arquivo); a marcação `notSent` da abertura do app passa a exigir `stanzaid` vazio. Detalhes em `docs/decisoes.md`. |
 
 ## Aguardando o Monal
 
