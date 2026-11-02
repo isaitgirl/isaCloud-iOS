@@ -649,3 +649,10 @@ No iOS 27, "Adicionar contato ou canal" (`AddContactMenu`) e "Convidar para o is
 - **Descartado:** `tableView.hitTest` para saber se o toque caiu no balão: no iOS 27 devolve a tabela, a célula ou o `contentView`, nunca a view interna; a área medida também não fica velha depois da rolagem (testado no iOS 18.6).
 - **Link:** a célula (`UIHostingConfiguration`) herda o `openURL` do app; o fork põe nela um `OpenURLAction` que só repassa ao `openURL` de fora quando `messageMenuRow == nil`. Não mexe em `ExternalLinkViewModifier` do app. No iOS 18.6 e no 27 o toque longo em link abre o menu do app.
 - **Não verificado:** a hora sozinha no iOS 27 (o toque caiu na folha de reações); avatar nos dois simuladores.
+
+## Crash ao compartilhar um link para o isaCloud: mensagem duplicada na lista (02/11/2026, build 81, roadmap 126)
+
+- **Relatório:** TestFlight, build 81, iOS 27.2, 15:21:52, thread principal, `ChatView.mapMessages` (`WrappingMessages.swift:14`) → `fatalError("Messages can not have duplicate ids")`, chamado por `ChatView.init` no `body`. A Isadora estava compartilhando um link do iTunes para o isaCloud; a mensagem **chegou ao destinatário**.
+- **Causa:** o app abre a folha de compartilhar pela extensão, e a mensagem sai pelo outbox (`MonalAppDelegate.m`, `kMonalShareOutboxUpdate`). O `ChatView` a inseria com `messages.append(...)`, sem a checagem de duplicata que `enqueueNewMessages` e `loadMissedMessages` já têm. Com o chat aberto, o `kMonalRefresh` (`loadMissedMessages`) podia ler a mesma mensagem do banco antes de o aviso chegar. Duas mensagens com o mesmo `id`: o ExyteChat aborta o app.
+- **Decisão:** o aviso do outbox passa a usar `enqueueNewMessages([ChatViewMessage(message)])` (ignora o que já está na lista ou na fila). Os outros `messages.append` (envio direto, encaminhar) ficam como estão: rodam na hora, na thread principal, logo depois de gravar a mensagem, sem janela para um refresh no meio.
+- **Mesma família do crash visto no iOS 18.6 ao encaminhar** (seção "Encaminhar mensagens: mídia"): `enqueueNewMessages` já tinha ganhado o filtro por causa dele.
