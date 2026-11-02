@@ -287,11 +287,77 @@ struct GifMessageBubble: View {
     }
 }
 
-/// colours of the messages the current user sends: the isaCloud pink with white text
+/// colours of the messages the current user sends. They come from Settings > User Interface > Appearance: "#RRGGBB" in the
+/// ownBubbleColorHex and ownBubbleTextColorHex keys; an empty value is the isaCloud default, the pink asset with white text.
+/// The hex and contrast helpers are in IsaCloudColorMath (pure, unit tested).
 enum IsaCloudBubbleColors {
-    static let mine = Color("isaCloudPink")
-    static let mineText = Color.white
-    static let mineTime = Color.white.opacity(0.85)
+    private static let bubbleKey = "ownBubbleColorHex"
+    private static let textKey = "ownBubbleTextColorHex"
+    private static let bubbleCache = HexColorCache()
+    private static let textCache = HexColorCache()
+
+    static var mine: Color { bubble(storedHex(bubbleKey)) }
+    static var mineText: Color { text(storedHex(textKey)) }
+    static var mineTime: Color { time(storedHex(textKey)) }
+
+    /// the bubble colour for a hex value; the chat view passes the value it observes, so it redraws when the value changes
+    static func bubble(_ hex: String) -> Color {
+        return bubbleCache.color(for: hex) { IsaCloudColorMath.color(fromHex: $0) ?? Color("isaCloudPink") }
+    }
+
+    /// the text colour for a hex value
+    static func text(_ hex: String) -> Color {
+        return textCache.color(for: hex) { IsaCloudColorMath.color(fromHex: $0) ?? Color.white }
+    }
+
+    /// the time under my messages: the text colour at 85% opacity (white at 85% by default)
+    static func time(_ hex: String) -> Color {
+        return text(hex).opacity(0.85)
+    }
+
+    /// true when a colour was chosen in the settings (the default is both values empty)
+    static var hasCustomColors: Bool {
+        return !storedHex(bubbleKey).isEmpty || !storedHex(textKey).isEmpty
+    }
+
+    /// false when a chosen colour leaves the text hard to read on the bubble; the default is not warned about
+    static var hasReadableContrast: Bool {
+        guard hasCustomColors else {
+            return true
+        }
+        return IsaCloudColorMath.isReadable(bubble: mine, text: mineText)
+    }
+
+    /// back to the isaCloud default colours (empty values)
+    static func resetToDefaults() {
+        let defaults = HelperTools.defaultsDB()
+        defaults.set("", forKey: bubbleKey)
+        defaults.set("", forKey: textKey)
+    }
+
+    private static func storedHex(_ key: String) -> String {
+        return HelperTools.defaultsDB().string(forKey: key) ?? ""
+    }
+}
+
+/// keeps the colour of the last hex value read. The settings are read while the chats draw the messages, which can happen
+/// off the main thread, so the cache is locked.
+private final class HexColorCache {
+    private let lock = NSLock()
+    private var lastHex: String?
+    private var lastColor = Color.clear
+
+    func color(for hex: String, make: (String) -> Color) -> Color {
+        lock.lock()
+        defer { lock.unlock() }
+        if lastHex == hex {
+            return lastColor
+        }
+        let color = make(hex)
+        lastHex = hex
+        lastColor = color
+        return color
+    }
 }
 
 /// isaCloud: the reactions of a GIF, drawn like the footer of the other messages (ExyteChat fork, MessageReactionView.swift): a row of
