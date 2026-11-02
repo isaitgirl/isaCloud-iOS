@@ -1,4 +1,4 @@
-# Estado atual e handoff (02/11/2026, build 83)
+# Estado atual e handoff (02/11/2026, build 84)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,9 +7,9 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 83** (mensagem "Build 83 ..."), tag `build-83`; `git log --oneline -3` |
-| TestFlight | **83** (02/11/2026, 16:51; o 82 foi o anterior, tag `build-82`) |
-| `.dev` no iPhone | **83** (igual ao TestFlight, sem a sonda; **sem push**, então a extensão de notificação não roda nele) |
+| Commit | o do **build 84** (mensagem "Build 84 ..."), tag `build-84`; `git log --oneline -3` |
+| TestFlight | **84** (02/11/2026, 17:19; o 83 foi o anterior, tag `build-83`, enviado às 16:51) |
+| `.dev` no iPhone | **84** (igual ao TestFlight, sem a sonda; **sem push**, então a extensão de notificação não roda nele) |
 | Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com a build de testes de 02/11/2026 (ad-hoc, por cima do banco, que tem backup do dia em `~/Library/Application Support/isacloud-sim-backups/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
 | ExyteChat | `f5eb80a` na `isaCloud` (cor do texto do meu balão na pílula de reação e na seta de responder, PR 18; antes `1429d6c` = toque longo só no balão + link ignorado com o menu aberto, PR 17; `b7de90e` = toque ignorado com o menu aberto, PR 16; **os três estão no build 83**; `d2ece12` e `583d960`, PR 15 e 14, estão desde o 82) |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
@@ -20,6 +20,11 @@ Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 
 - **Menu da mensagem em ~250 ms** (PR 25 do app, PR 15 do fork): o toque longo do SwiftUI ignorava a duração e disparava em ~600 ms; agora é um `UILongPressGestureRecognizer` de 0,15 s na tabela do ExyteChat + animação de 0,1 s + vibração preparada no toque. **Confirmado pela Isadora no iPhone, GIF incluído.** Detalhes em `decisoes.md` ("Menu da mensagem em 250 ms") e `exytechat-fork.md` (mudança nº 3).
 - **"Salvar Imagem" e "Salvar Vídeo" na folha de compartilhar do chat** (PR 14 do fork): a extensão do arquivo compartilhado era o mime type em hexadecimal. Testado no simulador iOS 18.6; **falta** vídeo, iOS 27 e conferir no iPhone; o `MediaViewer.swift` (Mídia Compartilhada) não foi verificado.
+
+## O que entrou no build 84 (sobre o 83)
+
+- **Extensão de notificação não trava mais na inicialização** (PR 32 do app; roadmap 127): o `MLUDPLogger flushWithTimeout:` esperava sem prazo e a extensão foi morta pelo iOS por "extension check-in timeout" (o "New Message?" das 15:54, build 81). Agora o sinal fica numa flag e a espera tem prazo. **Causa provável, sem pilha; validar no TestFlight** contando "New Message?" e mortes por check-in timeout (receita em `docs/troubleshooting.md`, "Notificação fantasma"). As notificações **vazias** continuam: são o placeholder esperado sem push filtering.
+- **Ainda sem causa:** as vazias de 12:13 e 12:48 de 02/11 (saíram da janela de log do iPhone). Para o próximo caso: anotar o minuto e rodar `sudo log collect --device-udid <UDID> --last 12h` logo depois.
 
 ## O que entrou no build 83 (sobre o 82)
 
