@@ -4,8 +4,8 @@ Todas as funcionalidades do isaCloud numa tabela só: o que está **feito** (ris
 
 A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23/10/2026 sobre a `develop` (Monal 7), base atual do fork. As reações (XEP-0444), que eram o item mais trabalhoso, saíram da lista porque já existem na `develop`.
 
-**Total de features no roadmap:** 119
-**Features concluídas:** 110
+**Total de features no roadmap:** 121
+**Features concluídas:** 112
 
 | # | Funcionalidade | Esforço | Observações |
 |---|---|---|---|
@@ -141,6 +141,8 @@ A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23
 | 121 | ~~Salvar imagem e vídeo na galeria pela folha de compartilhar do visualizador do chat~~ | **feito em 02/11/2026** (build 82; PR 14 do fork; testado no simulador iOS 18.6, ainda não no iPhone com vídeo nem no iOS 27) | A folha de compartilhar só oferecia Arquivos porque o app guarda os anexos com o mime type em hexadecimal no lugar da extensão. O fork do ExyteChat passa a compartilhar uma cópia temporária com a extensão certa, e o iOS volta a oferecer "Salvar Imagem" e "Salvar Vídeo". Sem botão novo e sem permissão nova. O visualizador da "Mídia Compartilhada" (`MediaViewer.swift`) não foi verificado. Detalhes em `docs/decisoes.md`. |
 | 122 | ~~Menu da mensagem em 250 ms (toque longo do UIKit)~~ | **feito em 02/11/2026** (build 82; PR 15 do fork; confirmado pela Isadora no iPhone, inclusive no GIF) | O toque longo do SwiftUI na lista ignorava a duração e disparava em ~600 ms (medido no iPhone 12 Pro). Agora é um `UILongPressGestureRecognizer` de 0,15 s na tabela do fork, com a vibração preparada no toque, e a animação do app em 0,1 s. Detalhes em `docs/decisoes.md` e `docs/exytechat-fork.md`, mudança nº 3. |
 | 123 | ~~Visualizador de imagens abrindo sozinho depois de fechar o menu da mensagem~~ | **feito em 02/11/2026** (defeito do build 82, corrigido para o build 83; PR 16 do fork; confirmado pela Isadora no iPhone) | O toque curto da mídia dispara ao levantar o dedo do toque longo e o visualizador ficava na fila atrás do menu. O fork do ExyteChat ignora o toque na mensagem enquanto o menu está aberto (`ChatViewModel`, mudança nº 16). Falta conferir vídeo, link tocável e o replay do GIF. Detalhes em `docs/decisoes.md`. |
+| 124 | ~~Toque longo só no balão: não abrir o menu no espaço vazio, na hora nem no avatar~~ | **feito em 02/11/2026** (entra no build 83; PR 17 do fork; confirmado pela Isadora no iPhone; testado nos simuladores iOS 18.6 e 27) | O reconhecedor do UIKit (mudança nº 3 do fork) pegava a linha inteira. Agora o `gestureRecognizerShouldBegin` compara o toque com a área do balão medida pelo SwiftUI (`MessageBubbleFrame`, coordenadas da janela; o `hitTest` não serve no iOS 27). Sem área medida, abre como antes. O GIF mede o próprio balão (`GifMessageBubble`). Detalhes em `docs/decisoes.md`. |
+| 125 | ~~Link tocado com o menu aberto não abre mais depois da reação~~ | **feito em 02/11/2026** (entra no build 83; PR 17 do fork; confirmado pela Isadora no iPhone) | O `openURL` do app era chamado ao levantar o dedo do toque longo sobre um link. O fork passa um `openURL` na célula que ignora a URL enquanto `messageMenuRow != nil`. Toque curto continua abrindo. Detalhes em `docs/decisoes.md`. |
 
 ## Aguardando o Monal
 

@@ -641,3 +641,11 @@ No iOS 27, "Adicionar contato ou canal" (`AddContactMenu`) e "Convidar para o is
 - **Ponto sensível de merge com o Monal:** só o bloco comentado com "isaCloud:" em `swizzled_queueLogMessage` (+24 linhas). Efeito colateral aceito: um log síncrono feito de dentro da fila de log vira async (a linha sai depois do bloco atual).
 - **Descartado:** log sempre assíncrono (perderia a última linha de erro antes de um crash) e esperar as escritas terminarem antes de suspender (mexe no ciclo de vida inteiro).
 - **Medido no simulador iOS 18.6 (código temporário, fora do repositório):** fila suspensa + `DDLogError` em thread de fundo: antes travava para sempre, depois volta em 259 ms; sem suspensão 0,8 ms. **Não validado:** o `0xdead10cc` real no aparelho (contar por dia nos crash logs) e o iOS 27 em execução. Pendente: `DDLogStderr` com `[DDLog flushLog]` sem limite.
+
+## Toque longo só no balão e link ignorado com o menu aberto (02/11/2026, roadmap 124 e 125)
+
+- **Sintomas (Isadora, depois do build 82):** (1) o toque longo abria o menu mesmo no espaço vazio da linha; (2) num toque longo sobre um link, depois da reação a URL era aberta.
+- **Balão:** `gestureRecognizerShouldBegin` do reconhecedor da tabela compara `location(in: nil)` (coordenadas da janela) com a área do balão que o SwiftUI mede por linha (`reportsMessageBubbleFrame()`, `GeometryReader` em `.global`, `PreferenceKey` no `MessageView`; citação + balão, sem avatar, status e hora). Margem de 6 pt. Sem área medida, o reconhecedor começa como antes (falha para o lado seguro). O GIF é um balão do app: `GifMessageBubble` aplica o mesmo `reportsMessageBubbleFrame()` (imagem + reações, sem a hora).
+- **Descartado:** `tableView.hitTest` para saber se o toque caiu no balão: no iOS 27 devolve a tabela, a célula ou o `contentView`, nunca a view interna; a área medida também não fica velha depois da rolagem (testado no iOS 18.6).
+- **Link:** a célula (`UIHostingConfiguration`) herda o `openURL` do app; o fork põe nela um `OpenURLAction` que só repassa ao `openURL` de fora quando `messageMenuRow == nil`. Não mexe em `ExternalLinkViewModifier` do app. No iOS 18.6 e no 27 o toque longo em link abre o menu do app.
+- **Não verificado:** a hora sozinha no iOS 27 (o toque caiu na folha de reações); avatar nos dois simuladores.
