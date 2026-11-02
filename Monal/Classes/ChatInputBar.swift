@@ -14,6 +14,8 @@ struct ChatInputBar: View {
     var onSaveEdit: () -> Void
     var onCancelEdit: () -> Void
     var onAttachPhotos: () -> Void
+    /// isaCloud: opens the camera; the item is only offered on devices with a camera
+    var onAttachCamera: () -> Void
     var onAttachFile: () -> Void
     /// isaCloud: attaches the image on the clipboard; the item is only offered while the clipboard has one
     var onPasteImage: () -> Void = {}
@@ -95,6 +97,13 @@ struct ChatInputBar: View {
 
     private var attachMenu: some View {
         Menu {
+            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                Button {
+                    onAttachCamera()
+                } label: {
+                    Label("Camera", systemImage: "camera")
+                }
+            }
             Button {
                 onAttachPhotos()
             } label: {

@@ -442,6 +442,73 @@ struct SystemMediaPicker: UIViewControllerRepresentable {
     }
 }
 
+/// isaCloud: the camera for a chat attachment (a photo or a video). The media is not saved to the photo library: it is handed over as
+/// a temporary file, like the pictures of SystemMediaPicker. It uses the system's default video quality, so the upload stays small.
+struct CameraPicker: UIViewControllerRepresentable {
+    @Binding var isPresented: Bool
+    let onPicked: ([(url: URL, isVideo: Bool)]) -> Void
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.mediaTypes = [UTType.image.identifier, UTType.movie.identifier]
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(isPresented: $isPresented, onPicked: onPicked)
+    }
+
+    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        @Binding var isPresented: Bool
+        let onPicked: ([(url: URL, isVideo: Bool)]) -> Void
+
+        init(isPresented: Binding<Bool>, onPicked: @escaping ([(url: URL, isVideo: Bool)]) -> Void) {
+            _isPresented = isPresented
+            self.onPicked = onPicked
+        }
+
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            isPresented = false
+            //the system deletes the video file as soon as the camera closes: keep a copy of it, in a folder of its own
+            let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+            do {
+                try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            } catch {
+                DDLogError("Could not create the folder for the captured media: \(error)")
+                return
+            }
+            if let movieURL = info[.mediaURL] as? URL {
+                let copy = directory.appendingPathComponent(movieURL.lastPathComponent)
+                do {
+                    try FileManager.default.copyItem(at: movieURL, to: copy)
+                    onPicked([(url: copy, isVideo: true)])
+                } catch {
+                    DDLogError("Could not copy the captured video: \(error)")
+                }
+            } else if let image = info[.originalImage] as? UIImage, let data = image.jpegData(compressionQuality: 0.9) {
+                let url = directory.appendingPathComponent("IMG-\(UUID().uuidString).jpg")
+                do {
+                    try data.write(to: url)
+                    onPicked([(url: url, isVideo: false)])
+                } catch {
+                    DDLogError("Could not save the captured photo: \(error)")
+                }
+            } else {
+                DDLogError("The camera returned neither a photo nor a video")
+            }
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            isPresented = false
+        }
+    }
+}
+
 //see https://www.hackingwithswift.com/books/ios-swiftui/importing-an-image-into-swiftui-using-phpickerviewcontroller
 struct ImagePicker: UIViewControllerRepresentable {
     @Binding var image: UIImage?

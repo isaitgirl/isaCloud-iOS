@@ -4,8 +4,8 @@ Todas as funcionalidades do isaCloud numa tabela só: o que está **feito** (ris
 
 A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23/10/2026 sobre a `develop` (Monal 7), base atual do fork. As reações (XEP-0444), que eram o item mais trabalhoso, saíram da lista porque já existem na `develop`.
 
-**Total de features no roadmap:** 127
-**Features concluídas:** 119
+**Total de features no roadmap:** 128
+**Features concluídas:** 120
 
 | # | Funcionalidade | Esforço | Observações |
 |---|---|---|---|
@@ -149,6 +149,7 @@ A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23
 | 129 | ~~Mensagem de grupo já entregue aparecia com "!" e "Reenviar" por um erro tardio do servidor~~ | **feito em 02/11/2026** (build 85; compila em iOS 18.6 e 27, queries validadas no banco de produção; **falta** ver no aparelho, o caso é raro) | Caso da Isadora (build 84, 02/11/2026 16:43): a mensagem foi confirmada e refletida pela sala em 1 s (`stanzaid` gravado), o Thiago respondeu, mas 10 min depois, na reconexão depois de o iOS suspender o app, o servidor entregou um `<message type=error>` `recipient-unavailable` (`by` = servidor da conta, com `<delay>`) com o id dela e o app marcou a bolha como falha. A guarda do Monal só olha `received`, que em grupo nunca é 1. **Correção:** `isReflectedGroupMessage:andJid:` (grupo + `stanzaid` conhecido) faz o `MLMessageProcessor` ignorar o erro; o dedup limpa um erro que chegou antes do eco (menos erros de transferência de arquivo); a marcação `notSent` da abertura do app passa a exigir `stanzaid` vazio. Detalhes em `docs/decisoes.md`. |
 | 130 | ~~Desconectar sem segurar o banco esperando a rede~~ | **feito em 02/11/2026** (build 85; compila em iOS 18.6 e 27; testado no XR indo e voltando do segundo plano) | Segundo item da análise dos `0xdead10cc` (`docs/decisoes.md`): `disconnectWithStreamError` enviava o último ack e fechava o stream com `waitUntilFinished:YES` dentro da transação; a escrita de rede (`MLOutputStream write:maxLength:`) ficava presa e o banco travado. Agora: transação de limpeza, rede fora da transação com prazo de 2 s (`isaCloudRunOnSendQueue:withTimeout:`), transação curta para gravar o estado. |
 | 131 | Medir em produção os salvamentos lentos do estado (`realPersistState`) | **em andamento** (log no build 85; falta colher os dados no iPhone) | Mecanismo mais comum dos `0xdead10cc` (5 de 14): o app é suspenso serializando o estado dentro da transação. O log `isaCloud: slow realPersistState` / `slow persistState serialization` (acima de 50 ms) traz tempo, bytes e o tamanho de cada parte; com os dados, decidir entre enxugar o estado e processar stanzas em lote. Acompanhar com `scripts/classificar-crashes.py`. |
+| 132 | ~~Câmera no clipe: foto ou vídeo direto na conversa~~ | **feito em 02/11/2026** (build 86; compila em iOS 18.6 e 27; testado no iPhone pela Isadora, o simulador não tem câmera) | Item "Câmera" no menu do clipe; captura com `UIImagePickerController` e entra como anexo, sem salvar na galeria. Só testável no iPhone. Análise: `docs/feature-enviar-midia-da-camera.md`. |
 
 ## Aguardando o Monal
 

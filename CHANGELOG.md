@@ -4,6 +4,9 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## Não publicado
 
+### Adicionado
+- **"Câmera" no clipe da caixa de mensagem.** Abre a câmera do iOS para tirar uma foto ou gravar um vídeo, que entra na barra de anexos como as mídias da biblioteca e é enviado quando a pessoa toca em enviar. Não salva na biblioteca de Fotos e usa a qualidade de vídeo padrão do sistema. O item só aparece em aparelhos com câmera; com a permissão negada, o app mostra o alerta com o atalho para Ajustes. Textos novos em pt-BR: "Câmera", "Falta permissão da câmera", "O isaCloud não tem permissão para usar a câmera", "Ajustes" (`CameraPicker` em `SwiftuiHelpers.swift`, `ChatInputBar.swift`, `ChatView.swift`). Análise em `docs/feature-enviar-midia-da-camera.md`.
+
 ## 0.0.1 (build 85) — 02/11/2026 (enviado ao TestFlight às 18:17)
 
 ### Corrigido
