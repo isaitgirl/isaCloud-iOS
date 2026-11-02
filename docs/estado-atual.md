@@ -1,4 +1,4 @@
-# Estado atual e handoff (31/10/2026, build 80)
+# Estado atual e handoff (02/11/2026, build 81)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,14 +7,23 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 78** (mensagem "Build 78 ..."), tag `build-80`; `git log --oneline -3` |
-| TestFlight | **80** (31/10/2026; o 79 foi o anterior, tag `build-79`) |
-| `.dev` no iPhone | **80** (igual ao TestFlight, sem a sonda) |
-| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o build 80 e as 3 contas de teste |
+| Commit | o do **build 81** (mensagem "Build 81 ..."), tag `build-81`; `git log --oneline -3` |
+| TestFlight | **81** (02/11/2026 11:41; o 80 foi o anterior, tag `build-80`) |
+| `.dev` no iPhone | **81** (igual ao TestFlight, sem a sonda; **sem push**, então a extensão de notificação não roda nele) |
+| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 ainda com o build 80 e as 3 contas de teste (o 81 só foi compilado neles, **não instalado**, para não apagar o banco de teste; a extensão não roda no simulador com `simctl push`) |
 | ExyteChat | `349d33b` na `isaCloud` (a hora sobre o texto, PR 13, e a hora sempre embaixo; **está no build 77**) |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
+
+## O que entrou no build 81 (sobre o 80)
+
+Tema: **`0xdead10cc` em segundo plano** (PR 24; causa, correção, limites e **pontos sensíveis de merge com o Monal** em `decisoes.md`, seção "Expiração das tarefas de segundo plano..."; roadmap 106).
+- **Camada 1:** o `expirationHandler` do BGRefresh/BGProcessing e o timer de wakeup esperam a thread principal no máximo 1 s (`MonalAppDelegate runOnMainQueue:withTimeout:`) e, se ela não responder, congelam as contas na própria thread. Achado no log do iPhone: uma acordada de ~30 s com centenas de presenças de canais MUC (um canal movimentado respondeu por mais da metade) deixava a thread principal saturada e o congelamento nunca rodava.
+- **Extensão de notificação** sai com flush manual, `[MLProcessLock unlock]` e `_exit(0)` (5 mortes `0xdead10cc` dela em 31/10 e 01/11 estavam presas dentro do `exit()`).
+- **Aviso "isaCloud" vazio** também removido nas acordadas em segundo plano.
+- **Falta validar no aparelho (nada disso foi testado em execução):** contar `0xdead10cc` por dia nos crash logs do iPhone (base: 1 a 3 por dia desde 28/10; no app e, separado, na `NotificationService`) e procurar no log "Main queue did not run our block" seguido de "Posting kMonalWillBeFreezed" em 1 a 2 s. Comandos: `docs/troubleshooting.md` e a memória `ler-log-de-producao-do-iphone`.
+- **Próximos passos:** (1) camada 2: gravar as presenças de canal em lote (um `persistState` e uma atualização de tela por lote; arquivos `xmpp.m`/`MLMucProcessor.m` do Monal, validar antes); (2) o aviso cru **"New Message?"** (texto original do push quando a extensão não entrega o conteúdo): falta o horário de um caso para achar o push no log do iPhone; a nossa limpeza nunca o remove; (3) propor `_exit` e o fallback de expiração ao Monal.
 
 ## O que entrou no build 80 (sobre o 79)
 

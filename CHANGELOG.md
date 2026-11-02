@@ -4,6 +4,8 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## Não publicado
 
+## 0.0.1 (build 81) — 02/11/2026 (enviado ao TestFlight às 11:41)
+
 ### Corrigido
 - **O app podia ser encerrado pelo iOS (`0xdead10cc`) no fim de uma acordada em segundo plano com muitas presenças de canal.** Quando o iOS avisa que o tempo da tarefa de segundo plano acabou, o app espera a thread principal para desconectar as contas e se congelar. Num canal movimentado (centenas de presenças de participantes a cada acordada) a thread principal ficava ocupada por mais de 5 s, o congelamento não chegava a rodar e o iOS suspendia o app no meio de uma gravação no banco. Agora o app espera a thread principal no máximo 1 s e, se ela não responder, faz o congelamento na própria thread da tarefa (`MonalAppDelegate.m`: tarefas de atualização e de processamento em segundo plano e o timer de wakeup). Quando isso acontece o log mostra "Main queue did not run our block within 1.0 seconds". **Ainda não testado no aparelho.**
 - **A extensão de notificação sai sem passar pelo `exit()`.** Nos 5 relatórios de `0xdead10cc` da extensão (31/10 e 01/11) o processo estava preso dentro do `exit()` (fase de `atexit` e destrutores) quando o iOS o suspendeu com os arquivos do banco e de lock abertos. Agora ela faz o flush dos logs, libera o lock do processo e sai com `_exit(0)`, que encerra na hora e solta todos os locks. **Ainda não testado no aparelho** (o simulador não roda a nossa extensão).
