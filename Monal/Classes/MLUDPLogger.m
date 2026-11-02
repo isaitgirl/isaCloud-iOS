@@ -53,6 +53,10 @@ static volatile MLUDPLogger* _self;
     if(_self != nil)
     {
         NSCondition* condition = [NSCondition new];
+        //isaCloud: a signal sent before the wait below starts was lost and the wait never ended (the timer is cancelled by the
+        //flush block too): the flag remembers it, and the wait has a deadline anyway (notification extension killed at launch
+        //with "extension check-in timeout", 02/11/2026)
+        __block BOOL done = NO;
         //this timeout will trigger if the flush could not be finished in time (leeway of 10ms)
         //use dispatch_source_set_timer() directly instead of createTimer() because we don't want to log anything in here
         dispatch_source_t timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0));
@@ -61,6 +65,7 @@ static volatile MLUDPLogger* _self;
             [[self class] logError:@"flush timer triggered!"];
             dispatch_source_cancel(timer);
             [condition lock];
+            done = YES;
             [condition signal];
             [condition unlock];
         });
@@ -70,12 +75,15 @@ static volatile MLUDPLogger* _self;
             [[self class] logError:@"flush succeeded in time"];
             dispatch_source_cancel(timer);      //stop timer
             [condition lock];
+            done = YES;
             [condition signal];
             [condition unlock];
         });
         //wait for either timeout or flush to trigger
+        NSDate* deadline = [NSDate dateWithTimeIntervalSinceNow:timeout + 0.050];
         [condition lock];
-        [condition wait];
+        while(!done && [condition waitUntilDate:deadline])
+            ;
         [condition unlock];
     }
 }

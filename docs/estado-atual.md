@@ -29,6 +29,7 @@ Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 - **Cor do balão e do texto das minhas mensagens** (PR 29 do app, PR 18 do fork; roadmap 119). **Falta** testar no iPhone com cor personalizada: seta de responder, enviar, editar e gravar.
 - **"Compartilhar…" no menu das mídias** (PR 31; roadmap 120). Testado em foto, GIF e vídeo nos simuladores; **falta** áudio, documento e o iPhone.
 - **Crash ao compartilhar um link para o isaCloud** (build 81, iOS 27.2): corrigido (PR 30; roadmap 126). Testado no XR; no iOS 27 o share sheet do Safari do simulador não abriu.
+- **Depois do envio:** notificação "New Message?" das 15:54 = extensão morta por check-in timeout na inicialização; corrigido no código (`MLUDPLogger flushWithTimeout` com flag e prazo, roadmap 127, **para o build 84**, validar no aparelho). O crash do e-mail (`CrashReport-1.mcrash-7`) é o mesmo "duplicate ids" das 15:21, já corrigido no 83.
 - **Próximas frentes:** validar o `0xdead10cc` com o build 83 e a camada 2 (presenças de canal em lote, roadmap 106).
 
 ## O que entrou no build 81 (sobre o 80)

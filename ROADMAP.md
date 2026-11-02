@@ -4,8 +4,8 @@ Todas as funcionalidades do isaCloud numa tabela só: o que está **feito** (ris
 
 A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23/10/2026 sobre a `develop` (Monal 7), base atual do fork. As reações (XEP-0444), que eram o item mais trabalhoso, saíram da lista porque já existem na `develop`.
 
-**Total de features no roadmap:** 122
-**Features concluídas:** 115
+**Total de features no roadmap:** 123
+**Features concluídas:** 116
 
 | # | Funcionalidade | Esforço | Observações |
 |---|---|---|---|
@@ -144,6 +144,7 @@ A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23
 | 124 | ~~Toque longo só no balão: não abrir o menu no espaço vazio, na hora nem no avatar~~ | **feito em 02/11/2026** (build 83; PR 17 do fork; confirmado pela Isadora no iPhone; testado nos simuladores iOS 18.6 e 27) | O reconhecedor do UIKit (mudança nº 3 do fork) pegava a linha inteira. Agora o `gestureRecognizerShouldBegin` compara o toque com a área do balão medida pelo SwiftUI (`MessageBubbleFrame`, coordenadas da janela; o `hitTest` não serve no iOS 27). Sem área medida, abre como antes. O GIF mede o próprio balão (`GifMessageBubble`). Detalhes em `docs/decisoes.md`. |
 | 125 | ~~Link tocado com o menu aberto não abre mais depois da reação~~ | **feito em 02/11/2026** (build 83; PR 17 do fork; confirmado pela Isadora no iPhone) | O `openURL` do app era chamado ao levantar o dedo do toque longo sobre um link. O fork passa um `openURL` na célula que ignora a URL enquanto `messageMenuRow != nil`. Toque curto continua abrindo. Detalhes em `docs/decisoes.md`. |
 | 126 | ~~Crash "Messages can not have duplicate ids" ao compartilhar um link de outro app para o isaCloud~~ | **feito em 02/11/2026** (defeito do build 81, corrigido para o build 83; relatório do TestFlight, iOS 27.2) | O aviso `kMonalShareOutboxUpdate` inseria a mensagem com `messages.append`, sem checar duplicata; se um refresh já a tivesse lido do banco, o ExyteChat abortava o app. A mensagem já tinha sido enviada. Agora usa `enqueueNewMessages` (`ChatView.swift`). Detalhes em `docs/decisoes.md`. |
+| 127 | ~~Notificação "New Message?": extensão de notificação morta na inicialização (check-in timeout)~~ | **feito em 02/11/2026** (para o build 84; causa provável, falta validar no aparelho) | Log do sistema do iPhone (`log collect`): o launchd matou a extensão com `XPC_EXIT_REASON_EXTENSION_CHECK_IN_TIMEOUT` após 5 s e o iOS entregou o texto cru do fpush. Travou no `+[NotificationService initialize]`, depois do flush dos logs e antes do `-init`. Suspeita: `+[MLUDPLogger flushWithTimeout:]` (arquivo do Monal) espera um `NSCondition` sem predicado e pode perder o sinal e esperar para sempre (o UDP logger está sempre ativo). Correção: flag + `waitUntilDate:` com prazo (timeout + 50 ms) no `MLUDPLogger.m`, comentada com "isaCloud:". Receita em `docs/troubleshooting.md`. As notificações vazias são o placeholder esperado sem push filtering. |
 
 ## Aguardando o Monal
 
