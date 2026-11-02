@@ -247,3 +247,11 @@ for kind, ts, got in ev:
 PY
 ```
 - Também vale pegar `JetsamEvent-*.ips` e os crash logs da extensão (`NotificationService-*.ips`) do minuto da notificação.
+
+## Classificar os crashes por mecanismo
+
+```bash
+python3 scripts/classificar-crashes.py --pull <UDID_DO_IPHONE> --dir /tmp/crashes --since AAAA-MM-DD
+```
+
+Sem `--pull`, lê uma pasta já copiada (`--dir`). `--details` mostra a pilha que levou à classificação. O UDID fica em `isaCloud/local/NOTAS-LOCAIS.md` (ou na variável `ISACLOUD_IPHONE_UDID`).
