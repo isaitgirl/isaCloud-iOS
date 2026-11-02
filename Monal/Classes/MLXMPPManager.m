@@ -170,6 +170,10 @@ static const int pingFreqencyMinutes = 5;       //about the same Conversations u
 
     //isaCloud: text size inside the chats, a step relative to the system text size (0 = Padrão, the system's own size; see ChatTextSize)
     [self upgradeIntegerUserSettingsIfUnset:@"chatTextSizeStep" toDefault:0];
+
+    //isaCloud: colours of the messages the user sends ("#RRGGBB"; empty = the isaCloud default, see IsaCloudBubbleColors)
+    [self upgradeObjectUserSettingsIfUnset:@"ownBubbleColorHex" toDefault:@""];
+    [self upgradeObjectUserSettingsIfUnset:@"ownBubbleTextColorHex" toDefault:@""];
     
     [self upgradeBoolUserSettingsIfUnset:@"showNewChatView" toDefault:YES];
     

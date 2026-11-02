@@ -11,7 +11,7 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 | TestFlight | **82** (02/11/2026, 14:18; o 81 foi o anterior, tag `build-81`) |
 | `.dev` no iPhone | **82** (igual ao TestFlight, sem a sonda; **sem push**, então a extensão de notificação não roda nele) |
 | Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 ainda com o build 80 e as 3 contas de teste (o 81 só foi compilado neles, **não instalado**, para não apagar o banco de teste; a extensão não roda no simulador com `simctl push`) |
-| ExyteChat | `1429d6c` na `isaCloud` (toque longo só no balão + link ignorado com o menu aberto, PR 17, **ainda não no TestFlight**; antes `b7de90e` = toque ignorado com o menu aberto, PR 16, também fora do TestFlight; antes `d2ece12` = toque longo do menu em UIKit, PR 15, e `583d960` = folha de compartilhar com a extensão certa, PR 14; **os dois estão no build 82**) |
+| ExyteChat | `f5eb80a` na `isaCloud` (cor do texto do meu balão na pílula de reação e na seta de responder, PR 18, **ainda não no TestFlight**; antes `1429d6c` = toque longo só no balão + link ignorado com o menu aberto, PR 17, **ainda não no TestFlight**; antes `b7de90e` = toque ignorado com o menu aberto, PR 16, também fora do TestFlight; antes `d2ece12` = toque longo do menu em UIKit, PR 15, e `583d960` = folha de compartilhar com a extensão certa, PR 14; **os dois estão no build 82**) |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.

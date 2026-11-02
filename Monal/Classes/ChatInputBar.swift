@@ -191,7 +191,7 @@ struct ChatInputBar: View {
                 } label: {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 28))
-                        .foregroundStyle(Color("isaCloudPink"))
+                        .foregroundStyle(IsaCloudBubbleColors.mine)
                 }
                 .accessibilityLabel("Send recording")
                 .accessibilityIdentifier("sendRecording")
@@ -249,9 +249,9 @@ struct ChatInputBar: View {
     private var micButton: some View {
         Image(systemName: "mic.fill")
             .font(.system(size: 18))
-            .foregroundStyle(.white)
+            .foregroundStyle(IsaCloudBubbleColors.mineText)
             .frame(width: 40, height: 40)
-            .background(Color("isaCloudPink"), in: Circle())
+            .background(IsaCloudBubbleColors.mine, in: Circle())
             .contentShape(Circle())
             .accessibilityLabel("microphone")
             .accessibilityAddTraits(.isButton)
@@ -278,18 +278,18 @@ struct ChatInputBar: View {
                 Button(action: onSend) {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(IsaCloudBubbleColors.mineText)
                         .frame(width: 40, height: 40)
-                        .background(Color("isaCloudPink"), in: Circle())
+                        .background(IsaCloudBubbleColors.mine, in: Circle())
                 }
                 .accessibilityLabel("arrowSend")
             case .saveEdit:
                 Button(action: onSaveEdit) {
                     Image(systemName: "checkmark")
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(IsaCloudBubbleColors.mineText)
                         .frame(width: 40, height: 40)
-                        .background(Color("isaCloudPink"), in: Circle())
+                        .background(IsaCloudBubbleColors.mine, in: Circle())
                 }
                 .accessibilityIdentifier("checkmark")
             case .microphone:

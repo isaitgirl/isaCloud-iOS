@@ -4,6 +4,9 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## Não publicado
 
+### Adicionado
+- **Cor do balão e do texto das minhas mensagens** (Configurações Gerais → Interface do Usuário → Aparência). Dois seletores de cor livres (sem opacidade), "Restaurar cores padrão", a mesma prévia do tamanho do texto e um aviso quando o contraste entre balão e texto fica abaixo de 4,5:1 (só com cor personalizada). O botão de enviar, o microfone, os ícones de entrega e a pílula de reação acompanham a cor escolhida; o rótulo "Encaminhado" e os links nos meus balões usam a cor do texto. Vazio = rosa e branco do isaCloud. Duas preferências novas, `ownBubbleColorHex` e `ownBubbleTextColorHex` (`GeneralSettings.swift`, `ChatView.swift`, `ChatInputBar.swift`, `IsaCloudBubbleColors` em `GifPickerView.swift`, `IsaCloudColorMath.swift`). **Depende do PR 18 do fork do ExyteChat** (pílula de reação e seta de responder). Testado nos simuladores iOS 18.6 e 27; falta o `.dev`.
+
 ### Corrigido
 - **O app podia ser encerrado pelo iOS (`0xdead10cc`) por um log de erro preso na suspensão do registro.** Um log síncrono (erro) feito dentro de uma transação de escrita no banco podia travar para sempre se a fila de log fosse suspensa logo depois da checagem (caso do build 81, 13:48:11); o banco ficava travado e o iOS matava o app. Agora o log síncrono entra na fila e espera no máximo 250 ms (`HelperTools.m`, `swizzled_queueLogMessage`).
 - **O visualizador de imagens não abre mais sozinho depois de fechar o menu de uma mensagem com mídia** (defeito do build 82, de quando o menu passou a abrir em 250 ms). O toque curto da foto, do GIF ou do vídeo disparava quando o dedo levantava do toque longo e a apresentação ficava na fila atrás do menu; o fork do ExyteChat agora ignora o toque na mensagem enquanto o menu está aberto (PR 16 do fork, `ChatViewModel`).

@@ -205,6 +205,13 @@
 "Hi, how are you?" = "Oi, tudo bem?";
 "Fine, thanks! And you?" = "Tudo bem, e você?";
 
+/* isaCloud: cores das minhas mensagens (Configurações Gerais > Interface do Usuário > Aparência) */
+"Color of my message bubble" = "Cor do balão das minhas mensagens";
+"Color of my message text" = "Cor do texto das minhas mensagens";
+"Low contrast: the text may be hard to read on this bubble." = "Pouco contraste: o texto pode ficar difícil de ler neste balão.";
+"Restore default colors" = "Restaurar cores padrão";
+"Changes the colors of the messages you send. The send button and the delivery icons follow the bubble color." = "Muda as cores das mensagens que você envia. O botão de enviar e os ícones de entrega acompanham a cor do balão.";
+
 /* isaCloud: criptografia com contato que ainda não tem dispositivos conhecidos (busca da lista de aparelhos) */
 "Could not decrypt because the sender's device %u is not known yet." = "Não é possível descriptografar pois o dispositivo %u do remetente ainda não é conhecido.";
 "Encryption Not Possible" = "Criptografia indisponível";

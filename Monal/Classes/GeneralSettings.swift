@@ -144,6 +144,13 @@ class GeneralSettingsDefaultsDB: ObservableObject {
     @defaultsDB("chatTextSizeStep")
     var chatTextSizeStep: Int
 
+    //isaCloud: colours of the messages the user sends, "#RRGGBB" (empty = the isaCloud default, see IsaCloudBubbleColors)
+    @defaultsDB("ownBubbleColorHex")
+    var ownBubbleColorHex: String
+
+    @defaultsDB("ownBubbleTextColorHex")
+    var ownBubbleTextColorHex: String
+
     @defaultsDB("preventLeaksBeforeAuth")
     var preventLeaksBeforeAuth: Bool
     
@@ -335,6 +342,33 @@ struct UserInterfaceSettings: View {
                     }
                     textSizePreview
                     Text("Adjusts the text size inside chats, relative to the system text size. Default follows the system.")
+                        .foregroundColor(Color(UIColor.secondaryLabel))
+                        .font(.footnote)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                //isaCloud: the colours of the messages the user sends; the preview above shows them too
+                VStack(alignment: .leading, spacing: 0) {
+                    ColorPicker("Color of my message bubble", selection: Binding(
+                        get: { IsaCloudBubbleColors.mine },
+                        set: { generalSettingsDefaultsDB.ownBubbleColorHex = IsaCloudColorMath.hex(from: $0) }
+                    ), supportsOpacity: false)
+                    ColorPicker("Color of my message text", selection: Binding(
+                        get: { IsaCloudBubbleColors.mineText },
+                        set: { generalSettingsDefaultsDB.ownBubbleTextColorHex = IsaCloudColorMath.hex(from: $0) }
+                    ), supportsOpacity: false)
+                    if !IsaCloudBubbleColors.hasReadableContrast {
+                        Label("Low contrast: the text may be hard to read on this bubble.", systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.orange)
+                            .font(.footnote)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Button("Restore default colors") {
+                        IsaCloudBubbleColors.resetToDefaults()
+                        //the settings object is told, so this screen (and the preview) draw the default colours
+                        generalSettingsDefaultsDB.objectWillChange.send()
+                    }
+                    .disabled(!IsaCloudBubbleColors.hasCustomColors)
+                    Text("Changes the colors of the messages you send. The send button and the delivery icons follow the bubble color.")
                         .foregroundColor(Color(UIColor.secondaryLabel))
                         .font(.footnote)
                         .fixedSize(horizontal: false, vertical: true)

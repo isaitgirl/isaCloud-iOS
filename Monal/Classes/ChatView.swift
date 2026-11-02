@@ -103,6 +103,13 @@ class ChatViewDefaultsDB: ObservableObject {
     //isaCloud: text size inside the chats, a step relative to the system text size (see ChatTextSize)
     @defaultsDB("chatTextSizeStep")
     var chatTextSizeStep: Int
+
+    //isaCloud: colours of the messages the user sends, "#RRGGBB" (empty = the isaCloud default, see IsaCloudBubbleColors)
+    @defaultsDB("ownBubbleColorHex")
+    var ownBubbleColorHex: String
+
+    @defaultsDB("ownBubbleTextColorHex")
+    var ownBubbleTextColorHex: String
 }
 
 /// isaCloud: the text size inside the chats (bubbles, names, quotes, reactions, time, input bar), as a step relative to the
@@ -1245,12 +1252,13 @@ struct ChatView: View {
         }
         .chatTheme(
             ChatTheme(
-                // isaCloud: the messages the user sends are pink, with black text
+                // isaCloud: the messages the user sends use the colours of Settings > User Interface > Appearance (default: pink with
+                // white text). The colours are read from the observed settings here, so the view is built again when they change
                 colors: ChatTheme.Colors(
-                    messageMyBG: IsaCloudBubbleColors.mine,
-                    messageMyText: IsaCloudBubbleColors.mineText,
-                    messageMyTimeText: IsaCloudBubbleColors.mineTime,
-                    sendButtonBackground: IsaCloudBubbleColors.mine
+                    messageMyBG: IsaCloudBubbleColors.bubble(chatViewDefaultsDB.ownBubbleColorHex),
+                    messageMyText: IsaCloudBubbleColors.text(chatViewDefaultsDB.ownBubbleTextColorHex),
+                    messageMyTimeText: IsaCloudBubbleColors.time(chatViewDefaultsDB.ownBubbleTextColorHex),
+                    sendButtonBackground: IsaCloudBubbleColors.bubble(chatViewDefaultsDB.ownBubbleColorHex)
                 ),
                 //isaCloud: ExyteChat draws nothing for a message that reached the server (its "sent" image is empty), so the
                 //message had no icon between the clock and the delivery confirmation: it gets a dotted check in a circle, while the
@@ -1789,12 +1797,12 @@ class ChatViewMessage: ExyteChat.Message {
         }
         return QuoteFormatting.attachmentLabel(.file(name: (fileInfo.filename as String?) ?? ""))
     }
-    /// isaCloud: the label line of a forwarded message, in bold (white in our own bubbles)
+    /// isaCloud: the label line of a forwarded message, in bold (the text colour in our own bubbles)
     private func forwardLabelText(_ label: String) -> AttributedString {
         var attributed = AttributedString(label)
         attributed.inlinePresentationIntent = .stronglyEmphasized
-        //white on the pink bubble of our own messages; on the light bubble of what others forward to us white would not be seen
-        attributed.foregroundColor = self.user.isCurrentUser ? Color.white : Color.primary
+        //the text colour of our own bubbles (white by default); on the light bubble of what others forward to us it would not be seen
+        attributed.foregroundColor = self.user.isCurrentUser ? IsaCloudBubbleColors.mineText : Color.primary
         return attributed
     }
     /// isaCloud: the text of a message: quoted lines ("> ...") are marked as a quote (ExyteChat draws them with bars on their left, see
@@ -1829,8 +1837,8 @@ class ChatViewMessage: ExyteChat.Message {
     }
     override var attributedText: AttributedString {
         get {
-            // Keep outgoing links in the same color as outgoing text (white) for readability
-            let linkColor: Color = self.user.isCurrentUser ? .white : .accentColor
+            // Keep outgoing links in the same color as outgoing text (the text colour of our bubbles) for readability
+            let linkColor: Color = self.user.isCurrentUser ? IsaCloudBubbleColors.mineText : .accentColor
 
             // isaCloud: the first line of a forwarded text says so, in bold (white in our own bubbles); the rest is the text as always
             if innerMessage.messageType == kMessageTypeText || innerMessage.messageType == kMessageTypeUrl, let forwarded = MessageForward.split(text) {
