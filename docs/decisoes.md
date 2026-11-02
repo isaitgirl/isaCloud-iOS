@@ -625,3 +625,19 @@ No iOS 27, "Adicionar contato ou canal" (`AddContactMenu`) e "Convidar para o is
 - **Resultado:** a Isadora testou no iPhone ("ficou muito bom"), inclusive no balão de GIF.
 - **GIF:** o balão mantém o `onLongPressGesture` dele (`GifMessageBubble`); como `showContextMenu` só põe a linha em `messageMenuRow`, os dois gatilhos dão o mesmo resultado. Se algum dia aparecer menu duplo, retirar o do GIF.
 - **Não testado:** toque curto em link; `showMessageMenuOnLongPress` desligado. Mexe só no fork (e no número da animação do app); nenhum arquivo do Monal.
+
+## Visualizador abrindo depois do menu da mensagem (02/11/2026, defeito do build 82)
+
+- **Sintoma (Isadora, logo depois do envio do build 82):** numa mensagem com foto, depois de abrir o menu pelo toque longo e fechá-lo (reagir ou tocar fora), o visualizador de imagens abria. Texto não era afetado.
+- **Causa:** o toque curto da mídia é um `TapGesture` simultâneo do SwiftUI; dispara quando o dedo levanta, no fim do toque longo, e o `fullScreenCover` do visualizador ficava na fila atrás do menu. Com o gesto antigo do SwiftUI o tap era descartado pela própria exclusão de gestos; o reconhecedor de UIKit (mudança nº 3 do fork) não participa disso.
+- **Descartado (testado no simulador, sem efeito):** `shouldRecognizeSimultaneouslyWith` falso no reconhecedor da tabela; desligar e religar (`isEnabled`) todos os reconhecedores da célula no início do toque longo. O tap simultâneo do SwiftUI não se cancela de fora.
+- **Decisão:** bloquear na origem, no `ChatViewModel` do fork (mudança nº 16): nenhuma apresentação por toque na mensagem enquanto `messageMenuRow != nil`. Sem dependência de tempo (um toque na mensagem nunca é legítimo com o menu aberto) e sem mexer no `UIList`. Confirmado pela Isadora no iPhone.
+- **Não verificado:** vídeo e link tocável (link: `ExternalLinkViewModifier` intercepta o `openURL` e não passa pelo ViewModel); replay do GIF pelo `onTapGesture` do app atrás do menu (não visto, não corrigido).
+
+## Log síncrono com limite de espera (02/11/2026, roadmap 106)
+
+- **Causa (`0xdead10cc` do build 81, 13:48:11):** no CocoaLumberjack todo log de erro (e `DDLogStderr`/`DDLogStdout`, `async:NO` em `MLConstants.h`) é um `dispatch_sync` na fila de log. O `swizzled_queueLogMessage` (`HelperTools.m`) só força async se `_suspensionHandling_isSuspended` já for verdadeiro; se `+signalSuspension` suspender a fila logo depois da checagem, o `dispatch_sync` nunca volta, a `receiveQueue` fica presa dentro da transação de escrita segurando o banco e o iOS mata o app suspenso. No log de produção o app para de escrever às 13:48:05.439, a hora em que a atualização de segundo plano (iniciada às 13:47:39) expirava e congelava.
+- **Decisão:** o log síncrono entra como async e espera a fila drenar por no máximo 250 ms (mesmo padrão de `flushLogsWithTimeout:`); sem espera quando a chamada já vem da própria fila de log (comparação de `dispatch_queue_get_label`) ou com a fila suspensa. Mantém "a linha de erro já foi escrita quando a chamada volta" no caso normal e limita o pior caso a 250 ms.
+- **Ponto sensível de merge com o Monal:** só o bloco comentado com "isaCloud:" em `swizzled_queueLogMessage` (+24 linhas). Efeito colateral aceito: um log síncrono feito de dentro da fila de log vira async (a linha sai depois do bloco atual).
+- **Descartado:** log sempre assíncrono (perderia a última linha de erro antes de um crash) e esperar as escritas terminarem antes de suspender (mexe no ciclo de vida inteiro).
+- **Medido no simulador iOS 18.6 (código temporário, fora do repositório):** fila suspensa + `DDLogError` em thread de fundo: antes travava para sempre, depois volta em 259 ms; sem suspensão 0,8 ms. **Não validado:** o `0xdead10cc` real no aparelho (contar por dia nos crash logs) e o iOS 27 em execução. Pendente: `DDLogStderr` com `[DDLog flushLog]` sem limite.
