@@ -223,3 +223,27 @@ xcrun devicectl device copy from --device <UDID> --domain-type systemCrashLogs -
 - `Library/metrics/metrickit-diagnostic-*.json`: diagnósticos do MetricKit (`crashDiagnostics`, com `terminationReason` e pilhas só por deslocamento, sem símbolos). `0xdead10cc` = app morto por segurar um arquivo bloqueado ao ir para segundo plano.
 - `Library/metrics/samples-AAAA-MM-DD.jsonl`: amostras (`thermal`, `cpu_ms`, memória, `db_lock_*`). Estado térmico `serious` deixa o iPhone lento.
 - O `.ips` do `0x8BADF00D` mostra na thread 0 o que a thread principal esperava; o `termination.reasons` diz o prazo (`scene-update watchdog`, 10 s ou 30 s) e a visibilidade (`Background`).
+
+## Notificação fantasma "New Message?" ou vazia (investigação de 02/11/2026)
+
+Anote o **horário exato (minuto)** de cada notificação. O iPhone guarda só ~4 arquivos `.rawlog` (cerca de 4 h de uso): copie os logs no mesmo dia, depois de ver a notificação (comando na seção 10; nomes em UTC, linhas em hora local).
+
+- **Notificação vazia (só "isaCloud")**: é o placeholder do push que o app decidiu não mostrar (sem push filtering). Esperado: a extensão apaga o placeholder do push anterior (`isaCloud: removing 1 push placeholder notification(s)`) e o app apaga o resto quando acorda (`didReceiveRemoteNotification` com `content-available`). Ela fica visível dos ~30 s do push até a próxima acordada.
+- **"New Message?"**: é o texto padrão do payload quando a extensão **não processa** o push. No log da extensão, a assinatura é `Notification Service Extension started` **sem** `Got incoming push` logo depois (nos pushes normais ele vem ~0,2 s depois; a extensão vive ~27 s e termina com `Now killing appex process`). Em 02/11/2026 15:53:42 o processo subiu, ficou 5 s (só o relógio `activity: N`) e morreu sem receber o pedido; não havia JetsamEvent nem crash da extensão nesse minuto.
+- Achar todos os casos de uma vez (copie o `.rawlog`; o formato está na seção 10):
+
+```bash
+python3 - "Monal AAAA-MM-DD--HH-MM-SS-mmm.rawlog" <<'PY'
+import re, sys
+data = open(sys.argv[1], encoding='utf-8', errors='replace').read()
+ev = []
+for m in re.finditer(r'\{"context".*?"timestamp":"[0-9-]* ([0-9:]*)"\}', data, re.S):
+    msg = re.search(r'"message":"(.*?)"(?=,"[a-zA-Z]+":)', m.group(0), re.S)
+    msg = msg.group(1) if msg else ''
+    if 'Notification Service Extension started' in msg: ev.append(['start', m.group(1), False])
+    elif 'Got incoming push' in msg and ev: ev[-1][2] = True
+for kind, ts, got in ev:
+    if not got: print('extensão sem "Got incoming push":', ts)
+PY
+```
+- Também vale pegar `JetsamEvent-*.ips` e os crash logs da extensão (`NotificationService-*.ips`) do minuto da notificação.

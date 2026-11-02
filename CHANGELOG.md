@@ -4,6 +4,9 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## Não publicado
 
+### Corrigido
+- **Notificação "New Message?" por extensão travada na inicialização.** Em 02/11/2026 15:53 (build 81) o iOS matou a extensão de notificação com "extension check-in timeout" depois de 5 s e mostrou o texto cru do push. Ela travou no flush do logger de rede (`MLUDPLogger flushWithTimeout:`, arquivo do Monal), que esperava um sinal sem prazo: se o envio terminava antes de a espera começar, o sinal se perdia e a espera não acabava. Agora o sinal fica guardado numa flag e a espera tem prazo (o timeout pedido + 50 ms). O mesmo flush roda no app ao suspender e acordar. **Causa provável, não provada por pilha**; validar contando "New Message?" depois do próximo build.
+
 ## 0.0.1 (build 83) — 02/11/2026 (enviado ao TestFlight às 16:51)
 
 ### Adicionado
