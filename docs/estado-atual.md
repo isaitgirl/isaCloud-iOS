@@ -1,4 +1,4 @@
-# Estado atual e handoff (02/11/2026, build 82)
+# Estado atual e handoff (02/11/2026, build 83)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,11 +7,11 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 82** (mensagem "Build 82 ..."), tag `build-82`; `git log --oneline -3` |
-| TestFlight | **82** (02/11/2026, 14:18; o 81 foi o anterior, tag `build-81`) |
-| `.dev` no iPhone | **82** (igual ao TestFlight, sem a sonda; **sem push**, então a extensão de notificação não roda nele) |
-| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 ainda com o build 80 e as 3 contas de teste (o 81 só foi compilado neles, **não instalado**, para não apagar o banco de teste; a extensão não roda no simulador com `simctl push`) |
-| ExyteChat | `f5eb80a` na `isaCloud` (cor do texto do meu balão na pílula de reação e na seta de responder, PR 18, **ainda não no TestFlight**; antes `1429d6c` = toque longo só no balão + link ignorado com o menu aberto, PR 17, **ainda não no TestFlight**; antes `b7de90e` = toque ignorado com o menu aberto, PR 16, também fora do TestFlight; antes `d2ece12` = toque longo do menu em UIKit, PR 15, e `583d960` = folha de compartilhar com a extensão certa, PR 14; **os dois estão no build 82**) |
+| Commit | o do **build 83** (mensagem "Build 83 ..."), tag `build-83`; `git log --oneline -3` |
+| TestFlight | **83** (02/11/2026, 16:51; o 82 foi o anterior, tag `build-82`) |
+| `.dev` no iPhone | **83** (igual ao TestFlight, sem a sonda; **sem push**, então a extensão de notificação não roda nele) |
+| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com a build de testes de 02/11/2026 (ad-hoc, por cima do banco, que tem backup do dia em `~/Library/Application Support/isacloud-sim-backups/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
+| ExyteChat | `f5eb80a` na `isaCloud` (cor do texto do meu balão na pílula de reação e na seta de responder, PR 18; antes `1429d6c` = toque longo só no balão + link ignorado com o menu aberto, PR 17; `b7de90e` = toque ignorado com o menu aberto, PR 16; **os três estão no build 83**; `d2ece12` e `583d960`, PR 15 e 14, estão desde o 82) |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
@@ -20,12 +20,16 @@ Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 
 - **Menu da mensagem em ~250 ms** (PR 25 do app, PR 15 do fork): o toque longo do SwiftUI ignorava a duração e disparava em ~600 ms; agora é um `UILongPressGestureRecognizer` de 0,15 s na tabela do ExyteChat + animação de 0,1 s + vibração preparada no toque. **Confirmado pela Isadora no iPhone, GIF incluído.** Detalhes em `decisoes.md` ("Menu da mensagem em 250 ms") e `exytechat-fork.md` (mudança nº 3).
 - **"Salvar Imagem" e "Salvar Vídeo" na folha de compartilhar do chat** (PR 14 do fork): a extensão do arquivo compartilhado era o mime type em hexadecimal. Testado no simulador iOS 18.6; **falta** vídeo, iOS 27 e conferir no iPhone; o `MediaViewer.swift` (Mídia Compartilhada) não foi verificado.
-- **Defeito do build 82 já corrigido (entra no build 83):** numa mídia, depois de fechar o menu do toque longo, o visualizador abria. O fork ignora o toque na mensagem com o menu aberto (PR 16, `b7de90e`; roadmap 123). Confirmado pela Isadora no iPhone; falta conferir vídeo, link e replay do GIF.
-- **Toque longo só no balão e link ignorado com o menu aberto** (PR 17 do fork; roadmap 124 e 125; **entram no build 83**): confirmado pela Isadora no iPhone. Falta conferir o avatar e a hora sozinha no iOS 27.
-- **`0xdead10cc` do build 81 corrigido no código** (PR 27 do app, log síncrono com limite de espera, roadmap 106; **entra no build 83**, ainda não validado no aparelho).
-- **Cor do balão e do texto das minhas mensagens** (PR 29 do app, PR 18 do fork; roadmap 119; entra no build 83). **"Compartilhar…" no menu das mídias** (roadmap 120; entra no build 83). **Crash ao compartilhar um link para o isaCloud** corrigido (PR 30, roadmap 126; entra no build 83).
-- **Anotado e não feito:** o `0xdead10cc` do build 81 (13:48:11) é o **logger síncrono dentro da transação de escrita** (roadmap 106, "Caso do build 81"): é a **próxima frente**.
-- Docs de outras sessões que entraram junto neste commit: decisões 119 (cor do balão) e 120 ("Compartilhar…" no menu das mídias), só análise, sem código.
+
+## O que entrou no build 83 (sobre o 82)
+
+- **Visualizador de imagens não abre mais depois do menu** (defeito do build 82; PR 16 do fork e 26 do app; roadmap 123). Confirmado pela Isadora no iPhone; falta conferir vídeo e replay do GIF.
+- **Toque longo só no balão e link ignorado com o menu aberto** (PR 17 do fork, 28 do app; roadmap 124 e 125). Confirmado pela Isadora no iPhone; falta conferir o avatar e a hora sozinha no iOS 27.
+- **`0xdead10cc` do build 81, log síncrono com limite de espera** (PR 27 do app; roadmap 106). **Ainda não validado no aparelho:** contar os `0xdead10cc` por dia e procurar "Main queue did not run our block".
+- **Cor do balão e do texto das minhas mensagens** (PR 29 do app, PR 18 do fork; roadmap 119). **Falta** testar no iPhone com cor personalizada: seta de responder, enviar, editar e gravar.
+- **"Compartilhar…" no menu das mídias** (PR 31; roadmap 120). Testado em foto, GIF e vídeo nos simuladores; **falta** áudio, documento e o iPhone.
+- **Crash ao compartilhar um link para o isaCloud** (build 81, iOS 27.2): corrigido (PR 30; roadmap 126). Testado no XR; no iOS 27 o share sheet do Safari do simulador não abriu.
+- **Próximas frentes:** validar o `0xdead10cc` com o build 83 e a camada 2 (presenças de canal em lote, roadmap 106).
 
 ## O que entrou no build 81 (sobre o 80)
 
