@@ -656,3 +656,8 @@ No iOS 27, "Adicionar contato ou canal" (`AddContactMenu`) e "Convidar para o is
 - **Causa:** o app abre a folha de compartilhar pela extensão, e a mensagem sai pelo outbox (`MonalAppDelegate.m`, `kMonalShareOutboxUpdate`). O `ChatView` a inseria com `messages.append(...)`, sem a checagem de duplicata que `enqueueNewMessages` e `loadMissedMessages` já têm. Com o chat aberto, o `kMonalRefresh` (`loadMissedMessages`) podia ler a mesma mensagem do banco antes de o aviso chegar. Duas mensagens com o mesmo `id`: o ExyteChat aborta o app.
 - **Decisão:** o aviso do outbox passa a usar `enqueueNewMessages([ChatViewMessage(message)])` (ignora o que já está na lista ou na fila). Os outros `messages.append` (envio direto, encaminhar) ficam como estão: rodam na hora, na thread principal, logo depois de gravar a mensagem, sem janela para um refresh no meio.
 - **Mesma família do crash visto no iOS 18.6 ao encaminhar** (seção "Encaminhar mensagens: mídia"): `enqueueNewMessages` já tinha ganhado o filtro por causa dele.
+
+### Implementado (02/11/2026, roadmap 120)
+
+- `ChatView.swift`: nova ação `.share` ("Compartilhar…", ícone `square.and.arrow.up`) só em mensagem de arquivo com o download completo. Foto, GIF e vídeo (`message.attachments`) vão para o `.share` da biblioteca; áudio e documento são copiados por `shareDownloadedFile` para uma pasta temporária (nome original) e abrem `ActivityViewController` num `.sheet`; a pasta é removida no `onDismiss` (o item já foi limpo antes dele, por isso a pasta fica em outro `@State`). Sem mudança no fork. String "Share…" só no override do pt-BR.
+- **Não verificado:** áudio e documento nos simuladores (as conversas de teste não têm um baixado) e a folha no iPhone.
