@@ -2900,6 +2900,14 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
     }];
 }
 
+//isaCloud: cheap check (read only) used to skip the write transaction of updateIqHandlerTimeouts when there is nothing to do
+-(BOOL) hasIdleTimersForAccount:(NSNumber*) accountID
+{
+    return [self.db boolReadTransaction:^{
+        return (BOOL)([[self.db executeScalar:@"SELECT COUNT(*) FROM idle_timers WHERE account_id=?;" andArguments:@[accountID]] integerValue] > 0);
+    }];
+}
+
 #pragma mark isaCloud: full text search in the messages (index: MLMessageSearch)
 
 //the history ids of the messages having every word of the query (each word as a prefix, no matter accents or case), newest first

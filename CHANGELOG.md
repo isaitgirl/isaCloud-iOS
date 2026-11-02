@@ -4,6 +4,9 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## Não publicado
 
+### Corrigido
+- **Menos chance de o iOS encerrar o app (`0xdead10cc`) ao suspendê-lo.** A thread de timeouts abria uma transação de escrita no banco para cada conta a cada segundo, mesmo sem nada a fazer e mesmo com o app congelando; se o iOS suspendesse o app nesse instante, o banco ficava travado. Agora ela só abre a transação quando há iq handlers ou idle timers pendentes, e pula contas congeladas (`xmpp.m` `updateIqHandlerTimeouts`, `DataLayer hasIdleTimersForAccount:`).
+
 ## 0.0.1 (build 84) — 02/11/2026 (enviado ao TestFlight às 17:19)
 
 ### Corrigido
