@@ -5868,6 +5868,18 @@ static NSRegularExpression* fastTokenRemovalRegex;
     if([_parseQueue operationCount] > 4 || _accountState < kStateInitStarted || !_catchupDone)
         return;
     
+    //isaCloud: this runs every second for every account, even while the app is about to be suspended, and a write transaction
+    //that is open when iOS suspends the app gets it killed (0xdead10cc): don't open one when there is nothing to do
+    //(a frozen parse queue means the app or appex is freezing; the timeouts will continue once it is unfrozen)
+    if([self parseQueueFrozen])
+        return;
+    BOOL hasIqHandlers = NO;
+    @synchronized(self->_iqHandlers) {
+        hasIqHandlers = self->_iqHandlers.count > 0;
+    }
+    if(!hasIqHandlers && ![[DataLayer sharedInstance] hasIdleTimersForAccount:self.accountID])
+        return;
+
     [[DataLayer sharedInstance] createTransaction:^{
         //update iq handlers
         BOOL stateUpdated = NO;

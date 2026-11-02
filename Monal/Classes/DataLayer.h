@@ -376,6 +376,7 @@ extern NSString* const kMessageTypeFiletransfer;
 -(void) delIdleTimerWithId:(NSNumber* _Nullable) timerId;
 -(void) cleanupIdleTimerOnAccountID:(NSNumber*) accountID;
 -(BOOL) decrementIdleTimersForAccount:(xmpp*) account;
+-(BOOL) hasIdleTimersForAccount:(NSNumber*) accountID;      //isaCloud
 
 -(void) addPromise:(MLPromise*) promise;
 -(void) removePromise:(MLPromise*) promise;
