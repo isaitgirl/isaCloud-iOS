@@ -15,8 +15,19 @@
 #import "MLNotificationManager.h"
 #import <monalxmpp/MLFileTransfer.h>
 #import <monalxmpp/xmpp.h>
+#import <unistd.h>
 
 @import CallKit;
+
+//isaCloud: _exit() instead of exit(). exit() runs the atexit handlers and static destructors first, and in all five 0xdead10cc reports of the
+//appex (31/10 and 01/11/2026) the process was stuck inside exit() (__cxa_finalize_ranges, waiting on a condition variable) when iOS suspended it
+//while it still held the SQLite and process lock files. _exit() ends the process at once and the kernel releases every lock.
+static void isaCloudTerminateAppex(void)
+{
+    [HelperTools flushLogsWithTimeout:0.1];     //exit() would have flushed in our atexit handler, do it by hand now
+    [MLProcessLock unlock];                      //safe to call twice, it only closes the lock fd if it is still open
+    _exit(0);
+}
 
 @interface NotificationService ()
 +(BOOL) getAppexCleanShutdownStatus;
@@ -139,7 +150,7 @@
     [NotificationService setAppexCleanShutdownStatus:YES];
     
     DDLogInfo(@"Now killing appex process, goodbye...");
-    exit(0);
+    isaCloudTerminateAppex();
 }
 
 -(BOOL) feedNextHandler
@@ -669,7 +680,7 @@ static BOOL warnUnclean = NO;
 #endif
 
         DDLogInfo(@"Committing suicide...");
-        exit(0);
+        isaCloudTerminateAppex();
 
 /*
         //proxy to push singleton
