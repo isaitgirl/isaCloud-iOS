@@ -11,7 +11,7 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 | TestFlight | **82** (02/11/2026, 14:18; o 81 foi o anterior, tag `build-81`) |
 | `.dev` no iPhone | **82** (igual ao TestFlight, sem a sonda; **sem push**, então a extensão de notificação não roda nele) |
 | Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 ainda com o build 80 e as 3 contas de teste (o 81 só foi compilado neles, **não instalado**, para não apagar o banco de teste; a extensão não roda no simulador com `simctl push`) |
-| ExyteChat | `b7de90e` na `isaCloud` (toque ignorado com o menu aberto, PR 16, **ainda não no TestFlight**; antes `d2ece12` = toque longo do menu em UIKit, PR 15, e `583d960` = folha de compartilhar com a extensão certa, PR 14; **os dois estão no build 82**) |
+| ExyteChat | `FORKSHA` na `isaCloud` (toque longo só no balão + link ignorado com o menu aberto, PR 17, **ainda não no TestFlight**; antes `b7de90e` = toque ignorado com o menu aberto, PR 16, também fora do TestFlight; antes `d2ece12` = toque longo do menu em UIKit, PR 15, e `583d960` = folha de compartilhar com a extensão certa, PR 14; **os dois estão no build 82**) |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
@@ -21,6 +21,8 @@ Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 - **Menu da mensagem em ~250 ms** (PR 25 do app, PR 15 do fork): o toque longo do SwiftUI ignorava a duração e disparava em ~600 ms; agora é um `UILongPressGestureRecognizer` de 0,15 s na tabela do ExyteChat + animação de 0,1 s + vibração preparada no toque. **Confirmado pela Isadora no iPhone, GIF incluído.** Detalhes em `decisoes.md` ("Menu da mensagem em 250 ms") e `exytechat-fork.md` (mudança nº 3).
 - **"Salvar Imagem" e "Salvar Vídeo" na folha de compartilhar do chat** (PR 14 do fork): a extensão do arquivo compartilhado era o mime type em hexadecimal. Testado no simulador iOS 18.6; **falta** vídeo, iOS 27 e conferir no iPhone; o `MediaViewer.swift` (Mídia Compartilhada) não foi verificado.
 - **Defeito do build 82 já corrigido (entra no build 83):** numa mídia, depois de fechar o menu do toque longo, o visualizador abria. O fork ignora o toque na mensagem com o menu aberto (PR 16, `b7de90e`; roadmap 123). Confirmado pela Isadora no iPhone; falta conferir vídeo, link e replay do GIF.
+- **Toque longo só no balão e link ignorado com o menu aberto** (PR 17 do fork; roadmap 124 e 125; **entram no build 83**): confirmado pela Isadora no iPhone. Falta conferir o avatar e a hora sozinha no iOS 27.
+- **`0xdead10cc` do build 81 corrigido no código** (PR 27 do app, log síncrono com limite de espera, roadmap 106; **entra no build 83**, ainda não validado no aparelho).
 - **Anotado e não feito:** o `0xdead10cc` do build 81 (13:48:11) é o **logger síncrono dentro da transação de escrita** (roadmap 106, "Caso do build 81"): é a **próxima frente**.
 - Docs de outras sessões que entraram junto neste commit: decisões 119 (cor do balão) e 120 ("Compartilhar…" no menu das mídias), só análise, sem código.
 

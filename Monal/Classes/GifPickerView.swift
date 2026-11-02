@@ -166,26 +166,30 @@ struct GifMessageBubble: View {
                 avatar
             }
             VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 2) {
-                if showSender && !isCurrentUser {
-                    //like the other messages of others in a group or channel: a gray bubble with the name above the picture
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(user.name)
-                            .font(.caption.weight(.bold))
-                            .lineLimit(1)
-                            .padding(.horizontal, 12)
-                            .padding(.top, 8)
+                VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 2) {
+                    if showSender && !isCurrentUser {
+                        //like the other messages of others in a group or channel: a gray bubble with the name above the picture
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(user.name)
+                                .font(.caption.weight(.bold))
+                                .lineLimit(1)
+                                .padding(.horizontal, 12)
+                                .padding(.top, 8)
+                            gif
+                                .padding(.horizontal, 6)
+                                .padding(.bottom, 6)
+                        }
+                        .background(RoundedRectangle(cornerRadius: 14).fill(theme.colors.messageFriendBG))
+                    } else {
                         gif
-                            .padding(.horizontal, 6)
-                            .padding(.bottom, 6)
                     }
-                    .background(RoundedRectangle(cornerRadius: 14).fill(theme.colors.messageFriendBG))
-                } else {
-                    gif
+                    // isaCloud: the reactions under the GIF, as the footer of the other messages; the space is reserved only when there are some
+                    if !reactionItems.isEmpty {
+                        GifReactionsFooter(reactions: reactionItems, width: gifSize.width, onTap: onReactionsTap)
+                    }
                 }
-                // isaCloud: the reactions under the GIF, as the footer of the other messages; the space is reserved only when there are some
-                if !reactionItems.isEmpty {
-                    GifReactionsFooter(reactions: reactionItems, width: gifSize.width, onTap: onReactionsTap)
-                }
+                // isaCloud: the picture and its reactions are the bubble for the long press of the chat; the time below, the avatar and the status are not
+                .reportsMessageBubbleFrame()
                 timeView
             }
             if isCurrentUser, let status = message.status {
