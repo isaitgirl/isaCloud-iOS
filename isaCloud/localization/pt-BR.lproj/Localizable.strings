@@ -78,6 +78,10 @@
 "Microphone access is off" = "Microfone desativado";
 "Allow isaCloud to use the microphone in Settings to send voice messages." = "Permita que o isaCloud use o microfone nos Ajustes para enviar mensagens de voz.";
 "Photos and videos" = "Fotos e vídeos";
+"Camera" = "Câmera";
+"Camera permissions missing" = "Falta permissão da câmera";
+"Monal is not allowed to access the camera" = "O isaCloud não tem permissão para usar a câmera";
+"Settings" = "Ajustes";
 "Search GIFs" = "Buscar GIFs";
 "Powered by GIPHY" = "Powered by GIPHY";
 "GIF search is not available" = "Busca de GIF indisponível";

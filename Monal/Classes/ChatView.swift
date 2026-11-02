@@ -10,6 +10,7 @@ import FrameUp
 import ExyteChat
 import ExyteMediaPicker
 import CoreLocation
+import AVFoundation
 typealias ExyteChatView = ExyteChat.ChatView
 
 
@@ -190,6 +191,8 @@ struct ChatView: View {
     @State private var ownRole = kMucRoleNone
     @StateObject private var inputModel = ChatInputModel()
     @State private var showMediaPicker = false
+    @State private var showCamera = false
+    @State private var showCameraPermissionAlert = false
     @State private var showGifPicker = false
     @State private var showLocationPicker = false
     @State private var showFileImporter = false
@@ -816,6 +819,7 @@ struct ChatView: View {
                 editSaveClosure = nil
             },
             onAttachPhotos: { showMediaPicker = true },
+            onAttachCamera: { openCamera() },
             onAttachFile: { showFileImporter = true },
             onPasteImage: pasteImageFromClipboard,
             onSearchGif: { showGifPicker = true },
@@ -943,6 +947,26 @@ struct ChatView: View {
         for media in medias {
             let kind: ChatInputAttachment.Kind = media.isVideo ? .file : .image
             inputModel.addAttachment(ChatInputAttachment(kind: kind, url: media.url))
+        }
+    }
+
+    /// isaCloud: opens the camera for an attachment; asks for the permission the first time, and offers Settings when it is off
+    private func openCamera() {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            showCamera = true
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                DispatchQueue.main.async {
+                    if granted {
+                        showCamera = true
+                    } else {
+                        showCameraPermissionAlert = true
+                    }
+                }
+            }
+        default:
+            showCameraPermissionAlert = true
         }
     }
 
@@ -1329,6 +1353,13 @@ struct ChatView: View {
                 addPickedMedias(medias)
             })
         }
+        .fullScreenCover(isPresented: $showCamera) {
+            //isaCloud: the camera for an attachment (see CameraPicker)
+            CameraPicker(isPresented: $showCamera, onPicked: { medias in
+                addPickedMedias(medias)
+            })
+            .ignoresSafeArea()
+        }
         .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
             addFiles(result)
         }
@@ -1353,6 +1384,17 @@ struct ChatView: View {
         //TODO: modernize alert prompt usage in all other swiftui files to be in line with this implementation here
         //TODO: e.g. non-hardcoded dismiss button text and usage of optionalMappedToBool and dismissCallback
         //somehow the order of alert modifiers is important: they have to come after all sheet modifiers
+        //isaCloud: the camera is off for this app (the same text the old chat shows, with the shortcut to Settings)
+        .alert(NSLocalizedString("Camera permissions missing", comment: "Camera permissions missing warning"), isPresented: $showCameraPermissionAlert) {
+            Button("OK", role: .cancel) {}
+            Button(NSLocalizedString("Settings", comment: "Camera permissions missing warning")) {
+                if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(settingsURL)
+                }
+            }
+        } message: {
+            Text(NSLocalizedString("Monal is not allowed to access the camera", comment: "Camera permissions missing warning"))
+        }
         .alert(isPresented: $alertPrompt.optionalMappedToBool()) {
             let callback = alertPrompt!.dismissCallback
             return Alert(title: alertPrompt!.title, message: alertPrompt!.message, dismissButton:.default(alertPrompt!.dismissLabel, action: {
