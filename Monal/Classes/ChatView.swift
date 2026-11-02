@@ -1695,7 +1695,9 @@ struct ChatView: View {
                 inputModel.isUploading = uploading.boolValue
             }
             if let message = notification.userInfo?["message"] as? MLMessage {
-                messages.append(ChatViewMessage(message))
+                //isaCloud: not a plain append: a refresh of the chat can have read this message from the database before the notice arrives,
+                //and ExyteChat aborts the app when two messages have the same id (crash of build 81 sharing a link into the app)
+                enqueueNewMessages([ChatViewMessage(message)])
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kMonalMucOwnAffiliationOrRoleChanged)).receive(on: RunLoop.main)) { notification in
