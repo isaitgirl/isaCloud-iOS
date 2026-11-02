@@ -1117,6 +1117,13 @@ static NSRegularExpression* fastTokenRemovalRegex;
     
     //this has to be synchronous because we want to wait for the disconnect to complete before continuing and unlocking the process in the NSE
     [self dispatchOnReceiveQueue: ^{
+        //isaCloud: the network part of the disconnect (last smacks ack, closing the stream) used to run inside the db write
+        //transaction below and waited for the send queue with no limit; a blocked socket write (MLOutputStream waits for
+        //nw_connection_send to complete) kept the database locked while iOS suspended the app (0xdead10cc of 28/10 and 01/11/2026).
+        //Now: (1) a write transaction for the in-memory and handler cleanup, (2) the network part outside of any transaction,
+        //each wait with a deadline, (3) a short write transaction to persist the state.
+        __block BOOL needsNetworkDisconnect = NO;
+        __block BOOL doExplicitStreamClose = NO;
         [[DataLayer sharedInstance] createTransaction:^{
             DDLogInfo(@"stopping running timers");
             if(self.delayedRealSessionInitTimer)
@@ -1136,14 +1143,14 @@ static NSRegularExpression* fastTokenRemovalRegex;
                     timer();
                 [self->_timersToCancelOnDisconnect removeAllObjects];
             }
-            
+
             DDLogVerbose(@"Removing scramHandler...");
             self->_scramHandler = nil;
             self->_htHandler = nil;
             self->_fastTokenRequested = nil;
             self->_blockToCallOnTCPOpen = nil;
             self->_fast_used = NO;
-            
+
             if(self->_accountState<kStateReconnecting)
             {
                 DDLogVerbose(@"not doing logout because already logged out, but clearing state if explicitLogout was yes");
@@ -1153,7 +1160,7 @@ static NSRegularExpression* fastTokenRemovalRegex;
             }
             DDLogInfo(@"disconnecting");
             self->_disconnectInProgres = YES;
-            
+
             //invalidate all ephemeral iq handlers (those not surviving an app restart or switch to/from appex)
             @synchronized(self->_iqHandlers) {
                 for(NSString* iqid in [self->_iqHandlers allKeys])
@@ -1172,8 +1179,15 @@ static NSRegularExpression* fastTokenRemovalRegex;
                     }
                 }
             }
-            
-            if(explicitLogout && self->_accountState>=kStateHasStream)
+
+            needsNetworkDisconnect = YES;
+            doExplicitStreamClose = explicitLogout && self->_accountState>=kStateHasStream;
+        }];
+
+        if(needsNetworkDisconnect)
+        {
+            //isaCloud: network part, outside of any db transaction
+            if(doExplicitStreamClose)
             {
                 DDLogInfo(@"doing explicit logout (xmpp stream close)");
                 self->_reconnectBackoffTime = 0.0;
@@ -1183,93 +1197,123 @@ static NSRegularExpression* fastTokenRemovalRegex;
                     //disable push for this node
                     if([self.connectionProperties.accountDiscoFeatures containsObject:@"urn:xmpp:push:0"])
                         [self disablePush];
-                    [self->_sendQueue addOperations: @[[NSBlockOperation blockOperationWithBlock:^{
+                    //block until finished (with a deadline) because we are closing the xmpp stream directly afterwards
+                    [self isaCloudRunOnSendQueue:^{
                         [self sendLastAck];
-                    }]] waitUntilFinished:YES];         //block until finished because we are closing the xmpp stream directly afterwards
+                    } withTimeout:2.0];
                 }
-                [self->_sendQueue addOperations: @[[NSBlockOperation blockOperationWithBlock:^{
+                //block until finished (with a deadline) because we are closing the socket directly afterwards
+                [self isaCloudRunOnSendQueue:^{
                     //close stream (either with error or normally)
                     if(streamError != nil)
                         [self writeToStream:streamError.XMLString];    // dont even bother queueing
                     MLXMLNode* stream = [[MLXMLNode alloc] initWithElement:@"/stream:stream"];  //hack to close stream
                     [self writeToStream:stream.XMLString];    // dont even bother queueing
-                }]] waitUntilFinished:YES];         //block until finished because we are closing the socket directly afterwards
-
-                @synchronized(self->_stateLockObject) {
-                    //preserve unAckedStanzas even on explicitLogout and resend them on next connect
-                    //if we don't do this, messages could get lost when logging out directly after sending them
-                    //and: sending messages twice is less intrusive than silently loosing them
-                    NSMutableArray* stanzas = self.unAckedStanzas;
-
-                    //reset smacks state to sane values (this can be done even if smacks is not supported)
-                    [self initSM3];
-                    [self replaceUnackedStanzasWith:stanzas];
-                    
-                    //inform all old iq handlers of invalidation and clear _iqHandlers dictionary afterwards
-                    [self invalidateIQHandlersWithReason:@"disconnect"];
-                    
-                    //invalidate pubsub queue (*after* iq handlers that also might invalidate a result handler of the queued operation)
-                    [self.pubsub invalidateQueue];
-                    
-                    //clear pipeline cache
-                    [self resetAuthPipelining];
-                    
-                    //clear all reconnection handlers
-                    NSArray* handlers = nil;
-                    @synchronized(self->_reconnectionHandlers) {
-                        handlers = [self->_reconnectionHandlers copy];
-                        [self->_reconnectionHandlers removeAllObjects];
-                    }
-                    for(MLHandler* handler in handlers)
-                        $invalidate(handler, $ID(account, self));
-
-                    //persist these changes
-                    [self persistState];
-                }
-                
-                //delete FAST token for this account --> use SCRAM on next login
-                [SAMKeychain deletePasswordForService:kMonalHtTokenKeychainName account:self.accountID.stringValue];
-                
-                [[DataLayer sharedInstance] resetContactsForAccount:self.accountID];
-                
-                //trigger view updates to make sure enabled/disabled account state propagates to all ui elements
-                [[MLNotificationQueue currentQueue] postNotificationName:kMonalRefresh object:nil userInfo:nil];
+                } withTimeout:2.0];
             }
             else
             {
                 [self unfreezeSendQueue];      //make sure the queue is operational again
                 if(streamError != nil)
                 {
-                    [self->_sendQueue addOperations: @[[NSBlockOperation blockOperationWithBlock:^{
+                    //block until finished (with a deadline) because we are closing the socket directly afterwards
+                    [self isaCloudRunOnSendQueue:^{
                         //close stream with error
                         [self writeToStream:streamError.XMLString];    // dont even bother queueing
                         MLXMLNode* stream = [[MLXMLNode alloc] initWithElement:@"/stream:stream"];  //hack to close stream
                         [self writeToStream:stream.XMLString];    // dont even bother queueing
-                    }]] waitUntilFinished:YES];         //block until finished because we are closing the socket directly afterwards
+                    } withTimeout:2.0];
                 }
                 else
                 {
                     //send one last ack before closing the stream (xep version 1.5.2)
                     if(self.accountState >= kStateInitStarted)
                     {
-                        [self->_sendQueue addOperations:@[[NSBlockOperation blockOperationWithBlock:^{
+                        //block until finished (with a deadline) because we are closing the socket directly afterwards
+                        [self isaCloudRunOnSendQueue:^{
                             [self sendLastAck];
-                        }]] waitUntilFinished:YES];         //block until finished because we are closing the socket directly afterwards
+                        } withTimeout:2.0];
                     }
                 }
-                
-                //persist these changes
-                [self persistState];
             }
-        }];
-        
+
+            //isaCloud: state part, in a short write transaction
+            [[DataLayer sharedInstance] createTransaction:^{
+                if(doExplicitStreamClose)
+                {
+                    @synchronized(self->_stateLockObject) {
+                        //preserve unAckedStanzas even on explicitLogout and resend them on next connect
+                        //if we don't do this, messages could get lost when logging out directly after sending them
+                        //and: sending messages twice is less intrusive than silently loosing them
+                        NSMutableArray* stanzas = self.unAckedStanzas;
+
+                        //reset smacks state to sane values (this can be done even if smacks is not supported)
+                        [self initSM3];
+                        [self replaceUnackedStanzasWith:stanzas];
+
+                        //inform all old iq handlers of invalidation and clear _iqHandlers dictionary afterwards
+                        [self invalidateIQHandlersWithReason:@"disconnect"];
+
+                        //invalidate pubsub queue (*after* iq handlers that also might invalidate a result handler of the queued operation)
+                        [self.pubsub invalidateQueue];
+
+                        //clear pipeline cache
+                        [self resetAuthPipelining];
+
+                        //clear all reconnection handlers
+                        NSArray* handlers = nil;
+                        @synchronized(self->_reconnectionHandlers) {
+                            handlers = [self->_reconnectionHandlers copy];
+                            [self->_reconnectionHandlers removeAllObjects];
+                        }
+                        for(MLHandler* handler in handlers)
+                            $invalidate(handler, $ID(account, self));
+
+                        //persist these changes
+                        [self persistState];
+                    }
+
+                    //delete FAST token for this account --> use SCRAM on next login
+                    [SAMKeychain deletePasswordForService:kMonalHtTokenKeychainName account:self.accountID.stringValue];
+
+                    [[DataLayer sharedInstance] resetContactsForAccount:self.accountID];
+
+                    //trigger view updates to make sure enabled/disabled account state propagates to all ui elements
+                    [[MLNotificationQueue currentQueue] postNotificationName:kMonalRefresh object:nil userInfo:nil];
+                }
+                else
+                {
+                    //persist these changes
+                    [self persistState];
+                }
+            }];
+        }
+
         [self closeSocket];
         [self accountStatusChanged];
         self->_disconnectInProgres = NO;
-        
+
         //make sure our idle state is rechecked
         [[NSNotificationCenter defaultCenter] postNotificationName:kMonalNotIdle object:self];
     }];
+}
+
+//isaCloud: like [_sendQueue addOperations:@[op] waitUntilFinished:YES], but never waits longer than timeout: a blocked socket write
+//must not hold the disconnect (and the app freeze that waits for it) forever. If the deadline passes, closeSocket right afterwards
+//cancels the connection, which completes the blocked write.
+-(BOOL) isaCloudRunOnSendQueue:(monal_void_block_t) block withTimeout:(NSTimeInterval) timeout
+{
+    dispatch_semaphore_t finished = dispatch_semaphore_create(0);
+    [self->_sendQueue addOperation:[NSBlockOperation blockOperationWithBlock:^{
+        block();
+        dispatch_semaphore_signal(finished);
+    }]];
+    if(dispatch_semaphore_wait(finished, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(timeout * NSEC_PER_SEC))) != 0)
+    {
+        DDLogWarn(@"isaCloud: send queue of account %@ did not finish within %.1f s while disconnecting, continuing anyway", self.accountID, timeout);
+        return NO;
+    }
+    return YES;
 }
 
 -(void) closeSocket
@@ -4238,6 +4282,7 @@ static NSRegularExpression* fastTokenRemovalRegex;
     //thread 2 (for example: urllib session): holding state lock object and waiting for write transaction
     [[DataLayer sharedInstance] createTransaction:^{
         @synchronized(self->_stateLockObject) {
+            CFAbsoluteTime isaCloudPersistStart = CFAbsoluteTimeGetCurrent();      //isaCloud: see the slow persist log below
             DDLogVerbose(@"%@ --> realPersistState before: used/available memory: %.3fMiB / %.3fMiB)...", self.accountID, [HelperTools report_memory], (CGFloat)os_proc_available_memory() / 1048576);
             //state dictionary
             NSMutableDictionary* values = [NSMutableDictionary new];
@@ -4329,6 +4374,10 @@ static NSRegularExpression* fastTokenRemovalRegex;
             //save state dictionary
             DDLogVerbose(@"%@ --> realPersistState is now serializing the state...", self.accountID);
             [[DataLayer sharedInstance] persistState:values forAccount:self.accountID];
+            //isaCloud: what makes the slow saves slow (counts only, cheap); the serialization time and size are logged by DataLayer
+            double isaCloudPersistMs = (CFAbsoluteTimeGetCurrent() - isaCloudPersistStart) * 1000.0;
+            if(isaCloudPersistMs > 50.0)
+                DDLogWarn(@"isaCloud: slow realPersistState for account %@: %.0f ms, unAckedStanzas=%lu, iqHandlers=%lu, reconnectionHandlers=%lu, mucState=%lu, pubsubData=%lu, runningMamQueries=%lu, runningCapsQueries=%lu, mdsData=%lu, inCatchup=%lu", self.accountID, isaCloudPersistMs, (unsigned long)[values[@"unAckedStanzas"] count], (unsigned long)[values[@"iqHandlers"] count], (unsigned long)[values[@"reconnectionHandlers"] count], (unsigned long)[values[@"mucState"] count], (unsigned long)[values[@"pubsubData"] count], (unsigned long)[values[@"runningMamQueries"] count], (unsigned long)[values[@"runningCapsQueries"] count], (unsigned long)[values[@"mdsData"] count], (unsigned long)[values[@"inCatchup"] count]);
 
             //debug output
             DDLogVerbose(@"%@ --> persistState(saved at %@):\n\tisDoingFullReconnect=%@,\n\tlastHandledInboundStanza=%@,\n\tlastHandledOutboundStanza=%@,\n\tlastOutboundStanza=%@,\n\t#unAckedStanzas=%lu%s,\n\tstreamID=%@\n\tlastInteractionDate=%@\n\tpersistentIqHandlers=%@\n\tsupportsHttpUpload=%d\n\tpushEnabled=%d\n\tsupportsPubSub=%d\n\tsupportsModernPubSub=%d\n\tsupportsPubSubMax=%d\n\taccountDiscoDone=%d\n\tself.inCatchup=%@\n\tomemo.state=%@\n\thasSeenOmemoDeviceListAfterOwnDeviceid=%@\n\tself.cachedStreamFeaturesBeforeAuth=%@\n\tself.cachedStreamFeaturesAfterAuth=%@\n",
