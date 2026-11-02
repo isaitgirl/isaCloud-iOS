@@ -1223,7 +1223,7 @@ struct ChatView: View {
         .autoFocusTextInputOnChatOpen(chatViewDefaultsDB.showKeyboardOnChatOpen)
         .showUsername(contact.isMuc)
         .scrollTo(jumpScrollParams)      //isaCloud: see jumpToSearchedMessage()
-        .messageMenuAnimationDuration(0.15)      //isaCloud: the message menu (reactions, actions) opens sooner than the library's 0.3 s
+        .messageMenuAnimationDuration(0.1)      //isaCloud: the message menu (reactions, actions) opens sooner than the library's 0.3 s (0.15 s long press + 0.1 s = 250 ms, see UIList.swift)
         .reactionsBelowBubble(!chatViewDefaultsDB.reactionsAboveMessages)       //isaCloud: in the footer, unless the setting asks for the old place
         .setMessageFont(ChatTextSize.messageFont(system: dynamicTypeSize, step: chatViewDefaultsDB.chatTextSizeStep))      //isaCloud: see ChatTextSize
         .setMessageTimeFont(ChatTextSize.timeFont(system: dynamicTypeSize, step: chatViewDefaultsDB.chatTextSizeStep))

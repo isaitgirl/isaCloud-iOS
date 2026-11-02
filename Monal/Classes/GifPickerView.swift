@@ -214,7 +214,7 @@ struct GifMessageBubble: View {
             .onTapGesture {
                 replayToken += 1
             }
-            .onLongPressGesture(minimumDuration: 0.3) {      //same time as the other messages (ExyteChat fork, UIList.swift)
+            .onLongPressGesture(minimumDuration: 0.1) {      //same time as the other messages (ExyteChat fork, UIList.swift)
                 showContextMenu()
             }
     }
