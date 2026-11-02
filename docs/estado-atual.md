@@ -23,6 +23,7 @@ Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 - **Defeito do build 82 já corrigido (entra no build 83):** numa mídia, depois de fechar o menu do toque longo, o visualizador abria. O fork ignora o toque na mensagem com o menu aberto (PR 16, `b7de90e`; roadmap 123). Confirmado pela Isadora no iPhone; falta conferir vídeo, link e replay do GIF.
 - **Toque longo só no balão e link ignorado com o menu aberto** (PR 17 do fork; roadmap 124 e 125; **entram no build 83**): confirmado pela Isadora no iPhone. Falta conferir o avatar e a hora sozinha no iOS 27.
 - **`0xdead10cc` do build 81 corrigido no código** (PR 27 do app, log síncrono com limite de espera, roadmap 106; **entra no build 83**, ainda não validado no aparelho).
+- **Cor do balão e do texto das minhas mensagens** (PR 29 do app, PR 18 do fork; roadmap 119; entra no build 83). **"Compartilhar…" no menu das mídias** (roadmap 120; entra no build 83). **Crash ao compartilhar um link para o isaCloud** corrigido (PR 30, roadmap 126; entra no build 83).
 - **Anotado e não feito:** o `0xdead10cc` do build 81 (13:48:11) é o **logger síncrono dentro da transação de escrita** (roadmap 106, "Caso do build 81"): é a **próxima frente**.
 - Docs de outras sessões que entraram junto neste commit: decisões 119 (cor do balão) e 120 ("Compartilhar…" no menu das mídias), só análise, sem código.
 

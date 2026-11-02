@@ -5,6 +5,7 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 ## Não publicado
 
 ### Adicionado
+- **"Compartilhar…" no menu de toque longo das mídias.** Mensagens com arquivo já baixado (foto, GIF, vídeo, áudio, documento) ganham a opção no menu, que abre a folha de compartilhar do iOS ("Salvar Imagem", "Salvar Vídeo", "Salvar em Arquivos", AirDrop…). Foto, GIF e vídeo usam o compartilhamento do ExyteChat (cópia com a extensão certa, PR 14 do fork); áudio e documentos são copiados para uma pasta temporária com o nome original, que é removida quando a folha fecha. Mídia ainda não baixada e mensagens de texto não mostram a opção (`ChatView.swift`).
 - **Cor do balão e do texto das minhas mensagens** (Configurações Gerais → Interface do Usuário → Aparência). Dois seletores de cor livres (sem opacidade), "Restaurar cores padrão", a mesma prévia do tamanho do texto e um aviso quando o contraste entre balão e texto fica abaixo de 4,5:1 (só com cor personalizada). O botão de enviar, o microfone, os ícones de entrega e a pílula de reação acompanham a cor escolhida; o rótulo "Encaminhado" e os links nos meus balões usam a cor do texto. Vazio = rosa e branco do isaCloud. Duas preferências novas, `ownBubbleColorHex` e `ownBubbleTextColorHex` (`GeneralSettings.swift`, `ChatView.swift`, `ChatInputBar.swift`, `IsaCloudBubbleColors` em `GifPickerView.swift`, `IsaCloudColorMath.swift`). **Depende do PR 18 do fork do ExyteChat** (pílula de reação e seta de responder). Testado nos simuladores iOS 18.6 e 27; falta o `.dev`.
 
 ### Corrigido
