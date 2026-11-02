@@ -203,6 +203,14 @@ struct ChatView: View {
         case file(messageDBId: NSNumber, message: MLMessage)
     }
     @State private var messageToForward: ForwardedItem?       //isaCloud: what is being forwarded (the picker of destinations is shown while it is set)
+    /// isaCloud: a copy of a file (audio, document) that the share sheet is showing; the copy is in its own temporary folder
+    private struct SharedFileCopy: Identifiable {
+        let id = UUID()
+        let url: URL
+    }
+    @State private var fileToShare: SharedFileCopy?
+    //isaCloud: the temporary folder of the last copy shared, removed when the share sheet closes (the item is cleared before onDismiss runs)
+    @State private var sharedCopyFolder: URL?
     //isaCloud: opened from the search in the messages: the chat shows this message in the middle of the screen (nil: the newest ones as always)
     @State private var jumpToHistoryId: NSNumber?
     @State private var jumpScrollParams: ScrollToParams?
@@ -217,7 +225,7 @@ struct ChatView: View {
     }
 
     enum MessageAction: MessageMenuAction {
-        case copy, quote, forward, edit, retract, moderate, delete, resend
+        case copy, quote, forward, share, edit, retract, moderate, delete, resend
 
         func title() -> String {
             switch self {
@@ -227,6 +235,8 @@ struct ChatView: View {
                     NSLocalizedString("Reply", comment: "message menu: quote the message in the input")
                 case .forward:
                     NSLocalizedString("Forward…", comment: "message menu: send the message to other chats")
+                case .share:
+                    NSLocalizedString("Share…", comment: "message menu: opens the share sheet with the media or file of the message")
                 case .edit:
                     NSLocalizedString("Edit", comment: "message menu")
                 case .retract:
@@ -248,6 +258,8 @@ struct ChatView: View {
                     Image(systemName: "arrowshape.turn.up.left")
                 case .forward:
                     Image(systemName: "arrowshape.turn.up.right")
+                case .share:
+                    Image(systemName: "square.and.arrow.up")
                 case .edit:
                     if #available(iOS 18.0, macCatalyst 18.0, *) {
                         Image(systemName: "bubble.and.pencil")
@@ -298,6 +310,14 @@ struct ChatView: View {
             } else if mlMessage.messageType == kMessageTypeFiletransfer
                 && MessageForward.canForwardFile(isRetracted: mlMessage.retracted, hasSendError: hasSendError) {
                 availableActions.append(.forward)
+            }
+
+            //isaCloud: sharing a file that is on the device (photo, GIF, video, audio, document): the share sheet offers Save Image, Save to Files...
+            //(the state is read with an explicit type, as in ChatViewMessage.files)
+            if mlMessage.messageType == kMessageTypeFiletransfer,
+               let fileInfo = (message as! ChatViewMessage).fileInfo,
+               (fileInfo.downloadState as DownloadState.RawValue) == DownloadState.complete.rawValue {
+                availableActions.append(.share)
             }
 
             if !mlMessage.inbound && DataLayer.sharedInstance().checkLMCEligible(mlMessage.messageDBId, encrypted: mlMessage.encrypted || contact.isEncrypted, historyBaseID: nil) {
@@ -693,6 +713,26 @@ struct ChatView: View {
         }
     }
 
+    /// isaCloud: copies a downloaded file (audio, document) to a temporary folder, with its own name, and opens the share sheet with the copy.
+    /// The copy is removed when the sheet closes. A failed copy is only logged.
+    private func shareDownloadedFile(_ cacheURL: URL, filename: String) async {
+        let name = filename.isEmpty ? cacheURL.lastPathComponent : filename
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let copy = folder.appendingPathComponent(name)
+        do {
+            //(copying a big file must not block the screen)
+            try await Task.detached {
+                try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                try FileManager.default.copyItem(at: cacheURL, to: copy)
+            }.value
+            sharedCopyFolder = folder
+            fileToShare = SharedFileCopy(url: copy)
+        } catch {
+            DDLogError("Share: could not copy the file to share it: \(error.localizedDescription)")
+            try? FileManager.default.removeItem(at: folder)
+        }
+    }
+
     /// isaCloud: opens the chat at the message found by the search: loads from the database everything between that message and what is shown,
     /// then scrolls to it (the list loads older messages in blocks, from the newest; this closes the gap at once)
     private func jumpToSearchedMessage() {
@@ -1078,6 +1118,18 @@ struct ChatView: View {
                         messageToForward = .file(messageDBId: messageDBId, message: mlMessage)
                     } else {
                         messageToForward = .text(mlMessage.messageText)
+                    }
+                case .share:
+                    if !message.attachments.isEmpty {
+                        //isaCloud: photos, GIFs and videos are attachments: the library shares a copy with the right extension (Save Image, Save Video)
+                        defaultActionClosure(message, .share)
+                    } else if let fileInfo = (message as! ChatViewMessage).fileInfo {
+                        //isaCloud: audio and documents are not attachments in the library, so the copy is made here
+                        let cacheURL = fileInfo.fileURL as URL?
+                        let filename = (fileInfo.filename as String?) ?? ""
+                        if let cacheURL = cacheURL {
+                            Task { await shareDownloadedFile(cacheURL, filename: filename) }
+                        }
                     }
                 case .edit:
                     inputModel.startEdit(of: mlMessage.messageId, text: mlMessage.messageText)
@@ -1581,6 +1633,15 @@ struct ChatView: View {
                     break
                 }
             }
+        }
+        //isaCloud: the share sheet of an audio or a document ("Share…" in the message menu); its copy is removed when it closes
+        .sheet(item: $fileToShare, onDismiss: {
+            if let folder = sharedCopyFolder {
+                try? FileManager.default.removeItem(at: folder)
+                sharedCopyFolder = nil
+            }
+        }) { file in
+            ActivityViewController(activityItems: [file.url])
         }
         .toolbarRole(.editor)       //make sure to never show the title of the previous view in the back bar button
         .canContainExternalLinks()
