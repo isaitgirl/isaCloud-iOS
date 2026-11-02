@@ -11,7 +11,7 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 | TestFlight | **82** (02/11/2026, 14:18; o 81 foi o anterior, tag `build-81`) |
 | `.dev` no iPhone | **82** (igual ao TestFlight, sem a sonda; **sem push**, então a extensão de notificação não roda nele) |
 | Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 ainda com o build 80 e as 3 contas de teste (o 81 só foi compilado neles, **não instalado**, para não apagar o banco de teste; a extensão não roda no simulador com `simctl push`) |
-| ExyteChat | `d2ece12` na `isaCloud` (toque longo do menu em UIKit, PR 15; antes `583d960`, folha de compartilhar com a extensão certa, PR 14; **ambos no build 82**) |
+| ExyteChat | `b7de90e` na `isaCloud` (toque ignorado com o menu aberto, PR 16, **ainda não no TestFlight**; antes `d2ece12` = toque longo do menu em UIKit, PR 15, e `583d960` = folha de compartilhar com a extensão certa, PR 14; **os dois estão no build 82**) |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
@@ -20,7 +20,7 @@ Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 
 - **Menu da mensagem em ~250 ms** (PR 25 do app, PR 15 do fork): o toque longo do SwiftUI ignorava a duração e disparava em ~600 ms; agora é um `UILongPressGestureRecognizer` de 0,15 s na tabela do ExyteChat + animação de 0,1 s + vibração preparada no toque. **Confirmado pela Isadora no iPhone, GIF incluído.** Detalhes em `decisoes.md` ("Menu da mensagem em 250 ms") e `exytechat-fork.md` (mudança nº 3).
 - **"Salvar Imagem" e "Salvar Vídeo" na folha de compartilhar do chat** (PR 14 do fork): a extensão do arquivo compartilhado era o mime type em hexadecimal. Testado no simulador iOS 18.6; **falta** vídeo, iOS 27 e conferir no iPhone; o `MediaViewer.swift` (Mídia Compartilhada) não foi verificado.
-- **Bug aberto no build 82 (relatado pela Isadora logo depois do envio):** numa imagem, depois de reagir pelo menu do toque longo, o visualizador de imagens abre sozinho. Não acontecia com o toque longo do SwiftUI; suspeita: o novo reconhecedor do UIKit (`UIList`, PR 15 do fork) e o toque/liberação depois do menu. Em investigação; correção irá no build 83.
+- **Defeito do build 82 já corrigido (entra no build 83):** numa mídia, depois de fechar o menu do toque longo, o visualizador abria. O fork ignora o toque na mensagem com o menu aberto (PR 16, `b7de90e`; roadmap 123). Confirmado pela Isadora no iPhone; falta conferir vídeo, link e replay do GIF.
 - **Anotado e não feito:** o `0xdead10cc` do build 81 (13:48:11) é o **logger síncrono dentro da transação de escrita** (roadmap 106, "Caso do build 81"): é a **próxima frente**.
 - Docs de outras sessões que entraram junto neste commit: decisões 119 (cor do balão) e 120 ("Compartilhar…" no menu das mídias), só análise, sem código.
 
@@ -31,7 +31,7 @@ Tema: **`0xdead10cc` em segundo plano** (PR 24; causa, correção, limites e **p
 - **Extensão de notificação** sai com flush manual, `[MLProcessLock unlock]` e `_exit(0)` (5 mortes `0xdead10cc` dela em 31/10 e 01/11 estavam presas dentro do `exit()`).
 - **Aviso "isaCloud" vazio** também removido nas acordadas em segundo plano.
 - **Falta validar no aparelho (nada disso foi testado em execução):** contar `0xdead10cc` por dia nos crash logs do iPhone (base: 1 a 3 por dia desde 28/10; no app e, separado, na `NotificationService`) e procurar no log "Main queue did not run our block" seguido de "Posting kMonalWillBeFreezed" em 1 a 2 s. Comandos: `docs/troubleshooting.md` e a memória `ler-log-de-producao-do-iphone`.
-- **Próxima frente (anotada em 02/11/2026): o `0xdead10cc` do logger.** Um caso do build 81 (produção, 13:48:11) mostrou a `receiveQueue` presa num log síncrono dentro de transação de escrita, com a fila do Lumberjack parada (o log do app para em 13:48:05.439); não é a espera pela thread principal que a camada 1 resolveu. Detalhes e a correção a planejar no roadmap 106 (`HelperTools.m:492`, `swizzled_queueLogMessage`; log assíncrono dentro de transação). Falta saber por que a fila do logger parou.
+- **`0xdead10cc` do logger (caso do build 81, 13:48:11): corrigido em código, falta commit/PR e ver no aparelho.** Branch `fix/log-sincrono-na-suspensao` (`HelperTools.m`, log síncrono com espera de no máximo 250 ms; roadmap 106 e `decisoes.md`, "Log síncrono com limite de espera"). Está no `.dev` do iPhone; **não** está no TestFlight. Falta medir os `0xdead10cc` por dia depois do build 83.
 - **Próximos passos:** (1) camada 2: gravar as presenças de canal em lote (um `persistState` e uma atualização de tela por lote; arquivos `xmpp.m`/`MLMucProcessor.m` do Monal, validar antes); (2) o aviso cru **"New Message?"** (texto original do push quando a extensão não entrega o conteúdo): falta o horário de um caso para achar o push no log do iPhone; a nossa limpeza nunca o remove; (3) propor `_exit` e o fallback de expiração ao Monal.
 
 ## O que entrou no build 80 (sobre o 79)

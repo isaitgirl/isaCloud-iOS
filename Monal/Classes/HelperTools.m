@@ -511,9 +511,32 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
         });
     }
     
-    //don't do sync logging for any message (usually ERROR), while the global logging queue is suspended
+    //isaCloud: don't do sync logging for any message (usually ERROR), while the global logging queue is suspended
     //don't use _suspensionHandling_lock here because that can introduce deadlocks
     //(for example if we have log statements in our MLLogFileManager code rotating the logfile and creating a new one)
+    //isaCloud: there is a race here: the suspension can start right after the check above and before the dispatch_sync of the
+    //Lumberjack, which then waits forever on the suspended queue. A caller holding the sqlite lock (e.g. receiveQueue inside a
+    //write transaction) then blocks the app in the background, and iOS kills it with 0xdead10cc (build 81, 13:48:11).
+    //So a sync request is queued as async here instead, and we wait for the queue to drain for at most 250 ms (same pattern
+    //as flushLogsWithTimeout:). The line is written as soon as the queue runs again, even if the wait times out.
+    //Don't wait when already running on the logging queue itself (e.g. log statements in the MLLogFileManager code), as the
+    //drain block would then be queued behind the current block and we would always hit the timeout.
+    if(asyncFlag == NO && !_suspensionHandling_isSuspended)
+    {
+        [self swizzled_queueLogMessage:logMessage asynchronously:YES];
+        const char* currentLabel = dispatch_queue_get_label(DISPATCH_CURRENT_QUEUE_LABEL);
+        const char* loggingLabel = dispatch_queue_get_label([DDLog loggingQueue]);
+        BOOL onLoggingQueue = (currentLabel != NULL && loggingLabel != NULL && strcmp(currentLabel, loggingLabel) == 0);
+        if(!onLoggingQueue)
+        {
+            dispatch_semaphore_t drained = dispatch_semaphore_create(0);
+            dispatch_async([DDLog loggingQueue], ^{
+                dispatch_semaphore_signal(drained);
+            });
+            dispatch_semaphore_wait(drained, dispatch_time(DISPATCH_TIME_NOW, 250 * NSEC_PER_MSEC));
+        }
+        return;
+    }
     return [self swizzled_queueLogMessage:logMessage asynchronously:_suspensionHandling_isSuspended ? YES : asyncFlag];
 }
 

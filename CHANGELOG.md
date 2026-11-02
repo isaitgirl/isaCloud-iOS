@@ -4,6 +4,10 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## Não publicado
 
+### Corrigido
+- **O app podia ser encerrado pelo iOS (`0xdead10cc`) por um log de erro preso na suspensão do registro.** Um log síncrono (erro) feito dentro de uma transação de escrita no banco podia travar para sempre se a fila de log fosse suspensa logo depois da checagem (caso do build 81, 13:48:11); o banco ficava travado e o iOS matava o app. Agora o log síncrono entra na fila e espera no máximo 250 ms (`HelperTools.m`, `swizzled_queueLogMessage`).
+- **O visualizador de imagens não abre mais sozinho depois de fechar o menu de uma mensagem com mídia** (defeito do build 82, de quando o menu passou a abrir em 250 ms). O toque curto da foto, do GIF ou do vídeo disparava quando o dedo levantava do toque longo e a apresentação ficava na fila atrás do menu; o fork do ExyteChat agora ignora o toque na mensagem enquanto o menu está aberto (PR 16 do fork, `ChatViewModel`).
+
 ## 0.0.1 (build 82) — 02/11/2026 (enviado ao TestFlight às 14:18)
 
 ### Alterado
