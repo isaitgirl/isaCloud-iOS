@@ -568,6 +568,39 @@ No iOS 27, "Adicionar contato ou canal" (`AddContactMenu`) e "Convidar para o is
   - **Vale propor ao Monal:** as duas mudanças são genéricas (não dependem do isaCloud) e atacam um `0xdead10cc` que o Monal também deve ter.
   - **Sem teste automatizado:** a expiração do `BGTask` e a saída da extensão só se reproduzem no aparelho; qualquer mudança futura nessas funções deve ser validada contando os `0xdead10cc` por dia nos crash logs.
 
+## Cor do balão e do texto das minhas mensagens (02/11/2026, só análise, roadmap 119)
+- **Pedido da Isadora:** trocar a cor do meu balão e a cor do texto em Configurações → Interface do Usuário → Aparência. **Decidido por ela:** (1) o botão de enviar e os ícones de status mudam junto com o balão; (2) seletor de cor **livre** (`ColorPicker`) tanto para o fundo quanto para a fonte, sem paleta fechada. Nada foi implementado ainda.
+- **Por que é barato:** o gancho já existe. O `.chatTheme(...)` de `ChatView.swift` injeta `messageMyBG`, `messageMyText`, `messageMyTimeText` e `sendButtonBackground` a partir de `IsaCloudBubbleColors` (`GifPickerView.swift`: `mine` = `isaCloudPink`, `mineText` = branco, `mineTime` = branco a 85%). O fork usa `messageMyBG` nos ícones de status (`MessageStatusView`), no gesto de responder, no menu e na modal de reações, então eles seguem a cor sozinhos. O modelo a copiar é o `chatTextSizeStep` (registro em `MLXMPPManager.m`, `@defaultsDB` em `GeneralSettings.swift` e `ChatView.swift`, leitura no `body` do chat).
+- **Desenho escolhido:**
+  - Duas preferências de texto hexadecimal, `ownBubbleColorHex` e `ownBubbleTextColorHex`; **vazio = padrão isaCloud** (continua `isaCloudPink` e branco, e uma troca de marca futura segue valendo).
+  - `ColorPicker` com `supportsOpacity: false` para as duas, botão "Restaurar cores padrão", prévia com dois balões (a mesma `textSizePreview`) e aviso quando a razão de contraste entre balão e texto ficar abaixo de 4,5:1.
+  - `IsaCloudBubbleColors` deixa de ter `static let` e lê as preferências, com a cor em cache estático atualizado quando a preferência muda (`ChatViewMessage.attributedText` é chamada o tempo todo; não ler `UserDefaults` a cada chamada). `mineTime` passa a ser a cor do texto a 85%.
+  - A cor é a mesma no claro e no escuro (o rosa de hoje já é).
+- **Pontos com branco fixo que quebram com balão claro (têm de mudar junto):**
+  - `ChatView.swift`, `forwardLabelText`: rótulo "Encaminhado" em `Color.white` → cor do texto escolhida (ou não definir cor e herdar do tema).
+  - `ChatView.swift`, `attributedText`: `linkColor` = `.white` nos meus balões → cor do texto escolhida. A `LinkCache` guarda só os trechos de link, não a cor, então não precisa ser invalidada.
+  - **Fork do ExyteChat**, `MessageReactionView.swift`, `reactionCapsule`: `.tint(.white)` na pílula do meu balão → `theme.colors.messageMyText`. Com o padrão o resultado é idêntico (branca com texto rosa). Commit próprio no fork, PR par; o PR do fork é mesclado antes e o `Package.resolved` aponta para o SHA. Adicionar à lista de `docs/exytechat-fork.md` quando entrar.
+  - Não mudam: a cápsula escura da hora sobre mídia (`MessageTimeWithCapsuleView`, branca de propósito) e os GIFs/mídias, que não têm balão.
+- **Riscos a validar:**
+  1. Cor clara no balão: os ícones de status e o botão de enviar ficam sobre o fundo do chat com `messageBG`; um amarelo claro some ali. O aviso de contraste vale para balão × texto; para ícones × fundo, testar ou limitar a luminosidade do balão.
+  2. Atualização ao vivo e ao reabrir o chat (como o tamanho do texto), no iOS 18 e no 27.
+  3. Cor de link e rótulo no meu balão com texto escuro.
+  4. Textos novos precisam de tradução pt-BR no override do isaCloud ("Cor do balão", "Cor do texto", "Restaurar cores padrão").
+- **Descartado:** só paleta pronta (não atende "trocar a cor"; pode vir como atalho depois); `ChatTheme(accentColor:)` da biblioteca (recolore fundo, balão dos outros e campo de texto, e só existe no iOS 18+); cor por conversa (exige tabela nova na escada do banco do isaCloud, fica como evolução).
+- **Merge com o Monal:** baixo risco. Tudo cai em trechos já marcados `//isaCloud:` (tema do chat, bloco de Aparência, `IsaCloudBubbleColors`) mais uma linha de registro em `MLXMPPManager.m`. Sem mudança de banco.
+- **Esforço:** meio dia a um dia (cerca de 100 linhas no app, 1 linha no fork, strings, teste nos simuladores iOS 18 e 27 e no `.dev`).
+
+## "Compartilhar…" no menu das mídias, em vez de botões de salvar (02/11/2026, só decisão, roadmap 120)
+- **Pedido:** poder salvar uma mídia direto do toque longo na mensagem (galeria para foto e vídeo, Arquivos para áudio e arquivo).
+- **Decisão da Isadora:** usar a opção **"Compartilhar…"** no menu, que abre a folha de compartilhar padrão do iOS. Dali já se escolhe "Salvar Imagem", "Salvar Vídeo" ou "Salvar em Arquivos". Dois toques em vez de um, mas sem permissão nova, sem `PHPhotoLibrary` e sem seletor de documentos próprio.
+- **Por que serve:** a PR 14 do fork (`AttachmentSharing`, ver `docs/exytechat-fork.md`, item 15) já compartilha uma cópia temporária com a extensão certa, o que faz a folha oferecer "Salvar Imagem" e "Salvar Vídeo" (o cache guarda o mime type em hexadecimal no lugar da extensão). Seguir a mesma linha da decisão de 02/11/2026 de não fazer botão novo.
+- **Descartado:** itens "Salvar na galeria" e "Salvar em Arquivos" no menu (`PHAssetCreationRequest` + `UIDocumentPickerViewController(forExporting:)`; cerca de um dia, mais permissões, traduções e testes). Fica como evolução se os dois toques incomodarem.
+- **Como fazer (para depois):**
+  - `ChatView.swift`: caso novo `share` em `MessageAction` ("Share…", `square.and.arrow.up`), ao lado de "Forward…", só quando a mensagem é `kMessageTypeFiletransfer`, o `downloadState` é `complete` e a mensagem não está pendente, com erro ou retirada (esses casos já saem de `menuItems(for:)` antes). Ler os campos do `fileInfo` com tipo explícito (erro do build 77).
+  - **Cuidado:** `DefaultMessageMenuAction.share` do fork só compartilha `message.attachments` (foto e vídeo; GIF entra se for imagem). **Áudio (`recording`) e arquivo (`files`) não são anexos**, então `defaultActionClosure(message, .share)` não faria nada: para eles o app abre a própria folha (`UIActivityViewController`) com uma cópia temporária com o nome e a extensão certos (`fileInfo.filename`), pelo mesmo motivo da PR 14.
+  - Strings: "Share…" no pt-BR do isaCloud ("Compartilhar…"), seguindo o "Forward…" ("Encaminhar…").
+- **Não testado:** nada foi implementado. Conferir foto, GIF animado, vídeo, áudio e PDF, em 1:1 e em grupo, recebidos e enviados, com OMEMO, e a folha com o teclado aberto, no iOS 18 e no 27 e no iPhone.
+
 ## Descartado
 - **Código de afiliado** (Tela "Tenho um código", `mod_invites` do Prosody): removido do roadmap por decisão da Isadora em 26/10/2026.
 - **Aviso de privacidade ao ligar a foto pública** e **"usar o apelido em todas as salas"**: ver as seções acima.
@@ -575,3 +608,20 @@ No iOS 27, "Adicionar contato ou canal" (`AddContactMenu`) e "Convidar para o is
 ## Convenções gerais
 - Código em inglês, seguindo o Monal; textos para a pessoa em pt-BR pelo mecanismo de tradução (`isaCloud/localization`, regra em `docs/traducoes.md`). Mudanças que compliquem o merge com o Monal precisam ser validadas antes.
 - Commits: só quando a Isadora pedir, com mensagem bem descritiva.
+
+## Salvar foto na galeria: corrigir a extensão do arquivo compartilhado, sem botão novo (02/11/2026)
+
+- **Pedido:** o visualizador de imagens do chat só deixava salvar em Arquivos; a Isadora queria salvar na galeria do iPhone, com a menor complexidade e risco.
+- **Causa:** o chat entrega ao ExyteChat o arquivo do cache do Monal, cuja "extensão" é o mime type em hexadecimal (`MLFiletransfer retrieveCacheFilePathForUrl:andMimeType:`). A folha de compartilhar do iOS não reconhece o tipo, então não oferece "Salvar Imagem". Confirmado no simulador: arquivo genérico antes, "Imagem PNG" com miniatura depois.
+- **Decisão:** corrigir na origem do problema, no fork do ExyteChat (`AttachmentSharing`, PR 14, ver `docs/exytechat-fork.md`, item 15): compartilhar uma cópia temporária com a extensão certa. Sem tela, sem botão e sem permissão nova (`NSPhotoLibraryAddUsageDescription` já existia); o salvamento é o do próprio iOS.
+- **Descartado:** botão "Salvar na galeria" com `PHPhotoLibrary` no `MediaViewer.swift` (o visualizador da "Mídia Compartilhada", que não é o do chat). Chegou a ser feito e testado até a permissão, mas a gravação falhava com `PHPhotosErrorDomain 3302` pelo mesmo motivo da extensão hexadecimal, exigiria a mesma cópia temporária, mais textos traduzidos e um arquivo do Monal alterado. O visualizador da galeria compartilha por `ShareLink` com `Transferable` (JPEG, GIF, SVG), que deve oferecer "Salvar Imagem"; **não foi verificado**. Se faltar, o patch do botão está no histórico desta conversa.
+- **Não testado:** vídeo, iOS 27 e o iPhone (o `.dev` já está com a correção).
+
+## Menu da mensagem em 250 ms: toque longo do UIKit (02/11/2026, build 82)
+
+- **Pedido:** a Isadora achava o menu de contexto lento mesmo com 0,3 s de toque longo e 0,15 s de animação; no Android usou 250 ms no total, sem animação, e ficou ótimo. Meta: ~250 ms ao todo.
+- **Medição (iPhone 12 Pro, iOS 27, `.dev` com registro temporário, fora do código):** o toque longo do SwiftUI disparava ~600 ms depois do toque, **ignorando** o `minimumDuration` (0,1 s e 0,3 s davam o mesmo); montar o menu e as animações depois do gatilho levavam só 110 a 200 ms. Ou seja, o atraso era o gesto, não a animação; encurtar a animação mais não adiantava.
+- **Decisão:** trocar o gesto por um `UILongPressGestureRecognizer` na tabela do fork do ExyteChat (`UIList.swift`, mudança nº 3 de `docs/exytechat-fork.md`, PR 15 do fork) com 0,15 s, e a animação do app em 0,1 s (`ChatView.swift`, `.messageMenuAnimationDuration(0.1)`). Vibração preparada no toque inicial para não atrasar. Medido no simulador: o reconhecedor entra em `.began` ~156 ms depois do toque. Escolha 150 + 100 em vez de 100 + 100: um toque curto e lento demais não deve virar menu em vez de abrir a mídia.
+- **Resultado:** a Isadora testou no iPhone ("ficou muito bom"), inclusive no balão de GIF.
+- **GIF:** o balão mantém o `onLongPressGesture` dele (`GifMessageBubble`); como `showContextMenu` só põe a linha em `messageMenuRow`, os dois gatilhos dão o mesmo resultado. Se algum dia aparecer menu duplo, retirar o do GIF.
+- **Não testado:** toque curto em link; `showMessageMenuOnLongPress` desligado. Mexe só no fork (e no número da animação do app); nenhum arquivo do Monal.

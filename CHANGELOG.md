@@ -4,6 +4,14 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## Não publicado
 
+## 0.0.1 (build 82) — 02/11/2026 (enviado ao TestFlight às 14:18)
+
+### Alterado
+- **O menu da mensagem (toque longo) abre em ~250 ms, em vez de ~0,6 s.** O toque longo do SwiftUI dentro da lista ignorava a duração pedida e só disparava depois de ~600 ms; agora o gatilho é um reconhecedor do UIKit de 0,15 s no fork do ExyteChat (PR 15 do fork), com a vibração preparada no toque, e a animação do menu é de 0,1 s. Vale também para o balão de GIF.
+
+### Corrigido
+- **A folha de compartilhar do visualizador de imagens agora oferece "Salvar Imagem" (e "Salvar Vídeo").** O app guarda os anexos baixados com o mime type em hexadecimal no lugar da extensão (`….696d6167652f706e67`), então o iOS mostrava um arquivo genérico e só deixava salvar em Arquivos. O fork do ExyteChat passa a compartilhar uma cópia temporária com a extensão certa (PR 14 do fork); no iOS 18.6 a folha mostra "Imagem PNG", com miniatura, e a imagem entrou na biblioteca de Fotos no formato original. A permissão de adicionar fotos já existia. **Falta testar no iPhone, em vídeo e no iOS 27.**
+
 ## 0.0.1 (build 81) — 02/11/2026 (enviado ao TestFlight às 11:41)
 
 ### Corrigido
