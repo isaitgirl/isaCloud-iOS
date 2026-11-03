@@ -521,7 +521,7 @@ grava e atualiza a UI.
    criar o nó e conferir `whitelist`/`max_items` com um cliente XMPP.
 2. **Android local:** modelo, manager, atributos, publicação e aplicação remota; testar só no
    Android, inspecionando o nó com outro cliente.
-3. **iOS local:** migração 5, `archiveBuddy`/`unarchiveBuddy`, filtro da lista, badge e
+3. **iOS local:** migração 6 (a 5 é das figurinhas), `archiveBuddy`/`unarchiveBuddy`, filtro da lista, badge e
    notificações; testar só no iOS, sem PEP.
 4. **iOS PEP:** registro, fetch, handler, publicação e flush; testar Android ↔ iOS.
 5. **Ligar por padrão** e publicar na release seguinte (proposta: 43).

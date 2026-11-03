@@ -776,6 +776,10 @@ static const int pingFreqencyMinutes = 5;       //about the same Conversations u
     {
         DDLogVerbose(@"Message added to history with id %ld", (long)[messageDBId intValue]);
 
+        //isaCloud: a sticker is a file message with the XEP-0449 marker (see sendMessage:... below and isSticker)
+        if([uploadInfo[@"isSticker"] boolValue])
+            [[DataLayer sharedInstance] setStickerForHistoryId:messageDBId];
+
         // MLMessage object that will be returned by the method
         MLMessage* newMLMessage = [MLMessage createMessageFromHistoryID:messageDBId];
         if (!newMLMessage)

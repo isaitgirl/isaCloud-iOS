@@ -1,4 +1,4 @@
-# Estado atual e handoff (03/11/2026, build 87)
+# Estado atual e handoff (03/11/2026, build 88)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,14 +7,22 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 87** (mensagem "Build 87 ..."), tag `build-87`; `git log --oneline -3` |
-| TestFlight | **87** (03/11/2026, 14:45; o 86 foi o anterior, tag `build-86`, 02/11 18:31) |
-| `.dev` no iPhone | **87** (igual ao TestFlight, sem a sonda; **sem push**, então a extensão de notificação não roda nele) |
+| Commit | o do **build 88** (mensagem "Build 88 ..."), tag `build-88`; `git log --oneline -3` |
+| TestFlight | **88** (03/11/2026, 16:57; o 87 foi o anterior, tag `build-87`, 14:45) |
+| `.dev` no iPhone | **88** (igual ao TestFlight, sem a sonda; **sem push**, então a extensão de notificação não roda nele) |
 | Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com a build de testes de 02/11/2026 (ad-hoc, por cima do banco, que tem backup do dia em `~/Library/Application Support/isacloud-sim-backups/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
 | ExyteChat | `f49d4f6` na `isaCloud` (card de link com altura fixa, `LinkPreviewPrefetcher`, `listHidden`, PR 19; antes `f5eb80a` (cor do texto do meu balão na pílula de reação e na seta de responder, PR 18; antes `1429d6c` = toque longo só no balão + link ignorado com o menu aberto, PR 17; `b7de90e` = toque ignorado com o menu aberto, PR 16; **os três estão no build 83**; `d2ece12` e `583d960`, PR 15 e 14, estão desde o 82) |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
+
+## O que entrou no build 88 (sobre o 87)
+
+- **Figurinhas** (roadmap 138): criar a partir de foto (recorte quadrado ou 4:3, remover fundo com o Vision, textos com contorno inclusive fora da foto), biblioteca local com favoritas, envio ao tocar, sem balão com 128 pt, "Salvar figurinha" com aviso passageiro; PNG 512 + marcador XEP-0449; migração 5 da escada do isaCloud. **Guia para o Android: `docs/ferramenta-de-figurinhas.md`.**
+- **Extensão de compartilhar com o grupo de keychain do app** (roadmap 140): sem ele, cada compartilhamento trocava o "device id" e a migração **apagava as chaves OMEMO e o estado das contas** (também na produção); foi a causa do crash na abertura de 16:38 e das identidades OMEMO novas do dia. Conferido no `.dev`.
+- **Deadlock do envio OMEMO** (roadmap 139): o envio criptografado agora abre a transação do banco antes da trava do Signal.
+- **Download duplicado entre contas do mesmo aparelho** não marca mais "!"; **menu da mensagem em 0,4 s** no total; **"Reenviar" direto**; **"Enviando…" no compartilhar**; **busca do compartilhar fecha ao marcar**; notificação de reação em pt-BR.
+- **A observar:** os contatos viram dispositivos OMEMO novos de hoje (as identidades apagadas); a primeira não lida e a altura fixa do card de link seguem em avaliação.
 
 ## O que entrou no build 87 (sobre o 86) — em avaliação por alguns dias a partir de 03/11/2026
 

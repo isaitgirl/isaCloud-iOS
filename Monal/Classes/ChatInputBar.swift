@@ -20,6 +20,8 @@ struct ChatInputBar: View {
     /// isaCloud: attaches the image on the clipboard; the item is only offered while the clipboard has one
     var onPasteImage: () -> Void = {}
     var onSearchGif: () -> Void
+    /// isaCloud: opens the sticker sheet (favorites, all, create); see Stickers.swift
+    var onPickSticker: () -> Void = {}
     var onShareLocation: () -> Void
     var onRemoveAttachment: (Int) -> Void
     var onSendRecording: (URL) -> Void
@@ -65,6 +67,9 @@ struct ChatInputBar: View {
         .overlay(alignment: .top) {
             if model.isUploading {
                 SendingHint().dynamicTypeSize(sendingHintTypeSize)
+            } else if let notice = model.notice {
+                SendingHint(notice: notice).dynamicTypeSize(sendingHintTypeSize)
+                    .transition(.opacity)
             }
         }
     }
@@ -128,6 +133,11 @@ struct ChatInputBar: View {
                 onSearchGif()
             } label: {
                 Label("GIF", systemImage: "play.rectangle")
+            }
+            Button {
+                onPickSticker()
+            } label: {
+                Label("Stickers", systemImage: "face.smiling")
             }
             Button {
                 onShareLocation()
@@ -394,14 +404,25 @@ struct ChatInputBar: View {
 private struct SendingHint: View {
     /// how far above the top of the bar the capsule floats (its height plus a gap), scaled with the text size
     @ScaledMetric private var lift: CGFloat = 38
+    /// isaCloud: a short notice (ChatInputModel.showNotice) instead of "Sending...": a check mark in place of the spinner
+    var notice: String? = nil
 
     var body: some View {
         HStack(spacing: 8) {
-            ProgressView()
-                .controlSize(.small)
-            Text("Sending...")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            if let notice {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Text(notice)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else {
+                ProgressView()
+                    .controlSize(.small)
+                Text("Sending...")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)

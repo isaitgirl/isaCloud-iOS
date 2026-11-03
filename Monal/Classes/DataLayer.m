@@ -2132,6 +2132,27 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
     }];
 }
 
+//isaCloud: see the header
+-(void) setStickerForHistoryId:(NSNumber*) historyId
+{
+    if(historyId == nil)
+        return;
+    [self.db voidWriteTransaction:^{
+        [self.db executeNonQuery:@"UPDATE message_history SET isacloud_sticker=1 WHERE message_history_id=?;" andArguments:@[historyId]];
+    }];
+}
+
+//isaCloud: see the header
+-(BOOL) isStickerMessageId:(NSString*) messageId forAccount:(NSNumber*) accountID
+{
+    if(messageId == nil || accountID == nil)
+        return NO;
+    NSNumber* sticker = [self.db idReadTransaction:^{
+        return (NSNumber*)[self.db executeScalar:@"SELECT isacloud_sticker FROM message_history WHERE account_id=? AND messageid=? AND inbound=0 LIMIT 1;" andArguments:@[accountID, messageId]];
+    }];
+    return [sticker isKindOfClass:[NSNumber class]] && sticker.boolValue;
+}
+
 -(MLMessage*) lastMessageForContact:(NSString*) contact forAccount:(NSNumber*) accountID
 {
     if(accountID == nil || !contact)
@@ -2553,6 +2574,17 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
             [HelperTools serializeObject:payload[@"data"]],
         ]];
     }];
+}
+
+//isaCloud: see the header
+-(BOOL) hasShareSheetUploadForJid:(NSString*) jid onAccount:(NSNumber*) accountID
+{
+    if(jid == nil || accountID == nil)
+        return NO;
+    NSNumber* count = [self.db idReadTransaction:^{
+        return (NSNumber*)[self.db executeScalar:@"SELECT count(*) FROM sharesheet_outbox WHERE recipient=? AND account_id=? AND type IN ('image', 'file', 'contact', 'audiovisual');" andArguments:@[jid, accountID]];
+    }];
+    return count.integerValue > 0;
 }
 
 -(NSArray*) getShareSheetPayload

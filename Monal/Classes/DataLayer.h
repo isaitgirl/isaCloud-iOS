@@ -278,6 +278,10 @@ extern NSString* const kMessageTypeFiletransfer;
 //isaCloud: the id of the oldest unread message received in a chat (nil if there is none). If there are more than `maxMessages` messages from it to the newest one,
 //the id of the `maxMessages`-th newest message is returned instead, so that a group or channel with many unread messages does not open too far back
 -(NSNumber* _Nullable) firstUnreadHistoryIdForBuddy:(NSString*) buddy forAccount:(NSNumber*) accountID maxMessages:(NSUInteger) maxMessages;
+//isaCloud: marks a message as a sticker (XEP-0449), see the isacloud_sticker column (migration 5 of +migrateISACloudDB:)
+-(void) setStickerForHistoryId:(NSNumber*) historyId;
+//isaCloud: YES if the outbound message with this messageid (our own id, the one sent in the stanza) was sent as a sticker
+-(BOOL) isStickerMessageId:(NSString*) messageId forAccount:(NSNumber*) accountID;
 -(NSDictionary*) messageDataForHistoryID:(NSNumber*) historyID;
 //isaCloud: like messageDataForHistoryID:, but nil instead of an assertion if the message does not exist (anymore), e.g. after removing its account
 -(NSDictionary* _Nullable) optionalMessageDataForHistoryID:(NSNumber*) historyID;
@@ -372,6 +376,8 @@ extern NSString* const kMessageTypeFiletransfer;
 
 -(void) addShareSheetPayload:(NSDictionary*) payload;
 -(NSArray*) getShareSheetPayload;
+//isaCloud: YES while the share sheet outbox still has a file (photo, video, document, contact) for this chat, i.e. while it is uploaded
+-(BOOL) hasShareSheetUploadForJid:(NSString*) jid onAccount:(NSNumber*) accountID;
 -(void) deleteShareSheetPayloadWithId:(NSNumber*) payloadId;
 //isaCloud: removes every share sheet item still waiting to be sent (debug screen); returns how many were removed
 -(NSUInteger) clearShareSheetOutbox;

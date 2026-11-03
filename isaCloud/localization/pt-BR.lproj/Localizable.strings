@@ -225,3 +225,29 @@
 
 /* isaCloud: cartão de link quando não há pré-visualização (página sem dados ou que demorou mais de 5 s) */
 "Preview not available" = "Pré-visualização indisponível";
+
+/* isaCloud: figurinhas (criadas a partir de uma foto, com recorte, texto e remoção de fundo; ver Stickers.swift) */
+"Stickers" = "Figurinhas";
+"Sticker" = "Figurinha";
+"Favorites" = "Favoritas";
+"All stickers" = "Todas";
+"Create sticker" = "Criar figurinha";
+"No stickers yet" = "Nenhuma figurinha ainda";
+"No favorite stickers yet" = "Nenhuma figurinha favorita ainda";
+"Favorite" = "Favoritar";
+"Remove from favorites" = "Remover dos favoritos";
+"Delete sticker?" = "Excluir figurinha?";
+"Save sticker" = "Salvar figurinha";
+"Sticker saved" = "Figurinha salva";
+"Could not save the sticker" = "Não foi possível salvar a figurinha";
+"Square" = "Quadrado";
+"Rectangle" = "Retângulo";
+"Shape" = "Formato";
+"Choose photo" = "Escolher foto";
+"Remove background" = "Remover fundo";
+"Restore background" = "Restaurar fundo";
+"Could not remove the background" = "Não foi possível remover o fundo";
+"Text" = "Texto";
+
+/* isaCloud: notificação de reação (MLNotificationManager) */
+"Reacted with %@ to «%@»." = "Reagiu com %@ a «%@».";

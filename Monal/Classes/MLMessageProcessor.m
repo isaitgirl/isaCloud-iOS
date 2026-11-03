@@ -770,6 +770,10 @@ static NSMutableDictionary* _typingNotifications;
                 ];
             }
             
+            //isaCloud: a file message with the XEP-0449 sticker marker is a sticker: store it before the MLMessage is created (see isSticker)
+            if(historyId != nil && messageType == kMessageTypeFiletransfer && [messageNode check:@"{urn:xmpp:stickers:0}sticker"])
+                [[DataLayer sharedInstance] setStickerForHistoryId:historyId];
+
             if(historyId != nil)
                 message = [MLMessage createMessageFromHistoryID:historyId];
             if(message != nil && historyId != nil)      //check historyId to make static analyzer happy

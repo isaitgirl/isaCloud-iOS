@@ -4149,7 +4149,13 @@ static NSRegularExpression* fastTokenRemovalRegex;
 #ifndef DISABLE_OMEMO
     if(encrypt && (!contact.isMuc || (contact.isMuc && [contact.mucType isEqualToString:kMucTypeGroup])))
     {
-        [self.omemo encryptMessage:messageNode withMessage:message toContact:contact.contactJid];
+        //isaCloud: the database first, then the signal lock (taken inside encryptMessage:), in the same order as the receive queue,
+        //which processes OMEMO stanzas inside its write transaction. Encrypting outside a transaction took the signal lock first and
+        //then waited for the database to store the session, while the receive queue held the database and waited for the signal
+        //lock: a deadlock that froze the main thread when sending a shared photo (03/11/2026)
+        [[DataLayer sharedInstance] createTransaction:^{
+            [self.omemo encryptMessage:messageNode withMessage:message toContact:contact.contactJid];
+        }];
         [self addEME:@"eu.siacs.conversations.axolotl" withName:@"OMEMO" toMessageNode:messageNode];
     }
     else
@@ -4160,7 +4166,11 @@ static NSRegularExpression* fastTokenRemovalRegex;
         else
             [messageNode setBody:message];
     }
-    
+
+    //isaCloud: sticker marker (XEP-0449). Set for every send of a sticker, including resends, because the flag is stored with the message
+    if(isUpload && messageId && [[DataLayer sharedInstance] isStickerMessageId:messageId forAccount:self.accountID])
+        [messageNode addChildNode:[[MLXMLNode alloc] initWithElement:@"sticker" andNamespace:@"urn:xmpp:stickers:0"]];
+
     //set message type
     if(contact.isMuc)
         [messageNode.attributes setObject:kMessageGroupChatType forKey:@"type"];
