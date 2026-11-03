@@ -29,6 +29,11 @@ struct SharePickerView: View {
     private let destinations: [Destination]
 
     @State private var searchText = ""
+    //isaCloud: whether the search field is active; picking a destination there closes it, so the Send button (hidden under the search's
+    //close button) is reachable again
+    @State private var isSearching = false
+    //isaCloud: the destination picked while searching, to scroll to it once the whole list is back
+    @State private var pickedWhileSearching: String?
     //one destination at a time: this is the only place that says which row is selected
     @State private var selectedID: String?
     @State private var message = ""
@@ -86,19 +91,33 @@ struct SharePickerView: View {
                 if destinations.isEmpty {
                     ContentUnavailableView(shareSheetString("No contacts"), systemImage: "person.2.slash")
                 } else {
+                    ScrollViewReader { proxy in
                     List {
                         ForEach(shown) { destination in
                             row(for: destination)
                         }
                     }
                     .listStyle(.plain)
-                    .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always))
+                    .searchable(text: $searchText, isPresented: $isSearching, placement: .navigationBarDrawer(displayMode: .always))
+                    //isaCloud: after the search closes, the picked destination is shown in the whole list
+                    .onChange(of: pickedWhileSearching) { _, picked in
+                        guard let picked else {
+                            return
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            withAnimation {
+                                proxy.scrollTo(picked, anchor: .center)
+                            }
+                            pickedWhileSearching = nil
+                        }
+                    }
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
                     .overlay {
                         if shown.isEmpty {
                             ContentUnavailableView.search(text: searchText)
                         }
+                    }
                     }
                 }
             }
@@ -179,6 +198,12 @@ struct SharePickerView: View {
                 return
             }
             selectedID = isSelected ? nil : destination.id
+            //isaCloud: a destination picked in the search closes it: the search's close button no longer covers Send
+            if !isSelected && isSearching {
+                isSearching = false
+                searchText = ""
+                pickedWhileSearching = destination.id
+            }
         }
         .opacity(writable ? 1 : 0.45)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])

@@ -414,6 +414,13 @@ $$class_handler(handleFileDownload, $$ID(NSString*, url), $$ID(NSNumber*, histor
         //it will be removed once this completion returns, even if moved to a new location (this seems to be a ios16 bug)
         DDLogInfo(@"Hardlinking downloaded file from '%@' to document cache at '%@'...", [location path], cacheFilePath);
         error = [HelperTools hardLinkOrCopyFile:[location path] to:cacheFilePath];
+        //isaCloud: the cache file is named by the url, so a file already there is this same file, downloaded by another account of this
+        //device that is in the same room (both get the message). That is not an error: the copy failed only because the file exists
+        if(error && [_fileManager fileExistsAtPath:cacheFilePath])
+        {
+            DDLogWarn(@"Downloaded file for %@ is already in the document cache (another account of this device got it too), using it: %@", msg, error);
+            error = nil;
+        }
         if(error)
         {
             DDLogError(@"File download for %@ failed: %@", msg, error);

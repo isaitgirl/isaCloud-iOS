@@ -53,6 +53,9 @@ final class ChatInputModel: ObservableObject {
     @Published private(set) var text: String
     /// isaCloud: a file is being uploaded to be sent; the input shows a hint while it is
     @Published var isUploading = false
+    /// isaCloud: a short notice floating above the input (e.g. "Sticker saved"), in place of an alert; it goes away by itself
+    @Published private(set) var notice: String?
+    private var noticeToken = 0
     @Published private(set) var reply: ChatInputReply?
     @Published private(set) var edit: ChatInputEdit?
     @Published private(set) var attachments: [ChatInputAttachment] = []
@@ -174,6 +177,23 @@ final class ChatInputModel: ObservableObject {
 
     func setText(_ newText: String) {
         text = newText
+    }
+
+    /// isaCloud: shows `text` above the input for `duration` seconds (a newer notice replaces an older one and gets its full time)
+    func showNotice(_ text: String, duration: TimeInterval = 2) {
+        noticeToken += 1
+        let token = noticeToken
+        withAnimation(.easeIn(duration: 0.15)) {
+            notice = text
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
+            guard let self, self.noticeToken == token else {
+                return
+            }
+            withAnimation(.easeOut(duration: 0.2)) {
+                self.notice = nil
+            }
+        }
     }
 
     /// starts a reply by quoting a message: the quote line goes in front of the text, and the answer is written after it

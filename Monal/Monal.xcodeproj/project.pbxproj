@@ -278,6 +278,7 @@
 		A1C0FFEE00000000000001F5 /* MucHatViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001F4 /* MucHatViews.swift */; };
 		A1C0FFEE00000000000001E5 /* LocationPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001E4 /* LocationPickerView.swift */; };
 		A1C0FFEE00000000000001D5 /* GifPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001D4 /* GifPickerView.swift */; };
+		A1C0FFEE0000000000000E02 /* Stickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000E01 /* Stickers.swift */; };
 		A1C0FFEE0000000000000402 /* IsaCloudColorMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000401 /* IsaCloudColorMath.swift */; };
 		A1C0FFEE00000000000000B1 /* PublicChannelsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000000A1 /* PublicChannelsView.swift */; };
 		C117F7E22B0863B3001F2BC6 /* ContactPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D631822294BAB1D00026BE7 /* ContactPicker.swift */; };
@@ -645,6 +646,7 @@
 		A1C0FFEE00000000000001F4 /* MucHatViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MucHatViews.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000001E4 /* LocationPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPickerView.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000001D4 /* GifPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GifPickerView.swift; sourceTree = "<group>"; };
+		A1C0FFEE0000000000000E01 /* Stickers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Stickers.swift; sourceTree = "<group>"; };
 		A1C0FFEE0000000000000401 /* IsaCloudColorMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IsaCloudColorMath.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000000A1 /* PublicChannelsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicChannelsView.swift; sourceTree = "<group>"; };
 		3DC5035B2822F5220064C8A7 /* OmemoKeysView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OmemoKeysView.swift; sourceTree = "<group>"; };
@@ -1273,6 +1275,7 @@
 				A1C0FFEE00000000000001F4 /* MucHatViews.swift */,
 				A1C0FFEE00000000000001E4 /* LocationPickerView.swift */,
 				A1C0FFEE00000000000001D4 /* GifPickerView.swift */,
+				A1C0FFEE0000000000000E01 /* Stickers.swift */,
 				A1C0FFEE0000000000000401 /* IsaCloudColorMath.swift */,
 				A1C0FFEE00000000000000A1 /* PublicChannelsView.swift */,
 				3D27D957290B0BC80014748B /* ContactRequestsMenu.swift */,
@@ -2459,6 +2462,7 @@
 				A1C0FFEE00000000000001F5 /* MucHatViews.swift in Sources */,
 				A1C0FFEE00000000000001E5 /* LocationPickerView.swift in Sources */,
 				A1C0FFEE00000000000001D5 /* GifPickerView.swift in Sources */,
+				A1C0FFEE0000000000000E02 /* Stickers.swift in Sources */,
 				A1C0FFEE0000000000000402 /* IsaCloudColorMath.swift in Sources */,
 				A1C0FFEE00000000000000B1 /* PublicChannelsView.swift in Sources */,
 				952EBC802BAF72F300183DBF /* DebugView.swift in Sources */,
@@ -2876,7 +2880,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)Monal.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Monal.macos.entitlements;
 				COMPILER_INDEX_STORE_ENABLE = YES;
-				CURRENT_PROJECT_VERSION = 87;
+				CURRENT_PROJECT_VERSION = 88;
 				DEAD_CODE_STRIPPING = NO;
 				ENABLE_BITCODE = NO;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
@@ -2939,7 +2943,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)NotificationService/NotificationService.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = NotificationService/NotificationService.macos.entitlements;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 87;
+				CURRENT_PROJECT_VERSION = 88;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
 				INFOPLIST_FILE = NotificationService/Info.plist;
@@ -2971,7 +2975,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)NotificationService/NotificationService.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = NotificationService/NotificationService.macos.entitlements;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 87;
+				CURRENT_PROJECT_VERSION = 88;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
 				INFOPLIST_FILE = NotificationService/Info.plist;
@@ -3003,7 +3007,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)NotificationService/NotificationService.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = NotificationService/NotificationService.macos.entitlements;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 87;
+				CURRENT_PROJECT_VERSION = 88;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
 				INFOPLIST_FILE = NotificationService/Info.plist;
@@ -3069,7 +3073,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 87;
+				CURRENT_PROJECT_VERSION = 88;
 				DEAD_CODE_STRIPPING = NO;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -3136,7 +3140,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)Monal.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Monal.macos.entitlements;
 				COMPILER_INDEX_STORE_ENABLE = YES;
-				CURRENT_PROJECT_VERSION = 87;
+				CURRENT_PROJECT_VERSION = 88;
 				DEAD_CODE_STRIPPING = NO;
 				ENABLE_BITCODE = NO;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
@@ -3195,7 +3199,7 @@
 			baseConfigurationReference = 21E99538324C14220843F325 /* Pods-shareSheet.debug.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "$(ISACLOUD_ENTITLEMENTS_DIR)shareSheet.entitlements";
-				CURRENT_PROJECT_VERSION = 87;
+				CURRENT_PROJECT_VERSION = 88;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
@@ -3223,7 +3227,7 @@
 			baseConfigurationReference = 0EC0A5305E72C0F7F9E1CDEF /* Pods-shareSheet.adhoc.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "$(ISACLOUD_ENTITLEMENTS_DIR)shareSheet.entitlements";
-				CURRENT_PROJECT_VERSION = 87;
+				CURRENT_PROJECT_VERSION = 88;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
@@ -3251,7 +3255,7 @@
 			baseConfigurationReference = 061EF1BEDEE7A71FDF9AB402 /* Pods-shareSheet.appstore.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "$(ISACLOUD_ENTITLEMENTS_DIR)shareSheet.entitlements";
-				CURRENT_PROJECT_VERSION = 87;
+				CURRENT_PROJECT_VERSION = 88;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
@@ -3280,7 +3284,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CURRENT_PROJECT_VERSION = 87;
+				CURRENT_PROJECT_VERSION = 88;
 				DEAD_CODE_STRIPPING = NO;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = "";
@@ -3323,7 +3327,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CURRENT_PROJECT_VERSION = 87;
+				CURRENT_PROJECT_VERSION = 88;
 				DEAD_CODE_STRIPPING = NO;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = "";
@@ -3365,7 +3369,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CURRENT_PROJECT_VERSION = 87;
+				CURRENT_PROJECT_VERSION = 88;
 				DEAD_CODE_STRIPPING = NO;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = "";
@@ -3444,7 +3448,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 87;
+				CURRENT_PROJECT_VERSION = 88;
 				DEAD_CODE_STRIPPING = NO;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -3514,7 +3518,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)Monal.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Monal.macos.entitlements;
 				COMPILER_INDEX_STORE_ENABLE = YES;
-				CURRENT_PROJECT_VERSION = 87;
+				CURRENT_PROJECT_VERSION = 88;
 				DEAD_CODE_STRIPPING = NO;
 				ENABLE_BITCODE = NO;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
@@ -3614,7 +3618,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 87;
+				CURRENT_PROJECT_VERSION = 88;
 				DEAD_CODE_STRIPPING = NO;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -3894,7 +3898,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 87;
+				CURRENT_PROJECT_VERSION = 88;
 				DEAD_CODE_STRIPPING = NO;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -3966,7 +3970,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)Monal.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Monal.macos.entitlements;
 				COMPILER_INDEX_STORE_ENABLE = YES;
-				CURRENT_PROJECT_VERSION = 87;
+				CURRENT_PROJECT_VERSION = 88;
 				DEAD_CODE_STRIPPING = NO;
 				ENABLE_BITCODE = NO;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
@@ -4025,7 +4029,7 @@
 			baseConfigurationReference = 6BCB9FB4EBEA3735D24A44DF /* Pods-shareSheet.beta.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "$(ISACLOUD_ENTITLEMENTS_DIR)shareSheet.entitlements";
-				CURRENT_PROJECT_VERSION = 87;
+				CURRENT_PROJECT_VERSION = 88;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
@@ -4057,7 +4061,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "$(ISACLOUD_ENTITLEMENTS_DIR)NotificationService/NotificationService.ios.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = NotificationService/NotificationService.macos.entitlements;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 87;
+				CURRENT_PROJECT_VERSION = 88;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
 				INFOPLIST_FILE = NotificationService/Info.plist;
@@ -4086,7 +4090,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CURRENT_PROJECT_VERSION = 87;
+				CURRENT_PROJECT_VERSION = 88;
 				DEAD_CODE_STRIPPING = NO;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = "";
@@ -4320,7 +4324,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 87;
+				CURRENT_PROJECT_VERSION = 88;
 				DEAD_CODE_STRIPPING = NO;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -4397,7 +4401,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMPILER_INDEX_STORE_ENABLE = YES;
-				CURRENT_PROJECT_VERSION = 87;
+				CURRENT_PROJECT_VERSION = 88;
 				DEAD_CODE_STRIPPING = NO;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_BITCODE = NO;
@@ -4459,7 +4463,7 @@
 			baseConfigurationReference = 6015D382ABCE0D788029D7A3 /* Pods-shareSheet.alpha.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Alpha.shareSheet.entitlements;
-				CURRENT_PROJECT_VERSION = 87;
+				CURRENT_PROJECT_VERSION = 88;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
@@ -4490,7 +4494,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = NotificationService/Alpha.NotificationService.ios.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = NotificationService/Alpha.NotificationService.macos.entitlements;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 87;
+				CURRENT_PROJECT_VERSION = 88;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
 				INFOPLIST_FILE = NotificationService/Alpha.Info.plist;
@@ -4518,7 +4522,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CURRENT_PROJECT_VERSION = 87;
+				CURRENT_PROJECT_VERSION = 88;
 				DEAD_CODE_STRIPPING = NO;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = "";

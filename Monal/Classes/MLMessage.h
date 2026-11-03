@@ -126,6 +126,8 @@ The of the message in the DB , should be int
  */
 @property (nonatomic, assign) BOOL unread;
 @property (nonatomic, assign) BOOL displayMarkerWanted;
+//isaCloud: the message is a sticker (XEP-0449 marker, column isacloud_sticker): it is shown without a bubble
+@property (nonatomic, assign) BOOL isSticker;
 
 @property (nonatomic, readonly) xmpp* _Nullable account;
 @property (nonatomic, readonly) id<MLContactProtocol> contact;

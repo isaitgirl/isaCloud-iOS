@@ -194,6 +194,8 @@ struct ChatView: View {
     @State private var showCamera = false
     @State private var showCameraPermissionAlert = false
     @State private var showGifPicker = false
+    //isaCloud: the sticker sheet (Stickers.swift): a tap there sends the sticker at once
+    @State private var showStickerPicker = false
     @State private var showLocationPicker = false
     @State private var showFileImporter = false
     @State private var editSaveClosure: ((String) -> Void)?
@@ -246,11 +248,15 @@ struct ChatView: View {
 
     enum MessageAction: MessageMenuAction {
         case copy, quote, forward, share, edit, retract, moderate, delete, resend
+        //isaCloud: a received sticker goes to the sticker library (Stickers.swift)
+        case saveSticker
 
         func title() -> String {
             switch self {
                 case .copy:
                     NSLocalizedString("Copy", comment: "message menu")
+                case .saveSticker:
+                    NSLocalizedString("Save sticker", comment: "message menu: copies the sticker of the message to the sticker library")
                 case .quote:
                     NSLocalizedString("Reply", comment: "message menu: quote the message in the input")
                 case .forward:
@@ -274,6 +280,8 @@ struct ChatView: View {
             switch self {
                 case .copy:
                     Image(systemName: "doc.on.doc")
+                case .saveSticker:
+                    Image(systemName: "face.smiling")
                 case .quote:
                     Image(systemName: "arrowshape.turn.up.left")
                 case .forward:
@@ -338,6 +346,13 @@ struct ChatView: View {
                let fileInfo = (message as! ChatViewMessage).fileInfo,
                (fileInfo.downloadState as DownloadState.RawValue) == DownloadState.complete.rawValue {
                 availableActions.append(.share)
+            }
+
+            //isaCloud: a downloaded sticker can be kept in the sticker library (Stickers.swift)
+            if mlMessage.isSticker,
+               let fileInfo = (message as! ChatViewMessage).fileInfo,
+               (fileInfo.downloadState as DownloadState.RawValue) == DownloadState.complete.rawValue {
+                availableActions.append(.saveSticker)
             }
 
             if !mlMessage.inbound && DataLayer.sharedInstance().checkLMCEligible(mlMessage.messageDBId, encrypted: mlMessage.encrypted || contact.isEncrypted, historyBaseID: nil) {
@@ -848,7 +863,16 @@ struct ChatView: View {
         }
     }
 
-    private func uploadAndSendFile(_ localFileURL: URL?) async {
+    /// isaCloud: a sticker goes out like a photo (its PNG is uploaded), with the XEP-0449 marker: `isSticker` is stored with the message
+    /// (see MLXMPPManager sendMessageAndAddToHistory). The upload copies the file to its own cache, so the library keeps its PNG.
+    private func sendSticker(_ sticker: Sticker) {
+        StickerLibrary.shared.markUsed(sticker.id)
+        Task {
+            await uploadAndSendFile(sticker.url, isSticker: true)
+        }
+    }
+
+    private func uploadAndSendFile(_ localFileURL: URL?, isSticker: Bool = false) async {
         guard let localFileURL = localFileURL else {
             DDLogError("Couldn't get file location in order to upload it!")
             return
@@ -857,7 +881,7 @@ struct ChatView: View {
         do {
             let (url, mimeType, size) = try await MLFiletransfer.uploadFile(localFileURL, onAccount: self.account, withEncryption: self.contact.isEncrypted)
             await MainActor.run {
-                guard let newMLMessage = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: url, havingType: kMessageTypeFiletransfer, toContact: self.contact.obj, isEncrypted: self.contact.isEncrypted, uploadInfo: ["mimeType": mimeType, "size": size]) else {
+                guard let newMLMessage = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: url, havingType: kMessageTypeFiletransfer, toContact: self.contact.obj, isEncrypted: self.contact.isEncrypted, uploadInfo: ["mimeType": mimeType, "size": size, "isSticker": isSticker]) else {
                     inputModel.isUploading = false
                     return
                 }
@@ -885,6 +909,7 @@ struct ChatView: View {
             onAttachFile: { showFileImporter = true },
             onPasteImage: pasteImageFromClipboard,
             onSearchGif: { showGifPicker = true },
+            onPickSticker: { showStickerPicker = true },
             onShareLocation: { showLocationPicker = true },
             onRemoveAttachment: { inputModel.removeAttachment(at: $0) },
             onSendRecording: { url in
@@ -1167,8 +1192,22 @@ struct ChatView: View {
                 messages.append(ChatViewMessage(newMLMessage))
             }
         }, messageBuilder: { params in
+            //isaCloud: a sticker (XEP-0449 marker) is a still picture without a bubble, once its picture is downloaded (see Stickers.swift)
+            if (params.message as! ChatViewMessage).innerMessage.obj.isSticker,
+               let sticker = params.message.attachments.first(where: { $0.type == .image }) {
+                GifMessageBubble(
+                    url: sticker.full,
+                    message: params.message,
+                    user: params.message.user,
+                    isCurrentUser: params.message.user.isCurrentUser,
+                    showSender: contact.isMuc,
+                    isLastOfSenderGroup: params.positionInGroup == .single || params.positionInGroup == .last,
+                    showContextMenu: params.showContextMenuClosure,
+                    onReactionsTap: params.showReactionDetailsClosure,
+                    isSticker: true
+                )
             // GIFs are shown animated; the other messages keep the ExyteChat bubble
-            if let gif = params.message.attachments.first(where: { $0.mimeType == "image/gif" }) {
+            } else if let gif = params.message.attachments.first(where: { $0.mimeType == "image/gif" }) {
                 GifMessageBubble(
                     url: gif.full,
                     message: params.message,
@@ -1215,6 +1254,22 @@ struct ChatView: View {
                         let filename = (fileInfo.filename as String?) ?? ""
                         if let cacheURL = cacheURL {
                             Task { await shareDownloadedFile(cacheURL, filename: filename) }
+                        }
+                    }
+                case .saveSticker:
+                    //isaCloud: the downloaded picture of the sticker is copied to the library (a sticker already there is not kept twice)
+                    if let fileInfo = (message as! ChatViewMessage).fileInfo,
+                       let fileURL = fileInfo.fileURL as URL?,
+                       let png = try? Data(contentsOf: fileURL),
+                       StickerLibrary.shared.add(pngData: png) != nil {
+                        //a short notice above the input, where "Sending..." shows, instead of an alert to close (after the menu has closed)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            inputModel.showNotice(NSLocalizedString("Sticker saved", comment: "notice above the input after a sticker was added to the library"))
+                        }
+                    } else {
+                        //(a moment later: an alert shown while the message menu is closing does not appear)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            alertPrompt = AlertPrompt(title: Text("Could not save the sticker"), dismissLabel: Text("Close"))
                         }
                     }
                 case .edit:
@@ -1265,43 +1320,26 @@ struct ChatView: View {
                         )
                     }
                 case .resend:
-                    // Explicitly schedule this on the main thread, to ensure the update to confirmationPrompt happens.
-                    // This is needed for some reason, despite this code being already on the main thread.
+                    //isaCloud: resent at once, without asking first (Isadora, 03/11/2026): "Resend" is already the answer. The question was a
+                    //root action sheet, which on iOS 26+ came up as a popover cut down to one line on the navigation bar
                     Task { @MainActor in
-                        self.confirmationPrompt = ConfirmationPrompt(
-                            title: Text("Retry sending message?"),
-                            message: Text("This message failed to send (\(mlMessage.errorType ?? "unknown error")): \(mlMessage.errorReason ?? "unknown reason")"),
-                            buttons: [
-                                .default(
-                                    Text("Retry"),
-                                    action: {
-                                        Task { @MainActor in
-                                            await Task.detached(priority: .userInitiated) {
-                                                DataLayer.sharedInstance().clearError(ofMessageId: mlMessage.messageId)
-                                            }.value
+                        await Task.detached(priority: .userInitiated) {
+                            DataLayer.sharedInstance().clearError(ofMessageId: mlMessage.messageId)
+                        }.value
 
-                                            mlMessage.errorType = ""
-                                            mlMessage.errorReason = ""
-                                            let isUpload = mlMessage.messageType == kMessageTypeFiletransfer
-                                            let isEncrypted = mlMessage.encrypted || self.contact.isEncrypted
-                                            self.account.sendMessage(mlMessage.messageText,
-                                                                     to: self.contact.obj,
-                                                                     isEncrypted: isEncrypted,
-                                                                     isUpload: isUpload,
-                                                                     andMessageId: mlMessage.messageId)
-                                            MLNotificationQueue.current().post(
-                                                name: Notification.Name(kMLMessageSentToContact),
-                                                object: self.account,
-                                                userInfo: ["contact": self.contact.obj]
-                                            )
-                                        }
-                                    }
-                                ),
-                                .cancel(
-                                    Text("Cancel"),
-                                    action: { }
-                                )
-                            ]
+                        mlMessage.errorType = ""
+                        mlMessage.errorReason = ""
+                        let isUpload = mlMessage.messageType == kMessageTypeFiletransfer
+                        let isEncrypted = mlMessage.encrypted || self.contact.isEncrypted
+                        self.account.sendMessage(mlMessage.messageText,
+                                                 to: self.contact.obj,
+                                                 isEncrypted: isEncrypted,
+                                                 isUpload: isUpload,
+                                                 andMessageId: mlMessage.messageId)
+                        MLNotificationQueue.current().post(
+                            name: Notification.Name(kMLMessageSentToContact),
+                            object: self.account,
+                            userInfo: ["contact": self.contact.obj]
                         )
                     }
             }
@@ -1368,7 +1406,7 @@ struct ChatView: View {
         .autoFocusTextInputOnChatOpen(chatViewDefaultsDB.showKeyboardOnChatOpen)
         .showUsername(contact.isMuc)
         .scrollTo(jumpScrollParams)      //isaCloud: see jumpToSearchedMessage()
-        .messageMenuAnimationDuration(0.1)      //isaCloud: the message menu (reactions, actions) opens sooner than the library's 0.3 s (0.15 s long press + 0.1 s = 250 ms, see UIList.swift)
+        .messageMenuAnimationDuration(0.25)     //isaCloud: 0.4 s in all from the touch to the open menu (0.15 s long press, see UIList.swift, + 0.25 s); was 0.1 s until 03/11/2026
         .reactionsBelowBubble(!chatViewDefaultsDB.reactionsAboveMessages)       //isaCloud: in the footer, unless the setting asks for the old place
         .setMessageFont(ChatTextSize.messageFont(system: dynamicTypeSize, step: chatViewDefaultsDB.chatTextSizeStep))      //isaCloud: see ChatTextSize
         .setMessageTimeFont(ChatTextSize.timeFont(system: dynamicTypeSize, step: chatViewDefaultsDB.chatTextSizeStep))
@@ -1441,6 +1479,12 @@ struct ChatView: View {
         .sheet(isPresented: $showGifPicker) {
             GifPickerView(apiKey: GiphySearch.apiKey(from: Bundle.main.infoDictionary), onPick: { url in
                 inputModel.addAttachment(ChatInputAttachment(kind: .animatedGif, url: url))
+            })
+        }
+        //isaCloud: stickers (Stickers.swift)
+        .sheet(isPresented: $showStickerPicker) {
+            StickerPickerView(onPick: { sticker in
+                sendSticker(sticker)
             })
         }
         .sheet(item: $selectedContactForContactDetails) { selectedContact in
@@ -1776,6 +1820,11 @@ struct ChatView: View {
             }
             loadHistory()
             jumpToSearchedMessage()      //isaCloud
+            //isaCloud: a photo shared from another app is uploaded right after this chat opens, and the "uploading" notice of the outbox
+            //(kMonalShareOutboxUpdate) can come before this view listens: the outbox itself says whether something is on its way
+            if DataLayer.sharedInstance().hasShareSheetUpload(forJid: contact.contactJid, onAccount: contact.accountID) {
+                inputModel.isUploading = true
+            }
             if self.contact.obj.isMuc {
                 ownRole = DataLayer.sharedInstance().getOwnRole(inGroupOrChannel: contact.obj) ?? kMucRoleNone
                 voiceRequests = DataLayer.sharedInstance().getVoiceRequests(forRoom:contact.obj) as! [[String: AnyObject]]
@@ -1966,6 +2015,10 @@ class ChatViewMessage: ExyteChat.Message {
         //isaCloud: these fields are nullable on a file transfer that has not been downloaded yet, and the KVO wrapper *throws*
         //when a member is nil (it was the crash of 29/10/2026: replyQuoteText -> fileInfo.mimeType -> ObservableKVOWrapperCastingError).
         //Asking for an optional keeps the cast safe.
+        //isaCloud: a sticker is quoted as a sticker, not as a photo (the label is ours, see QuoteFormatting for the others)
+        if mlMessage.isSticker {
+            return "🎭 " + NSLocalizedString("Sticker", comment: "label of the quote when replying to a sticker, the emoji in front is not translated")
+        }
         if (fileInfo.mimeType as String?) == "image/gif" {
             return QuoteFormatting.attachmentLabel(.gif)
         } else if (fileInfo.isImage as Bool?) == true {

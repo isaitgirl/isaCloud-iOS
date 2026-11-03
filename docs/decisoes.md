@@ -699,7 +699,7 @@ No iOS 27, "Adicionar contato ou canal" (`AddContactMenu`) e "Convidar para o is
 - **Por quê:** hoje o "Archive chat" apaga a linha de `activechats` e marca tudo como lido; a próxima mensagem traz a conversa de volta, então o estado não dura e não há o que sincronizar. O Android já arquiva grupos e canais só localmente, sem sair da sala.
 - **Decidido:** (1) grupo ou canal arquivado fica mudo, mas uma **menção (@)** notifica e **só notifica** (não traz o grupo de volta), e badge e contador contam **só menções**; abrir **qualquer** grupo ou canal no **ponto da última menção** é uma **feature separada** (roadmap 135), feita antes; (2) mensagem nova continua escondida, como no Android; (3) o rótulo "Arquivado" aparece nas listas e nos detalhes; (4) PR 1 (arquivamento local, sem PEP) só quando ela mandar; PR 2 (PEP) só depois do nó do Android validado.
 - **Em aberto:** release; abrir 1:1 arquivado desarquiva no iOS; nome do nó PEP (sugestão: manter `im.isacloud:conversation-state:0`).
-- **Como fica no código (quando vier):** migração 5 da escada própria (`+migrateISACloudDB:`, nunca na escada 7.0xx do Monal), colunas `archived`, `archived_updated`, `archived_pending` em `buddylist`; `activechats` deixa de ser apagada (preserva `pinned`); filtro `archived = 0` na lista, no badge e nas não lidas; check no `MLNotificationManager` com exceção para menção; nó PEP `im.isacloud:conversation-state:0`. Mudanças em arquivos do Monal ficam pequenas, com `//isaCloud:`. Validar com banco real e em Prosody e ejabberd.
+- **Como fica no código (quando vier):** migração 6 da escada própria (a 5 é das figurinhas) (`+migrateISACloudDB:`, nunca na escada 7.0xx do Monal), colunas `archived`, `archived_updated`, `archived_pending` em `buddylist`; `activechats` deixa de ser apagada (preserva `pinned`); filtro `archived = 0` na lista, no badge e nas não lidas; check no `MLNotificationManager` com exceção para menção; nó PEP `im.isacloud:conversation-state:0`. Mudanças em arquivos do Monal ficam pequenas, com `//isaCloud:`. Validar com banco real e em Prosody e ejabberd.
 
 ## Preview de link com altura fixa em vez de cache em disco (03/11/2026, roadmap 137)
 
@@ -713,4 +713,33 @@ No iOS 27, "Adicionar contato ou canal" (`AddContactMenu`) e "Convidar para o is
 - **Medido** (simuladores, marcas temporárias já removidas): com 1 a 3 não lidas e sem link, os dados chegam à lista em ~0,2 s, mas o salto esperava ~1,7 s por tempos fixos (scrolls em 0,4 s e 1,2 s, fim em 1,5 s) e a dica "Carregando…" aparecia em 0,5 s. Agora: scrolls em 0,1 s e 0,5 s, fim em 0,7 s, dica só em 1,2 s (0,5 s quando há busca no banco): ~0,9 s no total.
 - **O app deixou de chamar o prefetch de previews no salto**, porque o card de link tem altura fixa e a linha não muda de tamanho quando o preview chega (com link perto do alvo: 3,2-3,6 s → 0,8-0,9 s). `LinkPreviewPrefetcher` continua no fork, sem uso no app (corrigido para voltar no prazo: a espera passava de 2 s porque cancelar o `TaskGroup` não interrompe o `LPMetadataProvider`); remover do fork se a avaliação aprovar.
 - **Lição:** logs do iPhone: o `devicectl` corta a cópia do `.rawlog` em 90 MB, então as linhas do fim do arquivo não chegam; para medir no aparelho, medir nos simuladores ou gravar um arquivo pequeno à parte.
+
+## Figurinhas criadas pelas pessoas (03/11/2026, roadmap 138)
+
+- **Decidido:** a figurinha é um PNG 512×512 enviado pelo upload normal, com o marcador `<sticker xmlns='urn:xmpp:stickers:0'/>` da XEP-0449, sem SFS, porque o Monal não tem SFS. Os outros apps veem uma imagem comum (testado com o Conversations). Entra como item "Figurinhas" no clipe, é enviada ao tocar, aparece sem balão com ~150 pt, aceita recorte quadrado ou retangular e já remove o fundo no MVP com o Vision.
+- **Por quê:** o reconhecimento pelo nome do arquivo não funciona com OMEMO, porque o Monal troca o nome por um UUID. O marcador vai fora da criptografia, mas revela só que é uma figurinha, não o conteúdo.
+- **No código:** migração 5 da escada do isaCloud (`message_history.isacloud_sticker`); a sincronização de arquivados passa a usar a 6. Toques no Monal: receber (`MLMessageProcessor`), guardar (`MLMessage`/`DataLayer`) e enviar (`MLXMPPManager`/`xmpp.m`). Biblioteca local em `<grupo>/stickers/`, sem banco. Análise e plano em `docs/analise-figurinhas.md`.
+- **Download duplicado entre contas (03/11/2026):** com duas contas do aparelho na mesma sala, as duas baixam o mesmo arquivo para o mesmo nome de cache (o hash da URL). A segunda cópia falhava e o erro, gravado só por `messageid` e sala, marcava também a mensagem da outra conta. Decidido: em `MLFiletransfer.m`, se a cópia falha e o arquivo já está no cache, ele vale como baixado, porque é o mesmo arquivo. É uma mudança mínima num arquivo do Monal, que serve também ao Monal original. O erro gravado sem a conta ficou como está.
+
+## Deadlock entre o envio criptografado e o recebimento de chaves OMEMO (03/11/2026, roadmap 139)
+
+- **Caso:** a foto compartilhada para a Lu pela folha de compartilhar congelou a conversa para sempre, e o app precisou ser fechado à força. No log do `.dev`, a thread principal tentou `BEGIN IMMEDIATE` a cada segundo de 16:14:11 até o fim do log (mais de 1 min).
+- **Causa (do Monal, igual na `develop` de 22/10):**
+  - **Thread principal:** `sendAllOutboxes` → `sendMessageAndAddToHistory` → `xmpp sendMessage:` → `MLOMEMO encryptMessage:`. A `session_cipher_encrypt` pega a trava do `SignalContext` e depois `MLSignalStore storeSessionRecord:` pede uma transação de escrita.
+  - **Thread de recebimento:** já está dentro de `createTransaction` (`prepareXMPPParser`) com um resultado de busca de bundle (`handleBundleFetchResult` → `processPreKeyBundle`) e pede a trava do Signal.
+  - São duas travas pegas em ordem invertida.
+- **Correção:** em `xmpp.m sendMessage:...`, o `encryptMessage:` roda dentro de `[[DataLayer sharedInstance] createTransaction:]`. O banco vem primeiro, como no recebimento, e as transações aninhadas da `MLSignalStore` reaproveitam a mesma transação. A thread principal ainda pode esperar o banco enquanto o recebimento termina um stanza, mas não fica presa para sempre.
+- **Não feito:** tirar da thread principal o envio da outbox e o `addActiveBuddies` do `presentChatWithContact`. É o mesmo lugar onde a thread principal esperou 4 s pelo `realPersistState`, já conhecido na análise do `0xdead10cc`.
+
+## Extensão de compartilhar sem o grupo de keychain do app: chaves OMEMO apagadas a cada compartilhamento (03/11/2026, roadmap 140)
+
+- **Sintoma:**
+  - **Crash na abertura (16:38):** SIGSEGV em `curve25519` dentro de `MLOMEMO createLocalIdentiyKeyPairIfNeeded`.
+  - **Identidade OMEMO nova a cada abertura:** "Created new omemo identity" para as três contas às 16:13, 16:17 e 16:24.
+  - **Aviso aos contatos:** "Novo dispositivo OMEMO detectado".
+  - **Reconexão completa e upload lento** depois de compartilhar.
+- **Causa:** `HelperTools deviceUUID` fica no keychain (`Monal.deviceUUID`). O app e a extensão de notificação declaram `keychain-access-groups = $(AppIdentifierPrefix)$(ISACLOUD_BUNDLE_ID)`, mas a extensão de compartilhar não declarava nenhum e usava o grupo padrão dela, com outro UUID. A migração do banco compara com `flags.device_id` e, se muda (`DataLayerMigrations.m` ~1172, fora do sandbox de APNS), apaga `signalIdentity`, `signalContactSession`, `signalPreKey`, `signalSignedPreKey` e invalida o estado das contas. Nos logs o valor alterna: o app vê `25668FF3…` e a extensão vê `0B55C914…`.
+- **Correção:** `keychain-access-groups` com o mesmo grupo do app em `Monal/shareSheet.entitlements` (produção) e em `isaCloud/dev-entitlements/shareSheet.entitlements` (`.dev`). Conferido no `.appex` assinado do `.dev`.
+- **Por que não apareceu antes:** só dispara quando a extensão de compartilhar e o app abrem o banco alternadamente. Hoje isso começou às 16:13; até as 15:33 o app via sempre o mesmo id. O Monal original também não declara o grupo na extensão, mas lá o grupo do app é outro (`G7YU7X7KRJ.SworIM`). Vale conferir se o problema existe lá antes de propor ao Monal.
+- **Efeito que fica:** os contatos viram dispositivos OMEMO novos hoje. Os dispositivos antigos desta instalação continuam publicados na lista de dispositivos até serem limpos.
 

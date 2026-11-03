@@ -153,9 +153,12 @@ struct GifMessageBubble: View {
     var showContextMenu: () -> Void = {}
     /// called when the reactions are tapped, to show who reacted with what
     var onReactionsTap: () -> Void = {}
+    /// isaCloud: a sticker (XEP-0449) is a still picture of `stickerSide` points, without the bubble, from a local file (see Stickers.swift)
+    var isSticker: Bool = false
     @State private var replayToken = 0
     @Environment(\.chatTheme) private var theme
 
+    static let stickerSide: CGFloat = 128
     private static let avatarSize: CGFloat = 32
     //the same width the ExyteChat message view reserves for the status icon
     private static let statusSize: CGFloat = 16
@@ -167,7 +170,14 @@ struct GifMessageBubble: View {
             }
             VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 2) {
                 VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 2) {
-                    if showSender && !isCurrentUser {
+                    if showSender && !isCurrentUser && isSticker {
+                        //isaCloud: a sticker has no bubble at all, not even in a group: only the name above it
+                        Text(user.name)
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                        gif
+                    } else if showSender && !isCurrentUser {
                         //like the other messages of others in a group or channel: a gray bubble with the name above the picture
                         VStack(alignment: .leading, spacing: 4) {
                             Text(user.name)
@@ -207,18 +217,31 @@ struct GifMessageBubble: View {
 
     /// isaCloud: the whole GIF, at the size that fits the chat (see GifLayout)
     private var gifSize: CGSize {
+        //isaCloud: a sticker has its own fixed size
+        if isSticker {
+            return CGSize(width: Self.stickerSide, height: Self.stickerSide)
+        }
         return GifLayout.chatSize(for: url)
     }
 
     private var gif: some View {
-        AnimatedGifView(url: url, loops: 2, replayToken: replayToken, fit: true)
-            .frame(width: gifSize.width, height: gifSize.height)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .contentShape(RoundedRectangle(cornerRadius: 14))
-            .onTapGesture {
+        Group {
+            if isSticker {
+                StickerImageView(url: url)
+            } else {
+                AnimatedGifView(url: url, loops: 2, replayToken: replayToken, fit: true)
+            }
+        }
+        .frame(width: gifSize.width, height: gifSize.height)
+        .clipShape(RoundedRectangle(cornerRadius: isSticker ? 0 : 14))
+        .contentShape(RoundedRectangle(cornerRadius: isSticker ? 0 : 14))
+        .onTapGesture {
+            //isaCloud: a sticker is still, a tap does not replay anything
+            if !isSticker {
                 replayToken += 1
             }
-            .onLongPressGesture(minimumDuration: 0.1) {      //same time as the other messages (ExyteChat fork, UIList.swift)
+        }
+            .onLongPressGesture(minimumDuration: 0.15) {     //same time as the other messages (ExyteChat fork, UIList.swift)
                 showContextMenu()
             }
     }

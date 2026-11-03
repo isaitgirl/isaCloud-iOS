@@ -1290,6 +1290,15 @@
     [self updateISACloudDB:db toVersion:4 withBlock:^{
         [MLMessageSearch createIndexInDatabase:db];
     }];
+
+    //isaCloud: stickers (XEP-0449 marker) are shown without a bubble, so the marker is stored with the message: it must survive a restart
+    //and MAM/history loads, where the stanza is gone. Outbound and inbound messages use the same column. Rows without it count as 0 (not a sticker).
+    //Harmless to run again: the column is only added if it is missing.
+    [self updateISACloudDB:db toVersion:5 withBlock:^{
+        if(![[db executeScalar:@"SELECT count(*) FROM pragma_table_info('message_history') WHERE name='isacloud_sticker';"] boolValue])
+            [db executeNonQuery:@"ALTER TABLE message_history ADD COLUMN isacloud_sticker INTEGER NOT NULL DEFAULT 0;"];
+    }];
+
     //...and at every start it indexes what the hooks of the DataLayer did not see (messages written by an older build, for example)
     [MLMessageSearch catchUpIndexInDatabase:db];
 }

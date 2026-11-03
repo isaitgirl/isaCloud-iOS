@@ -107,6 +107,8 @@ static NSMutableDictionary* _singletonCache;
     message.errorReason = [dic objectForKey:@"errorReason"];
 
     message.retracted = [(NSNumber*)[dic objectForKey:@"retracted"] boolValue];
+    //isaCloud: a missing key (dictionaries built without the column) means "not a sticker"
+    message.isSticker = [(NSNumber*)[dic objectForKey:@"isacloud_sticker"] boolValue];
 }
 
 +(MLMessage* _Nullable) createDraftMessageFromDatabaseWithJid:(NSString*) jid andAccountID:(NSNumber*) accountID
