@@ -275,6 +275,9 @@ extern NSString* const kMessageTypeFiletransfer;
 //isaCloud: the messages of a chat from a few before the message `historyId` (context) up to, not including, `beforeHistoryId`, oldest first; used to open a chat at a message
 //found by the search. Returns nil, if there are more than `limit` of them (the chat view would be too heavy)
 -(NSMutableArray<MLMessage*>* _Nullable) messagesForContact:(NSString*) buddy forAccount:(NSNumber*) accountID aroundMsgHistoryID:(NSNumber*) historyId beforeMsgHistoryID:(NSNumber*) beforeHistoryId limit:(NSUInteger) limit;
+//isaCloud: the id of the oldest unread message received in a chat (nil if there is none). If there are more than `maxMessages` messages from it to the newest one,
+//the id of the `maxMessages`-th newest message is returned instead, so that a group or channel with many unread messages does not open too far back
+-(NSNumber* _Nullable) firstUnreadHistoryIdForBuddy:(NSString*) buddy forAccount:(NSNumber*) accountID maxMessages:(NSUInteger) maxMessages;
 -(NSDictionary*) messageDataForHistoryID:(NSNumber*) historyID;
 //isaCloud: like messageDataForHistoryID:, but nil instead of an assertion if the message does not exist (anymore), e.g. after removing its account
 -(NSDictionary* _Nullable) optionalMessageDataForHistoryID:(NSNumber*) historyID;

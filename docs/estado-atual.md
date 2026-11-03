@@ -1,4 +1,4 @@
-# Estado atual e handoff (02/11/2026, build 86)
+# Estado atual e handoff (03/11/2026, build 87)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,14 +7,22 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 86** (mensagem "Build 86 ..."), tag `build-86`; `git log --oneline -3` |
-| TestFlight | **86** (02/11/2026, 18:31; o 85 foi o anterior, tag `build-85`, enviado às 18:17) |
-| `.dev` no iPhone | **86** (igual ao TestFlight, sem a sonda; **sem push**, então a extensão de notificação não roda nele) |
+| Commit | o do **build 87** (mensagem "Build 87 ..."), tag `build-87`; `git log --oneline -3` |
+| TestFlight | **87** (03/11/2026, 14:45; o 86 foi o anterior, tag `build-86`, 02/11 18:31) |
+| `.dev` no iPhone | **87** (igual ao TestFlight, sem a sonda; **sem push**, então a extensão de notificação não roda nele) |
 | Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com a build de testes de 02/11/2026 (ad-hoc, por cima do banco, que tem backup do dia em `~/Library/Application Support/isacloud-sim-backups/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
-| ExyteChat | `f5eb80a` na `isaCloud` (cor do texto do meu balão na pílula de reação e na seta de responder, PR 18; antes `1429d6c` = toque longo só no balão + link ignorado com o menu aberto, PR 17; `b7de90e` = toque ignorado com o menu aberto, PR 16; **os três estão no build 83**; `d2ece12` e `583d960`, PR 15 e 14, estão desde o 82) |
+| ExyteChat | `f49d4f6` na `isaCloud` (card de link com altura fixa, `LinkPreviewPrefetcher`, `listHidden`, PR 19; antes `f5eb80a` (cor do texto do meu balão na pílula de reação e na seta de responder, PR 18; antes `1429d6c` = toque longo só no balão + link ignorado com o menu aberto, PR 17; `b7de90e` = toque ignorado com o menu aberto, PR 16; **os três estão no build 83**; `d2ece12` e `583d960`, PR 15 e 14, estão desde o 82) |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
+
+## O que entrou no build 87 (sobre o 86) — em avaliação por alguns dias a partir de 03/11/2026
+
+- **Grupos e canais abrem na primeira não lida** (roadmap 136, `docs/feature-abrir-na-primeira-nao-lida.md`): limite de 200, a busca vence, MDS respeitado; salto de ~0,9 s (antes ~1,7 s; 3,4 s com link), dica "Carregando…" só depois de 1,2 s ou com busca no banco.
+- **Card de link com altura fixa de 120 pt** (roadmap 137, PR 19 do fork) e "Pré-visualização indisponível" quando falha; o app **não chama mais** o prefetch de previews (fica no fork).
+- **Campo de texto** com no máximo 8 linhas inteiras (`.lineLimit(1...8)`).
+- **Se incomodar:** ancorar a posição do alvo no fork, ou religar o prefetch com prazo de 0,5 s; se aprovar, remover `LinkPreviewPrefetcher` do fork.
+- Cache em disco dos previews: avaliado e descartado (`docs/feature-abrir-na-primeira-nao-lida.md`). Marcas `//TEMP-MEDIÇÃO` de tempo foram removidas antes do commit.
 
 ## O que entrou no build 85 (sobre o 84)
 

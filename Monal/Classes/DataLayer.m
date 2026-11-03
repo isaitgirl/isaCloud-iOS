@@ -2112,6 +2112,26 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
     }];
 }
 
+//isaCloud: see DataLayer.h
+-(NSNumber* _Nullable) firstUnreadHistoryIdForBuddy:(NSString*) buddy forAccount:(NSNumber*) accountID maxMessages:(NSUInteger) maxMessages
+{
+    if(accountID == nil || !buddy || maxMessages == 0)
+        return nil;
+    return [self.db idReadTransaction:^{
+        NSNumber* firstUnread = [self.db executeScalar:@"SELECT MIN(message_history_id) FROM message_history WHERE account_id=? AND buddy_name=? AND unread=1 AND inbound=1;" andArguments:@[accountID, buddy]];
+        if(firstUnread == nil || [firstUnread isKindOfClass:[NSNull class]])
+            return (NSNumber*)nil;
+        NSNumber* count = [self.db executeScalar:@"SELECT COUNT(*) FROM message_history WHERE account_id=? AND buddy_name=? AND message_history_id>=?;" andArguments:@[accountID, buddy, firstUnread]];
+        if(count.unsignedIntegerValue <= maxMessages)
+            return firstUnread;
+        //too many messages between the first unread one and the newest one: open at the maxMessages-th newest message instead
+        NSNumber* newestToShow = [self.db executeScalar:@"SELECT message_history_id FROM message_history WHERE account_id=? AND buddy_name=? ORDER BY message_history_id DESC LIMIT 1 OFFSET ?;" andArguments:@[accountID, buddy, @(maxMessages - 1)]];
+        if(newestToShow == nil || [newestToShow isKindOfClass:[NSNull class]])
+            return firstUnread;
+        return newestToShow;
+    }];
+}
+
 -(MLMessage*) lastMessageForContact:(NSString*) contact forAccount:(NSNumber*) accountID
 {
     if(accountID == nil || !contact)

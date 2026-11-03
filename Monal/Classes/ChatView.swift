@@ -217,11 +217,28 @@ struct ChatView: View {
     //isaCloud: opened from the search in the messages: the chat shows this message in the middle of the screen (nil: the newest ones as always)
     @State private var jumpToHistoryId: NSNumber?
     @State private var jumpScrollParams: ScrollToParams?
+    //isaCloud: true from the moment a jump is known to come until it has settled (the previews are fetched and the list scrolls there)
+    @State private var isSettlingJump = false
+    //isaCloud: the "Loading…" capsule over the list, shown only when the jump takes a moment (see startJumpSafetyTimers())
+    @State private var showJumpHint = false
     /// a chat is only opened at a message if it takes at most this many messages to get there from the newest ones
     static let maxMessagesToJumpOver = 3000
+    //isaCloud: a group or channel opens at its first unread message, but at most this many messages back from the newest one
+    static let maxUnreadMessagesToOpenAt = 200
+    //isaCloud: timing of the jump to a message (see scrollToSearchedMessage() and startJumpSafetyTimers()). The first scroll goes by the estimated
+    //height of the rows; the second one, later, corrects it once the rows were measured while the list was drawn. Then the list settles.
+    static let jumpFirstScrollDelay: Double = 0.1
+    static let jumpSecondScrollDelay: Double = 0.5
+    static let jumpSecondScrollOffset: CGFloat = 0.5
+    static let jumpSettleDelay: Double = 0.2 //after the second scroll: the list shows the target and the jump is over (~0.7 s in all)
+    //isaCloud: the "Loading…" hint only if the jump takes more than jumpHintDelay, or if there is real work before the scroll (the database or the previews): then after jumpHintWorkDelay
+    static let jumpHintDelay: Double = 1.2
+    static let jumpHintWorkDelay: Double = 0.5
+    static let jumpSafetyDelay: Double = 4.5 //the settling always ends here, even if the list never scrolls
 
     init(contact: ObservableKVOWrapper<MLContact>, jumpToHistoryId: NSNumber? = nil) {
         _jumpToHistoryId = State(wrappedValue: jumpToHistoryId)
+        _isSettlingJump = State(wrappedValue: jumpToHistoryId != nil)
         _contact = StateObject(wrappedValue:contact)
         _voipProcessor = StateObject(wrappedValue:ObservableKVOWrapper((UIApplication.shared.delegate as! MonalAppDelegate).voipProcessor!))
         account = contact.obj.account!
@@ -743,16 +760,20 @@ struct ChatView: View {
             return
         }
         jumpToHistoryId = nil
+        startJumpSafetyTimers()
         let alreadyShown = messages.contains { $0.historyId == target }
         if alreadyShown {
             scrollToSearchedMessage(target)
             return
         }
         guard let oldestShown = messages.first(where: { !$0.isPending })?.historyId, target.intValue < oldestShown.intValue else {
+            finishJump()
             return
         }
+        showJumpHintNow() //isaCloud: the messages around the target are read from the database: real work before the scroll
         guard let missing = DataLayer.sharedInstance().messages(forContact: contact.contactJid, forAccount: contact.accountID, aroundMsgHistoryID: target, beforeMsgHistoryID: oldestShown, limit: UInt(ChatView.maxMessagesToJumpOver)) as? [MLMessage] else {
             DDLogWarn("Search: message \(target) is too far back (or gone) to open the chat there")
+            finishJump()
             return
         }
         //isaCloud: the links of the loaded messages are found in the background first (the detector is slow), so the list does not
@@ -766,23 +787,64 @@ struct ChatView: View {
                 //(the list may have changed meanwhile: what is shown already is not inserted again, ExyteChat aborts on two messages with the same id)
                 let shownIds = Set(messages.compactMap { $0.historyId })
                 messages.insert(contentsOf: missing.filter { !shownIds.contains($0.messageDBId) }.map { ChatViewMessage($0) }, at: 0)
-                scrollToSearchedMessage(target)
+                scrollToSearchedMessage(target) //isaCloud: the link card has a fixed height (120 pt) in every state, so a row does not change size when its preview arrives: there is nothing to fetch before the scroll (the prefetch of the previews was removed, see the fork's LinkPreviewPrefetcher)
             }
+        }
+    }
+
+    /// isaCloud: the "Loading…" capsule shows only if the jump takes more than jumpHintDelay (1.2 s), and at once after jumpHintWorkDelay
+    /// when there is real work before the scroll (see showJumpHintNow()); the settling always ends by jumpSafetyDelay (4.5 s), even if the list never scrolls
+    private func startJumpSafetyTimers() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + ChatView.jumpHintDelay) {
+            showJumpHintIfSettling()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + ChatView.jumpSafetyDelay) {
+            finishJump()
+        }
+    }
+
+    /// isaCloud: called where the jump has real work before the scroll (the messages are read from the database):
+    /// the hint shows after jumpHintWorkDelay, if the jump is still settling then
+    private func showJumpHintNow() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + ChatView.jumpHintWorkDelay) {
+            showJumpHintIfSettling()
+        }
+    }
+
+    private func showJumpHintIfSettling() {
+        if isSettlingJump {
+            withAnimation(.easeIn(duration: 0.15)) {
+                showJumpHint = true
+            }
+        }
+    }
+
+    /// isaCloud: the jump is over, or it was not going to happen: the hint goes away
+    private func finishJump() {
+        withAnimation(.easeIn(duration: 0.15)) {
+            isSettlingJump = false
+            showJumpHint = false
         }
     }
 
     /// isaCloud: scrolls to a message already in the list (see jumpToSearchedMessage())
     private func scrollToSearchedMessage(_ target: NSNumber) {
         guard let message = messages.first(where: { $0.historyId == target }) else {
+            finishJump()
             return
         }
         //the list must have taken the new messages before it can scroll to one of them
         //(and once more a moment later: the first scroll goes by the estimated height of the rows, which are measured while the list is drawn)
         //(the second one has another offset: the list only scrolls when the parameters change)
-        for (delay, offset) in [(0.4, 0.0), (1.2, 0.5)] {
+        //(the delays are short: the list is hidden until the jump settles, so every wait here is time the user waits; see the constants above)
+        for (delay, offset) in [(ChatView.jumpFirstScrollDelay, CGFloat(0.0)), (ChatView.jumpSecondScrollDelay, ChatView.jumpSecondScrollOffset)] {
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                 jumpScrollParams = ScrollToParams(messageID: message.id, position: .middle, offset: offset)
             }
+        }
+        //the list has scrolled there for the last time: it settles jumpSettleDelay after the second scroll (~0.7 s in all)
+        DispatchQueue.main.asyncAfter(deadline: .now() + ChatView.jumpSecondScrollDelay + ChatView.jumpSettleDelay) {
+            finishJump()
         }
     }
 
@@ -1316,6 +1378,7 @@ struct ChatView: View {
             inputModel.setText(inputModel.text + "\(ChatNameWithHats.nick(from: user.name)), ")
         }
         .linkPreviewsEnabled(chatViewDefaultsDB.showURLPreview)
+        .listHidden(isSettlingJump)      //isaCloud: the list fades out while a jump settles; the input bar and the "Loading…" hint stay (see JumpHint)
         .checkFileSizeClosure { file in
             MLFiletransfer.checkMimeTypeAndSize(forHistoryID: Int(file.id)! as NSNumber)
         }
@@ -1347,6 +1410,13 @@ struct ChatView: View {
         //isaCloud: the SwiftUI text inside the chat (names, quotes, reactions, input bar) follows the same step as the fonts above.
         //Only the chat's subtree gets it: the sheets and the toolbar, attached after this modifier, keep the system size
         .dynamicTypeSize(ChatTextSize.dynamicTypeSize(system: dynamicTypeSize, step: chatViewDefaultsDB.chatTextSizeStep))
+        .overlay(alignment: .top) {      //isaCloud: shown while a jump to a message settles (see startJumpSafetyTimers()); after the ExyteChat modifiers, which return ChatView
+            if showJumpHint {
+                JumpHint()
+                    .padding(.top, 16)
+                    .transition(.opacity)
+            }
+        }
         .sheet(isPresented: $showMediaPicker) {
             //isaCloud: the system picker (see SystemMediaPicker)
             SystemMediaPicker(isPresented: $showMediaPicker, onPicked: { medias in
@@ -1690,6 +1760,11 @@ struct ChatView: View {
         .addLoadingOverlay(overlay)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
+            //isaCloud: opened at the first unread message of a group or channel; must be read before refreshCounter marks everything as read
+            if jumpToHistoryId == nil, contact.obj.isMuc, let firstUnread = DataLayer.sharedInstance().firstUnreadHistoryId(forBuddy: contact.contactJid, forAccount: contact.accountID, maxMessages: UInt(ChatView.maxUnreadMessagesToOpenAt)) {
+                jumpToHistoryId = firstUnread
+                isSettlingJump = true
+            }
             MLNotificationManager.sharedInstance().currentContact = self.contact.obj
             loadChatBackground()
             mucPersonCount = countMucPersons(of: contact, ownJid: account.connectionProperties.identity.jid)    //isaCloud
@@ -2235,6 +2310,26 @@ class ChatViewUser: ExyteChat.User {
 
 
 //isaCloud: the solid eye inside the circle of the "last seen" icon: an almond with a small hole for the pupil (even-odd fill), drawn in the box of the circle
+/// isaCloud: a capsule floating over the top of the chat while a jump to a message settles. Same look as the "Sending..." hint of the input bar
+/// (see SendingHint in ChatInputBar.swift), with its own copy so that the input bar stays as it is.
+private struct JumpHint: View {
+    var body: some View {
+        HStack(spacing: 8) {
+            ProgressView()
+                .controlSize(.small)
+            Text("Loading…")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color(uiColor: .systemBackground), in: Capsule())
+        .overlay(Capsule().strokeBorder(Color(uiColor: .separator), lineWidth: 0.5))
+        .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
+        .allowsHitTesting(false)
+    }
+}
+
 private struct SolidEyeShape: Shape {
     func path(in rect: CGRect) -> Path {
         let w = rect.width
@@ -2251,3 +2346,4 @@ private struct SolidEyeShape: Shape {
         return path
     }
 }
+
