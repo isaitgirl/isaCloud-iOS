@@ -692,3 +692,25 @@ No iOS 27, "Adicionar contato ou canal" (`AddContactMenu`) e "Convidar para o is
 - **Medida:** `realPersistState` e `DataLayer persistState:forAccount:` registram, só acima de 50 ms e com `DDLogWarn` (assíncrono), o tempo, os bytes serializados e a contagem de `unAckedStanzas`, `iqHandlers`, `mucState`, `pubsubData` etc.
 - **Script:** `scripts/classificar-crashes.py --dir <pasta>` (ou `--pull <UDID>`, UDID fora do repositório) mostra os crashes por dia, tipo, mecanismo do `0xdead10cc` e build. Na base de 28/10 a 02/11: 14 `0xdead10cc` do app (5 persistState, 1 parse na transação, 2 disconnect, 2 log síncrono, 2 filetransfer, 2 sem banco).
 - **Lição de processo:** duas sessões no mesmo checkout trocaram a branch uma da outra e uma restauração apagou a medida do `DataLayer.m` (refeita). Sessões em paralelo usam worktree próprio.
+
+## Conversas arquivadas: arquivamento local duradouro e sincronização com o Android (03/11/2026, roadmap 134)
+
+- **Estado:** decidido, **sem código**; a Isadora pediu para não começar o PR 1 ainda. Análise e desenho completos em `docs/decisoes-sincronizacao-arquivados.md` (veio do isaCloud para Android); a avaliação para o iOS está na conversa de 03/11/2026 e nas seções "Decisões tomadas para o iOS" e "iOS — o que muda" desse documento.
+- **Por quê:** hoje o "Archive chat" apaga a linha de `activechats` e marca tudo como lido; a próxima mensagem traz a conversa de volta, então o estado não dura e não há o que sincronizar. O Android já arquiva grupos e canais só localmente, sem sair da sala.
+- **Decidido:** (1) grupo ou canal arquivado fica mudo, mas uma **menção (@)** notifica e **só notifica** (não traz o grupo de volta), e badge e contador contam **só menções**; abrir **qualquer** grupo ou canal no **ponto da última menção** é uma **feature separada** (roadmap 135), feita antes; (2) mensagem nova continua escondida, como no Android; (3) o rótulo "Arquivado" aparece nas listas e nos detalhes; (4) PR 1 (arquivamento local, sem PEP) só quando ela mandar; PR 2 (PEP) só depois do nó do Android validado.
+- **Em aberto:** release; abrir 1:1 arquivado desarquiva no iOS; nome do nó PEP (sugestão: manter `im.isacloud:conversation-state:0`).
+- **Como fica no código (quando vier):** migração 5 da escada própria (`+migrateISACloudDB:`, nunca na escada 7.0xx do Monal), colunas `archived`, `archived_updated`, `archived_pending` em `buddylist`; `activechats` deixa de ser apagada (preserva `pinned`); filtro `archived = 0` na lista, no badge e nas não lidas; check no `MLNotificationManager` com exceção para menção; nó PEP `im.isacloud:conversation-state:0`. Mudanças em arquivos do Monal ficam pequenas, com `//isaCloud:`. Validar com banco real e em Prosody e ejabberd.
+
+## Preview de link com altura fixa em vez de cache em disco (03/11/2026, roadmap 137)
+
+- **Problema:** a linha com URL nasce pequena (pill do `LPLinkView`) e cresce quando o preview chega; como a lista é invertida, isso empurra a mensagem-alvo do salto (primeira não lida, busca).
+- **Avaliado e descartado:** cache em disco dos previews (Caches, um arquivo por URL, 50 MB, 7 dias). Só ajuda link já visto, grava páginas não abertas e tem mais código no fork. Análise completa em `docs/feature-abrir-na-primeira-nao-lida.md`.
+- **Decidido (ideia da Isadora):** com os previews ligados, o card nasce com altura fixa; o preview só troca o conteúdo; sem preview mostra "Pré-visualização indisponível" na mesma altura (nunca encolhe). Mudança no fork do ExyteChat (`LinkViewRepresentable`/`LinkPreviewView`); string lida do `Localizable.strings` do app.
+
+### Resultado e avaliação em andamento (03/11/2026, build 87)
+
+- **Em avaliação por alguns dias, a partir de 03/11/2026**: o conjunto "abrir na primeira não lida + card de link com altura fixa + salto rápido" foi para o build 87 e a Isadora o usa no dia a dia antes de dar a solução por fechada. Se algo incomodar: ancorar a posição do alvo no fork (ver `docs/feature-abrir-na-primeira-nao-lida.md`) ou religar o prefetch com prazo curto (0,5 s).
+- **Medido** (simuladores, marcas temporárias já removidas): com 1 a 3 não lidas e sem link, os dados chegam à lista em ~0,2 s, mas o salto esperava ~1,7 s por tempos fixos (scrolls em 0,4 s e 1,2 s, fim em 1,5 s) e a dica "Carregando…" aparecia em 0,5 s. Agora: scrolls em 0,1 s e 0,5 s, fim em 0,7 s, dica só em 1,2 s (0,5 s quando há busca no banco): ~0,9 s no total.
+- **O app deixou de chamar o prefetch de previews no salto**, porque o card de link tem altura fixa e a linha não muda de tamanho quando o preview chega (com link perto do alvo: 3,2-3,6 s → 0,8-0,9 s). `LinkPreviewPrefetcher` continua no fork, sem uso no app (corrigido para voltar no prazo: a espera passava de 2 s porque cancelar o `TaskGroup` não interrompe o `LPMetadataProvider`); remover do fork se a avaliação aprovar.
+- **Lição:** logs do iPhone: o `devicectl` corta a cópia do `.rawlog` em 90 MB, então as linhas do fim do arquivo não chegam; para medir no aparelho, medir nos simuladores ou gravar um arquivo pequeno à parte.
+

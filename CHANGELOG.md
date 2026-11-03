@@ -4,6 +4,19 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## Não publicado
 
+(nada ainda)
+
+## 0.0.1 (build 87) — 03/11/2026 (enviado ao TestFlight às 14:45)
+
+A abertura na primeira não lida, o salto e o card de link ficam **em avaliação por alguns dias a partir de 03/11/2026**.
+
+### Adicionado
+- **Grupos e canais abrem na primeira mensagem não lida.** Ao abrir um grupo ou canal com mensagens não lidas, a conversa abre na primeira delas, com um pouco do que veio antes; sem não lidas, abre no fim como sempre. Com mais de 200 mensagens entre a primeira não lida e a mais nova, abre na 200ª mais recente (o resto se alcança rolando para cima). Se a conversa foi aberta por um resultado de busca, a busca vence. O que foi lido em outro aparelho (MDS) não conta como não lido. Chats 1:1 não mudam (`DataLayer firstUnreadHistoryIdForBuddy:`, `ChatView.swift`). O salto não pula mais por causa de links: a lista fica escondida até assentar (`listHidden`, API nova do fork do ExyteChat) e uma cápsula "Carregando…" aparece só se o salto precisar buscar mensagens no banco ou passar de 1,2 s (vale também para o salto da busca). O salto leva ~0,9 s (antes ~1,7 s com 1 não lida, e ~3,4 s com link perto do alvo): os tempos fixos de rolagem caíram de 0,4/1,2/1,5 s para 0,1/0,5/0,7 s e o app deixou de esperar a busca de previews, porque o card de link tem altura fixa (o `LinkPreviewPrefetcher` do fork continua no código, sem uso, a remover se o resultado for aprovado). Testado nos simuladores iOS 18.6 e 27 e no iPhone.
+- **Card de preview de link com altura fixa (120 pt).** Com os previews ligados, o card de cada URL nasce com a altura final e nunca muda de tamanho: carregando, com preview ou sem preview. Quando a página não responde, não tem dados ou passa de 5 s, o card mostra "Pré-visualização indisponível" na mesma altura (a falha é lembrada por 5 minutos para não buscar de novo a cada rolagem). Assim a linha não cresce quando o preview chega e o salto não é mais empurrado. O card com preview ocupa a largura do balão. Decisão e análise do cache em disco descartado em `docs/feature-abrir-na-primeira-nao-lida.md`. Mudança no fork do ExyteChat (`LinkPresentation+View.swift`, `+Cache.swift`). Testado no iOS 18.6 e 27 e no iPhone.
+
+### Corrigido
+- **O campo de texto da mensagem não corta mais linhas e rola até o cursor quando o texto fica longo.** Sem limite próprio, o layout espremia o campo e uma linha ficava cortada no topo ou na base da caixa, e o campo não rolava para o cursor nessa situação (visto no iPhone com iOS 27.2). Agora o campo tem no máximo 8 linhas inteiras e rola por dentro (`.lineLimit(1...8)` em `ChatInputBar.swift`). Testado nos simuladores iOS 18.6 e 27 (digitando no fim, com Enter e movendo o cursor) e no iPhone.
+
 ## 0.0.1 (build 86) — 02/11/2026 (enviado ao TestFlight às 18:31)
 
 ### Adicionado
