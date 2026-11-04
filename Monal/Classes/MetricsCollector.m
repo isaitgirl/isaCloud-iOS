@@ -30,6 +30,7 @@
 #import <monalxmpp/HelperTools.h>
 #import <monalxmpp/MLSQLite.h>
 #import <monalxmpp/MLXMPPManager.h>
+#import <monalxmpp/MLConnectTiming.h>     //isaCloud: tempo de cada conexão (usa a referência de abertura daqui)
 
 //keep the samples for a while, but never let this grow without a limit
 static const NSInteger kMaxSampleAgeDays = 45;
@@ -80,6 +81,7 @@ static BOOL _launchFinishedWritten = NO;
     dispatch_once(&onceToken, ^{
         _launchStart = CACurrentMediaTime();
         _launchMarks = [NSMutableDictionary new];
+        [MLConnectTiming setLaunchStart:_launchStart];     //isaCloud: medição do tempo de conexão desde a abertura
     });
 }
 
@@ -495,6 +497,7 @@ static double _lastStageTime = 0.0;
     NSMutableArray* samples = [NSMutableArray new];
     NSMutableArray* metrickit = [NSMutableArray new];
     NSMutableArray* launches = [NSMutableArray new];
+    NSMutableArray* connects = [NSMutableArray new];     //isaCloud: uma linha por tentativa de conexão (MLConnectTiming)
     for(NSString* name in [fileManager contentsOfDirectoryAtPath:directory error:nil])
     {
         NSString* path = [directory stringByAppendingPathComponent:name];
@@ -524,6 +527,19 @@ static double _lastStageTime = 0.0;
                     [launches addObject:launch];
             }
         }
+        else if([name hasPrefix:@"connects-"] && [name hasSuffix:@".jsonl"])     //isaCloud: medição do tempo de conexão por conta
+        {
+            NSString* contents = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:nil];
+            for(NSString* line in [contents componentsSeparatedByString:@"\n"])
+            {
+                if(line.length == 0)
+                    continue;
+                NSData* data = [line dataUsingEncoding:NSUTF8StringEncoding];
+                NSDictionary* connect = data != nil ? [NSJSONSerialization JSONObjectWithData:data options:0 error:nil] : nil;
+                if([connect isKindOfClass:[NSDictionary class]])
+                    [connects addObject:connect];
+            }
+        }
         else if([name hasPrefix:@"metrickit-"] && [name hasSuffix:@".json"])
         {
             NSData* data = [NSData dataWithContentsOfFile:path];
@@ -539,6 +555,7 @@ static double _lastStageTime = 0.0;
         @"build": info[@"CFBundleVersion"] ?: @"?",
         @"samples": samples,
         @"launches": launches,
+        @"connects": connects,     //isaCloud: tempo de cada conexão por conta
         @"metrickit": metrickit,
     };
     NSError* error = nil;

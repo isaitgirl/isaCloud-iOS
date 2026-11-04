@@ -26,6 +26,7 @@
 #import <monalxmpp/DataLayer.h>
 #import <monalxmpp/HelperTools.h>
 #import <monalxmpp/MLXMPPManager.h>
+#import <monalxmpp/MLConnectTiming.h>      //isaCloud: medição do tempo de cada conexão (só observa)
 #import <monalxmpp/MLNotificationQueue.h>
 #import <monalxmpp/SCRAM.h>
 #import <monalxmpp/HT.h>
@@ -116,6 +117,7 @@ static NSRegularExpression* fastTokenRemovalRegex;
     BOOL _disconnectInProgres;
     NSObject* _stateLockObject;     //only used for @synchronized() blocks
     BOOL _lastIdleState;
+    MLConnectTiming* _connectTiming;       //isaCloud: tentativa de conexão em medição (só observa)
     NSMutableDictionary* _mamPageArrays;
     NSString* _internalID;
     NSString* _logtag;
@@ -476,6 +478,8 @@ static NSRegularExpression* fastTokenRemovalRegex;
                     DDLogVerbose(@"Adding idle state notification to receive queue...");
                     [_receiveQueue addOperations:@[[NSBlockOperation blockOperationWithBlock:^{
                         //don't queue this notification because it should be handled INLINE inside the receive queue
+                        [self->_connectTiming mark:@"idle"];          //isaCloud: medição, a conta ficou ociosa
+                        [self->_connectTiming finishWithOutcome:@"idle"];
                         [[NSNotificationCenter defaultCenter] postNotificationName:kMonalIdle object:self];
                     }]] waitUntilFinished:NO];
                 }
@@ -662,6 +666,7 @@ static NSRegularExpression* fastTokenRemovalRegex;
         DDLogInfo(@"Querying for SRV records");
         _discoveredServersList = [[MLDNSLookup new] dnsDiscoverOnDomain:self.connectionProperties.identity.domain];
         _SRVDiscoveryDone = YES;
+        [_connectTiming mark:@"dns"];       //isaCloud: tempo da consulta SRV
         // no SRV records found, update server to directly connect to specified domain
         if([_discoveredServersList count] == 0)
         {
@@ -929,6 +934,7 @@ static NSRegularExpression* fastTokenRemovalRegex;
         self.loginTimer = nil;
         [self dispatchAsyncOnReceiveQueue: ^{
             DDLogInfo(@"Login took too long, cancelling and trying to reconnect (potentially using another SRV record)");
+            [self->_connectTiming finishWithOutcome:@"login_timeout"];     //isaCloud: medição
             [self reconnect];
         }];
     }));
@@ -1005,6 +1011,9 @@ static NSRegularExpression* fastTokenRemovalRegex;
         DDLogInfo(@"XMPP connnect start");
         self->_startTLSComplete = NO;
         self->_catchupDone = NO;
+        //isaCloud: medição: começa a contar esta tentativa (a anterior, se ainda aberta, termina aqui)
+        [self->_connectTiming finishWithOutcome:@"disconnected"];
+        self->_connectTiming = [MLConnectTiming beginForAccount:self.accountID server:self.connectionProperties.identity.domain background:([HelperTools appState] == 2)];
         
         [self cleanupSendQueue];
         
@@ -1047,6 +1056,7 @@ static NSRegularExpression* fastTokenRemovalRegex;
 -(void) disconnectWithStreamError:(MLXMLNode* _Nullable) streamError andExplicitLogout:(BOOL) explicitLogout 
 {
     DDLogInfo(@"disconnect called...");
+    [self->_connectTiming finishWithOutcome:streamError ? @"error" : @"disconnected"];     //isaCloud: medição
     //commonly used by shortcut outside of receive queue and called from inside the receive queue, too
     monal_void_block_t doExplicitLogout = ^{
         @synchronized(self->_stateLockObject) {
@@ -1318,6 +1328,7 @@ static NSRegularExpression* fastTokenRemovalRegex;
 
 -(void) closeSocket
 {
+    [self->_connectTiming finishWithOutcome:@"disconnected"];     //isaCloud: medição (no-op se a tentativa já terminou)
     [self dispatchOnReceiveQueue: ^{
         DDLogInfo(@"removing streams from runLoop and aborting parser");
 
@@ -2554,6 +2565,7 @@ static NSRegularExpression* fastTokenRemovalRegex;
         }
         else if([parsedStanza check:@"/{urn:xmpp:sm:3}resumed"] && self.connectionProperties.supportsSM3 && self.accountState < kStateBound)
         {
+            [self->_connectTiming mark:@"resumed"];     //isaCloud: medição
             NSNumber* h = [parsedStanza findFirst:@"/@h|int"];
             if(h==nil)
                 return [self invalidXMLError];
@@ -2725,6 +2737,7 @@ static NSRegularExpression* fastTokenRemovalRegex;
             
             //increment state
             self->_accountState = kStateLoggedIn;
+            [self->_connectTiming mark:@"login"];     //isaCloud: medição
             [[MLNotificationQueue currentQueue] postNotificationName:kMLIsLoggedInNotice object:self];
             [self accountStatusChanged];
             
@@ -3020,6 +3033,7 @@ static NSRegularExpression* fastTokenRemovalRegex;
             
             //increment state
             self->_accountState = kStateLoggedIn;
+            [self->_connectTiming mark:@"login"];     //isaCloud: medição
             [[MLNotificationQueue currentQueue] postNotificationName:kMLIsLoggedInNotice object:self];
             [self accountStatusChanged];
             
@@ -3300,6 +3314,7 @@ static NSRegularExpression* fastTokenRemovalRegex;
                     return;
                 }
                 self->_startTLSComplete = YES;
+                [self->_connectTiming mark:@"tls"];     //isaCloud: medição
                 
                 //we successfully completed the tls handshake, now proceed inside the receive queue again
                 [self->_receiveQueue addOperations:@[[NSBlockOperation blockOperationWithBlock:^{
@@ -3351,11 +3366,14 @@ static NSRegularExpression* fastTokenRemovalRegex;
     //dropping it when the app froze, then the queue unfroze): the auth steps below read the TLS state of the stream (channel-binding
     //-> tlsVersion), which asserts on a stream that is not open (crash of 03/11/2026, build 88). Nothing to authenticate on a dead
     //stream: the reconnect for the reported error takes over
-    //(the same range MLStream asserts on: open, reading, writing or at end; the pipelined auth comes here right after opening)
+    //"opening" (NSStreamStatusOpening) is allowed on purpose: the pipelined auth of a direct TLS connection (cached stream features) comes
+    //here while the TLS handshake is still running, and the TLS-dependent part waits in _blockToCallOnTCPOpen until the TLS is connected.
+    //Only a stream that was never opened or is closed/in error is ignored (the C16 crash of 04/11/2026 was an error stream, status 7).
+    //Ignoring "opening" too made every cold start with cached features wait for the 12 s login timeout (04/11/2026)
     NSStreamStatus streamStatus = [((MLStream*)self.oStream) streamStatus];
-    if(streamStatus < NSStreamStatusOpen || streamStatus >= NSStreamStatusClosed)
+    if(streamStatus == NSStreamStatusNotOpen || streamStatus >= NSStreamStatusClosed)
     {
-        DDLogWarn(@"Ignoring stream features before auth: the stream is not open anymore (status %ld), waiting for the reconnect...", (long)streamStatus);
+        DDLogWarn(@"Ignoring stream features before auth: the stream is not open (status %ld), waiting for the reconnect...", (long)streamStatus);
         return;
     }
 
@@ -4902,6 +4920,7 @@ static NSRegularExpression* fastTokenRemovalRegex;
     
     //indicate we are bound now, *after* initializing/resetting all the other data structures to avoid race conditions
     _accountState = kStateBound;
+    [_connectTiming mark:@"bound"];     //isaCloud: medição
     
     //inform other parts of monal about our new state
     [[MLNotificationQueue currentQueue] postNotificationName:kMLResourceBoundNotice object:self];
@@ -5566,6 +5585,7 @@ static NSRegularExpression* fastTokenRemovalRegex;
             if(stream == self.oStream)
             {
                 self->_streamHasSpace = NO;
+                [self->_connectTiming mark:@"tcp"];     //isaCloud: medição, o socket abriu
                 
                 //restart logintimer when our output stream becomes readable (don't do anything without a running timer)
                 if(self.loginTimer != nil && self->_accountState < kStateLoggedIn)
@@ -6129,6 +6149,7 @@ static NSRegularExpression* fastTokenRemovalRegex;
 -(void) handleFinishedCatchup
 {
     self->_catchupDone = YES;
+    [self->_connectTiming mark:@"catchup"];     //isaCloud: medição
     self.isDoingFullReconnect = !self.connectionProperties.supportsSM3;
     
     //log catchup statistics

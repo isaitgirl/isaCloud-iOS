@@ -73,6 +73,7 @@
 		26CC57D423A08D7100ABB92A /* MLImageManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 26EC411217BDE39E0031304D /* MLImageManager.m */; };
 		26CC57D523A08D7100ABB92A /* MLSignalStore.m in Sources */ = {isa = PBXBuildFile; fileRef = 263AFDFB209B3B35007F9CEE /* MLSignalStore.m */; };
 		26CC57DA23A08DD800ABB92A /* MLXMPPManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 26352EA7177D222600E2C8FF /* MLXMPPManager.m */; };
+		4D1C0C0A2A6F0B1E00C0F002 /* MLConnectTiming.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D1C0C0A2A6F0B1E00C0F004 /* MLConnectTiming.m */; };
 		26CC57EB23A08F4400ABB92A /* monalxmpp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 26CC579223A0867400ABB92A /* monalxmpp.framework */; };
 		26D4389123A5EB6C00242AAA /* MLConstants.h in Headers */ = {isa = PBXBuildFile; fileRef = 262D9EAB17924532009292B4 /* MLConstants.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		26D7C05E23D6AFD800CA123C /* MLChatInputContainer.m in Sources */ = {isa = PBXBuildFile; fileRef = 26D7C05D23D6AFD800CA123C /* MLChatInputContainer.m */; };
@@ -96,6 +97,7 @@
 		3424B4E92D232BEB009F6503 /* xmpp.h in Headers */ = {isa = PBXBuildFile; fileRef = 260C51CF177F08F50039634B /* xmpp.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		3424B4EA2D232BF5009F6503 /* MLSignalStore.h in Headers */ = {isa = PBXBuildFile; fileRef = 263AFDFA209B3B35007F9CEE /* MLSignalStore.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		3424B4EB2D232BFA009F6503 /* MLXMPPManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 26352EA6177D222600E2C8FF /* MLXMPPManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		4D1C0C0A2A6F0B1E00C0F001 /* MLConnectTiming.h in Headers */ = {isa = PBXBuildFile; fileRef = 4D1C0C0A2A6F0B1E00C0F003 /* MLConnectTiming.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		3424B4EC2D232BFF009F6503 /* MLImageManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 26EC411117BDE39E0031304D /* MLImageManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		3424B4EE2D232C0F009F6503 /* MLCall.h in Headers */ = {isa = PBXBuildFile; fileRef = 848717F2295ED64500B8D288 /* MLCall.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		3424B4EF2D232C14009F6503 /* HelperTools.h in Headers */ = {isa = PBXBuildFile; fileRef = C1AAC3E224B5EF4100BB15D6 /* HelperTools.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -459,6 +461,8 @@
 		2633CB41231CB816006D0277 /* MLMessageProcessor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MLMessageProcessor.h; sourceTree = "<group>"; };
 		2633CB42231CB816006D0277 /* MLMessageProcessor.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MLMessageProcessor.m; sourceTree = "<group>"; };
 		26352EA6177D222600E2C8FF /* MLXMPPManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MLXMPPManager.h; sourceTree = "<group>"; };
+		4D1C0C0A2A6F0B1E00C0F003 /* MLConnectTiming.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MLConnectTiming.h; sourceTree = "<group>"; };
+		4D1C0C0A2A6F0B1E00C0F004 /* MLConnectTiming.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MLConnectTiming.m; sourceTree = "<group>"; };
 		26352EA7177D222600E2C8FF /* MLXMPPManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MLXMPPManager.m; sourceTree = "<group>"; };
 		2636C43D177BD58C001CA71F /* XMPPEdit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = XMPPEdit.h; sourceTree = "<group>"; };
 		2636C43E177BD58C001CA71F /* XMPPEdit.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = XMPPEdit.m; sourceTree = "<group>"; };
@@ -1143,6 +1147,8 @@
 				C15D504A24C727CC002F75BB /* MLLogFileManager.m */,
 				26352EA6177D222600E2C8FF /* MLXMPPManager.h */,
 				26352EA7177D222600E2C8FF /* MLXMPPManager.m */,
+				4D1C0C0A2A6F0B1E00C0F003 /* MLConnectTiming.h */,
+				4D1C0C0A2A6F0B1E00C0F004 /* MLConnectTiming.m */,
 				389E298B25E901CA009A5268 /* MLAudioRecoderManager.h */,
 				389E298925E901CA009A5268 /* MLAudioRecoderManager.m */,
 			);
@@ -1734,6 +1740,7 @@
 				84DED85A2EE0795200401D3A /* MLContactProtocol.h in Headers */,
 				3424B4EC2D232BFF009F6503 /* MLImageManager.h in Headers */,
 				3424B4EB2D232BFA009F6503 /* MLXMPPManager.h in Headers */,
+				4D1C0C0A2A6F0B1E00C0F001 /* MLConnectTiming.h in Headers */,
 				84DED8582EE0776400401D3A /* MLChannelContact.h in Headers */,
 				8426B09830762D85004801F5 /* MLPresenceProcessor.h in Headers */,
 				3424B4EA2D232BF5009F6503 /* MLSignalStore.h in Headers */,
@@ -2546,6 +2553,7 @@
 				541B6AB4262BC9040038B936 /* MLStream.m in Sources */,
 				84FC37552897521500634E3E /* snprintf.m in Sources */,
 				26CC57DA23A08DD800ABB92A /* MLXMPPManager.m in Sources */,
+				4D1C0C0A2A6F0B1E00C0F002 /* MLConnectTiming.m in Sources */,
 				84DED8562EE0774700401D3A /* MLChannelContact.m in Sources */,
 				26CC57B823A0876300ABB92A /* MLHTTPRequest.m in Sources */,
 				26CC57A223A086AA00ABB92A /* xmpp.m in Sources */,

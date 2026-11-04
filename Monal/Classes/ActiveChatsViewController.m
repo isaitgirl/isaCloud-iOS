@@ -26,6 +26,9 @@
 #import "chatViewController.h"
 #import "GeneratedAssetSymbols.h"
 
+//isaCloud: same switch as in MonalAppDelegate.m (ISACLOUD_SYNC_INDICATOR_ONLY_WHEN_CONNECTING there; keep both equal, HOW TO REVERT: set to 0)
+#define ISACLOUD_SYNC_INDICATOR_ONLY_WHEN_CONNECTING 1
+
 #define prependToViewQueue(firstArg, ...)                           metamacro_if_eq(0, metamacro_argcount(__VA_ARGS__))([self prependToViewQueue:firstArg withId:MLViewIDUnspecified andFile:(char*)__FILE__ andLine:__LINE__ andFunc:(char*)__func__])(_prependToViewQueue(firstArg, __VA_ARGS__))
 #define _prependToViewQueue(ownId, block)                           [self prependToViewQueue:block withId:ownId andFile:(char*)__FILE__ andLine:__LINE__ andFunc:(char*)__func__]
 #define appendToViewQueue(firstArg, ...)                            metamacro_if_eq(0, metamacro_argcount(__VA_ARGS__))([self appendToViewQueue:firstArg withId:MLViewIDUnspecified andFile:(char*)__FILE__ andLine:__LINE__ andFunc:(char*)__func__])(_appendToViewQueue(firstArg, __VA_ARGS__))
@@ -647,7 +650,11 @@ static BOOL _dnssecWarningDisplayed;
         self.spinnerButton.hidesSharedBackground = YES;
     [self setSyncIndicatorVisible:NO];
     self.spinnerButton.isAccessibilityElement = YES;
-    self.spinnerButton.accessibilityLabel = NSLocalizedString(@"Syncing", @"Accessibility label for the network/sync activity indicator shown in the chats toolbar when XMPP accounts or file transfers are active");
+    //isaCloud: with ISACLOUD_SYNC_INDICATOR_ONLY_WHEN_CONNECTING (MonalAppDelegate.m) the spinner only means "connecting", so it is labelled that way (the Weblate translation of "Syncing" is missing in pt-BR)
+    if(ISACLOUD_SYNC_INDICATOR_ONLY_WHEN_CONNECTING)
+        self.spinnerButton.accessibilityLabel = NSLocalizedString(@"Connecting...", @"Accessibility label for the network indicator shown in the chats toolbar when an XMPP account cannot connect");
+    else
+        self.spinnerButton.accessibilityLabel = NSLocalizedString(@"Syncing", @"Accessibility label for the network/sync activity indicator shown in the chats toolbar when XMPP accounts or file transfers are active");
     
     self.chatListTable.emptyDataSetSource = self;
     self.chatListTable.emptyDataSetDelegate = self;

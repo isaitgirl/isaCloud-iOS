@@ -5,6 +5,13 @@ Registro do **porquê** das escolhas feitas no fork: decisões de produto, de c�
 - O que está feito, em andamento ou pendente, com datas e resultados de teste, fica no `ROADMAP.md` (toda decisão daqui tem uma linha lá). O histórico de cada build fica no `CHANGELOG.md`.
 - Dados sensíveis ficam em `isaCloud/local/NOTAS-LOCAIS.md`, nunca aqui.
 
+## Rodapé da tela de abertura (04/11/2026)
+
+- **Texto:** "  Copyright © 2026 isaCloud. Todos os direitos reservados." no `Monal/Monal-iOS/Launch Screen.storyboard` (só o atributo `text` do label `obG-Y5-kRd` mudou, uma linha, para o merge com o Monal ficar simples).
+- **Fixo em português:** a tela de abertura não passa pelo Localizable, então o texto não é traduzido por idioma.
+- **Arquivo `Monal/Monal-iOS/.storyboard`:** não está no `project.pbxproj`, então não entra no app; ficou intocado.
+- **Posição e tamanho:** o rodapé fica preso à área segura de baixo (o Monal prendia à borda física, e o texto ia para trás da barrinha e das curvas), com a letra encolhendo até 60% se não couber e sem os espaços iniciais.
+
 ## Métricas do aparelho e do sistema (29/10/2026)
 
 - **Pedido:** avaliar se o app consome recursos acima do esperado (CPU, bateria, memória) **por build**, com arquivos que possam ser copiados de tempo em tempo.
@@ -777,3 +784,38 @@ No iOS 27, "Adicionar contato ou canal" (`AddContactMenu`) e "Convidar para o is
 - **Descartado:** reduzir a foto no momento do clique, antes da escolha de destino (ficaria pesado para encaminhamentos grandes e não resolve a outbox).
 - **Pendente (roadmap 148):** cor Display P3. A redução converte para RGB genérico, e fotos P3 podem perder cor. A correção é manter o espaço de cores da original na recodificação. Ainda não medido.
 - **Pendente (Android):** `FileBackend.getRotation` ignora as tags 2, 4, 5 e 7, e a correção fica com outro agente.
+
+## Tempo de conexão por conta (04/11/2026)
+
+O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em `launches-*.jsonl`). Não se sabia quanto tempo cada conta leva para voltar: consulta SRV, socket, TLS, login, bind, resume do Stream Management, catchup (MAM) e o momento em que a conta fica ociosa, que é quando o spinner some. Cada tentativa de conexão passou a ser medida.
+
+- **Onde fica:** `Monal/Classes/MLConnectTiming.h/.m`, no framework monalxmpp, porque o `xmpp.m` está nele. No `xmpp.m` são uma ou duas linhas por ponto (com `//isaCloud: medição`), e no `MLXMPPManager.m` uma chamada por motivo de tentativa. Nenhum timer, prazo ou ordem de etapa mudou.
+- **O que é gravado:** uma linha por tentativa em `<grupo>/Library/metrics/connects-AAAA-MM-DD.jsonl`, quando a conta fica ociosa (`outcome: idle`) ou quando a tentativa termina antes (`login_timeout`, `disconnected`, `error`). Os tempos (`dns_ms`, `tcp_ms`, `tls_ms`, `login_ms`, `bound_ms`, `catchup_ms`, `idle_ms`) são em ms desde o início da tentativa, e um marco que não aconteceu fica de fora. Também entram `reason` (`launch`, `foreground`, `network`, `reconnect`, `other`), `attempt`, `resumed`, `background`, `since_launch_ms` (desde a abertura do app) e `server`, que é só o domínio. Não entram JID, usuário nem senha.
+- **Escrita:** o registro sai no fim da tentativa, em fila de background, fora da fila de recebimento e das transações do banco. A fila é serial porque duas contas terminando juntas corromperam uma linha quando gravavam em paralelo. A app extension não grava (só o app mede).
+- **Export e harness:** a chave `connects` aparece no export de métricas do Depuração, e o `tools/metrics-harness/send.py` envia como medida `<measurement>_connect`.
+- **Limites:** `reason = launch` também vale quando a conta é criada ou ligada nos Ajustes, porque o caminho é o mesmo. O número da tentativa conta desde a abertura do processo.
+- **Por que não reaproveitar o `launches`:** a abertura e a conexão de cada conta são coisas diferentes. Uma conta pode levar 20 s para voltar enquanto a lista já abriu, e a média dos dois esconderia o problema.
+- **Primeiro achado (04/11/2026):** na abertura a frio com recursos guardados, o login antecipado da TLS direta esperava os 12 s do prazo de login. A causa era a guarda do C16 em `handleFeaturesBeforeAuth`, que descartava também o stream em "abrindo". Corrigido: a guarda descarta só o stream não aberto e o fechado ou em erro (ver `docs/analises-crashes.md`, C16). Nenhum prazo foi mudado; a medição só mostrou o problema.
+
+## Spinner só quando não conecta (04/11/2026, roadmap 150)
+
+- **Regra:** o spinner da lista de conversas (`spinnerButton`) significa só "o app não está conseguindo conectar". Ele aparece quando o app está em primeiro plano e alguma conta ativa (`connectedXMPP`) fica `ISACLOUD_SYNC_INDICATOR_DELAY` (5 s) seguidos com `accountState < kStateBound`. Some assim que todas as contas ativas estão conectadas, ou quando o app vai para o segundo plano.
+- **Por que 5 s:** a medição das conexões (`connects-*.jsonl`, seção "Tempo de conexão por conta") deu `isacloud.im` entre 0,3 e 2,4 s e `autozona.cc` entre 2,2 e 4,1 s até a conta ficar ociosa. Cinco segundos cobrem a abertura normal sem acender o spinner, e uma conexão de fato parada aparece logo depois.
+- **O que deixou de acender o spinner:** o catchup (MAM), o processamento de stanzas e as transferências de arquivo. Essas situações têm indicadores próprios nas conversas (o progresso da transferência aparece no próprio anexo), e misturá-las no spinner da lista fazia o ícone girar sem que houvesse problema de conexão.
+- **Sem rede:** as contas não conectam, então o spinner aparece depois de 5 s. Isso é desejado: é o sinal de que o app não consegue conectar.
+- **Rótulo:** o `accessibilityLabel` do spinner passou de "Syncing" para "Connecting..." (chave que já existe e está traduzida como "Conectando..."). "Syncing" não tinha tradução pt-BR no Weblate, e o rótulo novo descreve o que o spinner agora significa.
+- **Trava para reverter:** `ISACLOUD_SYNC_INDICATOR_ONLY_WHEN_CONNECTING` em `Monal/Classes/MonalAppDelegate.m` e `Monal/Classes/ActiveChatsViewController.m` (os dois valores têm que ser iguais). Com `0`, volta o comportamento original do Monal (spinner enquanto contas não estão ociosas ou há transferência, e rótulo "Syncing"). O ramo original fica no código.
+- **Gatilhos:** além das chamadas antigas (`nowIdle`, `nowNotIdle`, `filetransfersNowIdle`), o cálculo roda em `kMonalAccountStatusChanged` e `kMonalConnectivityChange`, no `applicationDidBecomeActive:` e ao ir para o segundo plano (`applicationDidEnterBackground:`, que cancela o timer e esconde o spinner).
+- **Não mudou:** `checkIfBackgroundTaskIsStillNeeded` continua sendo chamado do mesmo jeito em `nowIdle:` e `filetransfersNowIdle:`. A decisão de manter a tarefa de segundo plano não depende do spinner.
+- **Teste no iPhone (04/11/2026):** no modo avião o spinner apareceu depois de 5 s, como previsto. Ao desligar o modo avião, as contas levaram ~15 s para voltar; a causa está na seção "Reconectar na hora quando a rede volta".
+
+## Reconectar na hora quando a rede volta (04/11/2026)
+
+- **Problema:** no teste do modo avião, a rede voltou às 20:09:50, mas as contas só conectaram às 20:10:05. A tentativa de conexão começada sem rede ficou presa. O monitor de rede do `MLXMPPManager` manda `sendPing:` para cada conta quando a rede volta ("reachable again") ou muda ("still reachable"), mas o `xmpp.m` ignora o ping abaixo de `kStateInitStarted` ("ping attempted before logged in and bound"). A conexão abriu em 20:09:52, uma nova mudança de rede em 20:09:53 refez o socket por baixo e a sessão XMPP ficou esperando, até o prazo de login de 12 s derrubar a tentativa (20:10:04). A tentativa seguinte, com a rede estável, conectou em 0,4 s (`isacloud.im`) e 2,9 s (`autozona.cc`).
+- **Decisão:** nas duas situações, a conta ainda não vinculada (`kStateLoggedOut < accountState < kStateBound`) reconecta na hora com `reconnect:0` (motivo `network` na medição). A conta já vinculada continua recebendo o ping, como no Monal. A espera de 1 s do "still reachable" e a checagem de `parseQueueFrozen` continuam iguais. É a hipótese (1) do item "Spinner que gira sem conectar" do roadmap, no caminho da rede.
+- **Por que no `MLXMPPManager` e não no `sendPing:`:** o `sendPing:` também é chamado pelo pinger periódico e por outros caminhos. Mudar o ping reconectaria logins que estão andando normalmente.
+- **Risco:** com a rede oscilando, sai uma reconexão a cada mudança. Isso custa pouco, porque o login ainda não terminou, e a espera de 1 s do Monal já junta várias mudanças seguidas.
+- **Pausa de 5 s (04/11/2026, segundo teste):** depois de a rede voltar, o iOS mandou 8 avisos de "still reachable", um por segundo, enquanto o Wi-Fi e o celular se acertavam. Cada aviso reconectava de novo o `autozona.cc`, que precisa de ~3,5 s (0,8 s de TLS e 2,6 s de login no ejabberd), e ele só conectou quando os avisos pararam: ~12 s depois da volta da rede. O `isacloud.im` conecta em menos de 1 s e escapou. Agora, depois de uma reconexão disparada pela rede, os avisos de "still reachable" dos `ISACLOUD_NETWORK_RECONNECT_COOLDOWN` (5 s) seguintes deixam a conta em paz. O "reachable again" (a rede de fato voltou) sempre reconecta, e o prazo de login de 12 s continua cobrindo uma tentativa que trave de verdade.
+- **Terceiro teste (04/11/2026, 20:34):** a rede voltou às 20:34:01,3; as contas do `isacloud.im` ficaram ociosas em 1,4 e 1,6 s e a do `autozona.cc` em 3,9 s. A pausa segurou três avisos de "still reachable" (1,1, 2,2 e 3,2 s depois) e o login terminou sem ser derrubado. O spinner, que já estava aceso sem rede, apagou logo depois.
+- **Trava para reverter:** `ISACLOUD_RECONNECT_UNBOUND_ON_NETWORK_CHANGE` em `Monal/Classes/MLXMPPManager.m`. Com `0`, volta o ping de sempre.
+- **Teste:** o simulador não perde rede, então o teste de verdade é repetir o modo avião no iPhone e ver o `connects-*.jsonl` (`reason: network`).

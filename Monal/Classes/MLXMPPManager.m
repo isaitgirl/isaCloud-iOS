@@ -10,6 +10,7 @@
 
 #import <monalxmpp/MLConstants.h>
 #import <monalxmpp/MLXMPPManager.h>
+#import <monalxmpp/MLConnectTiming.h>     //isaCloud: medição do tempo de conexão
 #import <monalxmpp/DataLayer.h>
 #import <monalxmpp/HelperTools.h>
 #import <monalxmpp/xmpp.h>
@@ -31,6 +32,16 @@
 static const int pingFreqencyMinutes = 5;       //about the same Conversations uses
 #define FIRST_LOGIN_TIMEOUT 30.0
 
+//isaCloud: when the network comes back (or changes), reconnect accounts that are not bound yet instead of pinging them:
+//xmpp ignores pings below kStateInitStarted, so a login attempt started without network only recovered after the 12 s login timeout.
+//Set to 0 to go back to Monal's behaviour (always ping).
+#define ISACLOUD_RECONNECT_UNBOUND_ON_NETWORK_CHANGE 1
+
+//isaCloud: after a network-triggered reconnect, further "still reachable" updates leave that account alone for this many seconds
+//(the iOS sends several path updates in a row while wifi/cellular settle; reconnecting on each one never let slow servers finish the login).
+//The 12 s login timeout still covers an attempt that really stalls.
+#define ISACLOUD_NETWORK_RECONNECT_COOLDOWN 5.0
+
 @interface MLXMPPManager()
 {
     nw_path_monitor_t _path_monitor;
@@ -38,6 +49,39 @@ static const int pingFreqencyMinutes = 5;       //about the same Conversations u
     NSMutableArray* _connectedXMPP;
 }
 @end
+
+//isaCloud: see ISACLOUD_RECONNECT_UNBOUND_ON_NETWORK_CHANGE
+static void isaCloudPingOrReconnect(xmpp* account, BOOL networkCameBack)
+{
+#if ISACLOUD_RECONNECT_UNBOUND_ON_NETWORK_CHANGE
+    xmppState state = account.accountState;
+    if(state > kStateLoggedOut && state < kStateBound)
+    {
+        //date of the last reconnect triggered by this function, per account (handler runs accounts in parallel)
+        static NSMutableDictionary<NSNumber*, NSDate*>* lastNetworkReconnect;
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
+            lastNetworkReconnect = [NSMutableDictionary new];
+        });
+        NSDate* now = [NSDate date];
+        @synchronized(lastNetworkReconnect)
+        {
+            NSDate* last = lastNetworkReconnect[account.accountID];
+            if(!networkCameBack && last != nil && [now timeIntervalSinceDate:last] < ISACLOUD_NETWORK_RECONNECT_COOLDOWN)
+            {
+                DDLogInfo(@"network changed but %@ was reconnected %.1fs ago for a network change, letting the current attempt finish", account, [now timeIntervalSinceDate:last]);
+                return;     //no ping either: it would be ignored while the login is still running
+            }
+            lastNetworkReconnect[account.accountID] = now;
+        }
+        DDLogInfo(@"network changed and %@ is not bound yet (state %ld), reconnecting now instead of pinging", account, (long)state);
+        [MLConnectTiming setReason:@"network" forAccount:account.accountID];
+        [account reconnect:0];
+        return;
+    }
+#endif
+    [account sendPing:SHORT_PING];
+}
 
 @implementation MLXMPPManager
 
@@ -341,13 +385,17 @@ static const int pingFreqencyMinutes = 5;       //about the same Conversations u
                     {
                         //try to send a ping. if it fails, it will reconnect
                         DDLogVerbose(@"manager pinging %@", xmppAccount);
-                        [xmppAccount sendPing:SHORT_PING];     //short ping timeout to quickly check if connectivity is still okay
+                        //isaCloud: reconnect unbound accounts instead of pinging (see ISACLOUD_RECONNECT_UNBOUND_ON_NETWORK_CHANGE)
+                        isaCloudPingOrReconnect(xmppAccount, YES);     //short ping timeout to quickly check if connectivity is still okay
                     }
                     else
                     {
                         //don't reconnect if appex has frozen our queues!
                         if(!xmppAccount.parseQueueFrozen)
+                        {
+                            [MLConnectTiming setReason:@"network" forAccount:xmppAccount.accountID];     //isaCloud: medição (motivo da tentativa)
                             [xmppAccount reconnect:0];      //try to immediately reconnect, don't bother pinging
+                        }
                         else
                             DDLogDebug(@"Not trying to reconnect %@ in 0s, parse queue frozen!", xmppAccount);
                     }
@@ -388,7 +436,8 @@ static const int pingFreqencyMinutes = 5;       //about the same Conversations u
                     if(!xmppAccount.parseQueueFrozen)
                     {
                         [NSThread sleepForTimeInterval:1];
-                        [xmppAccount sendPing:SHORT_PING];     //short ping timeout to quickly check if connectivity is still okay
+                        //isaCloud: reconnect unbound accounts instead of pinging (see ISACLOUD_RECONNECT_UNBOUND_ON_NETWORK_CHANGE)
+                        isaCloudPingOrReconnect(xmppAccount, NO);     //short ping timeout to quickly check if connectivity is still okay
                     }
                     else
                         DDLogDebug(@"Not pinging %@ after 1s, parse queue frozen!", xmppAccount);
@@ -550,6 +599,7 @@ static const int pingFreqencyMinutes = 5;       //about the same Conversations u
     if(existing.accountState<kStateReconnecting)
     {
         DDLogInfo(@"disconnected existing account, reconnecting.");
+        [MLConnectTiming setReason:@"foreground" forAccount:existing.accountID];     //isaCloud: medição (motivo da tentativa)
         [existing connect];
     }
     else
@@ -628,6 +678,7 @@ static const int pingFreqencyMinutes = 5;       //about the same Conversations u
     if(!self.isConnectBlocked)
     {
         DDLogInfo(@"starting connect");
+        [MLConnectTiming setReason:@"launch" forAccount:xmppAccount.accountID];     //isaCloud: medição (motivo da tentativa)
         [xmppAccount connect];
     }
     else

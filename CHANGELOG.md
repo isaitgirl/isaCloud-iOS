@@ -2,6 +2,19 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## Não publicado
+
+### Melhorias
+- **Spinner só quando o app não consegue conectar:** o indicador da lista de conversas aparece só quando alguma conta fica mais de 5 s sem conectar com o app em primeiro plano. Catchup, processamento de mensagens e transferências de arquivo não acendem mais o spinner (têm indicadores próprios). O rótulo de acessibilidade passa a ser "Conectando...". Trava `ISACLOUD_SYNC_INDICATOR_ONLY_WHEN_CONNECTING` em `MonalAppDelegate.m` e `ActiveChatsViewController.m` (decisão em `docs/decisoes.md`).
+- **Rodapé da tela de abertura com o nome isaCloud:** "Copyright © 2026 isaCloud. Todos os direitos reservados." no `Launch Screen.storyboard`, em português fixo (a tela de abertura não passa pelo Localizable; decisão em `docs/decisoes.md`).
+
+### Técnico
+- **Tempo de conexão por conta:** cada tentativa de conexão grava uma linha em `connects-*.jsonl` (DNS, socket, TLS, login, bind, catchup e ocioso, em ms). Só medição, sem mudança de comportamento; a gravação usa fila serial, para duas contas terminando juntas não corromperem uma linha (`MLConnectTiming`, `docs/decisoes.md`).
+
+### Correções
+- **Login antecipado na abertura a frio:** a guarda do C16 em `handleFeaturesBeforeAuth` descartava também o stream em "abrindo", e toda abertura com recursos guardados esperava os 12 s do prazo de login. Agora só descarta o stream não aberto, fechado ou em erro (`docs/analises-crashes.md`, C16).
+- **Reconexão quando a rede volta:** as contas ainda não vinculadas reconectam na hora (`reconnect:0`) quando a rede volta ou muda, em vez de receber um ping que o `xmpp.m` ignora antes do bind. Antes, a tentativa começada sem rede só destravava no prazo de login de 12 s (~15 s depois de sair do modo avião). Contas já conectadas continuam com o ping. Depois de uma reconexão pela rede, os avisos seguintes de mudança de rede respeitam uma pausa de 5 s por conta (`ISACLOUD_NETWORK_RECONNECT_COOLDOWN`), senão uma conta lenta como a do `autozona.cc` era derrubada a cada aviso e não terminava o login. Trava `ISACLOUD_RECONNECT_UNBOUND_ON_NETWORK_CHANGE` em `MLXMPPManager.m` (decisão em `docs/decisoes.md`).
+
 ## 0.0.1 (build 91) — 04/11/2026
 
 ### Alterado

@@ -46,6 +46,9 @@ DEFAULTS = {"INFLUX_BUCKET": "isacloud_ios", "INFLUX_TIMEOUT": "10"}
 # tags que o harness publica em cada tipo de registro (o resto é field/tag do payload)
 SAMPLE_TAGS = ("build", "ios", "model", "thermal", "low_power")
 LAUNCH_TAGS = ("build", "ios", "model")
+#isaCloud: tentativas de conexão por conta (connects-*.jsonl), medida <measurement>_connect
+CONNECT_TAGS = ("build", "ios", "model", "reason", "outcome", "resumed", "server")
+CONNECT_SKIP_KEYS = frozenset(("at", "short", "kind") + CONNECT_TAGS)
 METRICKIT_TAGS = ("build", "kind")
 
 # chaves da amostra que nunca viram field (timestamp e tags)
@@ -362,6 +365,44 @@ def build_launch_record(launch: Any, source: str) -> Dict[str, Any]:
     return make_record("launch", tags, fields, ts_ms, source)
 
 
+def build_connect_record(connect: Any, source: str) -> Dict[str, Any]:
+    """Normaliza uma tentativa de conexão (`connects-*.jsonl` ou `connects` do export).
+
+    Uma linha por tentativa, gravada quando a conta fica ociosa ou quando a tentativa termina antes.
+    Tags: build, ios, model, reason (launch/foreground/network/reconnect/other), outcome
+    (idle/login_timeout/disconnected/error), resumed e server (só o domínio).
+    Fields: tempos em ms desde o início da tentativa (dns_ms, tcp_ms, tls_ms, login_ms, bound_ms,
+    catchup_ms, idle_ms; o que não aconteceu vem ausente), since_launch_ms, attempt, background, dns_done.
+    """
+    if not isinstance(connect, dict):
+        raise RecordError("tentativa não é um objeto JSON")
+
+    ts_raw = connect.get("at")
+    ts_ms = parse_time_ms(ts_raw, f"{source}: campo 'at'") if ts_raw else None
+    if ts_ms is None:
+        raise RecordError("tentativa sem timestamp ('at')")
+
+    tags: Dict[str, str] = {}
+    for key in CONNECT_TAGS:
+        value = connect.get(key)
+        if value is None or value == "" or isinstance(value, (dict, list)):
+            continue
+        tags[key] = _tag_text(value)
+
+    fields: Dict[str, Any] = {}
+    for key, value in connect.items():
+        if key in CONNECT_SKIP_KEYS:
+            continue
+        if isinstance(value, bool):
+            fields[key] = value
+        elif isinstance(value, (int, float)) and math.isfinite(float(value)):
+            fields[key] = float(value)
+
+    if not fields:
+        raise RecordError("tentativa sem fields numéricos")
+    return make_record("connect", tags, fields, ts_ms, source)
+
+
 def flatten_payload(payload: Any, counters: Dict[str, int], prefix: str = "") -> Dict[str, Any]:
     """Achata o payload MetricKit: dicts viram `a_b`, números/bools viram fields."""
     fields: Dict[str, Any] = {}
@@ -525,6 +566,10 @@ def iter_export(data: Dict[str, Any], name: str) -> Iterator[Tuple[str, Any, str
     if isinstance(launches, list):
         for index, item in enumerate(launches):
             yield ("launch", item, f"{name}:launches[{index}]", None, None)
+    connects = data.get("connects")
+    if isinstance(connects, list):
+        for index, item in enumerate(connects):
+            yield ("connect", item, f"{name}:connects[{index}]", None, None)
 
 
 def iter_metrickit_file(path: Path) -> Iterator[Tuple[str, Any, str, Optional[str], int]]:
@@ -548,11 +593,13 @@ def iter_file(path: Path) -> List[Tuple[str, Any, str, Optional[str], Optional[i
         return list(iter_metrickit_file(path))
     if name.startswith("launches-") and name.endswith(".jsonl"):
         return list(iter_jsonl(path, kind="launch"))
+    if name.startswith("connects-") and name.endswith(".jsonl"):
+        return list(iter_jsonl(path, kind="connect"))
     if name.endswith(".jsonl"):
         return list(iter_jsonl(path))
 
     data = read_json(path)
-    if isinstance(data, dict) and ("samples" in data or "metrickit" in data or "launches" in data):
+    if isinstance(data, dict) and ("samples" in data or "metrickit" in data or "launches" in data or "connects" in data):
         return list(iter_export(data, name))
     if isinstance(data, dict) and isinstance(data.get("payload"), dict):
         return [("metrickit", data, name, None, None)]
@@ -588,6 +635,8 @@ def discover_directory(directory: Path) -> List[Tuple[str, Path]]:
             found.append(("samples-*.jsonl", entry))
         elif name.startswith("launches-") and name.endswith(".jsonl"):
             found.append(("launches-*.jsonl", entry))
+        elif name.startswith("connects-") and name.endswith(".jsonl"):
+            found.append(("connects-*.jsonl", entry))
         elif name.startswith("metrickit-") and name.endswith(".json"):
             found.append(("metrickit-*.json", entry))
         elif name.endswith(".json") and is_export_file(entry):
@@ -778,6 +827,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                 record = build_sample_record(item, source)
             elif kind == "launch":
                 record = build_launch_record(item, source)
+            elif kind == "connect":
+                record = build_connect_record(item, source)
             else:
                 record = build_metrickit_record(
                     item, source, kind_hint=kind_hint, fallback_ts_ms=fallback_ts
@@ -792,8 +843,9 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     samples = sum(1 for record in records if record["kind"] == "sample")
     launches = sum(1 for record in records if record["kind"] == "launch")
-    metrickit = len(records) - samples - launches
-    debug(f"{len(records)} registro(s) válido(s): {samples} amostra(s), {launches} abertura(s), {metrickit} MetricKit")
+    connects = sum(1 for record in records if record["kind"] == "connect")
+    metrickit = len(records) - samples - launches - connects
+    debug(f"{len(records)} registro(s) válido(s): {samples} amostra(s), {launches} abertura(s), {connects} conexão(ões), {metrickit} MetricKit")
 
     # estado de idempotência (dry-run não lê nem grava)
     state: Dict[str, str] = {}
@@ -821,6 +873,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             measurement = f"{config.measurement}_metrickit"
         elif record["kind"] == "launch":
             measurement = f"{config.measurement}_launch"
+        elif record["kind"] == "connect":
+            measurement = f"{config.measurement}_connect"
         try:
             line = render_line(measurement, record["tags"], record["fields"], record["ts_ms"])
         except RecordError as exc:
