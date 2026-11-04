@@ -2,6 +2,19 @@
 
 O que mudou em cada versão, em poucas palavras. A lista técnica completa está no [CHANGELOG.md](CHANGELOG.md).
 
+## Build 90 · 04/11/2026
+
+### Novidades
+- 🗜️ Fotos grandes agora são reduzidas antes de enviar, para chegar mais rápido e gastar menos internet.
+- ⚙️ Em Anexos, escolha o que fazer: Nunca, Apenas grandes (o padrão) ou Sempre.
+
+### Melhorias
+- 🔄 Fotos tiradas na vertical chegam na vertical, do jeito que você viu.
+- ⏳ Enquanto a foto é preparada, a barra mostra "Preparando foto…".
+
+### Correções
+- Nada nesta versão além das melhorias acima.
+
 ## Build 89 · 04/11/2026
 
 ### Novidades

@@ -4,8 +4,8 @@ Todas as funcionalidades do isaCloud numa tabela só: o que está **feito** (ris
 
 A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23/10/2026 sobre a `develop` (Monal 7), base atual do fork. As reações (XEP-0444), que eram o item mais trabalhoso, saíram da lista porque já existem na `develop`.
 
-**Total de features no roadmap:** 141
-**Features concluídas:** 125
+**Total de features no roadmap:** 144
+**Features concluídas:** 126
 
 | # | Funcionalidade | Esforço | Observações |
 |---|---|---|---|
@@ -164,6 +164,8 @@ A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23
 | 144 | ~~Folha de figurinhas: Cancelar à esquerda e Criar (ícone + texto) à direita~~ | **feito (build 89, 04/11/2026)**: confirmado pela Isadora no `.dev` | O `Label` mostrava só o ícone no iOS 26+; usa `HStack`, cor primária. |
 | 145 | ~~Tocar numa figurinha abre o visualizador de imagens~~ | **feito (build 89, 04/11/2026)**: confirmado pela Isadora no `.dev`; prints nos dois simuladores | Usa `showAttachmentClosure`; o visualizador mostra só o anexo tocado (`fullscreenSingleAttachment`, fork nº 21, PR 20 do fork). |
 | 146 | ~~Visualizador de imagens mostra só a foto tocada, com X e compartilhar fixos~~ | **feito (build 89, 04/11/2026)**: aprovado pela Isadora no iPhone; PR 20 do fork mesclado (`e168ed8`) | Análise em `docs/feature-visualizador-mostra-foto-unica.md`. |
+| 147 | ~~Compressão de fotos no envio (Nunca, Apenas grandes, Sempre)~~ | **feito (build 90, 04/11/2026)**: PR 40 mesclado no `isaCloud` (`a823b4e44`); testado nos simuladores e no `.dev` | Redução para 1920 px e JPEG no nível do slider, acima de 2 MB ou com tag de orientação; orientação EXIF aplicada aos pixels; indicador "Preparando foto". Pendências: redução na outbox da extensão e no encaminhar, em revisão. Análise em `docs/analise-comprimir-imagens.md`. |
+| 148 | Cor P3 na redução de fotos | **pendente, não implementado** | A redução converte para RGB genérico, e fotos em Display P3 podem perder cor. Correção: manter o espaço de cores da foto original na recodificação. Ainda não medido. |
 
 ## Aguardando o Monal
 

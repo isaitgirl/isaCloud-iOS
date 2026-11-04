@@ -2,6 +2,23 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 90) — 04/11/2026
+
+### Adicionado
+- **Compressão de fotos no envio.** Em Anexos, "Compressão de fotos" tem três modos: Nunca (envia a original, intacta), Apenas grandes (padrão; reduz fotos acima de 2 MB ou com orientação gravada nos metadados) e Sempre. A foto reduzida tem no máximo 1920 px no lado mais longo, sai em JPEG no nível do slider de qualidade, e GIF nunca é reduzido. A redução vale também para o envio pela folha de compartilhar (feito na outbox do app principal) e para o encaminhar (uma redução por encaminhamento, para todos os destinos). Enquanto prepara, a barra mostra "Preparando foto…" ou "Preparando foto N de M…". Análise em `docs/analise-comprimir-imagens.md`. Testes unitários em `HelperToolsTest.swift` (`ImageCompressionTests`).
+- Log de cada foto: antes e depois (tamanho e pixels), o modo e a orientação aplicada, e a limpeza das cópias temporárias da outbox depois do envio.
+
+### Alterado
+- **Orientação normalizada na redução.** Toda foto reduzida sai com a orientação real aplicada aos pixels e sem a tag EXIF de rotação (antes, o iOS gravava a foto deitada com a tag, e alguns apps mostravam de lado). No modo Nunca, a original vai intacta.
+- Preferência antiga "Enviar imagens originais" migrada para o novo seletor (ligada vira Nunca; desligada vira Apenas grandes).
+
+### Corrigido
+- Nada nesta versão além da compressão acima.
+
+### Pendente
+- Cor P3: a redução converte para RGB genérico, e fotos em Display P3 podem perder cor (roadmap 148).
+- Android: a leitura da rotação (`FileBackend.getRotation`) ignora os valores 2, 4, 5 e 7 da tag EXIF. Fica com outro agente.
+
 ## 0.0.1 (build 89) — 04/11/2026 (enviado ao TestFlight às 10:43)
 
 ### Adicionado

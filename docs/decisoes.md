@@ -764,3 +764,16 @@ No iOS 27, "Adicionar contato ou canal" (`AddContactMenu`) e "Convidar para o is
 - **No fork do ExyteChat:** opção `fullscreenSingleAttachment(_:)`, desligada por padrão (mudança nº 21, PR 20, `e168ed8`), para o fork continuar compatível com a biblioteca original. Detalhes e testes em `docs/feature-visualizador-mostra-foto-unica.md`.
 - **Descartado:** só o X sem compartilhar (o compartilhar já existia e evita voltar à conversa para salvar); arrastar para baixo para fechar (briga com o `ZoomableContainer`; entra se sentirmos falta); mexer no visualizador da "Mídia Compartilhada" do Monal (`MediaViewer.swift`).
 - **Aprendizado de teste:** figurinha e GIF usam o `GifMessageBubble`, que nunca abriu o visualizador; só foto e vídeo abriam. A figurinha passou a abrir (roadmap 145); o GIF continua reiniciando no toque.
+
+## Compressão de fotos no envio (04/11/2026, roadmap 147 e 148, build 90)
+
+- **Critério:** "Apenas grandes" (padrão) reduz fotos acima de 2 MB ou com tag de orientação EXIF. "Sempre" reduz tudo que é foto; "Nunca" envia a original. GIF nunca é reduzido. A redução nunca amplia (o lado máximo é o da própria foto, se for menor).
+- **Tamanho:** 1920 px no lado mais longo, JPEG no nível do slider de qualidade (já existia). Ficou no valor do Android (`Config.IMAGE_SIZE`), para as fotos terem o mesmo tamanho nos dois apps.
+- **Orientação:** a redução aplica a orientação real aos pixels (ImageIO com transformação) e não copia a tag. Assim a foto sai vertical nos dois lados, mesmo que o app de destino ignore a tag. No modo Nunca a original vai intacta, como pedido.
+- **Onde reduz:** no envio pela conversa (`uploadAndSendFile`), na outbox do app principal (fotos compartilhadas pela folha de compartilhar, que sobem em segundo plano) e no encaminhar (uma redução por encaminhamento, usada em todos os destinos). A extensão de compartilhar não reduz: quem reduz é o app principal, na hora de subir a outbox.
+- **Segundo plano:** a subida da outbox tem `beginBackgroundTask`, e o arquivo temporário é apagado depois do envio, com log. As pastas de redução que sobrarem são apagadas na inicialização.
+- **Ponte de dados:** `MLHandler` ganhou `boundArgumentForName:` para a outbox ler o arquivo do envio sem depender de outra estrutura.
+- **Migração:** a preferência antiga "Enviar imagens originais" vira o novo seletor (ligada = Nunca; desligada = Apenas grandes).
+- **Descartado:** reduzir a foto no momento do clique, antes da escolha de destino (ficaria pesado para encaminhamentos grandes e não resolve a outbox).
+- **Pendente (roadmap 148):** cor Display P3. A redução converte para RGB genérico, e fotos P3 podem perder cor. A correção é manter o espaço de cores da original na recodificação. Ainda não medido.
+- **Pendente (Android):** `FileBackend.getRotation` ignora as tags 2, 4, 5 e 7, e a correção fica com outro agente.
