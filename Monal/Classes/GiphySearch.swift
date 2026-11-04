@@ -53,19 +53,20 @@ enum GiphySearch {
 
     static let trendingEndpoint = URL(string: "https://api.giphy.com/v1/gifs/trending")!
 
-    static func searchURL(query: String, apiKey: String, limit: Int = 24) -> URL? {
-        return url(endpoint, [URLQueryItem(name: "q", value: query)], apiKey: apiKey, limit: limit)
+    static func searchURL(query: String, apiKey: String, limit: Int = 24, offset: Int = 0) -> URL? {
+        return url(endpoint, [URLQueryItem(name: "q", value: query)], apiKey: apiKey, limit: limit, offset: offset)
     }
 
-    static func trendingURL(apiKey: String, limit: Int = 24) -> URL? {
-        return url(trendingEndpoint, [], apiKey: apiKey, limit: limit)
+    static func trendingURL(apiKey: String, limit: Int = 24, offset: Int = 0) -> URL? {
+        return url(trendingEndpoint, [], apiKey: apiKey, limit: limit, offset: offset)
     }
 
-    private static func url(_ endpoint: URL, _ extra: [URLQueryItem], apiKey: String, limit: Int) -> URL? {
+    private static func url(_ endpoint: URL, _ extra: [URLQueryItem], apiKey: String, limit: Int, offset: Int) -> URL? {
         var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false)
         components?.queryItems = [
             URLQueryItem(name: "api_key", value: apiKey),
             URLQueryItem(name: "limit", value: String(limit)),
+            URLQueryItem(name: "offset", value: String(offset)),
             URLQueryItem(name: "rating", value: "g"),
         ] + extra
         return components?.url
@@ -99,15 +100,15 @@ enum GiphySearch {
         return nil
     }
 
-    static func search(query: String, apiKey: String) async throws -> [GiphyGif] {
-        guard let url = searchURL(query: query, apiKey: apiKey) else {
+    static func search(query: String, apiKey: String, offset: Int = 0) async throws -> [GiphyGif] {
+        guard let url = searchURL(query: query, apiKey: apiKey, offset: offset) else {
             throw GiphySearchError.badResponse
         }
         return try await fetch(url)
     }
 
-    static func trending(apiKey: String) async throws -> [GiphyGif] {
-        guard let url = trendingURL(apiKey: apiKey) else {
+    static func trending(apiKey: String, offset: Int = 0) async throws -> [GiphyGif] {
+        guard let url = trendingURL(apiKey: apiKey, offset: offset) else {
             throw GiphySearchError.badResponse
         }
         return try await fetch(url)

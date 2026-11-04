@@ -32,6 +32,18 @@ struct GiphySearchTests {
         #expect(values["rating"] == "g")
     }
 
+    @Test("the search request asks for the page at the given offset, and the first page by default")
+    func searchOffset() throws {
+        let first = try #require(GiphySearch.searchURL(query: "gato", apiKey: "k1"))
+        let later = try #require(GiphySearch.searchURL(query: "gato", apiKey: "k1", offset: 48))
+        let firstItems = try #require(URLComponents(url: first, resolvingAgainstBaseURL: false)?.queryItems)
+        let laterItems = try #require(URLComponents(url: later, resolvingAgainstBaseURL: false)?.queryItems)
+        #expect(firstItems.first { $0.name == "offset" }?.value == "0")
+        #expect(laterItems.first { $0.name == "offset" }?.value == "48")
+        #expect(laterItems.first { $0.name == "q" }?.value == "gato")
+        #expect(laterItems.first { $0.name == "rating" }?.value == "g")
+    }
+
     @Test("the response gives the preview and the animated GIF of each result")
     func parsesResults() throws {
         let json = """
@@ -88,6 +100,17 @@ struct GiphyTrendingTests {
         #expect(values["api_key"] == "k1")
         #expect(values["rating"] == "g")
         #expect(values["q"] == nil)
+    }
+
+    @Test("the trending request asks for the page at the given offset, and the first page by default")
+    func trendingOffset() throws {
+        let first = try #require(GiphySearch.trendingURL(apiKey: "k1"))
+        let later = try #require(GiphySearch.trendingURL(apiKey: "k1", offset: 73))
+        let firstItems = try #require(URLComponents(url: first, resolvingAgainstBaseURL: false)?.queryItems)
+        let laterItems = try #require(URLComponents(url: later, resolvingAgainstBaseURL: false)?.queryItems)
+        #expect(firstItems.first { $0.name == "offset" }?.value == "0")
+        #expect(laterItems.first { $0.name == "offset" }?.value == "73")
+        #expect(laterItems.first { $0.name == "q" } == nil)
     }
 
     @Test("the preview is the small animated GIF when Giphy sends it")
