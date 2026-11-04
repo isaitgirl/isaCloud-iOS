@@ -11,7 +11,8 @@ Fork do Monal (cliente XMPP para iOS) com a marca e os ajustes do isaCloud. Bran
 - Qualquer alteração que possa causa complexidade no merge com o Monal deve ser validada.
 - Os builds e testes devem sempre levar em consideração do iOS 18 ao 27.
 - Não perguntar a todo instante sobre commitar o projeto, aguardar instrução do usuário.
-- **"Fazer novo build e push"** quer dizer, nesta ordem: subir o número do build e enviar ao TestFlight (`docs/publicacao-testflight.md`); atualizar o iPhone com a mesma versão; atualizar o `CHANGELOG.md`; atualizar o `ROADMAP.md` se for feature; atualizar `docs/decisoes.md` (e `docs/exytechat-fork.md`) quando for relevante para merges futuros com o Monal e o ExyteChat, citando o Conversations quando a ideia veio de lá; commit com mensagem bonita e descrita; push. Se houver mudança no fork do ExyteChat, o PR do fork é mesclado antes e o `Package.resolved` aponta para o SHA mesclado. **Marcar o build com uma tag**: `git tag -a build-N <commit enviado>` (e `git push origin build-N`), e fechar a seção "Não publicado" do `CHANGELOG.md` com o número N.
+- **"Fazer novo build e push"** quer dizer, nesta ordem: subir o número do build e enviar ao TestFlight (`docs/publicacao-testflight.md`); atualizar o iPhone com a mesma versão; atualizar o `CHANGELOG.md` e o `CHANGELOG-USERS.md`; atualizar o `ROADMAP.md` se for feature; atualizar `docs/decisoes.md` (e `docs/exytechat-fork.md`) quando for relevante para merges futuros com o Monal e o ExyteChat, citando o Conversations quando a ideia veio de lá; commit com mensagem bonita e descrita; push. Se houver mudança no fork do ExyteChat, o PR do fork é mesclado antes e o `Package.resolved` aponta para o SHA mesclado. **Marcar o build com uma tag**: `git tag -a build-N <commit enviado>` (e `git push origin build-N`), e fechar a seção "Não publicado" do `CHANGELOG.md` com o número N.
+- **`CHANGELOG-USERS.md` acompanha o `CHANGELOG.md` (desde 04/11/2026):** toda vez que o `CHANGELOG.md` mudar, atualizar também o `CHANGELOG-USERS.md`, a versão para usuários. Ele é agrupado por build e data de fechamento, com "Novidades", "Melhorias" e "Correções". A linguagem é bem simples e "marketeira", e cada item tem uma frase só, curta. O que ainda não saiu vai em "Em breve (próxima versão)", que vira a seção do build quando ele fecha.
 - **Saber o que ainda não entrou num build:** `git log build-N..isaCloud --oneline` (N = último build enviado ao TestFlight; só o que mudou no código: `git diff --stat build-N isaCloud -- Monal`). Enquanto o próximo build não sai, **não suba o número do build** a cada commit: as correções acumuladas ficam na seção "Não publicado" do `CHANGELOG.md` e o `.dev` pode estar à frente da tag.
 - **"Fazer novo build"** (sem "e push") é o mesmo sem o commit e o push: atualiza docs, TestFlight e iPhone e deixa as mudanças sem commit.
 - As traduções devem seguir os padrões do Monal, considerando o merge com weblate, mas as traduções do isaCloud devem prevalecer sobre elas.
@@ -63,6 +64,7 @@ Fork do Monal (cliente XMPP para iOS) com a marca e os ajustes do isaCloud. Bran
 ## Troubleshooting
 
 - Comandos e procedimentos para investigar crashes e travamentos (TestFlight e isaCloud.dev, iPhone e simulador): `docs/troubleshooting.md`. Quando aprender um comando útil novo, acrescente lá.
+- **Todo crash ou travamento analisado vai para `docs/analises-crashes.md`** (tabela do resumo + entrada com o modelo do fim do arquivo), desde 04/11/2026. Detalhes longos e decisões continuam em `docs/decisoes.md`.
 
 ## Simulador controlado por fora (agente)
 

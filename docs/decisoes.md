@@ -743,3 +743,24 @@ No iOS 27, "Adicionar contato ou canal" (`AddContactMenu`) e "Convidar para o is
 - **Por que não apareceu antes:** só dispara quando a extensão de compartilhar e o app abrem o banco alternadamente. Hoje isso começou às 16:13; até as 15:33 o app via sempre o mesmo id. O Monal original também não declara o grupo na extensão, mas lá o grupo do app é outro (`G7YU7X7KRJ.SworIM`). Vale conferir se o problema existe lá antes de propor ao Monal.
 - **Efeito que fica:** os contatos viram dispositivos OMEMO novos hoje. Os dispositivos antigos desta instalação continuam publicados na lista de dispositivos até serem limpos.
 
+
+## Falha no upload de arquivo sem nenhum aviso (04/11/2026, roadmap 141 e 142)
+
+- **O que aconteceu:** numa garagem/elevador com a conexão oscilando, o texto ficou no spinner e a figurinha enviada antes simplesmente não apareceu. O upload do arquivo roda **antes** de a mensagem existir (só depois do upload `sendMessageAndAddToHistory` cria a mensagem), e o `catch` de `uploadAndSendFile` só escrevia no log (o pop-up do Monal foi tirado no commit `d12a3e0cd`, "Menos avisos ao usuário"). Sem mensagem, não há "!" nem "Reenviar".
+- **Escolha (opção A):** a cápsula acima da caixa de texto mostra "Não foi possível enviar 😞 Tente de novo!" por 4 s, em vermelho (`showNotice(isError:)`). Mexe só em arquivos do isaCloud (`ChatView`, `ChatInputModel`, `ChatInputBar`), sem tocar no fluxo do Monal.
+- **"Enviando…" virou contador** (`beginUpload/endUpload`): com dois uploads juntos o primeiro a terminar apagava a cápsula. O outbox do share sheet tem flag própria (`outboxUploading`).
+- **Descartada por ora (opção B, roadmap 142):** criar o balão antes do upload, com spinner e "Reenviar". É mais completa, mas mexe no fluxo de envio de arquivo e no banco (mensagem sem endereço do arquivo), o que pesa nos merges com o Monal.
+- **Limite conhecido:** se outro upload ainda estiver rodando, o aviso de erro espera (o "Enviando…" tem prioridade) e pode vencer antes de aparecer.
+
+## Folha de figurinhas e figurinha no visualizador; recorte livre descartado (04/11/2026, roadmap 143 a 145)
+
+- **Recorte livre (143), descartado no mesmo dia:** foi feito (moldura com 8 alças, qualquer proporção, de 20% a 100%) e testado nos simuladores, mas a Isadora preferiu o recorte **sempre quadrado**. Voltou ao quadrado original (moldura com 6% de margem no quadro de 512, sem seletor). Fica registrado para o caso de a ideia voltar: a moldura livre continuava centralizada, com largura e altura como frações do quadro máximo, para não mudar a saída (PNG 512×512) nem a posição dos textos.
+- **Folha de figurinhas (144):** "Cancelar" à esquerda e "Criar" à direita (ícone de carinha + texto, na cor primária; a versão rosa foi trocada pela primária a pedido). Um `Label` mostrava só o ícone na barra do iOS 26 ou mais novo; por isso o botão é um `HStack`.
+- **Figurinha abre o visualizador (145):** o toque numa figurinha chama `showAttachmentClosure` do ExyteChat; a figurinha usa o mesmo visualizador de foto única (`docs/feature-visualizador-mostra-foto-unica.md`). O GIF continua reiniciando no toque.
+
+## Visualizador de imagens só com o anexo tocado (04/11/2026, roadmap 146)
+
+- **Decisão:** o visualizador do chat mostra só o anexo tocado (sem contador nem miniaturas), com X e compartilhar fixos nos cantos e o toque na mídia sem efeito. O Monal/isaCloud não tem envio agrupado como o WhatsApp, então a galeria com todas as mídias da conversa não fazia sentido, e a foto precisava de um toque a mais para ficar limpa.
+- **No fork do ExyteChat:** opção `fullscreenSingleAttachment(_:)`, desligada por padrão (mudança nº 21, PR 20, `e168ed8`), para o fork continuar compatível com a biblioteca original. Detalhes e testes em `docs/feature-visualizador-mostra-foto-unica.md`.
+- **Descartado:** só o X sem compartilhar (o compartilhar já existia e evita voltar à conversa para salvar); arrastar para baixo para fechar (briga com o `ZoomableContainer`; entra se sentirmos falta); mexer no visualizador da "Mídia Compartilhada" do Monal (`MediaViewer.swift`).
+- **Aprendizado de teste:** figurinha e GIF usam o `GifMessageBubble`, que nunca abriu o visualizador; só foto e vídeo abriam. A figurinha passou a abrir (roadmap 145); o GIF continua reiniciando no toque.

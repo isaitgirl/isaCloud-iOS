@@ -4,7 +4,7 @@
 //
 //  isaCloud: stickers (figurinhas) made from a photo. The library is kept on the device (in the group folder of the app). The picker
 //  opens from the attachment menu of the chat (Favorites, All, Create) and sends a sticker at once. The editor crops the photo to a
-//  square or a 4:3 rectangle, can remove the background (Vision) and adds texts. The sticker goes out as a 512x512 PNG, uploaded like a
+//  square, can remove the background (Vision) and adds texts. The sticker goes out as a 512x512 PNG, uploaded like a
 //  photo, with the XEP-0449 marker (see MLXMPPManager sendMessageAndAddToHistory and xmpp.m sendMessage). Only SwiftUI, Vision and CryptoKit.
 //
 
@@ -230,17 +230,22 @@ struct StickerPickerView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        showEditor = true
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    .accessibilityLabel(Text("Create sticker"))
-                }
-                ToolbarItem(placement: .topBarTrailing) {
                     Button("Cancel") {
                         dismiss()
                     }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showEditor = true
+                    } label: {
+                        //a plain HStack: the toolbar of iOS 26 and later shows only the icon of a Label
+                        HStack(spacing: 4) {
+                            Image(systemName: "face.smiling")
+                            Text("Create")
+                        }
+                        .foregroundStyle(.primary)
+                    }
+                    .accessibilityLabel(Text("Create sticker"))
                 }
             }
             .sheet(isPresented: $showEditor) {
@@ -322,25 +327,6 @@ struct StickerPickerView: View {
 
 // MARK: - Editor
 
-/// isaCloud: the crop frame of a sticker, centred in the 512 square: a square, or a 4:3 rectangle (the rest of the square is transparent)
-enum StickerShape: String, CaseIterable, Identifiable {
-    case square
-    case rectangle
-
-    var id: String {
-        return rawValue
-    }
-
-    /// width / height of the crop frame
-    var aspect: CGFloat {
-        return self == .square ? 1 : 4.0 / 3.0
-    }
-
-    var title: LocalizedStringKey {
-        return self == .square ? "Square" : "Rectangle"
-    }
-}
-
 /// isaCloud: the colours of the texts; index 1 is black (its outline is white, the others have a black outline)
 enum StickerTextColors {
     static let all: [Color] = [.white, .black, .yellow, .pink, .blue]
@@ -359,31 +345,30 @@ struct StickerText: Identifiable, Equatable {
     var scale: CGFloat = 1
 }
 
-/// isaCloud: the sticker as drawn on a square of `side` points: the photo cropped to the frame (zoom and offset), and the texts over it.
+/// isaCloud: the sticker as drawn on a square of `side` points: the photo cropped to the square (zoom and offset), and the texts over it.
 /// The editor shows it at a few hundred points, and the PNG is drawn by ImageRenderer at 512 points; everything is a fraction of the side.
 /// It has no background, so the transparent parts of the PNG stay transparent.
 struct StickerCanvas: View {
     let side: CGFloat
     let photo: UIImage?
-    let shape: StickerShape
     let zoom: CGFloat
     /// the position of the photo, as a fraction of the side from its centre
     let offset: CGSize
     let texts: [StickerText]
 
-    /// the margin around the crop frame, as a fraction of the side
+    /// the margin around the crop square, as a fraction of the side
     static let margin: CGFloat = 0.06
 
-    /// the size of the crop frame on a square of `side` points
-    static func frame(for shape: StickerShape, side: CGFloat) -> CGSize {
-        let width = side * (1 - 2 * margin)
-        return CGSize(width: width, height: width / shape.aspect)
+    /// the size of the crop square on a square of `side` points
+    static func frame(side: CGFloat) -> CGSize {
+        let largest = side * (1 - 2 * margin)
+        return CGSize(width: largest, height: largest)
     }
 
     var body: some View {
         ZStack {
             if let photo {
-                let frame = StickerCanvas.frame(for: shape, side: side)
+                let frame = StickerCanvas.frame(side: side)
                 let base = max(frame.width / photo.size.width, frame.height / photo.size.height)
                 Image(uiImage: photo)
                     .resizable()
@@ -530,7 +515,7 @@ private struct EditableTextLayer: View {
     }
 }
 
-/// isaCloud: the editor of a sticker: choose the photo, crop it (square or 4:3, drag and pinch), remove the background (optional),
+/// isaCloud: the editor of a sticker: choose the photo, crop it (square, drag and pinch), remove the background (optional),
 /// add texts, and save the 512x512 PNG to the library.
 struct StickerEditorView: View {
     @Environment(\.dismiss) private var dismiss
@@ -543,7 +528,6 @@ struct StickerEditorView: View {
     @State private var removingBackground = false
     @State private var showRemovalFailed = false
     @State private var showSaveFailed = false
-    @State private var shape: StickerShape = .square
     @State private var zoom: CGFloat = 1
     @State private var zoomStart: CGFloat = 1
     @State private var offset: CGSize = .zero
@@ -601,10 +585,6 @@ struct StickerEditorView: View {
                     await load(item)
                 }
             }
-            .onChange(of: shape) { _, _ in
-                offset = clampedOffset(offset)
-                offsetStart = offset
-            }
             .alert("Could not remove the background", isPresented: $showRemovalFailed) {
                 Button("Close", role: .cancel) {}
             }
@@ -618,14 +598,6 @@ struct StickerEditorView: View {
         ScrollViewReader { proxy in
         ScrollView {
             VStack(spacing: 16) {
-                Picker("Shape", selection: $shape) {
-                    ForEach(StickerShape.allCases) { option in
-                        Text(option.title).tag(option)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-
                 preview
 
                 //while a text is typed the buttons are not needed: without them the field and its colours stay above the keyboard
@@ -685,12 +657,12 @@ struct StickerEditorView: View {
         }
     }
 
-    /// the square where the sticker is made: the chequered background, the picture, the guide of the crop frame, and the texts
+    /// the square where the sticker is made: the chequered background, the picture, the guide of the crop square, and the texts
     private var preview: some View {
         ZStack {
             Checkerboard()
-            StickerCanvas(side: Self.previewSide, photo: photo, shape: shape, zoom: zoom, offset: offset, texts: [])
-            let frame = StickerCanvas.frame(for: shape, side: Self.previewSide)
+            StickerCanvas(side: Self.previewSide, photo: photo, zoom: zoom, offset: offset, texts: [])
+            let frame = StickerCanvas.frame(side: Self.previewSide)
             RoundedRectangle(cornerRadius: 4)
                 .strokeBorder(Color.white.opacity(0.9), style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
                 .frame(width: frame.width, height: frame.height)
@@ -784,7 +756,7 @@ struct StickerEditorView: View {
         guard let photo else {
             return .zero
         }
-        let frame = StickerCanvas.frame(for: shape, side: 1)
+        let frame = StickerCanvas.frame(side: 1)
         let base = max(frame.width / photo.size.width, frame.height / photo.size.height)
         return CGSize(
             width: max(0, (photo.size.width * base * zoom - frame.width) / 2),
@@ -850,7 +822,7 @@ struct StickerEditorView: View {
     /// renders the square at 512 points (a PNG of 512 pixels, transparent outside the picture and the texts) and adds it to the library
     private func save() {
         let shown = texts.filter { !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-        let renderer = ImageRenderer(content: StickerCanvas(side: Self.outputSide, photo: photo, shape: shape, zoom: zoom, offset: offset, texts: shown))
+        let renderer = ImageRenderer(content: StickerCanvas(side: Self.outputSide, photo: photo, zoom: zoom, offset: offset, texts: shown))
         renderer.scale = 1
         guard let image = renderer.uiImage, let png = image.pngData(), StickerLibrary.shared.add(pngData: png) != nil else {
             DDLogError("Stickers: could not render the sticker")

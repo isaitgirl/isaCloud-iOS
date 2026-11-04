@@ -240,9 +240,8 @@
 "Save sticker" = "Salvar figurinha";
 "Sticker saved" = "Figurinha salva";
 "Could not save the sticker" = "Não foi possível salvar a figurinha";
-"Square" = "Quadrado";
-"Rectangle" = "Retângulo";
-"Shape" = "Formato";
+"Could not send. Try again!" = "Não foi possível enviar 😞 Tente de novo!";
+"Create" = "Criar";
 "Choose photo" = "Escolher foto";
 "Remove background" = "Remover fundo";
 "Restore background" = "Restaurar fundo";

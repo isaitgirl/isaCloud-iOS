@@ -51,10 +51,19 @@ struct ChatInputDraft: Equatable {
 
 final class ChatInputModel: ObservableObject {
     @Published private(set) var text: String
+    /// isaCloud: how many files of the chat are being uploaded to be sent; the input shows a hint while it is more than 0.
+    /// A counter, not a flag: with two uploads at once, the first to finish used to hide the hint while the other was still going.
+    @Published private(set) var uploadCount = 0
+    /// isaCloud: a file of the share sheet outbox is being uploaded (kept apart from uploadCount, so the outbox does not interfere with the chat uploads)
+    @Published private(set) var outboxUploading = false
     /// isaCloud: a file is being uploaded to be sent; the input shows a hint while it is
-    @Published var isUploading = false
+    var isUploading: Bool {
+        uploadCount > 0 || outboxUploading
+    }
     /// isaCloud: a short notice floating above the input (e.g. "Sticker saved"), in place of an alert; it goes away by itself
     @Published private(set) var notice: String?
+    /// isaCloud: the notice is an error (shown in red with an exclamation mark)
+    @Published private(set) var noticeIsError = false
     private var noticeToken = 0
     @Published private(set) var reply: ChatInputReply?
     @Published private(set) var edit: ChatInputEdit?
@@ -179,12 +188,29 @@ final class ChatInputModel: ObservableObject {
         text = newText
     }
 
-    /// isaCloud: shows `text` above the input for `duration` seconds (a newer notice replaces an older one and gets its full time)
-    func showNotice(_ text: String, duration: TimeInterval = 2) {
+    /// isaCloud: a file upload started (every beginUpload is matched by one endUpload)
+    func beginUpload() {
+        uploadCount += 1
+    }
+
+    /// isaCloud: a file upload finished, with success or failure
+    func endUpload() {
+        uploadCount = max(0, uploadCount - 1)
+    }
+
+    /// isaCloud: the share sheet outbox says whether one of its files is being uploaded
+    func setOutboxUploading(_ uploading: Bool) {
+        outboxUploading = uploading
+    }
+
+    /// isaCloud: shows `text` above the input for `duration` seconds (a newer notice replaces an older one and gets its full time);
+    /// `isError` shows it in red as a failure
+    func showNotice(_ text: String, duration: TimeInterval = 2, isError: Bool = false) {
         noticeToken += 1
         let token = noticeToken
         withAnimation(.easeIn(duration: 0.15)) {
             notice = text
+            noticeIsError = isError
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
             guard let self, self.noticeToken == token else {
@@ -192,6 +218,7 @@ final class ChatInputModel: ObservableObject {
             }
             withAnimation(.easeOut(duration: 0.2)) {
                 self.notice = nil
+                self.noticeIsError = false
             }
         }
     }

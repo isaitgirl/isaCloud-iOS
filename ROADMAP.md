@@ -4,8 +4,8 @@ Todas as funcionalidades do isaCloud numa tabela só: o que está **feito** (ris
 
 A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23/10/2026 sobre a `develop` (Monal 7), base atual do fork. As reações (XEP-0444), que eram o item mais trabalhoso, saíram da lista porque já existem na `develop`.
 
-**Total de features no roadmap:** 136
-**Features concluídas:** 121
+**Total de features no roadmap:** 141
+**Features concluídas:** 125
 
 | # | Funcionalidade | Esforço | Observações |
 |---|---|---|---|
@@ -158,6 +158,12 @@ A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23
 | 138 | ~~Figurinhas criadas pelas pessoas (recorte + texto, salvar e favoritar)~~ | **feito (build 88, 03/11/2026)**: testado no iPhone pela Isadora (remoção de fundo funcionou), 128 pt na conversa, guia para o Android em `docs/ferramenta-de-figurinhas.md` | Decidido: marcador XEP-0449, item no clipe, envio ao tocar, ~150 pt, recorte quadrado ou retangular, remoção de fundo (Vision) já no MVP. Imagem PNG 512×512 por upload + marcador XEP-0449, mostrada sem balão como o GIF; biblioteca local no grupo do app; remoção de fundo (Vision) e sincronização ficam para depois. Análise: `docs/analise-figurinhas.md`. |
 | 139 | Deadlock: envio criptografado (OMEMO) × recebimento de chaves OMEMO congelava a conversa | **no build 88 (03/11/2026), a observar no uso** | Visto ao compartilhar uma foto: trava do Signal e banco pegos em ordem invertida. O envio agora abre a transação do banco antes de criptografar (`xmpp.m`). Detalhes em `docs/decisoes.md`. |
 | 140 | Compartilhar apagava as chaves OMEMO e o estado das contas (extensão sem o grupo de keychain do app) | **no build 88 (03/11/2026); conferido no `.dev` (mesmo device id no app e na extensão)** | `device_id` diferente na extensão de compartilhar fazia a migração apagar as chaves OMEMO a cada alternância app/extensão. Entitlements da extensão com o grupo do app. Detalhes em `docs/decisoes.md`. |
+| 141 | ~~Aviso quando o envio de um arquivo falha (cápsula vermelha) e "Enviando…" por contador~~ | **feito (build 89, 04/11/2026)**: visto no simulador com falha forçada; falta uma falha real de upload no aparelho | Antes o erro do upload só ia para o log e a figurinha/foto sumia sem "!". Opção A de `docs/decisoes.md`: aviso de 4 s acima da caixa de texto. |
+| 142 | Balão já durante o upload do arquivo, com spinner e "Reenviar" se falhar (como o texto) | a fazer (opção B, mais atrito com o Monal: mexe no fluxo de envio de arquivo e no banco) | Só se o aviso do 141 não bastar na prática. |
+| 143 | Recorte livre nas figurinhas (alças na moldura) | **descartado (04/11/2026, build 89)**: foi feito e testado, mas a Isadora prefere o recorte sempre quadrado | Voltou ao quadrado; ver `docs/decisoes.md`. |
+| 144 | ~~Folha de figurinhas: Cancelar à esquerda e Criar (ícone + texto) à direita~~ | **feito (build 89, 04/11/2026)**: confirmado pela Isadora no `.dev` | O `Label` mostrava só o ícone no iOS 26+; usa `HStack`, cor primária. |
+| 145 | ~~Tocar numa figurinha abre o visualizador de imagens~~ | **feito (build 89, 04/11/2026)**: confirmado pela Isadora no `.dev`; prints nos dois simuladores | Usa `showAttachmentClosure`; o visualizador mostra só o anexo tocado (`fullscreenSingleAttachment`, fork nº 21, PR 20 do fork). |
+| 146 | ~~Visualizador de imagens mostra só a foto tocada, com X e compartilhar fixos~~ | **feito (build 89, 04/11/2026)**: aprovado pela Isadora no iPhone; PR 20 do fork mesclado (`e168ed8`) | Análise em `docs/feature-visualizador-mostra-foto-unica.md`. |
 
 ## Aguardando o Monal
 

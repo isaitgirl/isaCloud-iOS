@@ -1,4 +1,4 @@
-# Estado atual e handoff (03/11/2026, build 88)
+# Estado atual e handoff (04/11/2026, build 89)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,14 +7,23 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 88** (mensagem "Build 88 ..."), tag `build-88`; `git log --oneline -3` |
-| TestFlight | **88** (03/11/2026, 16:57; o 87 foi o anterior, tag `build-87`, 14:45) |
-| `.dev` no iPhone | **88** (igual ao TestFlight, sem a sonda; **sem push**, então a extensão de notificação não roda nele) |
+| Commit | o do **build 89** (mensagem "Build 89 ..."), tag `build-89`; `git log --oneline -3` |
+| TestFlight | **89** (04/11/2026, 10:43; o 88 foi o anterior, tag `build-88`, 03/11 16:57) |
+| `.dev` no iPhone | **89** (igual ao TestFlight; **sem push**, então a extensão de notificação não roda nele) |
 | Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com a build de testes de 02/11/2026 (ad-hoc, por cima do banco, que tem backup do dia em `~/Library/Application Support/isacloud-sim-backups/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
-| ExyteChat | `f49d4f6` na `isaCloud` (card de link com altura fixa, `LinkPreviewPrefetcher`, `listHidden`, PR 19; antes `f5eb80a` (cor do texto do meu balão na pílula de reação e na seta de responder, PR 18; antes `1429d6c` = toque longo só no balão + link ignorado com o menu aberto, PR 17; `b7de90e` = toque ignorado com o menu aberto, PR 16; **os três estão no build 83**; `d2ece12` e `583d960`, PR 15 e 14, estão desde o 82) |
+| ExyteChat | `e168ed8` na `isaCloud` (visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
+
+## O que entrou no build 89 (sobre o 88)
+
+- **Visualizador de imagens só com o anexo tocado** (roadmap 146, PR 20 do fork, `docs/feature-visualizador-mostra-foto-unica.md`): sem contador nem miniaturas; X e compartilhar fixos nos cantos. Figurinha agora abre esse visualizador (roadmap 145); GIF continua reiniciando no toque. Aprovado pela Isadora no iPhone.
+- **Aviso quando o envio de um arquivo falha** (roadmap 141): cápsula vermelha "Não foi possível enviar 😞 Tente de novo!" (antes o erro só ia para o log e a figurinha sumia sem "!"). "Enviando…" por contador. Visto no simulador com falha forçada; **falta uma falha real de upload no aparelho**. Opção B (balão durante o upload, roadmap 142) fica para depois.
+- **Folha de figurinhas:** "Cancelar" à esquerda, "Criar" (carinha + texto) à direita; recorte continua sempre quadrado (o recorte livre foi feito e descartado no mesmo dia, roadmap 143).
+- **Login não cai mais com a conexão falhando** (C16 em `docs/analises-crashes.md`): `handleFeaturesBeforeAuth:` ignora os recursos quando o stream não está aberto. O caminho da queda de rede não foi provocado; **só fica provado se o crash não voltar**.
+- **A observar:** `Device id` igual no app e na extensão (sem identidades OMEMO novas); primeira não lida e card de link seguem em avaliação.
+- **Dica de teste:** a fototeca do simulador tem conversas reais; para testar editor de figurinha ou envio de foto use o `.dev` do iPhone ou limpe a fototeca antes.
 
 ## O que entrou no build 88 (sobre o 87)
 

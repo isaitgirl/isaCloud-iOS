@@ -68,7 +68,7 @@ struct ChatInputBar: View {
             if model.isUploading {
                 SendingHint().dynamicTypeSize(sendingHintTypeSize)
             } else if let notice = model.notice {
-                SendingHint(notice: notice).dynamicTypeSize(sendingHintTypeSize)
+                SendingHint(notice: notice, isError: model.noticeIsError).dynamicTypeSize(sendingHintTypeSize)
                     .transition(.opacity)
             }
         }
@@ -406,16 +406,28 @@ private struct SendingHint: View {
     @ScaledMetric private var lift: CGFloat = 38
     /// isaCloud: a short notice (ChatInputModel.showNotice) instead of "Sending...": a check mark in place of the spinner
     var notice: String? = nil
+    /// isaCloud: the notice is a failure: an exclamation mark and red text, and it may take two lines on a narrow screen
+    var isError: Bool = false
 
     var body: some View {
         HStack(spacing: 8) {
             if let notice {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                Text(notice)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                if isError {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .font(.footnote)
+                        .foregroundStyle(Color(uiColor: .systemRed))
+                    Text(notice)
+                        .font(.footnote)
+                        .foregroundStyle(Color(uiColor: .systemRed))
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Text(notice)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             } else {
                 ProgressView()
                     .controlSize(.small)
