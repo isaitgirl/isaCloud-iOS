@@ -82,6 +82,12 @@ NSString* type_to_classname(NSString* type)
     _internalData[@"boundArguments"] = [self sanitizeArguments:args];
 }
 
+//isaCloud: see MLHandler.h
+-(id _Nullable) boundArgumentForName:(NSString*) name
+{
+    return [_internalData[@"boundArguments"] objectForKey:name];
+}
+
 -(id _Nullable) callWithArguments:(NSDictionary* _Nullable) args
 {
     MLAssert(_internalData[@"delegate"] && _internalData[@"handlerName"], @"Tried to call MLHandler while delegate and/or handlerName was not set!", @{@"handler": _internalData});

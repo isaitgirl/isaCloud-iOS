@@ -806,8 +806,14 @@ $$
 
 +(BOOL) imageFileNeedsCompression:(NSURL*) fileUrl
 {
+    return [self imageFileNeedsCompression:fileUrl asFilename:fileUrl.lastPathComponent];
+}
+
++(BOOL) imageFileNeedsCompression:(NSURL*) fileUrl asFilename:(NSString*) filename
+{
+    //the type comes from the name the file is sent with (a temporary file of the outbox has no extension of its own)
     //only still images are reduced: an animated gif would lose its animation, and other files are sent as they are
-    UTType* type = [UTType typeWithFilenameExtension:fileUrl.pathExtension];
+    UTType* type = [UTType typeWithFilenameExtension:filename.pathExtension];
     if(type == nil || ![type conformsToType:UTTypeImage] || [type conformsToType:UTTypeGIF])
         return NO;
     NSString* mode = [self imageCompressionMode];
@@ -824,10 +830,15 @@ $$
 
 +(void) compressImageFileIfNeeded:(NSURL*) fileUrl completion:(void (^)(NSURL* resultUrl)) completion
 {
+    [self compressImageFileIfNeeded:fileUrl asFilename:fileUrl.lastPathComponent completion:completion];
+}
+
++(void) compressImageFileIfNeeded:(NSURL*) fileUrl asFilename:(NSString*) filename completion:(void (^)(NSURL* resultUrl)) completion
+{
     //the work runs on a utility queue, never on the main thread; if it fails, the original file is sent
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
         NSURL* resultUrl = fileUrl;
-        if([self imageFileNeedsCompression:fileUrl])
+        if([self imageFileNeedsCompression:fileUrl asFilename:filename])
         {
             NSURL* resizedUrl = [self resizedImageFileForUrl:fileUrl maxPixelSize:ISACLOUD_IMAGE_MAX_PIXEL_SIZE quality:[[HelperTools defaultsDB] doubleForKey:@"ImageUploadQuality"]];
             if(resizedUrl != nil)

@@ -660,8 +660,23 @@ struct ChatView: View {
             let filename = downloaded.fileInfo.filename
             //isaCloud: the emoji of the kind of file goes in the label, the same for every destination
             let emoji = MessageForward.mediaEmoji(isGif: downloaded.fileInfo.mimeType == "image/gif", isImage: downloaded.fileInfo.isImage, isVideo: downloaded.fileInfo.isVideo, isAudio: downloaded.fileInfo.isAudio)
+            //isaCloud: a photo is reduced once here, with the same rule as a photo sent from the chat (docs/analise-comprimir-imagens.md), not once per destination.
+            //The reduced copy keeps the name of the original (with .jpg) and is removed when the forwarding is over.
+            var fileToSend = cacheURL
+            var nameToSend = filename
+            if MLFiletransfer.imageFileNeedsCompression(cacheURL) {
+                fileToSend = await MLFiletransfer.compressImageFileIfNeeded(cacheURL)
+                if fileToSend != cacheURL {
+                    nameToSend = fileToSend.lastPathComponent
+                }
+            }
+            defer {
+                if fileToSend != cacheURL {
+                    try? FileManager.default.removeItem(at: fileToSend.deletingLastPathComponent())
+                }
+            }
             for destination in destinations {
-                if !(await sendForwardedFile(to: destination, cacheURL: cacheURL, filename: filename, emoji: emoji)) {
+                if !(await sendForwardedFile(to: destination, cacheURL: fileToSend, filename: nameToSend, emoji: emoji)) {
                     failed.append(destination)
                 }
             }

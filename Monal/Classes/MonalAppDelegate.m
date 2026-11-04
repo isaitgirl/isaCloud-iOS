@@ -2046,6 +2046,67 @@ static void waitForAccountConnectionPoll(xmpp* account, NSUInteger tries, dispat
     waitForAccountConnectionPoll(account, 0, block);
 }
 
+#pragma mark - isaCloud: photo reduction of the outbox
+
+//isaCloud: the share extension does not reduce photos (its time and memory budget is tight), so the outbox does it here, with the same rule
+//as any other photo (MLFiletransfer decides). The reduced copy is passed as the "file" argument of the upload handler (the caller's arguments win
+//over the bound ones); the temporary copy and the reduced copy are removed when the upload is over, with or without error.
+-(void) uploadOutboxPayload:(NSDictionary*) payload toAccount:(xmpp*) account encrypted:(BOOL) encrypted completion:(monal_upload_completion_t) completion
+{
+    MLHandler* handler = payload[@"data"];
+    NSMutableDictionary* callerArgs = [NSMutableDictionary dictionaryWithDictionary:@{ $ID(account), $BOOL(encrypted), $ID(completion) }];
+    NSString* originalFile = [handler boundArgumentForName:@"file"];
+    NSString* filename = [handler boundArgumentForName:@"userFacingFilename"];
+    if(![payload[@"type"] isEqualToString:@"image"] || ![originalFile isKindOfClass:[NSString class]] || ![filename isKindOfClass:[NSString class]] ||
+        ![MLFiletransfer imageFileNeedsCompression:[NSURL fileURLWithPath:originalFile] asFilename:filename])
+    {
+        //nothing to reduce: upload exactly as before
+        [handler callWithArguments:callerArgs];
+        return;
+    }
+
+    //the reduction runs in the background, so keep the app running until the upload of the photo is over
+    UIApplication* application = [UIApplication sharedApplication];
+    __block UIBackgroundTaskIdentifier bgTask = UIBackgroundTaskInvalid;
+    void (^endBackgroundTask)(void) = ^{
+        @synchronized(self) {
+            if(bgTask != UIBackgroundTaskInvalid)
+            {
+                [application endBackgroundTask:bgTask];
+                bgTask = UIBackgroundTaskInvalid;
+            }
+        }
+    };
+    bgTask = [application beginBackgroundTaskWithName:@"isaCloud outbox photo" expirationHandler:^{
+        DDLogWarn(@"Outbox photo: background time expiring");
+        endBackgroundTask();
+    }];
+
+    NSURL* originalUrl = [NSURL fileURLWithPath:originalFile];
+    [MLFiletransfer compressImageFileIfNeeded:originalUrl asFilename:filename completion:^(NSURL* resultUrl) {
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            if([resultUrl isEqual:originalUrl])
+            {
+                //not reduced (or the reduction failed): the original goes out as it is
+                endBackgroundTask();
+                [handler callWithArguments:@{ $ID(account), $BOOL(encrypted), $ID(completion) }];
+                return;
+            }
+            NSString* resizedFolder = [resultUrl.path stringByDeletingLastPathComponent];
+            callerArgs[@"file"] = resultUrl.path;
+            callerArgs[@"completion"] = ^(NSString* url, NSString* mimeType, NSNumber* size, NSError* error) {
+                //the temporary copy (tmp.*) and the reduced copy are ours: remove them now that the upload is over
+                if([originalFile.lastPathComponent hasPrefix:@"tmp."])
+                    [[NSFileManager defaultManager] removeItemAtPath:originalFile error:nil];
+                [[NSFileManager defaultManager] removeItemAtPath:resizedFolder error:nil];
+                endBackgroundTask();
+                completion(url, mimeType, size, error);
+            };
+            [handler callWithArguments:callerArgs];
+        });
+    }];
+}
+
 -(void) sendAllOutboxes
 {
     //delay outbox sending until we have an active chats ui
@@ -2123,7 +2184,7 @@ static void waitForAccountConnectionPoll(xmpp* account, NSUInteger tries, dispat
                     [[MLNotificationQueue currentQueue] postNotificationName:kMonalShareOutboxUpdate object:nil userInfo:@{@"contact": contact, @"uploading": @YES}];
                     [self waitForAccountConnection:account then:^{
                     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-                        $call(payload[@"data"], $ID(account), $BOOL(encrypted), $ID(completion, (^(NSString* url, NSString* mimeType, NSNumber* size, NSError* error) {
+                        [self uploadOutboxPayload:payload toAccount:account encrypted:encrypted completion:(^(NSString* url, NSString* mimeType, NSNumber* size, NSError* error) {
                             dispatch_async(dispatch_get_main_queue(), ^{
                                 if(error != nil)
                                 {
@@ -2149,7 +2210,7 @@ static void waitForAccountConnectionPoll(xmpp* account, NSUInteger tries, dispat
                                     cleanup(payload);
                                 }
                             });
-                        })));
+                        })];
                     });
                     }];
                 }

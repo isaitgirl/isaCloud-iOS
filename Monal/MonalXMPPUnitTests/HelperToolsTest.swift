@@ -213,6 +213,38 @@ struct ImageCompressionTests {
         #expect(MLFiletransfer.resizedImageFile(for: source, maxPixelSize: 100, quality: 0.8) == nil)
     }
 
+    @Test("a temporary copy of the outbox is judged by the name it is sent with, not by its own extension")
+    func temporaryCopyUsesSendName() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: folder)
+        }
+        //the outbox keeps the photo as tmp.<uuid> (no extension); the name it is sent with is <uuid>.jpg
+        let temporary = folder.appendingPathComponent("tmp.\(UUID().uuidString)")
+        try Self.writeJPEG(width: 200, height: 100, orientation: 6, to: temporary)
+        #expect(MLFiletransfer.imageFileNeedsCompression(temporary) == false)
+        #expect(MLFiletransfer.imageFileNeedsCompression(temporary, asFilename: "\(UUID().uuidString).jpg") == true)
+
+        let untagged = folder.appendingPathComponent("tmp.\(UUID().uuidString)")
+        try Self.writeJPEG(width: 200, height: 100, orientation: nil, to: untagged)
+        #expect(MLFiletransfer.imageFileNeedsCompression(untagged, asFilename: "\(UUID().uuidString).jpg") == false)
+    }
+
+    @Test("gifs and non-images are never reduced, whatever the mode or the tag")
+    func gifAndNonImageAreKept() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: folder)
+        }
+        let source = folder.appendingPathComponent("foto.jpg")
+        try Self.writeJPEG(width: 200, height: 100, orientation: 6, to: source)
+        #expect(MLFiletransfer.imageFileNeedsCompression(source, asFilename: "animada.gif") == false)
+        #expect(MLFiletransfer.imageFileNeedsCompression(source, asFilename: "documento.pdf") == false)
+        #expect(MLFiletransfer.imageFileNeedsCompression(source, asFilename: "foto.jpg") == true)
+    }
+
     private static func makeImage(width: Int, height: Int) -> UIImage {
         let format = UIGraphicsImageRendererFormat.default()
         format.scale = 1

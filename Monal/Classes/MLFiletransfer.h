@@ -36,6 +36,8 @@ NS_ASSUME_NONNULL_BEGIN
 +(BOOL) shouldCompressImageOfSize:(unsigned long long) bytes inMode:(NSString*) mode;
 +(BOOL) imageFileNeedsCompression:(NSURL*) fileUrl;
 +(void) compressImageFileIfNeeded:(NSURL*) fileUrl completion:(void (^)(NSURL* resultUrl)) completion;
++(BOOL) imageFileNeedsCompression:(NSURL*) fileUrl asFilename:(NSString*) filename;
++(void) compressImageFileIfNeeded:(NSURL*) fileUrl asFilename:(NSString*) filename completion:(void (^)(NSURL* resultUrl)) completion;
 +(nullable NSURL*) resizedImageFileForUrl:(NSURL*) fileUrl maxPixelSize:(CGFloat) maxSize quality:(double) quality;
 +(nullable NSData*) resizedJPEGDataForImage:(UIImage*) image maxPixelSize:(CGFloat) maxSize quality:(double) quality;
 
