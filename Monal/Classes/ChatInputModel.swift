@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 /// A voice message being recorded. Holding: the finger is still on the microphone. Locked: recording continues
 /// without the finger, with the controls. Paused: locked and paused.
@@ -35,6 +36,12 @@ struct ChatInputAttachment: Equatable {
     let url: URL
 }
 
+/// isaCloud: which photo of a batch is being resized before its upload, out of how many photos the batch has
+struct ChatInputPreparing: Equatable {
+    let current: Int
+    let total: Int
+}
+
 /// What the trailing button of the input bar does right now.
 enum ChatInputTrailingAction: Equatable {
     case microphone
@@ -60,6 +67,8 @@ final class ChatInputModel: ObservableObject {
     var isUploading: Bool {
         uploadCount > 0 || outboxUploading
     }
+    /// isaCloud: the photo being resized before its upload ("Preparing photo" in the hint, in place of "Sending"); nil when none is
+    @Published private(set) var preparing: ChatInputPreparing?
     /// isaCloud: a short notice floating above the input (e.g. "Sticker saved"), in place of an alert; it goes away by itself
     @Published private(set) var notice: String?
     /// isaCloud: the notice is an error (shown in red with an exclamation mark)
@@ -196,6 +205,11 @@ final class ChatInputModel: ObservableObject {
     /// isaCloud: a file upload finished, with success or failure
     func endUpload() {
         uploadCount = max(0, uploadCount - 1)
+    }
+
+    /// isaCloud: sets the photo being resized before its upload, or nil when none is being resized
+    func setPreparing(_ value: ChatInputPreparing?) {
+        preparing = value
     }
 
     /// isaCloud: the share sheet outbox says whether one of its files is being uploaded

@@ -24,6 +24,16 @@
 //monal version 7.x, state counter: 001
 #define CURRENT_FILETRANSFER_DATA_VERSION @7001
 
+//isaCloud: photo reduction before the upload (docs/analise-comprimir-imagens.md): "large" reduces photos above 2 MiB, "always" every photo
+#define ISACLOUD_IMAGE_COMPRESSION_LARGE_BYTES (2 * 1024 * 1024)
+#define ISACLOUD_IMAGE_MAX_PIXEL_SIZE 1920
+static CGImageRef createWhiteBackedCopyOfImage(CGImageRef image) CF_RETURNS_RETAINED;
+//isaCloud: describes pixel size and EXIF orientation of an image, only for the photo log lines
+static NSString* describeImageSource(CGImageSourceRef source);
+static NSString* describeImageDataForLog(NSData* data);
+static NSString* describeImageFileForLog(NSURL* fileUrl);
+static BOOL imageFileHasOrientationTag(NSURL* fileUrl);
+
 static NSFileManager* _fileManager;
 static NSString* _documentCacheDir;
 static NSObject* _hardlinkingSyncObject;
@@ -719,6 +729,28 @@ $$
     NSString* file = [_documentCacheDir stringByAppendingPathComponent:tempname];
     DDLogDebug(@"Tempstoring jpeg encoded file having quality %f at %@", imageQuality, file);
     NSData* imageData = UIImageJPEGRepresentation(image, imageQuality);
+    //isaCloud: the share extension leaves the reduction to the main app (its time and memory budget is tight), see docs/analise-comprimir-imagens.md
+    NSString* mode = [self imageCompressionMode];
+    NSString* before = [NSString stringWithFormat:@"%.0fx%.0f px, %lu bytes at quality %.2f", image.size.width * image.scale, image.size.height * image.scale, (unsigned long) imageData.length, imageQuality];
+    //a UIImage with an orientation other than "up" is drawn upright too (same normalization as the files with an orientation tag)
+    BOOL normalize = image.imageOrientation != UIImageOrientationUp && ![mode isEqualToString:@"never"];
+    if(![HelperTools isAppExtension] && (normalize || [self shouldCompressImageOfSize:imageData.length inMode:mode]))
+    {
+        //a photo smaller than the limit is only turned upright, never enlarged
+        NSData* resizedData = [self resizedJPEGDataForImage:image maxPixelSize:ISACLOUD_IMAGE_MAX_PIXEL_SIZE quality:imageQuality];
+        if(resizedData != nil)
+        {
+            DDLogInfo(@"Photo from memory reduced (mode %@): %@ -> %lu bytes, %@", mode, before, (unsigned long) resizedData.length, describeImageDataForLog(resizedData));
+            imageData = resizedData;
+        }
+        else
+            DDLogWarn(@"Could not resize the image, uploading it with the quality of the setting");
+    }
+    else
+    {
+        NSString* reason = [HelperTools isAppExtension] ? @"share extension, not reduced" : ([mode isEqualToString:@"never"] ? @"mode never" : @"under the limit");
+        DDLogInfo(@"Photo from memory sent as it is (%@): %@", reason, before);
+    }
     [imageData writeToFile:file options:NSDataWritingAtomic error:&error];
     if(error)
     {
@@ -754,6 +786,234 @@ $$
     $call([self prepareUIImageUpload:image], $ID(account), $BOOL(encrypted), $ID(completion));
 }
 
+#pragma mark - isaCloud: photo reduction before the upload
+
++(NSString*) imageCompressionMode
+{
+    //"large" is the default (also when the setting is missing, e.g. in tests)
+    return [[HelperTools defaultsDB] stringForKey:@"imageCompressionMode"] ?: @"large";
+}
+
++(BOOL) shouldCompressImageOfSize:(unsigned long long) bytes inMode:(NSString*) mode
+{
+    if([mode isEqualToString:@"always"])
+        return YES;
+    if([mode isEqualToString:@"large"])
+        return bytes > ISACLOUD_IMAGE_COMPRESSION_LARGE_BYTES;
+    //"never" (and anything unknown): the original is sent
+    return NO;
+}
+
++(BOOL) imageFileNeedsCompression:(NSURL*) fileUrl
+{
+    //only still images are reduced: an animated gif would lose its animation, and other files are sent as they are
+    UTType* type = [UTType typeWithFilenameExtension:fileUrl.pathExtension];
+    if(type == nil || ![type conformsToType:UTTypeImage] || [type conformsToType:UTTypeGIF])
+        return NO;
+    NSString* mode = [self imageCompressionMode];
+    //"never" sends the original, rotation tag included
+    if([mode isEqualToString:@"never"])
+        return NO;
+    //a photo with an orientation tag is always normalized (its pixels turned upright, the tag removed), whatever its size,
+    //because receivers disagree on how to read the tag (e.g. the Android app shows mirrored selfies lying down)
+    if(imageFileHasOrientationTag(fileUrl))
+        return YES;
+    NSDictionary* attributes = [_fileManager attributesOfItemAtPath:fileUrl.path error:nil];
+    return [self shouldCompressImageOfSize:attributes.fileSize inMode:mode];
+}
+
++(void) compressImageFileIfNeeded:(NSURL*) fileUrl completion:(void (^)(NSURL* resultUrl)) completion
+{
+    //the work runs on a utility queue, never on the main thread; if it fails, the original file is sent
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+        NSURL* resultUrl = fileUrl;
+        if([self imageFileNeedsCompression:fileUrl])
+        {
+            NSURL* resizedUrl = [self resizedImageFileForUrl:fileUrl maxPixelSize:ISACLOUD_IMAGE_MAX_PIXEL_SIZE quality:[[HelperTools defaultsDB] doubleForKey:@"ImageUploadQuality"]];
+            if(resizedUrl != nil)
+                resultUrl = resizedUrl;
+            else
+                DDLogWarn(@"Could not resize %@, sending the original file", fileUrl.lastPathComponent);
+        }
+        completion(resultUrl);
+    });
+}
+
++(NSURL*) resizedImageFileForUrl:(NSURL*) fileUrl maxPixelSize:(CGFloat) maxSize quality:(double) quality
+{
+    CGImageSourceRef source = CGImageSourceCreateWithURL((__bridge CFURLRef) fileUrl, NULL);
+    if(source == NULL)
+    {
+        DDLogError(@"Could not read image at %@", fileUrl.path);
+        return nil;
+    }
+    //a photo smaller than the limit is only turned upright, never enlarged
+    NSDictionary* props = CFBridgingRelease(CGImageSourceCopyPropertiesAtIndex(source, 0, NULL));
+    CGFloat longestSide = MAX([props[(__bridge NSString*) kCGImagePropertyPixelWidth] doubleValue], [props[(__bridge NSString*) kCGImagePropertyPixelHeight] doubleValue]);
+    if(longestSide > 0 && longestSide < maxSize)
+        maxSize = longestSide;
+    //the thumbnail is the image scaled so its longest side is maxSize, with the EXIF orientation applied to the pixels
+    //(the photo keeps its pixels in sensor orientation and its rotation only in the metadata)
+    NSDictionary* options = @{
+        (__bridge NSString*) kCGImageSourceCreateThumbnailFromImageAlways: @YES,
+        (__bridge NSString*) kCGImageSourceThumbnailMaxPixelSize: @(maxSize),
+        (__bridge NSString*) kCGImageSourceCreateThumbnailWithTransform: @YES,
+    };
+    NSString* before = [NSString stringWithFormat:@"%llu bytes, %@", [[_fileManager attributesOfItemAtPath:fileUrl.path error:nil] fileSize], describeImageSource(source)];
+    CGImageRef thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, (__bridge CFDictionaryRef) options);
+    CFRelease(source);
+    if(thumbnail == NULL)
+    {
+        DDLogError(@"Could not create thumbnail of %@", fileUrl.path);
+        return nil;
+    }
+    CGImageRef flatImage = createWhiteBackedCopyOfImage(thumbnail);
+    CGImageRelease(thumbnail);
+    if(flatImage == NULL)
+        return nil;
+
+    //the new JPEG is written from the pixels only: no orientation and no other metadata (e.g. location) are copied
+    NSMutableData* jpegData = [NSMutableData new];
+    CGImageDestinationRef destination = CGImageDestinationCreateWithData((__bridge CFMutableDataRef) jpegData, CFSTR("public.jpeg"), 1, NULL);
+    if(destination == NULL)
+    {
+        CGImageRelease(flatImage);
+        return nil;
+    }
+    CGImageDestinationAddImage(destination, flatImage, (__bridge CFDictionaryRef) @{
+        (__bridge NSString*) kCGImageDestinationLossyCompressionQuality: @(quality),
+    });
+    BOOL finalized = CGImageDestinationFinalize(destination);
+    CFRelease(destination);
+    CGImageRelease(flatImage);
+    if(!finalized)
+    {
+        DDLogError(@"Could not encode resized image of %@", fileUrl.path);
+        return nil;
+    }
+
+    //one folder per resized copy, so the file keeps the name of the original (it is the name shown to the receiver)
+    NSString* folder = [_documentCacheDir stringByAppendingPathComponent:[NSString stringWithFormat:@"resized.%@", [[NSUUID UUID] UUIDString]]];
+    NSString* file = [folder stringByAppendingPathComponent:[[fileUrl.lastPathComponent stringByDeletingPathExtension] stringByAppendingPathExtension:@"jpg"]];
+    NSError* error;
+    [_fileManager createDirectoryAtPath:folder withIntermediateDirectories:YES attributes:nil error:&error];
+    if(!error)
+        [jpegData writeToFile:file options:NSDataWritingAtomic error:&error];
+    if(error)
+    {
+        [_fileManager removeItemAtPath:folder error:nil];
+        DDLogError(@"Could not save resized image: %@", error);
+        return nil;
+    }
+    [HelperTools configureFileProtectionFor:file];
+    DDLogInfo(@"Photo %@ reduced (mode %@): %@ -> %lu bytes, %@", fileUrl.lastPathComponent, [self imageCompressionMode], before, (unsigned long) jpegData.length, describeImageDataForLog(jpegData));
+    return [NSURL fileURLWithPath:file];
+}
+
+//isaCloud: logs an attachment that is sent as it is (the reason and, for images, the size and pixels), so the photo tests can be read from the log
++(void) logFileNotReduced:(NSURL*) fileUrl
+{
+    NSString* mode = [self imageCompressionMode];
+    UTType* type = [UTType typeWithFilenameExtension:fileUrl.pathExtension];
+    BOOL isStillImage = type != nil && [type conformsToType:UTTypeImage] && ![type conformsToType:UTTypeGIF];
+    NSString* reason;
+    if(type == nil || ![type conformsToType:UTTypeImage])
+        reason = @"not an image";
+    else if([type conformsToType:UTTypeGIF])
+        reason = @"GIF, never reduced";
+    else if([mode isEqualToString:@"never"])
+        reason = @"mode never";
+    else
+        reason = @"under the limit";
+    unsigned long long bytes = [[_fileManager attributesOfItemAtPath:fileUrl.path error:nil] fileSize];
+    DDLogInfo(@"Attachment %@ sent as it is (%@): %llu bytes%@", fileUrl.lastPathComponent, reason, bytes, isStillImage ? [NSString stringWithFormat:@", %@", describeImageFileForLog(fileUrl)] : @"");
+}
+
++(NSData*) resizedJPEGDataForImage:(UIImage*) image maxPixelSize:(CGFloat) maxSize quality:(double) quality
+{
+    //image.size already has the orientation applied; drawing it applies the orientation to the pixels of the new image
+    CGSize pixels = CGSizeMake(image.size.width * image.scale, image.size.height * image.scale);
+    CGFloat longestSide = MAX(pixels.width, pixels.height);
+    if(longestSide <= 0)
+        return nil;
+    CGFloat factor = MIN((CGFloat) 1.0, maxSize / longestSide);
+    CGSize target = CGSizeMake(round(pixels.width * factor), round(pixels.height * factor));
+
+    UIGraphicsImageRendererFormat* format = [UIGraphicsImageRendererFormat defaultFormat];
+    format.scale = 1;
+    format.opaque = YES;
+    UIGraphicsImageRenderer* renderer = [[UIGraphicsImageRenderer alloc] initWithSize:target format:format];
+    UIImage* resized = [renderer imageWithActions:^(UIGraphicsImageRendererContext* context __unused) {
+        //white behind transparent parts (a JPEG has no alpha)
+        [[UIColor whiteColor] setFill];
+        UIRectFill(CGRectMake(0, 0, target.width, target.height));
+        [image drawInRect:CGRectMake(0, 0, target.width, target.height)];
+    }];
+    return UIImageJPEGRepresentation(resized, quality);
+}
+
+//returns a new image (the caller releases it) of the same pixels, with white behind transparent parts
+static CGImageRef createWhiteBackedCopyOfImage(CGImageRef image) CF_RETURNS_RETAINED;
+static CGImageRef createWhiteBackedCopyOfImage(CGImageRef image)
+{
+    size_t width = CGImageGetWidth(image);
+    size_t height = CGImageGetHeight(image);
+    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+    CGContextRef context = CGBitmapContextCreate(NULL, width, height, 8, 0, colorSpace, (CGBitmapInfo) kCGImageAlphaNoneSkipLast);
+    CGColorSpaceRelease(colorSpace);
+    if(context == NULL)
+        return NULL;
+    CGRect rect = CGRectMake(0, 0, (CGFloat) width, (CGFloat) height);
+    CGContextSetRGBFillColor(context, 1, 1, 1, 1);
+    CGContextFillRect(context, rect);
+    CGContextDrawImage(context, rect, image);
+    CGImageRef result = CGBitmapContextCreateImage(context);
+    CGContextRelease(context);
+    return result;
+}
+
+//isaCloud: "WxH px, EXIF orientation N" of an image (the orientation is what the photo's pixels still have to be rotated by)
+static NSString* describeImageSource(CGImageSourceRef source)
+{
+    NSDictionary* props = CFBridgingRelease(CGImageSourceCopyPropertiesAtIndex(source, 0, NULL));
+    NSNumber* width = props[(__bridge NSString*) kCGImagePropertyPixelWidth];
+    NSNumber* height = props[(__bridge NSString*) kCGImagePropertyPixelHeight];
+    NSNumber* orientation = props[(__bridge NSString*) kCGImagePropertyOrientation];
+    return [NSString stringWithFormat:@"%@x%@ px, EXIF orientation %@", width ?: @"?", height ?: @"?", orientation ?: @"none"];
+}
+
+static NSString* describeImageDataForLog(NSData* data)
+{
+    CGImageSourceRef source = CGImageSourceCreateWithData((__bridge CFDataRef) data, NULL);
+    if(source == NULL)
+        return @"unreadable image";
+    NSString* result = describeImageSource(source);
+    CFRelease(source);
+    return result;
+}
+
+//isaCloud: YES when the file has an EXIF orientation other than 1 ("up"), i.e. its pixels are not stored upright
+static BOOL imageFileHasOrientationTag(NSURL* fileUrl)
+{
+    CGImageSourceRef source = CGImageSourceCreateWithURL((__bridge CFURLRef) fileUrl, NULL);
+    if(source == NULL)
+        return NO;
+    NSDictionary* props = CFBridgingRelease(CGImageSourceCopyPropertiesAtIndex(source, 0, NULL));
+    CFRelease(source);
+    NSNumber* orientation = props[(__bridge NSString*) kCGImagePropertyOrientation];
+    return orientation != nil && orientation.integerValue != 1;
+}
+
+static NSString* describeImageFileForLog(NSURL* fileUrl)
+{
+    CGImageSourceRef source = CGImageSourceCreateWithURL((__bridge CFURLRef) fileUrl, NULL);
+    if(source == NULL)
+        return @"unreadable image";
+    NSString* result = describeImageSource(source);
+    CFRelease(source);
+    return result;
+}
+
 +(void) doStartupCleanup
 {
     //delete leftover tmp files older than 1 day
@@ -772,6 +1032,14 @@ $$
             DDLogInfo(@"Deleting leftover tmp file at %@", filePath);
             [_fileManager removeItemAtPath:filePath error:nil];
         }
+    }
+    //isaCloud: resized photos are removed by the upload that made them; the ones left here were cut short by a force-close
+    //(no upload is running yet at startup, and the share extension never resizes)
+    NSPredicate* resizedFilter = [NSPredicate predicateWithFormat:@"self BEGINSWITH 'resized.'"];
+    for(NSString* folder in [directoryContents filteredArrayUsingPredicate:resizedFilter])
+    {
+        DDLogInfo(@"Deleting leftover resized photo folder %@", folder);
+        [_fileManager removeItemAtPath:[_documentCacheDir stringByAppendingPathComponent:folder] error:nil];
     }
     // delete any file preview hardlinks that didn't get deleted normally
     // e.g. due to a force-close while the preview is open

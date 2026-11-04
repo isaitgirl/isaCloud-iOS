@@ -7,6 +7,8 @@
 //
 
 import Testing
+import UIKit
+import ImageIO
 import monalxmpp
 
 struct HelperToolsTest {
@@ -88,4 +90,155 @@ struct HelperToolsTest {
         #expect(HelperTools.text("precisa falar com a isa", mentionsAnyOfNames: ["isa"]))
     }
 
+}
+
+/// isaCloud: photo reduction before the upload (docs/analise-comprimir-imagens.md)
+struct ImageCompressionTests {
+    private static let mib: UInt64 = 1024 * 1024
+
+    @Test("large mode reduces only photos above 2 MiB")
+    func largeModeLimit() {
+        #expect(MLFiletransfer.shouldCompressImage(ofSize: 2 * Self.mib, inMode: "large") == false)
+        #expect(MLFiletransfer.shouldCompressImage(ofSize: 2 * Self.mib + 1, inMode: "large") == true)
+    }
+
+    @Test("never mode does not reduce any photo")
+    func neverModeKeepsOriginal() {
+        #expect(MLFiletransfer.shouldCompressImage(ofSize: 50 * Self.mib, inMode: "never") == false)
+        #expect(MLFiletransfer.shouldCompressImage(ofSize: 1, inMode: "never") == false)
+    }
+
+    @Test("always mode reduces every photo, even a small one")
+    func alwaysModeReducesSmallPhotos() {
+        #expect(MLFiletransfer.shouldCompressImage(ofSize: 1, inMode: "always") == true)
+        #expect(MLFiletransfer.shouldCompressImage(ofSize: 50 * Self.mib, inMode: "always") == true)
+    }
+
+    @Test("a photo with EXIF orientation 6 keeps its visual orientation when reduced, and the longest side is within the limit")
+    func resizedFileKeepsOrientation() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: folder)
+        }
+        //400 x 200 pixels stored, shown rotated by 90 degrees: 200 x 400 (portrait) on the screen
+        let source = folder.appendingPathComponent("foto.jpg")
+        try Self.writeJPEG(width: 400, height: 200, orientation: 6, to: source)
+
+        let resized = try #require(MLFiletransfer.resizedImageFile(for: source, maxPixelSize: 100, quality: 0.8))
+        defer {
+            try? FileManager.default.removeItem(at: resized.deletingLastPathComponent())
+        }
+        let image = try #require(UIImage(contentsOfFile: resized.path))
+        //the pixels are already upright: no orientation is left to apply on the receiver
+        #expect(image.imageOrientation == .up)
+        #expect(image.size.height > image.size.width)
+        #expect(max(image.size.width, image.size.height) <= 100)
+        #expect(resized.lastPathComponent == "foto.jpg")
+    }
+
+    @Test("a landscape photo is reduced to the limit on its longest side")
+    func resizedFileLongestSide() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: folder)
+        }
+        let source = folder.appendingPathComponent("paisagem.jpg")
+        try Self.writeJPEG(width: 3000, height: 2000, orientation: nil, to: source)
+
+        let resized = try #require(MLFiletransfer.resizedImageFile(for: source, maxPixelSize: 1920, quality: 0.8))
+        defer {
+            try? FileManager.default.removeItem(at: resized.deletingLastPathComponent())
+        }
+        let image = try #require(UIImage(contentsOfFile: resized.path))
+        #expect(image.size.width == 1920)
+        #expect(image.size.height == 1280)
+    }
+
+    @Test("a small photo with a rotation tag is normalized even under the limit, without being enlarged")
+    func smallRotatedPhotoIsNormalized() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: folder)
+        }
+        //200 x 100 stored with orientation 6: shown as 100 x 200 (portrait), far below 2 MiB
+        let source = folder.appendingPathComponent("pequena.jpg")
+        try Self.writeJPEG(width: 200, height: 100, orientation: 6, to: source)
+        #expect(MLFiletransfer.imageFileNeedsCompression(source) == true)
+
+        let resized = try #require(MLFiletransfer.resizedImageFile(for: source, maxPixelSize: 1920, quality: 0.8))
+        defer {
+            try? FileManager.default.removeItem(at: resized.deletingLastPathComponent())
+        }
+        let image = try #require(UIImage(contentsOfFile: resized.path))
+        #expect(image.imageOrientation == .up)
+        #expect(image.size == CGSize(width: 100, height: 200))
+    }
+
+    @Test("a photo without rotation tag and under the limit is not reduced in large mode")
+    func untaggedSmallPhotoIsKept() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: folder)
+        }
+        let source = folder.appendingPathComponent("normal.jpg")
+        try Self.writeJPEG(width: 200, height: 100, orientation: nil, to: source)
+        #expect(MLFiletransfer.imageFileNeedsCompression(source) == false)
+    }
+
+    @Test("an in-memory image with orientation right is drawn upright when reduced")
+    func resizedImageKeepsOrientation() throws {
+        let cgImage = try #require(Self.makeImage(width: 400, height: 200).cgImage)
+        //shown rotated by 90 degrees: 200 x 400 (portrait)
+        let image = UIImage(cgImage: cgImage, scale: 1, orientation: .right)
+        let data = try #require(MLFiletransfer.resizedJPEGData(for: image, maxPixelSize: 100, quality: 0.8))
+        let result = try #require(UIImage(data: data))
+        #expect(result.imageOrientation == .up)
+        #expect(result.size.height > result.size.width)
+        #expect(max(result.size.width, result.size.height) <= 100)
+    }
+
+    @Test("a file that is not an image gives no resized copy, so the original is sent")
+    func unreadableFileGivesNoCopy() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: folder)
+        }
+        let source = folder.appendingPathComponent("texto.jpg")
+        try Data("isso não é uma imagem".utf8).write(to: source)
+        #expect(MLFiletransfer.resizedImageFile(for: source, maxPixelSize: 100, quality: 0.8) == nil)
+    }
+
+    private static func makeImage(width: Int, height: Int) -> UIImage {
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        format.opaque = true
+        return UIGraphicsImageRenderer(size: CGSize(width: width, height: height), format: format).image { context in
+            //left half red, right half blue: the halves tell the orientation apart
+            UIColor.red.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: width / 2, height: height))
+            UIColor.blue.setFill()
+            context.fill(CGRect(x: width / 2, y: 0, width: width - width / 2, height: height))
+        }
+    }
+
+    private static func writeJPEG(width: Int, height: Int, orientation: Int?, to url: URL) throws {
+        let image = makeImage(width: width, height: height)
+        guard let cgImage = image.cgImage,
+              let destination = CGImageDestinationCreateWithURL(url as CFURL, "public.jpeg" as CFString, 1, nil) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        var properties: [CFString: Any] = [kCGImageDestinationLossyCompressionQuality: 0.9]
+        if let orientation {
+            properties[kCGImagePropertyOrientation] = orientation
+        }
+        CGImageDestinationAddImage(destination, cgImage, properties as CFDictionary)
+        guard CGImageDestinationFinalize(destination) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+    }
 }

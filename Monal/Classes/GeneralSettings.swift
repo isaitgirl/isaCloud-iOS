@@ -129,6 +129,10 @@ class GeneralSettingsDefaultsDB: ObservableObject {
     
     @defaultsDB("uploadImagesOriginal")
     var uploadImagesOriginal: Bool
+
+    //isaCloud: "never", "large" (photos above 2 MiB) or "always"; replaces uploadImagesOriginal (see MLXMPPManager)
+    @defaultsDB("imageCompressionMode")
+    var imageCompressionMode: String
     
     @defaultsDB("hardlinkFiletransfersIntoDocuments")
     var hardlinkFiletransfersIntoDocuments: Bool
@@ -700,10 +704,16 @@ struct AttachmentSettings: View {
             }
             
             Section(header: Text("Upload Settings")) {
-                SettingsToggle(isOn: $generalSettingsDefaultsDB.uploadImagesOriginal) {
-                    Text("Upload Original Images")
+                //isaCloud: photos are resized before the upload (Never: the original; Only large: photos above 2 MB; Always: every photo)
+                Picker(selection: $generalSettingsDefaultsDB.imageCompressionMode, label: Text("Resize photos before sending")) {
+                    Text("Never").tag("never")
+                    Text("Only large").tag("large")
+                    Text("Always").tag("always")
                 }
-                if !generalSettingsDefaultsDB.uploadImagesOriginal {
+                Text("Photos are resized to at most 1920 pixels on the longest side. GIFs and other files are sent as they are.")
+                    .foregroundColor(.secondary)
+                    .font(.footnote)
+                if generalSettingsDefaultsDB.imageCompressionMode != "never" {
                     Text("Adjust the quality of images uploaded")
                         .foregroundColor(.secondary)
                         .font(.footnote)

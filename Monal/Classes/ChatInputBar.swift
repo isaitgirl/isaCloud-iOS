@@ -66,7 +66,7 @@ struct ChatInputBar: View {
         //isaCloud: the "sending" hint floats above the bar, so the chat does not move up and down while a file goes out
         .overlay(alignment: .top) {
             if model.isUploading {
-                SendingHint().dynamicTypeSize(sendingHintTypeSize)
+                SendingHint(preparing: model.preparing).dynamicTypeSize(sendingHintTypeSize)
             } else if let notice = model.notice {
                 SendingHint(notice: notice, isError: model.noticeIsError).dynamicTypeSize(sendingHintTypeSize)
                     .transition(.opacity)
@@ -408,6 +408,8 @@ private struct SendingHint: View {
     var notice: String? = nil
     /// isaCloud: the notice is a failure: an exclamation mark and red text, and it may take two lines on a narrow screen
     var isError: Bool = false
+    /// isaCloud: a photo is being resized before the upload: "Preparing photo" (or "Preparing N of M") in place of "Sending..."
+    var preparing: ChatInputPreparing? = nil
 
     var body: some View {
         HStack(spacing: 8) {
@@ -431,9 +433,17 @@ private struct SendingHint: View {
             } else {
                 ProgressView()
                     .controlSize(.small)
-                Text("Sending...")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                if let preparing {
+                    Text(preparing.total > 1
+                         ? String(format: NSLocalizedString("Preparing %d of %d...", comment: "hint above the input while photos are resized before the upload: photo number and count of photos"), preparing.current, preparing.total)
+                         : NSLocalizedString("Preparing photo...", comment: "hint above the input while a photo is resized before the upload"))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("Sending...")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .padding(.horizontal, 12)

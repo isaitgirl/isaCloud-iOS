@@ -1647,7 +1647,7 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
                         DDLogInfo(@"Got memory image item: %@", item);
                         payload[@"type"] = @"image";
                         payload[@"uttype"] = UTTypeImage.identifier;
-                        if(![[HelperTools defaultsDB] boolForKey:@"uploadImagesOriginal"])
+                        if(![[MLFiletransfer imageCompressionMode] isEqualToString:@"never"])
                         {
                             //use prepareUIImageUpload to resize the image to the configured quality
                             payload[@"data"] = [MLFiletransfer prepareUIImageUpload:item];
@@ -1663,7 +1663,7 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
                     DDLogInfo(@"Got image item: %@", item);
                     payload[@"type"] = @"image";
                     payload[@"uttype"] = UTTypeImage.identifier;
-                    if(![[HelperTools defaultsDB] boolForKey:@"uploadImagesOriginal"])
+                    if(![[MLFiletransfer imageCompressionMode] isEqualToString:@"never"])
                     {
                         [item startAccessingSecurityScopedResource];
                         [[NSFileCoordinator new] coordinateReadingItemAtURL:item options:NSFileCoordinatorReadingForUploading error:&error byAccessor:^(NSURL* _Nonnull newURL) {
