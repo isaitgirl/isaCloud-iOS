@@ -39,7 +39,7 @@ Registro único dos crashes, travamentos e mortes pelo sistema que já analisamo
 | C13 | 03/11 | simulador | crash Swift/ObjC | `MLContactCell` com `message` em BLOB (dado de teste mal inserido) | não é do app |
 | C14 | 24 e 25/10 | 5, 8 | SIGABRT (`MLAssert`) | `MLFiletransferInfo createFiletransferInfoForMessage:` sem a linha de `filetransfer_info` ao abrir um chat | corrigido (linha criada na hora) |
 | C15 | 30/10 | 67 | SIGABRT (`MLAssert`) | asserção em `disconnectWithStreamError:` durante `disconnectAll`, correndo com o congelamento | corrigido (virou aviso no log) |
-| C16 | 03/11 22:30 | 88 (TestFlight, iPhone14,7, iOS 27.2) | SIGABRT (`MLAssert`) | `MLStream tlsVersion` com o stream já em erro: login processado depois de a conexão cair | corrigido (próximo build) |
+| C16 | 03/11 22:30 | 88 (TestFlight, iPhone14,7, iOS 27.2) | SIGABRT (`MLAssert`) | `MLStream tlsVersion` com o stream já em erro: login processado depois de a conexão cair | corrigido (build 89; voltou no iPhone da Isadora em 04/11 10:53, no build 88) (próximo build) |
 
 ## Entradas
 
@@ -130,6 +130,7 @@ Registro único dos crashes, travamentos e mortes pelo sistema que já analisamo
 - **Correção (04/11/2026, branch `fix/login-com-stream-em-erro`, vai no próximo build):** em `xmpp.m`, ao processar os recursos antes da autenticação, parar se o stream de saída não estiver aberto (`streamStatus` fora de `Open…<Closed`). É só um aviso no log e o retorno, deixando a reconexão normal seguir.
   - **O que não fazer:** devolver uma lista vazia de channel binding ou zero no `tlsVersion`. Isso pode cair no ramo que **desativa a conta por suspeita de MITM** (canais anunciados sem par).
 - **Validar:** a asserção não aparece mais. Para provocar: congelar o app logo depois de conectar, ou cortar a rede durante o login.
+- **Segunda ocorrência (04/11/2026 10:53:38, build 88, iPhone13,3 = iPhone da Isadora, iOS 27.2):** `.ips` `isaCloud-2026-11-04-105338.ips` (SIGABRT, fila `receiveQueue[47:...]`, conta `isadora@xmpp.social.br`), pilha idêntica: `handleFeaturesBeforeAuth` → `channelBindingToUse` → `supportedChannelBindingTypes` → `isTLS13` → `tlsVersion` → `MLAssert`. O app de produção ainda era o build 88 (o 89, com a correção, subiu às 10:43 e ainda não estava instalado). O log do aparelho (`.rawlog`) saiu truncado em 10:53:17 (cópia de arquivo em escrita), então não mostra a queda de rede dos últimos 20 s; o mesmo padrão do log do usuário. As pastas de `~/Downloads/crashes-report/` de 04/11 trazem o mesmo evento por duas vias: o `CrashReport-1.mcrash-8 copy` (KSCrash, 932 KB, 10:53:37.087, `streamStatus = 7` = erro, thread 16; **sem log anexado**, `logfileCopyResult: -1`) e a entrada de 10:53:37 no `.xccrashpoint`. O `CrashReport-1.mcrash-8` de 5 MB é o de 03/11 22:30 (usuário, iPhone14,7), com o log. O relatório foi enviado pelo build **89**, que já estava instalado no aparelho quando o app reabriu. **Confirma que o crash é real e frequente o bastante para aparecer em dois aparelhos em ~12 h; o build 89 é o que o corrige. Validar no 89: nenhuma nova asserção `Stream must be open`.**
 
 ## Modelo para um crash novo
 

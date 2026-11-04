@@ -26,7 +26,7 @@ A figurinha é **uma imagem enviada como qualquer foto**, pelo HTTP Upload (XEP-
 </message>
 ```
 
-- **Elemento:** `<sticker xmlns='urn:xmpp:stickers:0'/>` vazio, sem atributo `pack`. Não usamos SFS (XEP-0447) nem hashes (XEP-0300) porque o Monal não tem SFS. A XEP diz que receptores devem tratar como figurinha a mensagem com `<sticker/>` **e** `<file-sharing/>`. Como não mandamos o segundo, o reconhecimento é nosso: **basta o `<sticker/>` numa mensagem de arquivo**.
+- **Elemento:** `<sticker xmlns='urn:xmpp:stickers:0'/>` vazio, sem atributo `pack`. Não usamos SFS (XEP-0447) nem hashes (XEP-0300) porque o Monal não tem SFS. A XEP diz que receptores devem tratar como figurinha a mensagem com `<sticker/>` **e** `<file-sharing/>`. Como não mandamos o `<file-sharing/>`, **não estamos em conformidade**. O reconhecimento é regra nossa, não da XEP: **o `<sticker/>` numa mensagem de arquivo** marca a figurinha no isaCloud. A conformidade está planejada em `docs/analise-figurinhas.md` (opção 2).
 - **Com OMEMO:** o corpo cifrado tem o link `aesgcm://…` e o `<sticker/>` vai **fora** da criptografia. Isso revela que é uma figurinha, mas não qual, porque a imagem continua cifrada. No iOS o marcador é acrescentado depois do bloco que monta corpo/OOB ou OMEMO, então vale nos dois casos.
 - **Reconhecer pelo elemento, nunca pelo nome do arquivo:** com OMEMO, o Monal troca o nome do upload por um UUID, e o nome não chega. Reconhecer pelo formato da imagem (PNG quadrado com transparência) também erraria com fotos comuns.
 - **Tipo e tamanho:** `image/png`, **512×512 px**, fundo transparente fora da foto, tipicamente de 100 a 300 KB.
