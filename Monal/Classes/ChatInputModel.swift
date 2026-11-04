@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 /// A voice message being recorded. Holding: the finger is still on the microphone. Locked: recording continues
 /// without the finger, with the controls. Paused: locked and paused.

@@ -456,6 +456,16 @@ struct GifPickerView: View {
     @State private var gifs: [GiphyGif] = []
     @State private var state: LoadState = .loading
     @State private var downloading = false
+    /// the next offset to ask Giphy for (the trending starts at a random one, so each opening shows other GIFs)
+    @State private var offset = 0
+    /// true while the last page came full (24 GIFs), so there may be more
+    @State private var hasMore = false
+    /// true while a page after the first one is loading, so the same page is not asked twice
+    @State private var loadingMore = false
+    /// the search term of the GIFs on screen, or nil for the trending ones
+    @State private var currentQuery: String?
+    /// counts the first-page requests, so an answer that arrives after a new search or trending load is dropped
+    @State private var generation = 0
 
     private enum LoadState: Equatable {
         case loading
@@ -465,6 +475,7 @@ struct GifPickerView: View {
     }
 
     private let columns = [GridItem(.adaptive(minimum: 110), spacing: 6)]
+    private let pageSize = 24
 
     var body: some View {
         NavigationStack {
@@ -528,6 +539,12 @@ struct GifPickerView: View {
                             .accessibilityElement()
                             .accessibilityAddTraits(.isButton)
                             .accessibilityLabel("GIF")
+                            .onAppear {
+                                // the last GIF on screen: the next page comes in (see loadMore)
+                                if gif.id == gifs.last?.id {
+                                    loadMore()
+                                }
+                            }
                     }
                 }
                 .padding(6)
@@ -535,21 +552,14 @@ struct GifPickerView: View {
         }
     }
 
-    /// the GIFs most used at the moment, shown until the user searches
+    /// the GIFs most used at the moment, shown until the user searches; each opening starts at another random offset
     private func loadTrending() {
         guard let apiKey else {
             state = .missingKey
             return
         }
-        state = .loading
-        Task {
-            do {
-                gifs = try await GiphySearch.trending(apiKey: apiKey)
-                state = .loaded
-            } catch {
-                state = .failed
-            }
-        }
+        currentQuery = nil
+        loadFirstPage(query: nil, apiKey: apiKey, startOffset: Int.random(in: 0..<100))
     }
 
     private func runSearch() {
@@ -562,15 +572,72 @@ struct GifPickerView: View {
             state = .missingKey
             return
         }
+        currentQuery = text
+        loadFirstPage(query: text, apiKey: apiKey, startOffset: 0)
+    }
+
+    /// the first page replaces the grid; a failure here shows the error, as before
+    private func loadFirstPage(query: String?, apiKey: String, startOffset: Int) {
+        generation += 1
+        let current = generation
         state = .loading
+        loadingMore = false
+        hasMore = false
+        offset = startOffset
         Task {
             do {
-                gifs = try await GiphySearch.search(query: text, apiKey: apiKey)
+                let page = try await fetchPage(query: query, apiKey: apiKey, offset: startOffset)
+                guard current == generation else {
+                    return
+                }
+                gifs = page
+                hasMore = page.count == pageSize
+                offset = startOffset + pageSize
                 state = .loaded
             } catch {
+                guard current == generation else {
+                    return
+                }
                 state = .failed
             }
         }
+    }
+
+    /// the page after the last one shown, for the same trending or search. A failure keeps the GIFs on screen: nothing changes
+    /// here, and the next time the end of the grid shows, it asks again.
+    private func loadMore() {
+        guard hasMore, !loadingMore, state == .loaded, let apiKey else {
+            return
+        }
+        loadingMore = true
+        let current = generation
+        let query = currentQuery
+        let start = offset
+        Task {
+            do {
+                let page = try await fetchPage(query: query, apiKey: apiKey, offset: start)
+                guard current == generation else {
+                    return
+                }
+                // a GIF already on screen is not repeated
+                let known = Set(gifs.map { $0.id })
+                gifs += page.filter { !known.contains($0.id) }
+                hasMore = page.count == pageSize
+                offset = start + pageSize
+            } catch {
+                // the grid keeps what it has
+            }
+            if current == generation {
+                loadingMore = false
+            }
+        }
+    }
+
+    private func fetchPage(query: String?, apiKey: String, offset: Int) async throws -> [GiphyGif] {
+        if let query {
+            return try await GiphySearch.search(query: query, apiKey: apiKey, offset: offset)
+        }
+        return try await GiphySearch.trending(apiKey: apiKey, offset: offset)
     }
 
     private func pick(_ gif: GiphyGif) {
