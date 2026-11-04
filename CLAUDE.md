@@ -50,6 +50,10 @@ Fork do Monal (cliente XMPP para iOS) com a marca e os ajustes do isaCloud. Bran
 - Os testes nos simuladores e no iPhone da Isadora usam basicamente três contas de teste (endereços em `isaCloud/local/NOTAS-LOCAIS.md`, que não vai para o Git). Duas ficam no servidor `isacloud.im` e uma no `autozona.cc`.
 - **`isacloud.im`: Prosody 13.0.7.** **`autozona.cc`: ejabberd 26.09.** Vale lembrar disso ao investigar diferenças de comportamento entre servidores (avatares, MUC, push, MAM, upload de arquivos).
 
+## App Android (isaCloudMessenger)
+
+- O cliente Android (fork do Conversations) fica em `~/projects/java/isaCloudMessenger` (branch observada: `feature/fdroid-build`). Consultar quando precisar comparar comportamento entre iOS e Android: formatos e compressão de vídeo, MIME, anexos, notificações. Não editar nada lá sem pedido.
+
 ## ExyteChat (fork)
 
 - O chat usa um fork nosso do ExyteChat (`isaitgirl/ExyteChat`, branch `isaCloud`, clone em `~/projects/swift/ExyteChat`). Mudanças na biblioteca ficam lá, pequenas, comentadas e em commits separados. Depois de cada commit no fork: push na branch `isaCloud` e atualizar a revisão em `Monal/Monal.xcworkspace/xcshareddata/swiftpm/Package.resolved` (senão o TestFlight compila a versão antiga). Rotina de atualização, a revisão atual e o que o fork muda: `docs/exytechat-fork.md`. Depois que um PR é mesclado, apagar o branch dele (no GitHub e local) e deixar os clones na `isaCloud`, **sempre pedindo confirmação antes de apagar**.
