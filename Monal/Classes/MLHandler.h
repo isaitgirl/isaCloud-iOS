@@ -104,6 +104,8 @@ NSString* type_to_classname(NSString* type);
 
 //bind new arguments dictionary
 -(void) bindArguments:(NSDictionary* _Nullable) args;
+//isaCloud: value of one bound argument (e.g. the temporary file of an outbox upload), nil if not bound
+-(id _Nullable) boundArgumentForName:(NSString*) name;
 
 //call and invalidate
 -(id _Nullable) callWithArguments:(NSDictionary* _Nullable) defaultArgs;

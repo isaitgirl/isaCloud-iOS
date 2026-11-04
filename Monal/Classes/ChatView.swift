@@ -660,8 +660,23 @@ struct ChatView: View {
             let filename = downloaded.fileInfo.filename
             //isaCloud: the emoji of the kind of file goes in the label, the same for every destination
             let emoji = MessageForward.mediaEmoji(isGif: downloaded.fileInfo.mimeType == "image/gif", isImage: downloaded.fileInfo.isImage, isVideo: downloaded.fileInfo.isVideo, isAudio: downloaded.fileInfo.isAudio)
+            //isaCloud: a photo is reduced once here, with the same rule as a photo sent from the chat (docs/analise-comprimir-imagens.md), not once per destination.
+            //The reduced copy keeps the name of the original (with .jpg) and is removed when the forwarding is over.
+            var fileToSend = cacheURL
+            var nameToSend = filename
+            if MLFiletransfer.imageFileNeedsCompression(cacheURL) {
+                fileToSend = await MLFiletransfer.compressImageFileIfNeeded(cacheURL)
+                if fileToSend != cacheURL {
+                    nameToSend = fileToSend.lastPathComponent
+                }
+            }
+            defer {
+                if fileToSend != cacheURL {
+                    try? FileManager.default.removeItem(at: fileToSend.deletingLastPathComponent())
+                }
+            }
             for destination in destinations {
-                if !(await sendForwardedFile(to: destination, cacheURL: cacheURL, filename: filename, emoji: emoji)) {
+                if !(await sendForwardedFile(to: destination, cacheURL: fileToSend, filename: nameToSend, emoji: emoji)) {
                     failed.append(destination)
                 }
             }
@@ -872,14 +887,28 @@ struct ChatView: View {
         }
     }
 
-    private func uploadAndSendFile(_ localFileURL: URL?, isSticker: Bool = false) async {
+    private func uploadAndSendFile(_ localFileURL: URL?, isSticker: Bool = false, photoNumber: ChatInputPreparing? = nil) async {
         guard let localFileURL = localFileURL else {
             DDLogError("Couldn't get file location in order to upload it!")
             return
         }
         inputModel.beginUpload()
+        //isaCloud: a photo can be resized first (docs/analise-comprimir-imagens.md); stickers keep their PNG. The resized copy is removed when the upload is over.
+        var fileToSend = localFileURL
+        if !isSticker && MLFiletransfer.imageFileNeedsCompression(localFileURL) {
+            inputModel.setPreparing(photoNumber ?? ChatInputPreparing(current: 1, total: 1))
+            fileToSend = await MLFiletransfer.compressImageFileIfNeeded(localFileURL)
+            inputModel.setPreparing(nil)
+        } else if !isSticker {
+            MLFiletransfer.logFileNotReduced(localFileURL)
+        }
+        defer {
+            if fileToSend != localFileURL {
+                try? FileManager.default.removeItem(at: fileToSend.deletingLastPathComponent())
+            }
+        }
         do {
-            let (url, mimeType, size) = try await MLFiletransfer.uploadFile(localFileURL, onAccount: self.account, withEncryption: self.contact.isEncrypted)
+            let (url, mimeType, size) = try await MLFiletransfer.uploadFile(fileToSend, onAccount: self.account, withEncryption: self.contact.isEncrypted)
             //isaCloud: endUpload is called once on each way out of this function (sent, not sent, or failed)
             await MainActor.run {
                 guard let newMLMessage = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: url, havingType: kMessageTypeFiletransfer, toContact: self.contact.obj, isEncrypted: self.contact.isEncrypted, uploadInfo: ["mimeType": mimeType, "size": size, "isSticker": isSticker]) else {
@@ -954,15 +983,49 @@ struct ChatView: View {
             .filter { $0 != ownNick }
     }
 
+    /// isaCloud: holds the UIKit background task of an upload batch, so it can be ended from the batch or from the expiration handler (once)
+    private final class UploadBackgroundTask {
+        var identifier: UIBackgroundTaskIdentifier = .invalid
+
+        func end() {
+            guard identifier != .invalid else {
+                return
+            }
+            UIApplication.shared.endBackgroundTask(identifier)
+            identifier = .invalid
+        }
+    }
+
+    /// isaCloud: runs a batch of uploads inside a UIKit background task, so it keeps going for a few seconds if the app is left
+    /// (the same pattern as the background task in MonalAppDelegate); the task ends with the batch or when iOS stops it
+    private func runUploadBatch(_ batch: @escaping () async -> Void) {
+        let backgroundTask = UploadBackgroundTask()
+        backgroundTask.identifier = UIApplication.shared.beginBackgroundTask(withName: "isaCloud.upload") {
+            backgroundTask.end()
+        }
+        Task {
+            await batch()
+            backgroundTask.end()
+        }
+    }
+
     /// isaCloud: sends what the input holds: attachments first, then the text (same order as before)
     private func sendFromInputBar() {
         guard let draft = inputModel.send() else {
             return
         }
         if !draft.attachments.isEmpty {
-            Task {
+            runUploadBatch {
+                //isaCloud: the photos of the batch are counted, so the hint can say "Preparing N of M"
+                let photoTotal = draft.attachments.filter { MLFiletransfer.imageFileNeedsCompression($0.url) }.count
+                var photoCount = 0
                 for attachment in draft.attachments {
-                    await uploadAndSendFile(attachment.url)
+                    var photoNumber: ChatInputPreparing? = nil
+                    if MLFiletransfer.imageFileNeedsCompression(attachment.url) {
+                        photoCount += 1
+                        photoNumber = ChatInputPreparing(current: photoCount, total: photoTotal)
+                    }
+                    await uploadAndSendFile(attachment.url, photoNumber: photoNumber)
                 }
             }
         }

@@ -250,3 +250,12 @@
 
 /* isaCloud: notificação de reação (MLNotificationManager) */
 "Reacted with %@ to «%@»." = "Reagiu com %@ a «%@».";
+
+/* isaCloud: redução de fotos antes do envio (Ajustes > Anexos; ChatInputBar.swift e GeneralSettings.swift) */
+"Resize photos before sending" = "Reduzir fotos antes de enviar";
+"Never" = "Nunca";
+"Only large" = "Apenas grandes";
+"Always" = "Sempre";
+"Photos are resized to at most 1920 pixels on the longest side. GIFs and other files are sent as they are." = "As fotos são reduzidas para no máximo 1920 pixels no lado maior. GIFs e outros arquivos são enviados como estão.";
+"Preparing photo..." = "Preparando foto...";
+"Preparing %d of %d..." = "Preparando foto %d de %d...";
