@@ -2096,9 +2096,15 @@ static void waitForAccountConnectionPoll(xmpp* account, NSUInteger tries, dispat
             callerArgs[@"file"] = resultUrl.path;
             callerArgs[@"completion"] = ^(NSString* url, NSString* mimeType, NSNumber* size, NSError* error) {
                 //the temporary copy (tmp.*) and the reduced copy are ours: remove them now that the upload is over
+                NSString* tmpResult = @"not a tmp file, kept";
                 if([originalFile.lastPathComponent hasPrefix:@"tmp."])
-                    [[NSFileManager defaultManager] removeItemAtPath:originalFile error:nil];
-                [[NSFileManager defaultManager] removeItemAtPath:resizedFolder error:nil];
+                {
+                    NSError* tmpError = nil;
+                    tmpResult = [[NSFileManager defaultManager] removeItemAtPath:originalFile error:&tmpError] ? @"removed" : [NSString stringWithFormat:@"not removed: %@", tmpError.localizedDescription];
+                }
+                NSError* folderError = nil;
+                NSString* folderResult = [[NSFileManager defaultManager] removeItemAtPath:resizedFolder error:&folderError] ? @"removed" : [NSString stringWithFormat:@"not removed: %@", folderError.localizedDescription];
+                DDLogInfo(@"Outbox photo cleanup after upload (error: %@): temporary copy %@ %@, reduced folder %@ %@", error ? @"yes" : @"no", originalFile.lastPathComponent, tmpResult, resizedFolder.lastPathComponent, folderResult);
                 endBackgroundTask();
                 completion(url, mimeType, size, error);
             };
