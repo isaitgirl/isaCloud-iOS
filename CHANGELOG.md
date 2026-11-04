@@ -4,6 +4,10 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## Não publicado
 
+## 0.0.1 (build 92) — 04/11/2026
+
+Enviado ao TestFlight às 20:41. PR 41 (`feature/conexao-rapida`).
+
 ### Melhorias
 - **Spinner só quando o app não consegue conectar:** o indicador da lista de conversas aparece só quando alguma conta fica mais de 5 s sem conectar com o app em primeiro plano. Catchup, processamento de mensagens e transferências de arquivo não acendem mais o spinner (têm indicadores próprios). O rótulo de acessibilidade passa a ser "Conectando...". Trava `ISACLOUD_SYNC_INDICATOR_ONLY_WHEN_CONNECTING` em `MonalAppDelegate.m` e `ActiveChatsViewController.m` (decisão em `docs/decisoes.md`).
 - **Rodapé da tela de abertura com o nome isaCloud:** "Copyright © 2026 isaCloud. Todos os direitos reservados." no `Launch Screen.storyboard`, em português fixo (a tela de abertura não passa pelo Localizable; decisão em `docs/decisoes.md`).

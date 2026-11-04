@@ -1,4 +1,4 @@
-# Estado atual e handoff (04/11/2026, build 89)
+# Estado atual e handoff (04/11/2026, build 92)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,14 +7,23 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 89** (mensagem "Build 89 ..."), tag `build-89`; `git log --oneline -3` |
-| TestFlight | **89** (04/11/2026, 10:43; o 88 foi o anterior, tag `build-88`, 03/11 16:57) |
-| `.dev` no iPhone | **89** (igual ao TestFlight; **sem push**, então a extensão de notificação não roda nele) |
-| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com a build de testes de 02/11/2026 (ad-hoc, por cima do banco, que tem backup do dia em `~/Library/Application Support/isacloud-sim-backups/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
+| Commit | o do **build 92** (mensagem "Build 92 ..."), tag `build-92`; `git log --oneline -3` |
+| TestFlight | **92** (04/11/2026, 20:41; antes 91 e 90 no mesmo dia, tags `build-91` e `build-90`) |
+| `.dev` no iPhone | **92** (igual ao TestFlight; **sem push**, então a extensão de notificação não roda nele) |
+| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o código do build 92 (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-2026-11-04-2030-pausa-rede/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
 | ExyteChat | `e168ed8` na `isaCloud` (visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
+
+## O que entrou no build 92 (sobre o 91)
+
+- **Medição do tempo de conexão por conta** (roadmap 149, `MLConnectTiming`): cada tentativa grava DNS, TCP, TLS, login, bind, catchup e ocioso em `<grupo>/Library/metrics/connects-AAAA-MM-DD.jsonl` (fila serial). Puxar do iPhone: `docs/troubleshooting.md`. Referência de 04/11: `isacloud.im` 0,3–2,6 s, `autozona.cc` 2,2–4,6 s (ejabberd mais lento no TLS e no login).
+- **Abertura a frio sem os 12 s de espera** (C16 em `docs/analises-crashes.md`): a guarda do build 89 descartava também o stream "abrindo" e todo login antecipado esperava o prazo de login. Confirmado no iPhone (folha de compartilhar a frio também envia na primeira tentativa).
+- **Reconexão na hora quando a rede volta** (`ISACLOUD_RECONNECT_UNBOUND_ON_NETWORK_CHANGE` + pausa `ISACLOUD_NETWORK_RECONNECT_COOLDOWN` de 5 s, `MLXMPPManager.m`): modo avião de ~15 s para 1,4–3,9 s, testado no iPhone às 20:34. A primeira versão sem pausa derrubava o login do `autozona.cc` a cada aviso de rede (um por segundo); a pausa resolveu.
+- **Spinner só quando não conecta** (roadmap 150, `ISACLOUD_SYNC_INDICATOR_ONLY_WHEN_CONNECTING`): acende depois de 5 s com alguma conta sem bind, com o app em primeiro plano; rótulo "Conectando...". Testado sem rede no iPhone.
+- **Rodapé da tela de abertura** "Copyright © 2026 isaCloud. Todos os direitos reservados.", preso à área segura.
+- **A observar:** o caminho do primeiro plano depois de muito tempo dormindo ("Spinner que gira sem conectar", roadmap) ainda não tem a conferência de ~25 s; se o spinner ficar aceso, colher o log e o `connects`. Aviso inofensivo `Could not invalidate already invalid timer` no `reinitLoginTimer`/`reconnect` (não investigado).
 
 ## O que entrou no build 89 (sobre o 88)
 
@@ -192,6 +201,9 @@ Era: em revisão, **não mesclar** sem antes considerar: depende de PR par no fo
 5. **Dados injetados no banco** precisam dos campos obrigatórios (mensagens de canal exigem `occupant_id`), senão o app quebra por causa do teste.
 6. **A tela do iPhone pode ser capturada** sem a Isadora: `xcrun devicectl device capture screenshot --device <udid> --destination <arquivo>`.
 7. `xcrun devicectl device info processes` lista os processos; o `.dev` e o de produção rodam ao mesmo tempo — conferir **qual** está na frente antes de concluir qualquer coisa sobre a tela.
+
+8. **Backup de simulador sempre em pasta nova** (04/11/2026): um executor escolheu a pasta com `ls -d ... | tail -1` e sobrescreveu dois backups antigos (`7AA8D91B-...-72b-1705` e `346E97D1-...-diag-1924`, que agora têm o banco de 04/11). Criar `<udid>-<data>-<HHMM>-<assunto>/` com `mkdir` sem `-p` e conferir com `ls -la`.
+9. **Avisos de rede chegam em rajada** (04/11/2026): ao sair do modo avião o iOS manda ~1 "still reachable" por segundo por uns 10 s. Qualquer reação a esse aviso precisa de pausa, senão um login lento nunca termina.
 
 ## Branches pendentes de apagar (pedir confirmação)
 
