@@ -2,6 +2,16 @@
 
 O que mudou em cada versão, em poucas palavras. A lista técnica completa está no [CHANGELOG.md](CHANGELOG.md).
 
+## Em breve (próxima versão)
+
+### Melhorias
+- O indicador de carregamento só aparece quando o app realmente não consegue conectar.
+- A tela de abertura agora mostra o nome isaCloud.
+
+### Correções
+- O app volta a conectar logo ao abrir, sem aquela espera de alguns segundos.
+- Quando a internet volta, o app reconecta na hora.
+
 ## Build 91 · 04/11/2026
 
 ### Melhorias

@@ -49,6 +49,14 @@
 
 @import Intents;
 
+//isaCloud: the chats toolbar spinner means only "the app cannot connect": it shows when the app is in the foreground and some active account
+//stayed for ISACLOUD_SYNC_INDICATOR_DELAY seconds without kStateBound (catchup, stanza processing and file transfers have their own indicators).
+//Decision of 04/11/2026, see docs/decisoes.md ("Spinner só quando não conecta").
+//HOW TO REVERT: set to 0 (the original Monal behaviour comes back: spinner while accounts are not idle or a file transfer runs)
+//(ActiveChatsViewController.m uses the same switch for the accessibility label)
+#define ISACLOUD_SYNC_INDICATOR_ONLY_WHEN_CONNECTING 1
+#define ISACLOUD_SYNC_INDICATOR_DELAY                5.0
+
 //the normal graceful timeout when putting the app into the background
 #define GRACEFUL_TIMEOUT                    20.0
 //reducing the BGPROCESS_ and BGREFRESH_GRACEFUL_TIMEOUT to 5 seconds probably gives us more background shots than consuming 60 seconds per shot
@@ -80,6 +88,8 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
     BOOL _shutdownPending;
     BOOL _wasFrozen;
     NotificationBannerQueue* _bannerQueue;
+    NSTimer* _isaCloudSpinnerTimer;     //isaCloud: pending 5 s timer before showing the "not connecting" spinner (main thread only)
+    BOOL _isaCloudSpinnerShown;         //isaCloud: last state set on the chats toolbar spinner by the isaCloud rule (main thread only)
 }
 
 //these all need to be atomic to not fall into an "asm load -> arc free -> use-after-free pointer usage" race condition
@@ -235,7 +245,12 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(nowIdle:) name:kMonalIdle object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(filetransfersNowIdle:) name:kMonalFiletransfersIdle object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(nowNotIdle:) name:kMonalNotIdle object:nil];
-    
+    if(ISACLOUD_SYNC_INDICATOR_ONLY_WHEN_CONNECTING)     //isaCloud: the spinner also follows connection state changes now
+    {
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleSpinner) name:kMonalAccountStatusChanged object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleSpinner) name:kMonalConnectivityChange object:nil];
+    }
+
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(showConnectionStatus:) name:kXMPPError object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateUnread) name:kMonalNewMessageNotice object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateUnread) name:kMonalUpdateUnread object:nil];
@@ -570,14 +585,16 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
     //isaCloud: remove push placeholders left in Notification Center (see HelperTools isaCloudPushPlaceholderContent)
     [HelperTools removeIsaCloudPushPlaceholdersAfter:0];
     
-    if([[MLXMPPManager sharedInstance] connectedXMPP].count > 0)
+    if(ISACLOUD_SYNC_INDICATOR_ONLY_WHEN_CONNECTING)
+        [self handleSpinner];        //isaCloud: handleSpinner also hides the spinner when there are no accounts
+    else if([[MLXMPPManager sharedInstance] connectedXMPP].count > 0)   //isaCloud: was "if" before the ISACLOUD_SYNC_INDICATOR_ONLY_WHEN_CONNECTING branch
         [self handleSpinner];
     else
     {
         //hide spinner
         [self.activeChats setSyncIndicatorVisible:NO];
     }
-    
+
     //report pending crashes
     [MLCrashReporter reportPendingCrashes];
 }
@@ -1185,6 +1202,8 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
         DDLogInfo(@"Entering BG");
     
     [self updateUnread];
+    if(ISACLOUD_SYNC_INDICATOR_ONLY_WHEN_CONNECTING)
+        [self isaCloudCancelSpinnerTimerAndHide];     //isaCloud: no spinner in the background
 #if TARGET_OS_MACCATALYST
     if(NSProcessInfo.processInfo.isLowPowerModeEnabled)
     {
@@ -1365,11 +1384,54 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
     
 }
 
+//isaCloud: true if the app is in the foreground and some active account is not connected (below kStateBound)
+-(BOOL) isaCloudAnyAccountNotConnected
+{
+    if([UIApplication sharedApplication].applicationState != UIApplicationStateActive)
+        return NO;
+    for(xmpp* account in [[MLXMPPManager sharedInstance] connectedXMPP])
+    {
+        if(account.accountState < kStateBound)
+            return YES;
+    }
+    return NO;
+}
+
+//isaCloud: main thread only
+-(void) isaCloudCancelSpinnerTimerAndHide
+{
+    if(_isaCloudSpinnerTimer == nil && !_isaCloudSpinnerShown)
+        return;     //nothing pending and nothing shown: avoid touching the toolbar
+    [_isaCloudSpinnerTimer invalidate];
+    _isaCloudSpinnerTimer = nil;
+    _isaCloudSpinnerShown = NO;
+    [self.activeChats setSyncIndicatorVisible:NO];
+}
+
+//isaCloud: main thread only (scheduled from handleSpinner)
+-(void) isaCloudSpinnerTimerFired:(NSTimer*) timer
+{
+    _isaCloudSpinnerTimer = nil;
+    //show the spinner only if an account is still not connected after the delay
+    _isaCloudSpinnerShown = [self isaCloudAnyAccountNotConnected];
+    [self.activeChats setSyncIndicatorVisible:_isaCloudSpinnerShown];
+}
+
 -(void) handleSpinner
 {
     //show/hide spinner (dispatch *async* to main queue to allow for ui changes)
     dispatch_async(dispatch_get_main_queue(), ^{
-        [self.activeChats setSyncIndicatorVisible:!([[MLXMPPManager sharedInstance] allAccountsIdle] && [MLFiletransfer isIdle])];
+        if(ISACLOUD_SYNC_INDICATOR_ONLY_WHEN_CONNECTING)
+        {
+            //isaCloud: the spinner means only "the app cannot connect": it appears after ISACLOUD_SYNC_INDICATOR_DELAY seconds
+            //with some active account not connected, and disappears as soon as all active accounts are connected
+            if(![self isaCloudAnyAccountNotConnected])
+                [self isaCloudCancelSpinnerTimerAndHide];
+            else if(!self->_isaCloudSpinnerShown && self->_isaCloudSpinnerTimer == nil)
+                self->_isaCloudSpinnerTimer = [NSTimer scheduledTimerWithTimeInterval:ISACLOUD_SYNC_INDICATOR_DELAY target:self selector:@selector(isaCloudSpinnerTimerFired:) userInfo:nil repeats:NO];
+        }
+        else
+            [self.activeChats setSyncIndicatorVisible:!([[MLXMPPManager sharedInstance] allAccountsIdle] && [MLFiletransfer isIdle])];
     });
 }
 
