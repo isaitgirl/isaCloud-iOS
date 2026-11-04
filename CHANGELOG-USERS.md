@@ -2,6 +2,12 @@
 
 O que mudou em cada versão, em poucas palavras. A lista técnica completa está no [CHANGELOG.md](CHANGELOG.md).
 
+## Build 91 · 04/11/2026
+
+### Melhorias
+- 🎞️ A busca de GIF traz mais resultados ao rolar a lista.
+- ✨ Os GIFs "em alta" mudam a cada vez que você abre a busca.
+
 ## Build 90 · 04/11/2026
 
 ### Novidades

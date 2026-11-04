@@ -2,6 +2,15 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 91) — 04/11/2026
+
+### Alterado
+- **Busca de GIF:** mais GIFs carregam ao rolar a lista, e os "em alta" (trending) mudam a cada vez que a busca é aberta (`GiphySearch.swift`, `GifPickerView.swift`; testes em `GiphySearchTests.swift`). Mesclado da branch `feature/gif-paginacao-variedade` (commits `3a692d86f` e `f9baf20d5`).
+
+### Documentação
+- Roadmap: abrir na primeira não lida (136) e preview de link de altura fixa (137) aprovados pela Isadora; dados do salvamento de estado (131) colhidos e analisados em `docs/analise-salvamento-do-estado.md`.
+- Figurinhas: a conformidade com a XEP-0449 (`<file-sharing/>` junto com `<sticker/>`) está registrada como pendente em `docs/decisoes.md` e `docs/analise-figurinhas.md`, sem implementação.
+
 ## 0.0.1 (build 90) — 04/11/2026
 
 ### Adicionado
