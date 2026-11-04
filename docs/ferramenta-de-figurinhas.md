@@ -60,7 +60,7 @@ A figurinha precisa continuar sem balão depois de reabrir o app e quando chega 
 | Enviar | **tocar envia na hora** e fecha a folha (como no WhatsApp) |
 | Toque longo na folha | "Favoritar" ou "Remover dos favoritos" e "Excluir", com confirmação "Excluir figurinha?" |
 | Criar | **o seletor de fotos abre direto**, porque escolher foto é o único começo possível; se a pessoa cancelar, a tela mostra o botão "Escolher foto" |
-| Recorte | **"Quadrado"** ou **"Retângulo"** (4:3 deitado); a foto se move e se amplia com pinça e arrasto sob a moldura; nunca deixa espaço vazio dentro da moldura |
+| Recorte | **Sempre quadrado** (a moldura tracejada); a foto se move e se amplia com pinça e arrasto sob a moldura; nunca deixa espaço vazio dentro da moldura. O recorte livre com alças foi feito e descartado em 04/11/2026 |
 | Remover fundo | botão **"Remover fundo"**, que alterna com **"Restaurar fundo"**; se falhar, aviso "Não foi possível remover o fundo" e a foto continua como estava |
 | Texto | botão **"Aa"** acrescenta um texto; arrastar move, pinça muda o tamanho; o texto pode ficar **fora da foto**, na margem transparente; o campo ocupa a **linha inteira**, com a lixeira no fim, e as **cores ficam embaixo** do campo |
 | Teclado | durante a digitação somem os botões de foto, fundo e Aa, e a tela rola para o campo e as cores ficarem acima do teclado |
@@ -70,7 +70,7 @@ A figurinha precisa continuar sem balão depois de reabrir o app e quando chega 
 
 ## 6. Como a imagem é montada (para ficar igual nas duas plataformas)
 
-- **Quadro de 512×512.** A moldura de recorte ocupa a largura menos **6% de margem** de cada lado. A altura é igual à largura no quadrado, e `largura / (4/3)` no retângulo. A moldura fica centralizada e o resto do quadro é transparente.
+- **Quadro de 512×512.** A moldura de recorte ocupa a largura menos **6% de margem** de cada lado. A altura é igual à largura (moldura quadrada). A moldura fica centralizada e o resto do quadro é transparente.
 - **Posições em frações do lado.** Centro do texto e deslocamento da foto vão de 0 a 1, então a prévia (320 pt no iOS) e o PNG final usam os mesmos números.
 - **Texto:**
   - **Fonte:** arredondada e pesada (`.rounded`, `.heavy` no iOS), com tamanho de 11% do lado vezes a escala do texto.
@@ -95,7 +95,7 @@ A figurinha precisa continuar sem balão depois de reabrir o app e quando chega 
 
 ## 9. Textos (inglês na chave, pt-BR no override do isaCloud)
 
-`Stickers`=Figurinhas, `Sticker`=Figurinha, `Favorites`=Favoritas, `All stickers`=Todas, `Create sticker`=Criar figurinha, `No stickers yet`=Nenhuma figurinha ainda, `No favorite stickers yet`=Nenhuma figurinha favorita ainda, `Favorite`=Favoritar, `Remove from favorites`=Remover dos favoritos, `Delete sticker?`=Excluir figurinha?, `Save sticker`=Salvar figurinha, `Sticker saved`=Figurinha salva, `Could not save the sticker`=Não foi possível salvar a figurinha, `Square`=Quadrado, `Rectangle`=Retângulo, `Shape`=Formato, `Choose photo`=Escolher foto, `Remove background`=Remover fundo, `Restore background`=Restaurar fundo, `Could not remove the background`=Não foi possível remover o fundo, `Text`=Texto. "Excluir" e "Cancelar" já existiam no Monal e foram reaproveitados.
+`Stickers`=Figurinhas, `Sticker`=Figurinha, `Favorites`=Favoritas, `All stickers`=Todas, `Create sticker`=Criar figurinha, `No stickers yet`=Nenhuma figurinha ainda, `No favorite stickers yet`=Nenhuma figurinha favorita ainda, `Favorite`=Favoritar, `Remove from favorites`=Remover dos favoritos, `Delete sticker?`=Excluir figurinha?, `Save sticker`=Salvar figurinha, `Sticker saved`=Figurinha salva, `Could not save the sticker`=Não foi possível salvar a figurinha, `Create`=Criar, `Choose photo`=Escolher foto, `Remove background`=Remover fundo, `Restore background`=Restaurar fundo, `Could not remove the background`=Não foi possível remover o fundo, `Text`=Texto. "Excluir" e "Cancelar" já existiam no Monal e foram reaproveitados.
 
 ## 10. Erros em que esbarramos (e que podem aparecer no Android)
 
@@ -107,7 +107,7 @@ A figurinha precisa continuar sem balão depois de reabrir o app e quando chega 
 
 ## 11. Como testar (o que fizemos no iOS)
 
-- **Biblioteca:** criar com recorte quadrado e retangular, texto dentro e fora da foto, salvar, favoritar, excluir.
+- **Biblioteca:** criar com recorte quadrado, texto dentro e fora da foto, salvar, favoritar, excluir.
 - **Envio 1:1 e em grupo:** conferir que a mensagem gravada tem o flag e que o stanza leva `urn:xmpp:stickers:0`.
 - **Outra plataforma:** receber no Conversations, que deve mostrar como imagem comum.
 - **Histórico:** reabrir o app e receber pelo MAM em outro aparelho; a figurinha deve continuar sem balão (no iOS isso foi conferido no banco: flag 1 nas duas cópias e 0 na foto comum).

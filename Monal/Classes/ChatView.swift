@@ -877,21 +877,27 @@ struct ChatView: View {
             DDLogError("Couldn't get file location in order to upload it!")
             return
         }
-        inputModel.isUploading = true
+        inputModel.beginUpload()
         do {
             let (url, mimeType, size) = try await MLFiletransfer.uploadFile(localFileURL, onAccount: self.account, withEncryption: self.contact.isEncrypted)
+            //isaCloud: endUpload is called once on each way out of this function (sent, not sent, or failed)
             await MainActor.run {
                 guard let newMLMessage = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: url, havingType: kMessageTypeFiletransfer, toContact: self.contact.obj, isEncrypted: self.contact.isEncrypted, uploadInfo: ["mimeType": mimeType, "size": size, "isSticker": isSticker]) else {
-                    inputModel.isUploading = false
+                    inputModel.endUpload()
                     return
                 }
                 messages.append(ChatViewMessage(newMLMessage))
+                inputModel.endUpload()
             }
         } catch {
-            //isaCloud: no pop-up for a failed upload (a technical message, often just a connection that is reconnecting): only the log
+            //isaCloud: no pop-up for a failed upload (a technical message, often just a connection that is reconnecting): the log and a notice above the input.
+            //The upload ends before the notice, so the "sending" hint does not cover the error.
             DDLogError("Couldn't upload file! error:  \(error.localizedDescription)")
+            await MainActor.run {
+                inputModel.endUpload()
+                inputModel.showNotice(NSLocalizedString("Could not send. Try again!", comment: "notice above the input when a file could not be uploaded to be sent"), duration: 4, isError: true)
+            }
         }
-        inputModel.isUploading = false
     }
 
     /// isaCloud: the chat input bar (text, attachments, edit) rendered from inputModel
@@ -1204,7 +1210,8 @@ struct ChatView: View {
                     isLastOfSenderGroup: params.positionInGroup == .single || params.positionInGroup == .last,
                     showContextMenu: params.showContextMenuClosure,
                     onReactionsTap: params.showReactionDetailsClosure,
-                    isSticker: true
+                    isSticker: true,
+                    onSelect: { params.showAttachmentClosure(sticker) }
                 )
             // GIFs are shown animated; the other messages keep the ExyteChat bubble
             } else if let gif = params.message.attachments.first(where: { $0.mimeType == "image/gif" }) {
@@ -1411,6 +1418,7 @@ struct ChatView: View {
         .setMessageFont(ChatTextSize.messageFont(system: dynamicTypeSize, step: chatViewDefaultsDB.chatTextSizeStep))      //isaCloud: see ChatTextSize
         .setMessageTimeFont(ChatTextSize.timeFont(system: dynamicTypeSize, step: chatViewDefaultsDB.chatTextSizeStep))
         .timeAlwaysBelowText(true)      //isaCloud: the time and the lock under the text, like under the media
+        .fullscreenSingleAttachment(true)      //isaCloud: the viewer shows only the tapped photo (no album sending here), with close and share always visible; see docs/feature-visualizador-mostra-foto-unica.md
         .tapAvatarClosure { user, _ in
             // mentions use only the nick: the verified emoji of the name is not part of it
             inputModel.setText(inputModel.text + "\(ChatNameWithHats.nick(from: user.name)), ")
@@ -1823,7 +1831,7 @@ struct ChatView: View {
             //isaCloud: a photo shared from another app is uploaded right after this chat opens, and the "uploading" notice of the outbox
             //(kMonalShareOutboxUpdate) can come before this view listens: the outbox itself says whether something is on its way
             if DataLayer.sharedInstance().hasShareSheetUpload(forJid: contact.contactJid, onAccount: contact.accountID) {
-                inputModel.isUploading = true
+                inputModel.setOutboxUploading(true)
             }
             if self.contact.obj.isMuc {
                 ownRole = DataLayer.sharedInstance().getOwnRole(inGroupOrChannel: contact.obj) ?? kMucRoleNone
@@ -1919,7 +1927,7 @@ struct ChatView: View {
                 return
             }
             if let uploading = notification.userInfo?["uploading"] as? NSNumber {
-                inputModel.isUploading = uploading.boolValue
+                inputModel.setOutboxUploading(uploading.boolValue)
             }
             if let message = notification.userInfo?["message"] as? MLMessage {
                 //isaCloud: not a plain append: a refresh of the chat can have read this message from the database before the notice arrives,

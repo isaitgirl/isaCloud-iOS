@@ -2,9 +2,18 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
-## Não publicado
+## 0.0.1 (build 89) — 04/11/2026 (enviado ao TestFlight às 10:43)
 
-(nada ainda)
+### Adicionado
+- **Tocar numa figurinha na conversa abre o visualizador de mídia.** `GifMessageBubble` ganhou `onSelect` (só a figurinha o usa; o GIF continua reiniciando) e o `messageBuilder` passa `params.showAttachmentClosure`.
+
+### Alterado
+- **Visualizador de imagens mostra só a foto tocada**, sem contador nem miniaturas, com X e compartilhar fixos em círculos translúcidos e o toque na foto sem efeito. Opção nova do fork (`fullscreenSingleAttachment`, desligada por padrão; mudança nº 21 do fork, PR 20, `e168ed8`). Análise em `docs/feature-visualizador-mostra-foto-unica.md`. Figurinha e GIF não abriam esse visualizador (agora só a figurinha abre).
+- **Folha de figurinhas:** "Cancelar" à esquerda e "Criar" (ícone de carinha e texto, na cor primária) à direita, no lugar do "+". O recorte livre foi feito e descartado no mesmo dia (04/11/2026): o recorte volta a ser sempre quadrado e o seletor Quadrado/Retângulo saiu (strings "Square", "Rectangle" e "Shape" removidas; entrou "Create").
+
+### Corrigido
+- **Quando o envio de um arquivo falha, o app avisa.** Se o upload de uma figurinha, foto, vídeo, áudio ou documento falhava (conexão caindo, como numa garagem ou elevador), nada aparecia: o erro só ia para o log, e como o balão só nasce depois do upload, a mensagem sumia sem "!" nem "Reenviar". Agora a cápsula acima da caixa de texto mostra, por 4 s, "Não foi possível enviar 😞 Tente de novo!", em vermelho (`uploadAndSendFile` no `ChatView.swift`, `showNotice(isError:)`). O "Enviando…" também passou a ser um contador: com dois uploads ao mesmo tempo, o primeiro a terminar não apaga mais o aviso do outro (`ChatInputModel.beginUpload/endUpload`). Alternativa mais completa, deixada para depois: criar o balão antes do upload, com spinner e "Reenviar" se falhar. Falta provocar a falha real num aparelho.
+- **O app não cai mais quando a conexão de uma conta cai bem na hora do login.** O iOS derruba as conexões quando congela o app em segundo plano. Ao descongelar, a fila ainda processava os recursos de login (SASL2) de uma conexão já em erro, e a escolha do channel binding consultava o TLS desse stream, disparando a asserção `Stream must be open` em `-[MLStream tlsVersion]` (relatório de usuário, build 88, 03/11/2026 22:30). Agora `handleFeaturesBeforeAuth:withForceSasl2:` ignora os recursos quando o stream não está mais aberto, e a reconexão normal segue. A lógica de channel binding e de proteção contra MITM não mudou (`xmpp.m`). Registrado como C16 em `docs/analises-crashes.md`.
 
 ## 0.0.1 (build 88) — 03/11/2026 (enviado ao TestFlight às 16:57)
 

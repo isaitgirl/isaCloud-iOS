@@ -155,6 +155,8 @@ struct GifMessageBubble: View {
     var onReactionsTap: () -> Void = {}
     /// isaCloud: a sticker (XEP-0449) is a still picture of `stickerSide` points, without the bubble, from a local file (see Stickers.swift)
     var isSticker: Bool = false
+    //isaCloud: a tap on a sticker opens the chat's fullscreen viewer (the GIF replays instead, see below)
+    var onSelect: (() -> Void)? = nil
     @State private var replayToken = 0
     @Environment(\.chatTheme) private var theme
 
@@ -235,9 +237,13 @@ struct GifMessageBubble: View {
         .frame(width: gifSize.width, height: gifSize.height)
         .clipShape(RoundedRectangle(cornerRadius: isSticker ? 0 : 14))
         .contentShape(RoundedRectangle(cornerRadius: isSticker ? 0 : 14))
+        //isaCloud: a sticker opens on a tap, so it is a button for VoiceOver (a GIF is not)
+        .accessibilityAddTraits(isSticker ? .isButton : [])
         .onTapGesture {
-            //isaCloud: a sticker is still, a tap does not replay anything
-            if !isSticker {
+            //isaCloud: a tap on a sticker opens it in the fullscreen viewer; a tap on a GIF replays it
+            if isSticker {
+                onSelect?()
+            } else {
                 replayToken += 1
             }
         }

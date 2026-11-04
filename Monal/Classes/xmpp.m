@@ -3347,6 +3347,18 @@ static NSRegularExpression* fastTokenRemovalRegex;
 
 -(void) handleFeaturesBeforeAuth:(MLXMLNode*) parsedStanza withForceSasl2:(BOOL) forceSasl2
 {
+    //isaCloud: stream features still waiting in the parse queue can be handled after the connection already failed (e.g. iOS
+    //dropping it when the app froze, then the queue unfroze): the auth steps below read the TLS state of the stream (channel-binding
+    //-> tlsVersion), which asserts on a stream that is not open (crash of 03/11/2026, build 88). Nothing to authenticate on a dead
+    //stream: the reconnect for the reported error takes over
+    //(the same range MLStream asserts on: open, reading, writing or at end; the pipelined auth comes here right after opening)
+    NSStreamStatus streamStatus = [((MLStream*)self.oStream) streamStatus];
+    if(streamStatus < NSStreamStatusOpen || streamStatus >= NSStreamStatusClosed)
+    {
+        DDLogWarn(@"Ignoring stream features before auth: the stream is not open anymore (status %ld), waiting for the reconnect...", (long)streamStatus);
+        return;
+    }
+
     monal_id_returning_void_block_t checkProperSasl2Support = ^{
         //check if we SASL2 is supported with something better than PLAIN and, if so, switch off plain_activated
         NSSet* supportedSasl2Mechanisms = [NSSet setWithArray:[parsedStanza find:@"{urn:xmpp:sasl:2}authentication/mechanism#"]];
