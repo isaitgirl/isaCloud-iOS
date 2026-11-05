@@ -221,6 +221,9 @@ struct ChatView: View {
     @State private var jumpScrollParams: ScrollToParams?
     //isaCloud: true from the moment a jump is known to come until it has settled (the previews are fetched and the list scrolls there)
     @State private var isSettlingJump = false
+    //isaCloud: the first unread message when the chat opened: the "Read up to here" line is drawn above it. A reference, not a value:
+    //the list of ExyteChat keeps the messageBuilder of its first render, and that closure must still see the id set later in onAppear
+    @State private var readMarker = ReadMarker()
     //isaCloud: the "Loading…" capsule over the list, shown only when the jump takes a moment (see startJumpSafetyTimers())
     @State private var showJumpHint = false
     /// a chat is only opened at a message if it takes at most this many messages to get there from the newest ones
@@ -232,6 +235,7 @@ struct ChatView: View {
     static let jumpFirstScrollDelay: Double = 0.1
     static let jumpSecondScrollDelay: Double = 0.5
     static let jumpSecondScrollOffset: CGFloat = 0.5
+    static let readMarkerExtraOffset: CGFloat = 220 //isaCloud: room left above the first unread message for the "Read up to here" line
     static let jumpSettleDelay: Double = 0.2 //after the second scroll: the list shows the target and the jump is over (~0.7 s in all)
     //isaCloud: the "Loading…" hint only if the jump takes more than jumpHintDelay, or if there is real work before the scroll (the database or the previews): then after jumpHintWorkDelay
     static let jumpHintDelay: Double = 1.2
@@ -867,7 +871,11 @@ struct ChatView: View {
         //(and once more a moment later: the first scroll goes by the estimated height of the rows, which are measured while the list is drawn)
         //(the second one has another offset: the list only scrolls when the parameters change)
         //(the delays are short: the list is hidden until the jump settles, so every wait here is time the user waits; see the constants above)
-        for (delay, offset) in [(ChatView.jumpFirstScrollDelay, CGFloat(0.0)), (ChatView.jumpSecondScrollDelay, ChatView.jumpSecondScrollOffset)] {
+        //isaCloud: with the "Read up to here" line the second scroll leaves some room above the row, so the line shows even when the message is
+        //tall (a photo, which the centered scroll cuts at the top). The list is upside down: a larger offset shows older messages. Same scrolls
+        //and delays either way (a scroll to the top of the screen was tried: the rows in between are not measured yet and it missed the row)
+        let secondOffset = ChatView.jumpSecondScrollOffset + (readMarker.historyId == target ? ChatView.readMarkerExtraOffset : 0)
+        for (delay, offset) in [(ChatView.jumpFirstScrollDelay, CGFloat(0.0)), (ChatView.jumpSecondScrollDelay, secondOffset)] {
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                 jumpScrollParams = ScrollToParams(messageID: message.id, position: .middle, offset: offset)
             }
@@ -1261,39 +1269,45 @@ struct ChatView: View {
                 messages.append(ChatViewMessage(newMLMessage))
             }
         }, messageBuilder: { params in
-            //isaCloud: a sticker (XEP-0449 marker) is a still picture without a bubble, once its picture is downloaded (see Stickers.swift)
-            if (params.message as! ChatViewMessage).innerMessage.obj.isSticker,
-               let sticker = params.message.attachments.first(where: { $0.type == .image }) {
-                GifMessageBubble(
-                    url: sticker.full,
-                    message: params.message,
-                    user: params.message.user,
-                    isCurrentUser: params.message.user.isCurrentUser,
-                    showSender: contact.isMuc,
-                    isLastOfSenderGroup: params.positionInGroup == .single || params.positionInGroup == .last,
-                    showContextMenu: params.showContextMenuClosure,
-                    onReactionsTap: params.showReactionDetailsClosure,
-                    isSticker: true,
-                    onSelect: { params.showAttachmentClosure(sticker) }
-                )
-            // GIFs are shown animated; the other messages keep the ExyteChat bubble
-            } else if let gif = params.message.attachments.first(where: { $0.mimeType == "image/gif" }) {
-                GifMessageBubble(
-                    url: gif.full,
-                    message: params.message,
-                    user: params.message.user,
-                    isCurrentUser: params.message.user.isCurrentUser,
-                    showSender: contact.isMuc,
-                    isLastOfSenderGroup: params.positionInGroup == .single || params.positionInGroup == .last,
-                    showContextMenu: params.showContextMenuClosure,
-                    onReactionsTap: params.showReactionDetailsClosure
-                )
-            } else if (params.message as! ChatViewMessage).isPending {
-                //isaCloud: a message that is still on its way (not saved yet) does not react to touches: no menu, no actions
-                params.defaultMessageView()
-                    .allowsHitTesting(false)
-            } else {
-                params.defaultMessageView()
+            //isaCloud: the "Read up to here" line above the first unread message the chat opened at (see readMarker)
+            VStack(alignment: .leading, spacing: 0) {
+                if let marker = readMarker.historyId, (params.message as! ChatViewMessage).historyId == marker {
+                    ReadMarkerLine()
+                }
+                //isaCloud: a sticker (XEP-0449 marker) is a still picture without a bubble, once its picture is downloaded (see Stickers.swift)
+                if (params.message as! ChatViewMessage).innerMessage.obj.isSticker,
+                   let sticker = params.message.attachments.first(where: { $0.type == .image }) {
+                    GifMessageBubble(
+                        url: sticker.full,
+                        message: params.message,
+                        user: params.message.user,
+                        isCurrentUser: params.message.user.isCurrentUser,
+                        showSender: contact.isMuc,
+                        isLastOfSenderGroup: params.positionInGroup == .single || params.positionInGroup == .last,
+                        showContextMenu: params.showContextMenuClosure,
+                        onReactionsTap: params.showReactionDetailsClosure,
+                        isSticker: true,
+                        onSelect: { params.showAttachmentClosure(sticker) }
+                    )
+                // GIFs are shown animated; the other messages keep the ExyteChat bubble
+                } else if let gif = params.message.attachments.first(where: { $0.mimeType == "image/gif" }) {
+                    GifMessageBubble(
+                        url: gif.full,
+                        message: params.message,
+                        user: params.message.user,
+                        isCurrentUser: params.message.user.isCurrentUser,
+                        showSender: contact.isMuc,
+                        isLastOfSenderGroup: params.positionInGroup == .single || params.positionInGroup == .last,
+                        showContextMenu: params.showContextMenuClosure,
+                        onReactionsTap: params.showReactionDetailsClosure
+                    )
+                } else if (params.message as! ChatViewMessage).isPending {
+                    //isaCloud: a message that is still on its way (not saved yet) does not react to touches: no menu, no actions
+                    params.defaultMessageView()
+                        .allowsHitTesting(false)
+                } else {
+                    params.defaultMessageView()
+                }
             }
         }, inputViewBuilder: { _ in
             //isaCloud: the field where a new message is typed keeps the system text size (the chat text size is for the messages)
@@ -1879,6 +1893,11 @@ struct ChatView: View {
             if jumpToHistoryId == nil, contact.obj.isMuc, let firstUnread = DataLayer.sharedInstance().firstUnreadHistoryId(forBuddy: contact.contactJid, forAccount: contact.accountID, maxMessages: UInt(ChatView.maxUnreadMessagesToOpenAt)) {
                 jumpToHistoryId = firstUnread
                 isSettlingJump = true
+                //isaCloud: the first unread message without the limit: the line is drawn only if the chat really opens there (with more unread messages than maxUnreadMessagesToOpenAt it opens further on, and the line would be wrong)
+                let trueFirst = DataLayer.sharedInstance().firstUnreadHistoryId(forBuddy: contact.contactJid, forAccount: contact.accountID, maxMessages: UInt.max)
+                if trueFirst?.isEqual(firstUnread) == true {
+                    readMarker.historyId = firstUnread
+                }
             }
             MLNotificationManager.sharedInstance().currentContact = self.contact.obj
             loadChatBackground()
@@ -2471,3 +2490,26 @@ private struct SolidEyeShape: Shape {
     }
 }
 
+/// isaCloud: where the "Read up to here" line goes (see ChatView.readMarker)
+final class ReadMarker {
+    var historyId: NSNumber?
+}
+
+/// isaCloud: a light gray line with "Read up to here", drawn above the first unread message a group or channel opened at
+struct ReadMarkerLine: View {
+    var body: some View {
+        HStack(spacing: 8) {
+            Rectangle().fill(Color(uiColor: .systemGray4)).frame(height: 1)
+            Text(NSLocalizedString("Read up to here", comment: "isaCloud: line above the first unread message of a group or channel"))
+                .font(.caption)
+                .foregroundStyle(Color(uiColor: .systemGray))
+                .lineLimit(1)
+                .fixedSize()
+            Rectangle().fill(Color(uiColor: .systemGray4)).frame(height: 1)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+    }
+}
