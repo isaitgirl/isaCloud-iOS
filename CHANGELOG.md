@@ -4,6 +4,13 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## Não publicado
 
+## 0.0.1 (build 94) — 05/11/2026
+
+Enviado ao TestFlight às 10:56. PR 44 (`feature/linha-lido-ate-aqui`).
+
+### Novidades
+- **Linha "Lido até este ponto"** (roadmap 153, PR 44): quando um grupo ou canal abre na primeira não lida, uma linha cinza clara com "Lido até este ponto" aparece logo acima dela e fica enquanto o chat estiver aberto. Não aparece com mais de 200 não lidas (o chat abre em outro ponto; uma segunda consulta sem limite confirma a primeira não lida verdadeira, ~0,3 ms). O segundo scroll do salto deixa 220 pt de folga acima da mensagem, para a linha caber na tela mesmo quando a não lida é uma foto; os scrolls e os tempos do salto continuam os mesmos. Só `ChatView.swift` e o `Localizable.strings` do isaCloud, sem mudar o fork do ExyteChat nem o banco. Documentação em `docs/feature-marcacao-leitura.md`; decisão em `docs/decisoes.md`.
+
 ## 0.0.1 (build 93) — 05/11/2026
 
 Enviado ao TestFlight às 10:09. PRs 42 (`feature/canal-escolher-conta`) e 43 (`feature/compartilhar-pela-sugestao`).

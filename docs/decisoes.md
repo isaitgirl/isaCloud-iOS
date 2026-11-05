@@ -839,3 +839,13 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - **Análise:** `docs/analise-compartilhar-pela-sugestao.md` (opções avaliadas e testes).
 - **Merge:** nenhum atrito; só `SharePickerView.swift` (arquivo do isaCloud) e `ShareSheet.strings` (tabela própria da extensão).
 
+## Linha "Lido até este ponto" (05/11/2026, roadmap 153, build 94)
+
+- **O que é:** ao abrir um grupo ou canal na primeira não lida (roadmap 136), uma linha cinza clara com "Lido até este ponto" fica logo acima dela enquanto o chat estiver aberto. Documentação completa: `docs/feature-marcacao-leitura.md`.
+- **Decisão (Isadora):** a forma mais simples e de menor risco. A linha faz parte da linha da mensagem, desenhada pelo `messageBuilder` do app. Nada muda no fork do ExyteChat nem no banco, e nenhuma mensagem falsa entra na lista.
+- **Mais de 200 não lidas:** o chat abre na 200ª mais nova e a linha não aparece. Uma segunda chamada de `firstUnreadHistoryId` sem limite confirma a primeira não lida verdadeira, sem mudar o `DataLayer`. Medido com log temporário (não commitado): ~0,3 ms.
+- **Id num objeto, não em `@State`:** o `UIList` do ExyteChat guarda o `messageBuilder` do primeiro desenho; com o id num valor de `@State`, a closure guardada nunca via o marcador. `final class ReadMarker` dentro de `@State` resolve.
+- **Posição:** a Isadora pediu a linha visível sem mudar a velocidade do salto. O segundo scroll ganha 220 pt de deslocamento (`readMarkerExtraOffset`) quando há a linha; tempos e quantidade de scrolls iguais. `.top` foi tentado e descartado (as alturas estimadas das fotos ainda não medidas fazem o scroll errar o alvo).
+- **Aceito pela Isadora:** a linha aparece também no destaque do menu da mensagem, e o nome do remetente não volta a aparecer depois da linha quando a mensagem anterior é da mesma pessoa.
+- **Descartado:** o indicador próprio do ExyteChat (`showLastReadIndicator`, texto fixo "New messages", critério pelo status `.readBy` e linha extra na tabela; exigiria mudar o fork).
+- **Merge:** só trechos `//isaCloud` do `ChatView.swift` e o `Localizable.strings` do isaCloud.

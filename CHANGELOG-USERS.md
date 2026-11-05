@@ -6,6 +6,11 @@ O que mudou em cada versão, em poucas palavras. A lista técnica completa está
 
 Nada por enquanto.
 
+## Build 94 · 05/11/2026
+
+### Novidades
+- 👀 Ao abrir um grupo ou canal, uma linha mostra até onde você já tinha lido.
+
 ## Build 93 · 05/11/2026
 
 ### Melhorias

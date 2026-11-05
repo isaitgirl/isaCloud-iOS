@@ -1,4 +1,4 @@
-# Estado atual e handoff (05/11/2026, build 93)
+# Estado atual e handoff (05/11/2026, build 94)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,10 +7,10 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 93** (mensagem "Build 93 ..."), tag `build-93`; `git log --oneline -3` |
-| TestFlight | **93** (05/11/2026, 10:09; antes 92 em 04/11/2026, tag `build-92`) |
-| `.dev` no iPhone | **93** (05/11/2026, o mesmo código do TestFlight; **sem push**, então a extensão de notificação não roda nele) |
-| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o código do build 93 (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261105-0952-compartilhar-sugestao/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
+| Commit | o do **build 94** (mensagem "Build 94 ..."), tag `build-94`; `git log --oneline -3` |
+| TestFlight | **94** (05/11/2026, 10:56; antes 93 às 10:09, tag `build-93`) |
+| `.dev` no iPhone | **94** (05/11/2026, o mesmo código do TestFlight; **sem push**, então a extensão de notificação não roda nele) |
+| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o código do build 94 (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261105-1036-linha-lido-2/` e `-1037-linha-lido-2/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
 | ExyteChat | `e168ed8` na `isaCloud` (visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
@@ -18,7 +18,11 @@ Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 
 ## Em andamento (05/11/2026)
 
-- Nada em aberto deste lote. **A conferir no iPhone:** compartilhar tocando num contato sugerido pelo iOS (roadmap 152), inclusive com um contato que esteja em duas contas, e entrar num canal público escolhendo a conta (roadmap 151).
+- Nada em aberto deste lote. **A conferir no iPhone:** a linha "Lido até este ponto" (roadmap 153) num canal só de texto e num com mais de 200 não lidas (a linha não deve aparecer); compartilhar tocando num contato sugerido pelo iOS (roadmap 152), inclusive com um contato que esteja em duas contas, e entrar num canal público escolhendo a conta (roadmap 151).
+
+## O que entrou no build 94 (sobre o 93)
+
+- **Linha "Lido até este ponto"** (roadmap 153, PR 44): ao abrir um grupo ou canal na primeira não lida, uma linha cinza clara fica acima dela. O id fica num objeto (`ReadMarker`), porque o ExyteChat guarda o `messageBuilder` do primeiro desenho; com `@State` a linha não aparecia. O segundo scroll do salto deixa 220 pt de folga para a linha caber acima de uma foto (`.top` foi tentado e erra o alvo). **Para testar no simulador:** o app sincroniza a leitura com o servidor ao conectar e desfaz um `UPDATE ... SET unread=1` feito com o app fechado; fazer o `UPDATE` com o app já conectado e então abrir a sala. Doc: `docs/feature-marcacao-leitura.md`.
 
 ## O que entrou no build 93 (sobre o 92)
 
