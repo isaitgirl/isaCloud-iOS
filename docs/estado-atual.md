@@ -9,12 +9,16 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 |---|---|
 | Commit | o do **build 92** (mensagem "Build 92 ..."), tag `build-92`; `git log --oneline -3` |
 | TestFlight | **92** (04/11/2026, 20:41; antes 91 e 90 no mesmo dia, tags `build-91` e `build-90`) |
-| `.dev` no iPhone | **92** (igual ao TestFlight; **sem push**, então a extensão de notificação não roda nele) |
-| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o código do build 92 (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-2026-11-04-2030-pausa-rede/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
+| `.dev` no iPhone | **92 + branch `feature/canal-escolher-conta`** (05/11/2026; tem código que ainda não está no TestFlight; **sem push**, então a extensão de notificação não roda nele) |
+| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o build 92 + `feature/canal-escolher-conta` (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-2026-11-05-0913-canal-conta/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
 | ExyteChat | `e168ed8` na `isaCloud` (visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
+
+## Em andamento (05/11/2026)
+
+- **Canais públicos com várias contas** (roadmap 151, branch `feature/canal-escolher-conta`, **sem commit**): lista de todas as contas, folha "Ingressar com…" com menu suspenso de conta e uma conta por linha. Visto no iOS 27 (lista, folha e menu); **falta** entrar de fato com uma conta escolhida, o "Abrir com", o iOS 18.6 e o iPhone. Depois: PR para `isaCloud` com prints. Análise: `docs/analise-ingressar-canal-escolhendo-conta.md`.
 
 ## O que entrou no build 92 (sobre o 91)
 

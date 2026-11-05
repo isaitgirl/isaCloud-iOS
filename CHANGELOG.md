@@ -4,6 +4,9 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## Não publicado
 
+### Melhorias
+- **Canais públicos com várias contas** (roadmap 151, branch `feature/canal-escolher-conta`): a lista junta os canais dos servidores de todas as contas conectadas (antes só os da conta mais antiga); com mais de uma conta, tocar num canal abre uma folha com o nome do canal e o menu suspenso "Ingressar com…" (só as contas que ainda não estão no canal, as do servidor do canal primeiro); a linha mostra, uma por linha, quais contas já estão no canal. Só `PublicChannelsView.swift`. Análise em `docs/analise-ingressar-canal-escolhendo-conta.md`.
+
 ## 0.0.1 (build 92) — 04/11/2026
 
 Enviado ao TestFlight às 20:41. PR 41 (`feature/conexao-rapida`).

@@ -4,7 +4,9 @@ O que mudou em cada versão, em poucas palavras. A lista técnica completa está
 
 ## Em breve (próxima versão)
 
-Nada por enquanto.
+### Melhorias
+- #️⃣ Tem mais de uma conta? A lista de canais mostra os canais de todas elas.
+- 👤 Ao entrar num canal, você escolhe com qual conta quer participar.
 
 ## Build 92 · 04/11/2026
 
