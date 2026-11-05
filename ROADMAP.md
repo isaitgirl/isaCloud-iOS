@@ -4,7 +4,7 @@ Todas as funcionalidades do isaCloud numa tabela só: o que está **feito** (ris
 
 A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23/10/2026 sobre a `develop` (Monal 7), base atual do fork. As reações (XEP-0444), que eram o item mais trabalhoso, saíram da lista porque já existem na `develop`.
 
-**Total de features no roadmap:** 146
+**Total de features no roadmap:** 147
 **Features concluídas:** 130
 
 | # | Funcionalidade | Esforço | Observações |
@@ -168,6 +168,7 @@ A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23
 | 148 | Cor P3 na redução de fotos | **pendente, não implementado** | A redução converte para RGB genérico, e fotos em Display P3 podem perder cor. Correção: manter o espaço de cores da foto original na recodificação. Ainda não medido. |
 | 149 | ~~Medir o tempo de conexão por conta~~ | **feito (build 92, 04/11/2026)** | Cada tentativa de conexão grava uma linha em `connects-*.jsonl` com o tempo de DNS, socket, TLS, login, bind, catchup e o momento em que a conta fica ociosa (o spinner some). Só medição. Harness envia como `<measurement>_connect`. Decisão em `docs/decisoes.md`, seção "Tempo de conexão por conta". Primeiro achado (04/11): o login antecipado descartado pela guarda do C16 fazia cada abertura a frio esperar os 12 s do prazo; corrigido na guarda (só NotOpen e Closed/Error são descartados). |
 | 150 | ~~Spinner só quando o app não consegue conectar~~ | **feito (build 92, 04/11/2026)**: modo avião testado no iPhone; as três contas voltam em até ~4 s depois da rede | O spinner da lista de conversas acende só se alguma conta ativa ficar 5 s sem conectar, com o app em primeiro plano. Catchup, stanzas e transferências não acendem mais. Rótulo de acessibilidade "Conectando...". Trava `ISACLOUD_SYNC_INDICATOR_ONLY_WHEN_CONNECTING` (`MonalAppDelegate.m` e `ActiveChatsViewController.m`). Decisão em `docs/decisoes.md`, seção "Spinner só quando não conecta". No teste do modo avião (04/11), as contas levaram ~15 s para voltar porque os pings da volta da rede eram ignorados antes do bind; agora a conta não vinculada reconecta na hora (`ISACLOUD_RECONNECT_UNBOUND_ON_NETWORK_CHANGE`, seção "Reconectar na hora quando a rede volta"). |
+| 151 | Canais públicos: lista de todas as contas e escolha da conta ao entrar | **implementado em 05/11/2026** (branch `feature/canal-escolher-conta`, sem commit; simuladores iOS 27 e 18.6 e `.dev`) | Antes, a tela usava sempre a conta ativa mais antiga: só listava os canais do servidor dela, o selo "Já está no canal" só valia para ela e o toque entrava com ela. Agora a lista junta os canais de **todas as contas prontas** (como o Conversations); com 2+ contas, o toque abre uma folha pequena com o nome do canal no título e "Ingressar com…" num menu suspenso de conta (o mesmo do "Usar conta" de Adicionar contato), só com as contas que ainda não estão no canal (as do servidor do canal primeiro; se todas já estão, abre a conversa); a linha mostra, uma por linha e com o ícone de pessoa, quais contas já estão no canal. Visto no iOS 27: lista com os canais de `isacloud.cc`, `canais.voz.social.br` e `canais.xmpp.social.br`, diálogo com a ordem certa. **Falta:** entrar de fato por uma conta escolhida, a passada de UI no iOS 18.6 e no iPhone. Análise: `docs/analise-ingressar-canal-escolhendo-conta.md`. |
 
 ## Aguardando o Monal
 
