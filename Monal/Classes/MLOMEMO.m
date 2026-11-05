@@ -1696,6 +1696,31 @@ $$
     return [NSNumber numberWithUnsignedInt:self.monalSignalStore.deviceid];
 }
 
+//isaCloud: "Clear devices" (same idea as Conversations' wipeOtherPepDevices): removes every own device from our devicelist except this one.
+//Devices still in use add themselves back when they connect (see handleOwnDevicelistUpdate), so this only cleans up leftovers.
+-(NSUInteger) isaCloudClearOtherOwnDevices
+{
+    NSString* jid = self.account.connectionProperties.identity.jid;
+    NSUInteger removed = 0;
+    for(NSNumber* device in [self.ownDeviceList copy])
+    {
+        if(device.unsignedIntValue == self.monalSignalStore.deviceid)
+            continue;
+        [self bulkDeleteDeviceForSource:jid andRid:device];
+        removed++;
+    }
+    //publish our changes, but only if we actually changed something
+    if(removed > 0)
+        [self publishOwnDeviceList];
+    return removed;
+}
+
+//isaCloud: number of own devices in our devicelist right now (including this one)
+-(NSUInteger) isaCloudOwnDeviceCount
+{
+    return self.ownDeviceList.count;
+}
+
 -(void) forceDeleteDeviceForSource:(NSString*) source andRid:(NSNumber*) rid
 {
     if([source isEqualToString:self.account.connectionProperties.identity.jid] && rid.unsignedIntValue == self.monalSignalStore.deviceid)

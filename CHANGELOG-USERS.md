@@ -4,7 +4,12 @@ O que mudou em cada versão, em poucas palavras. A lista técnica completa está
 
 ## Em breve (próxima versão)
 
-Nada por enquanto.
+### Melhorias
+- 🔐 Nova ferramenta na Depuração para tirar aparelhos antigos da criptografia.
+- ⚡ O app conecta mais rápido ao abrir e quando a internet volta.
+
+### Correções
+- 🛡️ O app não fecha mais sozinho quando a internet cai bem na hora de conectar.
 
 ## Build 94 · 05/11/2026
 

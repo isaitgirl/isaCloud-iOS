@@ -121,6 +121,12 @@
 "Clear share sheet queue" = "Limpar a fila de compartilhamento";
 "Share sheet queue cleared" = "Fila de compartilhamento limpa";
 "%lld items removed" = "%lld itens removidos";
+"Clear Other OMEMO Devices…" = "Limpar outros aparelhos OMEMO…";
+"Clear devices of %@?" = "Limpar aparelhos de %@?";
+"All other devices leave the OMEMO list of this account. Devices still in use add themselves back when they connect, but may not receive messages sent meanwhile." = "Todos os outros aparelhos saem da lista OMEMO desta conta. Os que ainda estão em uso voltam sozinhos quando conectarem, mas podem não receber as mensagens enviadas nesse meio-tempo.";
+"Clear" = "Limpar";
+"%lld devices removed." = "%lld aparelhos removidos.";
+"%lld devices" = "%lld aparelhos";
 "Pin Chat" = "Fixar Conversa";
 "Shared Media" = "Mídia Compartilhada";
 "Shared Files" = "Arquivos Compartilhados";

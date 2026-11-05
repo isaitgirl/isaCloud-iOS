@@ -9,7 +9,7 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 |---|---|
 | Commit | o do **build 94** (mensagem "Build 94 ..."), tag `build-94`; `git log --oneline -3` |
 | TestFlight | **94** (05/11/2026, 10:56; antes 93 às 10:09, tag `build-93`) |
-| `.dev` no iPhone | **94** (05/11/2026, o mesmo código do TestFlight; **sem push**, então a extensão de notificação não roda nele) |
+| `.dev` no iPhone | **94 + botão "Limpar outros aparelhos OMEMO…"** (05/11/2026, à frente do TestFlight, sem commit; **sem push**, então a extensão de notificação não roda nele) |
 | Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o código do build 94 (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261105-1036-linha-lido-2/` e `-1037-linha-lido-2/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
 | ExyteChat | `e168ed8` na `isaCloud` (visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
@@ -18,7 +18,7 @@ Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 
 ## Em andamento (05/11/2026)
 
-- Nada em aberto deste lote. **A conferir no iPhone:** a linha "Lido até este ponto" (roadmap 153) num canal só de texto e num com mais de 200 não lidas (a linha não deve aparecer); compartilhar tocando num contato sugerido pelo iOS (roadmap 152), inclusive com um contato que esteja em duas contas, e entrar num canal público escolhendo a conta (roadmap 151).
+- Nada em aberto deste lote. Conferidos pela Isadora no iPhone em 05/11/2026: a linha "Lido até este ponto" (roadmap 153), compartilhar pelo contato sugerido (152), entrar num canal público escolhendo a conta (151), "Compartilhar…" de áudio e documento (120) e o aviso de falha de upload (141).
 
 ## O que entrou no build 94 (sobre o 93)
 

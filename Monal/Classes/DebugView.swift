@@ -304,11 +304,68 @@ struct ExtraSettingsView: View {
                         UIApplication.shared.setAlternateIconName(nil)
                     }
                 }
+
+                //isaCloud: OMEMO section, one row per connected account (only accounts with an omemo object)
+                //clears leftover own devices from the devicelist, see MLOMEMO isaCloudClearOtherOwnDevices
+                Section(header: Text("OMEMO")) {
+                    let accounts = MLXMPPManager.sharedInstance().connectedXMPP as? [xmpp] ?? []
+                    ForEach(0..<accounts.count, id: \.self) { index in
+                        OmemoClearDevicesRow(account: accounts[index])
+                    }
+                }
             }
             .listStyle(.grouped)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.interpolatedWindowBackground)
+    }
+}
+
+//isaCloud: "Clear devices" for one account (same idea as Conversations): removes every own OMEMO device except this one.
+//Runs on the main thread, like the other OMEMO actions called from the UI (e.g. clearAllSessions in ContactDetails).
+struct OmemoClearDevicesRow: View {
+    let account: xmpp
+    @State private var deviceCount: Int = 0
+    @State private var showConfirm = false
+    @State private var showResult = false
+    @State private var removedCount: Int = 0
+
+    var body: some View {
+        let omemoOptional: MLOMEMO? = account.omemo
+        if let omemo = omemoOptional {
+            Button {
+                showConfirm = true
+            } label: {
+                VStack(alignment: .leading) {
+                    Text("Clear Other OMEMO Devices…")
+                        .foregroundColor(.red)
+                    Text(verbatim: account.connectionProperties.identity.jid)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text("\(deviceCount) devices")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .onAppear {
+                deviceCount = Int(omemo.isaCloudOwnDeviceCount())
+            }
+            .alert("Clear devices of \(account.connectionProperties.identity.jid)?", isPresented: $showConfirm) {
+                Button("Clear", role: .destructive) {
+                    removedCount = Int(omemo.isaCloudClearOtherOwnDevices())
+                    deviceCount = Int(omemo.isaCloudOwnDeviceCount())
+                    showResult = true
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("All other devices leave the OMEMO list of this account. Devices still in use add themselves back when they connect, but may not receive messages sent meanwhile.")
+            }
+            .alert("OMEMO", isPresented: $showResult) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("\(removedCount) devices removed.")
+            }
+        }
     }
 }
 

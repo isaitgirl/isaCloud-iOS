@@ -4,6 +4,15 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## Não publicado
 
+### Técnico
+- **"Limpar outros aparelhos OMEMO…" na Depuração** (Extra Settings, roadmap 105): um botão por conta conectada, com a contagem de aparelhos próprios, tira da lista OMEMO todos os aparelhos da conta menos o atual e publica a lista nova; os que estão em uso voltam sozinhos ao conectar. Mesma ideia do "Clear devices" do Conversations (`wipeOtherPepDevices`). Métodos novos `isaCloudClearOtherOwnDevices` e `isaCloudOwnDeviceCount` em `MLOMEMO.m`, sem mudar métodos do Monal; textos no `Localizable.strings` do isaCloud. Testado no simulador iOS 27 (poli2: 17 → 1; o aparelho do iOS 18.6 voltou sozinho em ~40 s). Decisão em `docs/decisoes.md`.
+
+### Melhorias
+- **Conexão mais rápida na abertura e na volta da rede (roadmap 156):** a conta que ainda está logando só é reconectada quando a rede muda de verdade, pela assinatura do caminho em `isaCloudPathSignature()` (status, Wi-Fi/celular/cabo, rede cara ou limitada, IPv4/IPv6). Antes, os avisos de rede repetidos do iOS e o primeiro aviso depois da abertura derrubavam logins que estavam andando, e a abertura a frio no iPhone chegou a ~22 s (`isacloud.im`) e ~31 s (`autozona.cc`). A pausa de 5 s (`ISACLOUD_NETWORK_RECONNECT_COOLDOWN`) saiu, porque passou a segurar só mudanças reais: a troca de celular para Wi-Fi ficava presa até o prazo de 12 s do login. Medido no `.dev`: abertura a frio de 0,7 s e 3,2 s, e contas prontas em 0,55 a 2,3 s quando a rede volta. Só `MLXMPPManager.m`, dentro da trava `ISACLOUD_RECONNECT_UNBOUND_ON_NETWORK_CHANGE`. Decisão em `docs/decisoes.md`.
+
+### Correções
+- **O app não cai mais quando a conexão cai entre a abertura do socket e o login (C16, terceira ocorrência).** O crash `Stream must be open` em `-[MLStream tlsVersion]` voltou no build 92 (05/11/2026 10:38, iPhone14,7, iOS 27.2) por outro caminho. O `NSStreamEventOpenCompleted` deixa o bloco do login com TLS (`_blockToCallOnTCPOpen`) esperando na fila de recebimento e, quando ele roda, o stream já está em erro. A guarda de 04/11, no começo de `handleFeaturesBeforeAuth`, não chega até ali. Agora o próprio bloco e o ramo do desafio SASL2 (`processInput`), que também lê o channel binding, ignoram o stream nunca aberto ou já fechado/em erro, com um aviso no log, e a reconexão segue. "Abrindo" continua passando, para não voltar a espera de 12 s na abertura a frio. Channel binding e proteção contra MITM sem mudança (`xmpp.m`). Registrado no C16 em `docs/analises-crashes.md`.
+
 ## 0.0.1 (build 94) — 05/11/2026
 
 Enviado ao TestFlight às 10:56. PR 44 (`feature/linha-lido-ate-aqui`).

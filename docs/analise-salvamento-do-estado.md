@@ -40,3 +40,7 @@ python3 scripts/classificar-crashes.py --pull <UDID> --dir <pasta> --since AAAA-
 ```
 
 As linhas `slow` aparecem com `"message":"isaCloud: slow ..."`; o formato do `.rawlog` e a armadilha do arquivo truncado estão em `docs/troubleshooting.md`.
+
+## Decisão (05/11/2026)
+
+A Isadora decidiu manter como está. As etapas 2 e 3 do plano só voltam se os `0xdead10cc` voltarem.

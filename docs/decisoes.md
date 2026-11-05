@@ -48,7 +48,7 @@ Definido pela Isadora, para o balão de GIF seguir o mesmo desenho das imagens:
 - **Mensagens de texto**: as reações ficam **dentro do balão**, em **pills** (não círculos). Pill **rosa** quando a reação é minha e a mensagem é de outra pessoa; pill **branca** quando a mensagem é minha.
 - **Imagens**: não há balão. A imagem, **abaixo e centralizado** com a prévia, as **reações sem pill** (por enquanto) e, **abaixo à direita**, o horário e o indicador de entrega.
 - **GIF**: segue o padrão das imagens.
-- Melhorias de imagens e GIF (pill nas reações, balão) ficam para depois, por decisão da Isadora em 30/10/2026.
+- ~~Melhorias de imagens e GIF (pill nas reações, balão) ficam para depois, por decisão da Isadora em 30/10/2026.~~ **Feito** (confirmado pela Isadora em 05/11/2026).
 
 ## Reversão do fechamento de banco na appex (30/10/2026)
 
@@ -751,12 +751,12 @@ No iOS 27, "Adicionar contato ou canal" (`AddContactMenu`) e "Convidar para o is
 - **Efeito que fica:** os contatos viram dispositivos OMEMO novos hoje. Os dispositivos antigos desta instalação continuam publicados na lista de dispositivos até serem limpos.
 
 
-## Falha no upload de arquivo sem nenhum aviso (04/11/2026, roadmap 141 e 142)
+## Falha no upload de arquivo sem nenhum aviso (04/11/2026, roadmap 141 e 111, que absorveu o 142)
 
 - **O que aconteceu:** numa garagem/elevador com a conexão oscilando, o texto ficou no spinner e a figurinha enviada antes simplesmente não apareceu. O upload do arquivo roda **antes** de a mensagem existir (só depois do upload `sendMessageAndAddToHistory` cria a mensagem), e o `catch` de `uploadAndSendFile` só escrevia no log (o pop-up do Monal foi tirado no commit `d12a3e0cd`, "Menos avisos ao usuário"). Sem mensagem, não há "!" nem "Reenviar".
 - **Escolha (opção A):** a cápsula acima da caixa de texto mostra "Não foi possível enviar 😞 Tente de novo!" por 4 s, em vermelho (`showNotice(isError:)`). Mexe só em arquivos do isaCloud (`ChatView`, `ChatInputModel`, `ChatInputBar`), sem tocar no fluxo do Monal.
 - **"Enviando…" virou contador** (`beginUpload/endUpload`): com dois uploads juntos o primeiro a terminar apagava a cápsula. O outbox do share sheet tem flag própria (`outboxUploading`).
-- **Descartada por ora (opção B, roadmap 142):** criar o balão antes do upload, com spinner e "Reenviar". É mais completa, mas mexe no fluxo de envio de arquivo e no banco (mensagem sem endereço do arquivo), o que pesa nos merges com o Monal.
+- **Descartada por ora (opção B, antigo roadmap 142, hoje dentro do 111):** criar o balão antes do upload, com spinner e "Reenviar". É mais completa, mas mexe no fluxo de envio de arquivo e no banco (mensagem sem endereço do arquivo), o que pesa nos merges com o Monal.
 - **Limite conhecido:** se outro upload ainda estiver rodando, o aviso de erro espera (o "Enviando…" tem prioridade) e pode vencer antes de aparecer.
 
 ## Folha de figurinhas e figurinha no visualizador; recorte livre descartado (04/11/2026, roadmap 143 a 145)
@@ -817,6 +817,15 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - **Risco:** com a rede oscilando, sai uma reconexão a cada mudança. Isso custa pouco, porque o login ainda não terminou, e a espera de 1 s do Monal já junta várias mudanças seguidas.
 - **Pausa de 5 s (04/11/2026, segundo teste):** depois de a rede voltar, o iOS mandou 8 avisos de "still reachable", um por segundo, enquanto o Wi-Fi e o celular se acertavam. Cada aviso reconectava de novo o `autozona.cc`, que precisa de ~3,5 s (0,8 s de TLS e 2,6 s de login no ejabberd), e ele só conectou quando os avisos pararam: ~12 s depois da volta da rede. O `isacloud.im` conecta em menos de 1 s e escapou. Agora, depois de uma reconexão disparada pela rede, os avisos de "still reachable" dos `ISACLOUD_NETWORK_RECONNECT_COOLDOWN` (5 s) seguintes deixam a conta em paz. O "reachable again" (a rede de fato voltou) sempre reconecta, e o prazo de login de 12 s continua cobrindo uma tentativa que trave de verdade.
 - **Terceiro teste (04/11/2026, 20:34):** a rede voltou às 20:34:01,3; as contas do `isacloud.im` ficaram ociosas em 1,4 e 1,6 s e a do `autozona.cc` em 3,9 s. A pausa segurou três avisos de "still reachable" (1,1, 2,2 e 3,2 s depois) e o login terminou sem ser derrubado. O spinner, que já estava aceso sem rede, apagou logo depois.
+- **Só mudança real de rede (05/11/2026, roadmap 156):** no iPhone, a abertura a frio das 12:53 levou ~22 s no `isacloud.im` e ~31 s no `autozona.cc`. O iOS mandou um "still reachable" por segundo durante mais de 30 s sem mudar nada (com o túnel do Xcode/devicectl ligado). Passados os 5 s da pausa, cada aviso derrubava um login que estava andando, e foram até 4 tentativas por conta. Também o **primeiro aviso depois da abertura** cai sempre em "reachable again", porque `_hasConnectivity` começa em `NO`. Ele reconectava, ~3 s depois da abertura, as contas que já estavam logando, e isso aparecia em quase toda abertura a frio. **Decisão:**
+  - `isaCloudPathSignature()` resume o caminho de rede em status, tipos de interface em uso (Wi-Fi, celular, cabo, outro), rede cara ou limitada e IPv4/IPv6.
+  - A conta ainda não vinculada só reconecta quando essa assinatura muda. No primeiro aviso depois da abertura, ela fica em paz, porque as tentativas da abertura já usam essa rede.
+  - **A pausa de 5 s saiu**, porque com a assinatura ela só pegava mudanças reais. No teste, a troca de celular para Wi-Fi 2 s depois ficou presa na conexão morta do celular até o prazo de 12 s do login (16 s até voltar).
+  - A conta já vinculada continua com o ping do Monal. O prazo de 12 s do login cobre a tentativa que travar de verdade, e cada aviso grava uma linha `nw_path update: … changed=… first=…` no log.
+- **Medido no iPhone (05/11/2026, `.dev`):**
+  - Abertura a frio: 0,7 s no `isacloud.im` e 3,2 s no `autozona.cc`. Quando o próprio iOS demora ~2,5 s para liberar a rede depois da abertura, fica em ~5 s, mas sem tentativas derrubadas.
+  - Rede de volta depois de ficar fora: reconexão em 7 ms e contas prontas em 0,55 a 0,75 s e 2,3 s.
+  - Trocas entre celular e Wi-Fi com as contas vinculadas: sem reconexão desnecessária e sem cascata.
 - **Trava para reverter:** `ISACLOUD_RECONNECT_UNBOUND_ON_NETWORK_CHANGE` em `Monal/Classes/MLXMPPManager.m`. Com `0`, volta o ping de sempre.
 - **Teste:** o simulador não perde rede, então o teste de verdade é repetir o modo avião no iPhone e ver o `connects-*.jsonl` (`reason: network`).
 
@@ -849,3 +858,15 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - **Aceito pela Isadora:** a linha aparece também no destaque do menu da mensagem, e o nome do remetente não volta a aparecer depois da linha quando a mensagem anterior é da mesma pessoa.
 - **Descartado:** o indicador próprio do ExyteChat (`showLastReadIndicator`, texto fixo "New messages", critério pelo status `.readBy` e linha extra na tabela; exigiria mudar o fork).
 - **Merge:** só trechos `//isaCloud` do `ChatView.swift` e o `Localizable.strings` do isaCloud.
+
+## Salvamento do estado e escrita na thread principal: ficam como estão (05/11/2026, roadmap 131 e 106)
+
+- **Salvamento do estado (131):** decisão da Isadora: manter um salvamento por stanza. Custa ~5% de processamento nas rajadas de presença e não houve `0xdead10cc` desde 02/11. O "salvar só no fim da rajada" segue descartado (contadores do Stream Management e OMEMO têm de sair com o commit); o cache da parte fria e o lote só voltam se os crashes voltarem (`docs/analise-salvamento-do-estado.md`).
+- **Escrita na thread principal ao abrir um chat (106):** fica como está por enquanto, anotado. O efeito é a tela engasgar enquanto outra thread segura o banco; medir antes de mexer, porque o código é do Monal.
+
+## "Limpar outros aparelhos OMEMO…" na Depuração (05/11/2026, roadmap 105)
+
+- **Problema:** as contas de teste acumulam aparelhos OMEMO próprios das reinstalações dos simuladores (17, 28 e 13). Cada mensagem é criptografada para todos eles, o que aumenta as mensagens do grupo Avatares e ajuda a estourar o limite `c2s` do servidor. A limpeza automática do Monal (`cleanupOwnOldDevices`) só tira aparelhos sem mensagem há 90 dias, e o `lastReceivedMsg` também é gravado quando a identidade é registrada; por isso nenhum saía.
+- **Decisão da Isadora:** botão por conta em Depuração → Extra Settings, que deixa na lista só o aparelho atual. **A ideia vem do Conversations** ("Clear devices", `AxolotlService.wipeOtherPepDevices`): os aparelhos em uso se colocam de volta ao conectar, mas podem perder o que foi enviado nesse meio-tempo (o aviso de confirmação diz isso).
+- **Código:** dois métodos novos em `MLOMEMO.m`/`.h` (`isaCloudClearOtherOwnDevices`, `isaCloudOwnDeviceCount`) e a `OmemoClearDevicesRow` em `DebugView.swift`. Nenhum método do Monal foi alterado, então o atrito de merge é baixo. Roda na thread principal, como as outras ações de OMEMO da UI (`clearAllSessions`, `deleteDevice`).
+- **Descartado:** escolher os aparelhos "ativos" pela data da última mensagem (não é confiável, pelo motivo acima) e um script externo (precisaria das senhas).
