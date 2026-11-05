@@ -5,7 +5,8 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 ## Não publicado
 
 ### Melhorias
-- **Canais públicos com várias contas** (roadmap 151, branch `feature/canal-escolher-conta`): a lista junta os canais dos servidores de todas as contas conectadas (antes só os da conta mais antiga); com mais de uma conta, tocar num canal abre uma folha com o nome do canal e o menu suspenso "Ingressar com…" (só as contas que ainda não estão no canal, as do servidor do canal primeiro); a linha mostra, uma por linha, quais contas já estão no canal. Só `PublicChannelsView.swift`. Análise em `docs/analise-ingressar-canal-escolhendo-conta.md`.
+- **Canais públicos com várias contas** (roadmap 151, PR 42): a lista junta os canais dos servidores de todas as contas conectadas (antes só os da conta mais antiga); com mais de uma conta, tocar num canal abre uma folha com o nome do canal e o menu suspenso "Ingressar com…" (só as contas que ainda não estão no canal, as do servidor do canal primeiro); a linha mostra, uma por linha, quais contas já estão no canal. Só `PublicChannelsView.swift`. Análise em `docs/analise-ingressar-canal-escolhendo-conta.md`.
+- **Compartilhar tocando no contato sugerido pelo iOS** (roadmap 152, branch `feature/compartilhar-pela-sugestao`): quando o compartilhamento vem de um contato da fileira de sugestões da folha do iOS, a extensão abre a lista já filtrada por aquele endereço, uma linha por conta em que ele existe, com a conta da sugestão marcada; "Mostrar todos" (ou a busca) volta para a lista inteira, rolada até a linha marcada. Se o contato não está na lista ou não dá para escrever nele, abre a lista inteira sem nada marcado. Só `SharePickerView.swift` e `ShareSheet.strings` (decisão em `docs/decisoes.md`, análise em `docs/analise-compartilhar-pela-sugestao.md`).
 
 ## 0.0.1 (build 92) — 04/11/2026
 

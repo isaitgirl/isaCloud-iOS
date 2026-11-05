@@ -829,3 +829,13 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - **iOS 26+:** o `.confirmationDialog` vira um balão e o botão Cancelar não aparece (tocar fora cancela); no iOS 18 é a folha de ações com Cancelar.
 - **Merge:** nenhum atrito; só `PublicChannelsView.swift` (arquivo do isaCloud) e duas traduções no override pt-BR.
 
+## Compartilhar pelo contato sugerido do iOS: lista filtrada em vez de tela nova (05/11/2026, roadmap 152)
+
+- **Problema:** tocar num contato da fileira de sugestões da folha de compartilhar do iOS abria a extensão com a lista inteira; o contato vinha marcado (o `INSendMessageIntent` do `extensionContext`), mas muitas vezes fora da tela, e parecia ser preciso escolher de novo.
+- **A sugestão já traz a conta:** o app doa ao sistema uma interação por conversa (`MLNotificationManager`, `makeIntentForMessage:`), com o `MLContact` serializado no `conversationIdentifier` (que tem o `accountID`) e o `accountID` no `serviceName`. Cada sugestão é uma conversa (conta + contato); se o mesmo contato está em duas contas, o iOS pode mostrar duas sugestões iguais na aparência.
+- **Decisão (Isadora):** a lista atual filtrada pelo endereço sugerido, uma linha por conta (as linhas já mostram a conta), com a da sugestão marcada e "Mostrar todos" no fim; a busca também tira o filtro. Se o contato não está entre os destinos ou não dá para escrever nele, a lista inteira sem nada marcado (antes ele vinha marcado com o Enviar desativado).
+- **Descartado:** uma tela curta só com o contato e o campo de mensagem (mais código e mais uma tela para manter; a lista filtrada resolve também a escolha da conta) e enviar direto sem mostrar nada (sem chance de mensagem nem de desfazer um toque errado).
+- **Teste:** o simulador não mostra a fileira de sugestões; o caminho foi testado com um contato fixo injetado no `ShareViewController.m` (código temporário, não commitado).
+- **Análise:** `docs/analise-compartilhar-pela-sugestao.md` (opções avaliadas e testes).
+- **Merge:** nenhum atrito; só `SharePickerView.swift` (arquivo do isaCloud) e `ShareSheet.strings` (tabela própria da extensão).
+

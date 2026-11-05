@@ -7,6 +7,7 @@ O que mudou em cada versão, em poucas palavras. A lista técnica completa está
 ### Melhorias
 - #️⃣ Tem mais de uma conta? A lista de canais mostra os canais de todas elas.
 - 👤 Ao entrar num canal, você escolhe com qual conta quer participar.
+- 📤 Compartilhar tocando num contato sugerido pelo iPhone já abre com ele escolhido.
 
 ## Build 92 · 04/11/2026
 

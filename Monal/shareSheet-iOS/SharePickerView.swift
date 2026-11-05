@@ -36,6 +36,8 @@ struct SharePickerView: View {
     @State private var pickedWhileSearching: String?
     //one destination at a time: this is the only place that says which row is selected
     @State private var selectedID: String?
+    //isaCloud: address coming from the iOS suggestion row; while it is set, the list shows only this address (one row per account)
+    @State private var focusJid: String?
     @State private var message = ""
     @State private var sending = false
     @ScaledMetric(relativeTo: .body) private var avatarSize: CGFloat = 40
@@ -52,10 +54,15 @@ struct SharePickerView: View {
             .map { Destination(id: "\($0.accountID)|\($0.contactJid)", contact: $0) }
             .sorted { ($0.contact.contactDisplayName.lowercased(), $0.contact.contactJid.lowercased()) < ($1.contact.contactDisplayName.lowercased(), $1.contact.contactJid.lowercased()) }
         //a Siri intent can name the chat to send to: start with it chosen, if it is a destination we can send to
-        if let recipient = initialRecipient, let match = destinations.first(where: { $0.id == "\(recipient.accountID)|\(recipient.contactJid)" }) {
+        //isaCloud: a suggestion from the iOS share sheet starts with its contact chosen and the list filtered to that address, if we can send to it
+        if let recipient = initialRecipient,
+           let match = destinations.first(where: { $0.id == "\(recipient.accountID)|\(recipient.contactJid)" }),
+           MessageForward.canWrite(isMuc: match.contact.isMuc, role: match.contact.isMuc ? DataLayer.sharedInstance().getOwnRole(inGroupOrChannel: match.contact) : nil) {
             _selectedID = State(initialValue: match.id)
+            _focusJid = State(initialValue: match.contact.contactJid)
         } else {
             _selectedID = State(initialValue: nil)
+            _focusJid = State(initialValue: nil)
         }
     }
 
@@ -65,6 +72,9 @@ struct SharePickerView: View {
 
     private var shown: [Destination] {
         guard !searchText.isEmpty else {
+            if let focusJid {
+                return destinations.filter { $0.contact.contactJid == focusJid }
+            }
             return destinations
         }
         let search = searchText.lowercased()
@@ -96,6 +106,16 @@ struct SharePickerView: View {
                         ForEach(shown) { destination in
                             row(for: destination)
                         }
+                        //isaCloud: leaves the filter by the suggested address and shows the whole list, scrolled to the chosen row
+                        if focusJid != nil && searchText.isEmpty {
+                            Button(shareSheetString("Show all")) {
+                                pickedWhileSearching = selectedID
+                                withAnimation {
+                                    focusJid = nil
+                                }
+                            }
+                            .foregroundStyle(shareSheetPink)
+                        }
                     }
                     .listStyle(.plain)
                     .searchable(text: $searchText, isPresented: $isSearching, placement: .navigationBarDrawer(displayMode: .always))
@@ -109,6 +129,12 @@ struct SharePickerView: View {
                                 proxy.scrollTo(picked, anchor: .center)
                             }
                             pickedWhileSearching = nil
+                        }
+                    }
+                    //isaCloud: typing a search leaves the filter by the suggested address: the search covers the whole list
+                    .onChange(of: searchText) { _, text in
+                        if !text.isEmpty {
+                            focusJid = nil
                         }
                     }
                     .autocorrectionDisabled()
