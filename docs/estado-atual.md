@@ -1,4 +1,4 @@
-# Estado atual e handoff (04/11/2026, build 92)
+# Estado atual e handoff (05/11/2026, build 93)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,10 +7,10 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 92** (mensagem "Build 92 ..."), tag `build-92`; `git log --oneline -3` |
-| TestFlight | **92** (04/11/2026, 20:41; antes 91 e 90 no mesmo dia, tags `build-91` e `build-90`) |
-| `.dev` no iPhone | **92 + branch `feature/canal-escolher-conta`** (05/11/2026; tem código que ainda não está no TestFlight; **sem push**, então a extensão de notificação não roda nele) |
-| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o build 92 + `feature/canal-escolher-conta` (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-2026-11-05-0913-canal-conta/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
+| Commit | o do **build 93** (mensagem "Build 93 ..."), tag `build-93`; `git log --oneline -3` |
+| TestFlight | **93** (05/11/2026, 10:09; antes 92 em 04/11/2026, tag `build-92`) |
+| `.dev` no iPhone | **93** (05/11/2026, o mesmo código do TestFlight; **sem push**, então a extensão de notificação não roda nele) |
+| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o código do build 93 (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261105-0952-compartilhar-sugestao/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
 | ExyteChat | `e168ed8` na `isaCloud` (visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
@@ -18,7 +18,12 @@ Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 
 ## Em andamento (05/11/2026)
 
-- **Canais públicos com várias contas** (roadmap 151, branch `feature/canal-escolher-conta`, **sem commit**): lista de todas as contas, folha "Ingressar com…" com menu suspenso de conta e uma conta por linha. Visto no iOS 27 (lista, folha e menu); **falta** entrar de fato com uma conta escolhida, o "Abrir com", o iOS 18.6 e o iPhone. Depois: PR para `isaCloud` com prints. Análise: `docs/analise-ingressar-canal-escolhendo-conta.md`.
+- Nada em aberto deste lote. **A conferir no iPhone:** compartilhar tocando num contato sugerido pelo iOS (roadmap 152), inclusive com um contato que esteja em duas contas, e entrar num canal público escolhendo a conta (roadmap 151).
+
+## O que entrou no build 93 (sobre o 92)
+
+- **Canais públicos com várias contas** (roadmap 151, PR 42): a lista junta os canais de todas as contas prontas; com 2+ contas, a folha "Ingressar com…" oferece só as contas que ainda não estão no canal. Análise: `docs/analise-ingressar-canal-escolhendo-conta.md`.
+- **Compartilhar pelo contato sugerido do iOS** (roadmap 152, PR 43): a extensão abre a lista filtrada pelo endereço sugerido, uma linha por conta, com a da sugestão marcada; "Mostrar todos" ou a busca voltam para a lista inteira. O simulador não mostra a fileira de sugestões: o teste foi com um contato injetado (código temporário, não commitado). Análise: `docs/analise-compartilhar-pela-sugestao.md`.
 
 ## O que entrou no build 92 (sobre o 91)
 
