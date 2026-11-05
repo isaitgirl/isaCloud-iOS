@@ -4,6 +4,10 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## Não publicado
 
+## 0.0.1 (build 95) — 05/11/2026
+
+Enviado ao TestFlight às 13:35. PR 45 (`fix/c16-bloco-tls-stream-em-erro`).
+
 ### Técnico
 - **"Limpar outros aparelhos OMEMO…" na Depuração** (Extra Settings, roadmap 105): um botão por conta conectada, com a contagem de aparelhos próprios, tira da lista OMEMO todos os aparelhos da conta menos o atual e publica a lista nova; os que estão em uso voltam sozinhos ao conectar. Mesma ideia do "Clear devices" do Conversations (`wipeOtherPepDevices`). Métodos novos `isaCloudClearOtherOwnDevices` e `isaCloudOwnDeviceCount` em `MLOMEMO.m`, sem mudar métodos do Monal; textos no `Localizable.strings` do isaCloud. Testado no simulador iOS 27 (poli2: 17 → 1; o aparelho do iOS 18.6 voltou sozinho em ~40 s). Decisão em `docs/decisoes.md`.
 

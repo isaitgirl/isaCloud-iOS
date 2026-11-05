@@ -4,6 +4,10 @@ O que mudou em cada versão, em poucas palavras. A lista técnica completa está
 
 ## Em breve (próxima versão)
 
+Nada por enquanto.
+
+## Build 95 · 05/11/2026
+
 ### Melhorias
 - 🔐 Nova ferramenta na Depuração para tirar aparelhos antigos da criptografia.
 - ⚡ O app conecta mais rápido ao abrir e quando a internet volta.
