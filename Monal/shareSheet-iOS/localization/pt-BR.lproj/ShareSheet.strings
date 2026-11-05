@@ -17,3 +17,6 @@
 
 /* mostrado quando a lista de contatos está vazia */
 "No contacts" = "Nenhum contato";
+
+/* o botão embaixo da lista filtrada por um contato sugerido: tira o filtro e mostra todos os contatos */
+"Show all" = "Mostrar todos";

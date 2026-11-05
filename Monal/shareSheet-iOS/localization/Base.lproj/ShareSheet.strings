@@ -17,3 +17,6 @@
 
 /* shown when the contact list is empty */
 "No contacts" = "No contacts";
+
+/* the button under the list filtered by a suggested contact: removes the filter and shows every contact */
+"Show all" = "Show all";
