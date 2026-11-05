@@ -2782,6 +2782,15 @@ static NSRegularExpression* fastTokenRemovalRegex;
             if(!self->_scramHandler)
                 return [self invalidXMLError];
             
+            //isaCloud: a queued SASL2 challenge can be handled after the connection already failed: the channel-binding below reads the
+            //TLS state (tlsVersion), which asserts on a stream that is not open (same race as C16). The reconnect takes over
+            NSStreamStatus challengeStreamStatus = [((MLStream*)self.oStream) streamStatus];
+            if(challengeStreamStatus == NSStreamStatusNotOpen || challengeStreamStatus >= NSStreamStatusClosed)
+            {
+                DDLogWarn(@"Ignoring SASL2 challenge: the stream is not open anymore (status %ld), waiting for the reconnect...", (long)challengeStreamStatus);
+                return;
+            }
+
             NSString* message = nil;
             BOOL deactivate_account = NO;
             NSString* innerSASLData = [[NSString alloc] initWithData:[parsedStanza findFirst:@"/{urn:xmpp:sasl:2}challenge#|base64"] encoding:NSUTF8StringEncoding];
@@ -3474,6 +3483,19 @@ static NSRegularExpression* fastTokenRemovalRegex;
         _blockToCallOnTCPOpen = ^{
             strongify(self);
             
+            //isaCloud: this block waits on the receive queue (NSStreamEventOpenCompleted or the direct call below) and the connection can
+            //fail meanwhile (iOS dropping it when freezing the app): the TLS reads below (channel-binding -> tlsVersion) assert on a stream
+            //that is not open (C16, build 92, 05/11/2026). Nothing to authenticate on a dead stream: the reconnect for the reported error
+            //takes over. Never fall back to an empty channel-binding list here, that could trigger the MITM account disabling below.
+            //"opening" (NSStreamStatusOpening) is allowed on purpose, for the same reason as the guard in handleFeaturesBeforeAuth:
+            //the direct call below can run while the TLS handshake of a direct TLS connection is still running
+            NSStreamStatus tlsStreamStatus = [((MLStream*)self.oStream) streamStatus];
+            if(tlsStreamStatus == NSStreamStatusNotOpen || tlsStreamStatus >= NSStreamStatusClosed)
+            {
+                DDLogWarn(@"Ignoring pipelined auth continuation: the stream is not open anymore (status %ld), waiting for the reconnect...", (long)tlsStreamStatus);
+                return;
+            }
+
             if([self->_supportedSaslMechanisms containsObject:@"PLAIN"])
                 DDLogWarn(@"Server supports SASL2 PLAIN, ignoring because this is insecure!");
             

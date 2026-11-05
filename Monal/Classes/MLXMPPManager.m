@@ -37,42 +37,50 @@ static const int pingFreqencyMinutes = 5;       //about the same Conversations u
 //Set to 0 to go back to Monal's behaviour (always ping).
 #define ISACLOUD_RECONNECT_UNBOUND_ON_NETWORK_CHANGE 1
 
-//isaCloud: after a network-triggered reconnect, further "still reachable" updates leave that account alone for this many seconds
-//(the iOS sends several path updates in a row while wifi/cellular settle; reconnecting on each one never let slow servers finish the login).
-//The 12 s login timeout still covers an attempt that really stalls.
-#define ISACLOUD_NETWORK_RECONNECT_COOLDOWN 5.0
+//isaCloud: repeated nw_path updates without a real change no longer reconnect (see isaCloudPathSignature), so there is no cooldown:
+//a real change (e.g. cellular -> wifi a few seconds later) must reconnect at once, or the attempt hangs on the dead path until the 12 s login timeout
 
 @interface MLXMPPManager()
 {
     nw_path_monitor_t _path_monitor;
     BOOL _hasConnectivity;
     NSMutableArray* _connectedXMPP;
+    NSString* _isaCloudLastPathSignature;   //isaCloud: see isaCloudPathSignature()
+    BOOL _isaCloudSawFirstPath;             //isaCloud: the first nw_path update after launch was already handled
 }
 @end
 
+//isaCloud: what matters to an ongoing connection in a nw_path: status, interface types in use, cost flags and IP families.
+//The iOS sends nw_path updates every second or so while nothing of this changes (e.g. with the Xcode/devicectl tunnel up),
+//and reconnecting on each one killed login attempts that were going fine (05/11/2026)
+static NSString* isaCloudPathSignature(nw_path_t path)
+{
+    return [NSString stringWithFormat:@"status=%d wifi=%d cellular=%d wired=%d other=%d expensive=%d constrained=%d ipv4=%d ipv6=%d",
+        (int)nw_path_get_status(path),
+        nw_path_uses_interface_type(path, nw_interface_type_wifi),
+        nw_path_uses_interface_type(path, nw_interface_type_cellular),
+        nw_path_uses_interface_type(path, nw_interface_type_wired),
+        nw_path_uses_interface_type(path, nw_interface_type_other),
+        nw_path_is_expensive(path),
+        nw_path_is_constrained(path),
+        nw_path_has_ipv4(path),
+        nw_path_has_ipv6(path)];
+}
+
 //isaCloud: see ISACLOUD_RECONNECT_UNBOUND_ON_NETWORK_CHANGE
-static void isaCloudPingOrReconnect(xmpp* account, BOOL networkCameBack)
+static void isaCloudPingOrReconnect(xmpp* account, BOOL networkCameBack, BOOL leaveUnboundAlone)
 {
 #if ISACLOUD_RECONNECT_UNBOUND_ON_NETWORK_CHANGE
     xmppState state = account.accountState;
     if(state > kStateLoggedOut && state < kStateBound)
     {
-        //date of the last reconnect triggered by this function, per account (handler runs accounts in parallel)
-        static NSMutableDictionary<NSNumber*, NSDate*>* lastNetworkReconnect;
-        static dispatch_once_t onceToken;
-        dispatch_once(&onceToken, ^{
-            lastNetworkReconnect = [NSMutableDictionary new];
-        });
-        NSDate* now = [NSDate date];
-        @synchronized(lastNetworkReconnect)
+        //isaCloud: no real network change (see isaCloudPathSignature) or the first path update after launch:
+        //the running attempt was started with this same network, let it finish (the 12 s login timeout covers a stalled one).
+        //No ping either: it would be ignored while the login is still running
+        if(leaveUnboundAlone)
         {
-            NSDate* last = lastNetworkReconnect[account.accountID];
-            if(!networkCameBack && last != nil && [now timeIntervalSinceDate:last] < ISACLOUD_NETWORK_RECONNECT_COOLDOWN)
-            {
-                DDLogInfo(@"network changed but %@ was reconnected %.1fs ago for a network change, letting the current attempt finish", account, [now timeIntervalSinceDate:last]);
-                return;     //no ping either: it would be ignored while the login is still running
-            }
-            lastNetworkReconnect[account.accountID] = now;
+            DDLogInfo(@"network update without a real change, letting the current attempt of %@ finish (state %ld)", account, (long)state);
+            return;
         }
         DDLogInfo(@"network changed and %@ is not bound yet (state %ld), reconnecting now instead of pinging", account, (long)state);
         [MLConnectTiming setReason:@"network" forAccount:account.accountID];
@@ -371,6 +379,13 @@ static void isaCloudPingOrReconnect(xmpp* account, BOOL networkCameBack)
         DDLogDebug(@"*** nw_path_monitor: nw_path_is_expensive=%@", bool2str(nw_path_is_expensive(path)));
         self->_onMobile = nw_path_is_constrained(path) || nw_path_is_expensive(path);
         DDLogDebug(@"*** nw_path_monitor: on 'mobile' --> %@", bool2str(self->_onMobile));
+        //isaCloud: tell real network changes from repeated updates (see isaCloudPathSignature)
+        NSString* isaCloudSignature = isaCloudPathSignature(path);
+        BOOL isaCloudPathChanged = ![isaCloudSignature isEqualToString:self->_isaCloudLastPathSignature];
+        BOOL isaCloudFirstPath = !self->_isaCloudSawFirstPath;
+        self->_isaCloudLastPathSignature = isaCloudSignature;
+        self->_isaCloudSawFirstPath = YES;
+        DDLogInfo(@"nw_path update: %@ (changed=%@, first=%@)", isaCloudSignature, bool2str(isaCloudPathChanged), bool2str(isaCloudFirstPath));
         if(nw_path_get_status(path) == nw_path_status_satisfied && !self->_hasConnectivity)
         {
             DDLogVerbose(@"reachable again");
@@ -385,8 +400,9 @@ static void isaCloudPingOrReconnect(xmpp* account, BOOL networkCameBack)
                     {
                         //try to send a ping. if it fails, it will reconnect
                         DDLogVerbose(@"manager pinging %@", xmppAccount);
+                        //isaCloud: the first update after launch is not the network coming back: the launch attempts already use it
                         //isaCloud: reconnect unbound accounts instead of pinging (see ISACLOUD_RECONNECT_UNBOUND_ON_NETWORK_CHANGE)
-                        isaCloudPingOrReconnect(xmppAccount, YES);     //short ping timeout to quickly check if connectivity is still okay
+                        isaCloudPingOrReconnect(xmppAccount, YES, isaCloudFirstPath);     //short ping timeout to quickly check if connectivity is still okay
                     }
                     else
                     {
@@ -437,7 +453,7 @@ static void isaCloudPingOrReconnect(xmpp* account, BOOL networkCameBack)
                     {
                         [NSThread sleepForTimeInterval:1];
                         //isaCloud: reconnect unbound accounts instead of pinging (see ISACLOUD_RECONNECT_UNBOUND_ON_NETWORK_CHANGE)
-                        isaCloudPingOrReconnect(xmppAccount, NO);     //short ping timeout to quickly check if connectivity is still okay
+                        isaCloudPingOrReconnect(xmppAccount, NO, !isaCloudPathChanged);     //short ping timeout to quickly check if connectivity is still okay
                     }
                     else
                         DDLogDebug(@"Not pinging %@ after 1s, parse queue frozen!", xmppAccount);
