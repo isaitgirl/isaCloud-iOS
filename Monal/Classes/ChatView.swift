@@ -171,7 +171,11 @@ struct ChatView: View {
     @State private var selectedContactForContactDetails: ObservableKVOWrapper<MLContact>?
     @State private var alertPrompt: AlertPrompt?
     @State private var confirmationPrompt: ConfirmationPrompt?
+    @State private var plainSendPrompt = false      //isaCloud: the "send without encryption this time" alert (see askToSendWithoutEncryption)
+    @State private var plainSendAction: (() -> Void)? = nil
+    @State private var plainSendCancelAction: (() -> Void)? = nil
     @State private var showDisableEncryptionDialog = false        //isaCloud: anchored to the lock button, see the toolbar
+    @State private var waitingForAcceptance = false      //isaCloud: a 1:1 contact that has not accepted yet and has no keys: the line above the input says so
     @StateObject private var overlay = LoadingOverlayState()
     @State private var moderationReason = "Spam"
     @State private var isEditingReason = false
@@ -181,6 +185,31 @@ struct ChatView: View {
     // The actual initialization happens in onAppear. It can safely be nil then.
     @State private var backgroundImage: UIImage? = UIImage(systemName: "circle")
     @State var messages: [ChatViewMessage] = []
+    /// isaCloud: a voice message, after the quote in the field (if any). Asks first when the contact has not accepted yet (see askToSendWithoutEncryption)
+    private func sendRecording(_ url: URL, plain: Bool = false) {
+        if !plain && isWaitingForAcceptance() {
+            askToSendWithoutEncryption { sendRecording(url, plain: true) }
+            return
+        }
+        Task {
+            //isaCloud: the quote in the field is the reply the person was writing, and the audio is that reply: the quote goes
+            //first, marked with the microphone so the reader knows an audio follows, and the audio right after, in order (the
+            //server delivers and archives them in the order they arrive). The audio itself can not carry the quote: its body is
+            //the file address, and the database has no caption field (see docs/decisoes.md).
+            let draftText = inputModel.text
+            if !draftText.isEmpty {
+                let body = draftText.hasPrefix(">") ? draftText + "\n🎤" : draftText
+                inputModel.setText("")
+                sendTextAtOnce(body, plain: plain)
+                //the quote left the field: the stored draft has to go with it, or it comes back the next time the chat opens
+                DispatchQueue.global(qos: .userInitiated).async {
+                    DataLayer.sharedInstance().saveMessageDraft(self.contact.contactJid, forAccount: self.account.accountID, withComment: "")
+                }
+            }
+            await uploadAndSendFile(url, plain: plain)
+        }
+    }
+
     /// isaCloud: saves and sends the text messages one after the other, in the order they were sent (see sendTextAtOnce)
     private static let sendQueue = DispatchQueue(label: "im.monal.chatview.send", qos: .userInitiated)
     @State var queuedNewMessages: [ChatViewMessage] = []
@@ -396,6 +425,37 @@ struct ChatView: View {
         showDisableEncryptionDialog = show
     }
     
+    /// isaCloud: a 1:1 contact that has not accepted our request yet (see MLContact isSubscribedTo)
+    private func isPendingContact() -> Bool {
+        return !contact.isMuc && !contact.obj.isSubscribedTo
+    }
+
+    /// isaCloud: a 1:1 contact that has not accepted yet, is encrypted and has no keys: a message sent encrypted would go out without its text
+    /// (MLOMEMO encryptMessage: sends only the placeholder body). Used before a send, so the text stays in the input if the person cancels
+    private func isWaitingForAcceptance() -> Bool {
+        return isWaitingForAcceptance(contact.obj)
+    }
+
+    /// isaCloud: the same check for any destination (forwarding goes to other chats), with the account of that destination
+    private func isWaitingForAcceptance(_ target: MLContact) -> Bool {
+        guard !target.isMuc, !target.isSubscribedTo, target.isEncrypted else {
+            return false
+        }
+        guard let targetAccount = MLXMPPManager.sharedInstance().getEnabledAccount(forID: target.accountID) else {
+            return false
+        }
+        return targetAccount.omemo.knownDevices(forAddressName: target.contactJid).count == 0
+    }
+
+    /// isaCloud: asks before sending to a contact that has not accepted yet. The send goes out without encryption for this message only:
+    /// the chat stays encrypted, and the setting is not changed. Cancel leaves the text and the attachments in the input.
+    /// An alert (not an action sheet: the sheet showed at the top of the screen and cut the text off)
+    private func askToSendWithoutEncryption(_ send: @escaping () -> Void, cancel: (() -> Void)? = nil) {
+        plainSendAction = send
+        plainSendCancelAction = cancel
+        plainSendPrompt = true
+    }
+
     private func checkOmemoSupport(withAlert showWarning: Bool) {
 #if !DISABLE_OMEMO
         if DataLayer.sharedInstance().isAccountEnabled(contact.accountID) {
@@ -416,11 +476,16 @@ struct ChatView: View {
                 }
             }
             hideLoadingOverlay(overlay)
+            //isaCloud: a 1:1 contact that has not accepted yet has no keys to send us: no alert and no fetch (a new request would go out
+            //again). The line above the input says it instead (see waitingForAcceptance)
+            waitingForAcceptance = !omemoDeviceForContactFound && contact.isEncrypted && isPendingContact()
             if !omemoDeviceForContactFound && contact.isEncrypted {
                 if HelperTools.isContactBlacklistedForEncryption(contact.obj) {
                     // this contact was blacklisted for encryption
                     // --> disable it
                     contact.obj.toggleEncryption(false)
+                } else if waitingForAcceptance {
+                    DDLogVerbose("Contact has not accepted yet, no omemo alert or fetch for: \(self.contact)")
                 } else if contact.isMuc && contact.mucType != kMucTypeGroup {
                     // a channel type muc has OMEMO encryption enabled, but channels don't support encryption
                     // --> warn user about this
@@ -636,7 +701,7 @@ struct ChatView: View {
     }
 
     /// isaCloud: sends the text to each destination as a message of ours, with the line that says it was forwarded
-    private func forward(_ text: String?, to destinations: [MLContact]) {
+    private func forward(_ text: String?, to destinations: [MLContact], plain: Bool = false) {
         guard let text = text else {
             return
         }
@@ -644,7 +709,7 @@ struct ChatView: View {
         for destination in destinations {
             //a destination without a conversation yet (for example your own notes on another account) shows up in the list of chats
             DataLayer.sharedInstance().addActiveBuddies(destination.contactJid, forAccount: destination.accountID)
-            if let sent = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: body, havingType: kMessageTypeText, toContact: destination, isEncrypted: destination.isEncrypted, uploadInfo: nil) {
+            if let sent = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: body, havingType: kMessageTypeText, toContact: destination, isEncrypted: destination.isEncrypted && !plain, uploadInfo: nil) {
                 //the chat we are in shows it at once when it is one of the destinations
                 if destination.isEqual(toContact: self.contact.obj) {
                     messages.append(ChatViewMessage(sent))
@@ -657,7 +722,7 @@ struct ChatView: View {
 
     /// isaCloud: sends a file to each destination, one after the other. The file is downloaded once (if it is not on the device yet);
     /// a destination that fails is skipped and the others go on. The alert names the destinations that failed.
-    private func forwardFile(_ messageDBId: NSNumber, _ message: MLMessage, to destinations: [MLContact]) async {
+    private func forwardFile(_ messageDBId: NSNumber, _ message: MLMessage, to destinations: [MLContact], plain: Bool = false) async {
         showLoadingOverlay(overlay, headline: "Forwarding…")
         var failed: [MLContact] = []
         if let downloaded = await downloadForForwarding(messageDBId), let cacheURL = downloaded.fileInfo.fileURL {
@@ -680,7 +745,7 @@ struct ChatView: View {
                 }
             }
             for destination in destinations {
-                if !(await sendForwardedFile(to: destination, cacheURL: fileToSend, filename: nameToSend, emoji: emoji)) {
+                if !(await sendForwardedFile(to: destination, cacheURL: fileToSend, filename: nameToSend, emoji: emoji, plain: plain)) {
                     failed.append(destination)
                 }
             }
@@ -729,7 +794,7 @@ struct ChatView: View {
 
     /// isaCloud: uploads the file to the server of one destination and sends it there: the label line first, then the file.
     /// The file is copied under its own name first, because the upload names it after the copy. false if the destination was skipped.
-    private func sendForwardedFile(to destination: MLContact, cacheURL: URL, filename: String, emoji: String) async -> Bool {
+    private func sendForwardedFile(to destination: MLContact, cacheURL: URL, filename: String, emoji: String, plain: Bool = false) async -> Bool {
         guard let account = MLXMPPManager.sharedInstance().getEnabledAccount(forID: destination.accountID) else {
             DDLogError("Forward: no enabled account for a destination, skipping it")
             return false
@@ -745,12 +810,12 @@ struct ChatView: View {
                 try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
                 try FileManager.default.copyItem(at: cacheURL, to: copy)
             }.value
-            let (url, mimeType, size) = try await MLFiletransfer.uploadFile(copy, onAccount: account, withEncryption: destination.isEncrypted)
+            let (url, mimeType, size) = try await MLFiletransfer.uploadFile(copy, onAccount: account, withEncryption: destination.isEncrypted && !plain)
             //a destination without a conversation yet shows up in the list of chats
             DataLayer.sharedInstance().addActiveBuddies(destination.contactJid, forAccount: destination.accountID)
             //the label and the file go out one after the other, nothing in between
-            let label = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: MessageForward.labelOnly(word: NSLocalizedString("Forwarded", comment: "label on top of a forwarded message: the symbol is put in front"), emoji: emoji), havingType: kMessageTypeText, toContact: destination, isEncrypted: destination.isEncrypted, uploadInfo: nil)
-            let sent = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: url, havingType: kMessageTypeFiletransfer, toContact: destination, isEncrypted: destination.isEncrypted, uploadInfo: ["mimeType": mimeType, "size": size])
+            let label = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: MessageForward.labelOnly(word: NSLocalizedString("Forwarded", comment: "label on top of a forwarded message: the symbol is put in front"), emoji: emoji), havingType: kMessageTypeText, toContact: destination, isEncrypted: destination.isEncrypted && !plain, uploadInfo: nil)
+            let sent = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: url, havingType: kMessageTypeFiletransfer, toContact: destination, isEncrypted: destination.isEncrypted && !plain, uploadInfo: ["mimeType": mimeType, "size": size])
             //the chat we are in shows them at once when it is one of the destinations
             if destination.isEqual(toContact: self.contact.obj) {
                 if let label = label {
@@ -888,14 +953,18 @@ struct ChatView: View {
 
     /// isaCloud: a sticker goes out like a photo (its PNG is uploaded), with the XEP-0449 marker: `isSticker` is stored with the message
     /// (see MLXMPPManager sendMessageAndAddToHistory). The upload copies the file to its own cache, so the library keeps its PNG.
-    private func sendSticker(_ sticker: Sticker) {
+    private func sendSticker(_ sticker: Sticker, plain: Bool = false) {
+        if !plain && isWaitingForAcceptance() {
+            askToSendWithoutEncryption { sendSticker(sticker, plain: true) }
+            return
+        }
         StickerLibrary.shared.markUsed(sticker.id)
         Task {
-            await uploadAndSendFile(sticker.url, isSticker: true)
+            await uploadAndSendFile(sticker.url, isSticker: true, plain: plain)
         }
     }
 
-    private func uploadAndSendFile(_ localFileURL: URL?, isSticker: Bool = false, photoNumber: ChatInputPreparing? = nil) async {
+    private func uploadAndSendFile(_ localFileURL: URL?, isSticker: Bool = false, photoNumber: ChatInputPreparing? = nil, plain: Bool = false) async {
         guard let localFileURL = localFileURL else {
             DDLogError("Couldn't get file location in order to upload it!")
             return
@@ -916,10 +985,12 @@ struct ChatView: View {
             }
         }
         do {
-            let (url, mimeType, size) = try await MLFiletransfer.uploadFile(fileToSend, onAccount: self.account, withEncryption: self.contact.isEncrypted)
+            //isaCloud: plain = sent without encryption this time only (see askToSendWithoutEncryption); the chat keeps its setting
+            let encrypted = self.contact.isEncrypted && !plain
+            let (url, mimeType, size) = try await MLFiletransfer.uploadFile(fileToSend, onAccount: self.account, withEncryption: encrypted)
             //isaCloud: endUpload is called once on each way out of this function (sent, not sent, or failed)
             await MainActor.run {
-                guard let newMLMessage = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: url, havingType: kMessageTypeFiletransfer, toContact: self.contact.obj, isEncrypted: self.contact.isEncrypted, uploadInfo: ["mimeType": mimeType, "size": size, "isSticker": isSticker]) else {
+                guard let newMLMessage = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: url, havingType: kMessageTypeFiletransfer, toContact: self.contact.obj, isEncrypted: encrypted, uploadInfo: ["mimeType": mimeType, "size": size, "isSticker": isSticker]) else {
                     inputModel.endUpload()
                     return
                 }
@@ -956,23 +1027,7 @@ struct ChatView: View {
             onShareLocation: { showLocationPicker = true },
             onRemoveAttachment: { inputModel.removeAttachment(at: $0) },
             onSendRecording: { url in
-                Task {
-                    //isaCloud: the quote in the field is the reply the person was writing, and the audio is that reply: the quote goes
-                    //first, marked with the microphone so the reader knows an audio follows, and the audio right after, in order (the
-                    //server delivers and archives them in the order they arrive). The audio itself can not carry the quote: its body is
-                    //the file address, and the database has no caption field (see docs/decisoes.md).
-                    let draftText = inputModel.text
-                    if !draftText.isEmpty {
-                        let body = draftText.hasPrefix(">") ? draftText + "\n🎤" : draftText
-                        inputModel.setText("")
-                        sendTextAtOnce(body)
-                        //the quote left the field: the stored draft has to go with it, or it comes back the next time the chat opens
-                        DispatchQueue.global(qos: .userInitiated).async {
-                            DataLayer.sharedInstance().saveMessageDraft(self.contact.contactJid, forAccount: self.account.accountID, withComment: "")
-                        }
-                    }
-                    await uploadAndSendFile(url)
-                }
+                sendRecording(url)
             },
             mentionCandidates: mentionNicks,
             sendingHintTypeSize: ChatTextSize.dynamicTypeSize(system: dynamicTypeSize, step: chatViewDefaultsDB.chatTextSizeStep)       //isaCloud: the "sending" capsule follows the chat text size
@@ -1019,6 +1074,15 @@ struct ChatView: View {
 
     /// isaCloud: sends what the input holds: attachments first, then the text (same order as before)
     private func sendFromInputBar() {
+        //isaCloud: before inputModel.send(), which clears the input: a cancel keeps the text and the attachments
+        if isWaitingForAcceptance() {
+            askToSendWithoutEncryption { performSendFromInputBar(plain: true) }
+            return
+        }
+        performSendFromInputBar(plain: false)
+    }
+
+    private func performSendFromInputBar(plain: Bool) {
         guard let draft = inputModel.send() else {
             return
         }
@@ -1033,12 +1097,12 @@ struct ChatView: View {
                         photoCount += 1
                         photoNumber = ChatInputPreparing(current: photoCount, total: photoTotal)
                     }
-                    await uploadAndSendFile(attachment.url, photoNumber: photoNumber)
+                    await uploadAndSendFile(attachment.url, photoNumber: photoNumber, plain: plain)
                 }
             }
         }
         if !draft.text.isEmpty {
-            sendTextAtOnce(draft.text, quotedMessageId: draft.quotedMessageId)
+            sendTextAtOnce(draft.text, quotedMessageId: draft.quotedMessageId, plain: plain)
         }
         sendChatState(isTyping: false)
         // Clear the draft to show the newly sent message in active chats
@@ -1051,9 +1115,10 @@ struct ChatView: View {
     /// thread waits when the database is busy with other writes (a few seconds, now and then): the chat stood still and the message came late.
     /// Now a message that is on its way (the spinner takes the place of the check mark) is shown at once, saved and sent in the background,
     /// and swapped for the real one when that is done. The time of the message is still the time it was saved.
-    private func sendTextAtOnce(_ text: String, quotedMessageId: String? = nil) {
+    private func sendTextAtOnce(_ text: String, quotedMessageId: String? = nil, plain: Bool = false) {
         let destination = contact.obj
-        let encrypted: Bool = contact.isEncrypted
+        //isaCloud: plain = sent without encryption this time only (see askToSendWithoutEncryption); the chat keeps its setting
+        let encrypted: Bool = contact.isEncrypted && !plain
         let pending = ChatViewMessage.pending(text: text, to: destination, ownJid: account.connectionProperties.identity.jid)
         messages.append(pending)
         ChatView.sendQueue.async {
@@ -1090,9 +1155,13 @@ struct ChatView: View {
     }
 
     /// isaCloud: sends the place chosen on the map as a location message, as the other clients do
-    private func sendLocation(_ coordinate: CLLocationCoordinate2D) {
+    private func sendLocation(_ coordinate: CLLocationCoordinate2D, plain: Bool = false) {
+        if !plain && isWaitingForAcceptance() {
+            askToSendWithoutEncryption { sendLocation(coordinate, plain: true) }
+            return
+        }
         let messageText = ChatLocation.geoURI(latitude: coordinate.latitude, longitude: coordinate.longitude)
-        guard let newMLMessage = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: messageText, havingType: kMessageTypeGeo, toContact: self.contact.obj, isEncrypted: self.contact.isEncrypted, uploadInfo: nil) else {
+        guard let newMLMessage = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: messageText, havingType: kMessageTypeGeo, toContact: self.contact.obj, isEncrypted: self.contact.isEncrypted && !plain, uploadInfo: nil) else {
             return
         }
         messages.append(ChatViewMessage(newMLMessage))
@@ -1312,8 +1381,19 @@ struct ChatView: View {
             }
         }, inputViewBuilder: { _ in
             //isaCloud: the field where a new message is typed keeps the system text size (the chat text size is for the messages)
-            makeInputBar()
-                .dynamicTypeSize(dynamicTypeSize)
+            VStack(spacing: 0) {
+                //isaCloud: a 1:1 contact that has not accepted yet: the line says why there are no encryption keys (not a pop-up)
+                if waitingForAcceptance {
+                    Text(String(format: NSLocalizedString("Waiting for %@ to accept the contact. Encryption starts when the keys arrive.", comment: "line above the input while a contact that has not accepted yet has no encryption keys: the name of the contact"), contact.contactDisplayName as String))
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 6)
+                }
+                makeInputBar()
+                    .dynamicTypeSize(dynamicTypeSize)
+            }
         }, messageMenuAction: { (action: MessageAction, defaultActionClosure, message) in
             let mlMessage = (message as! ChatViewMessage).innerMessage.obj
             let messageDBId = mlMessage.messageDBId
@@ -1866,13 +1946,34 @@ struct ChatView: View {
                 //(closing the sheet clears the item: it is read before)
                 let item = messageToForward
                 messageToForward = nil
-                switch item {
-                case .text(let text)?:
-                    forward(text, to: destinations)
-                case .file(let messageDBId, let message)?:
-                    Task { await forwardFile(messageDBId, message, to: destinations) }
-                case nil:
-                    break
+                //isaCloud: a contact that has not accepted yet and has no keys gets a question first (see askToSendWithoutEncryption)
+                let dispatch: ([MLContact], Bool) -> Void = { targets, plain in
+                    switch item {
+                    case .text(let text)?:
+                        forward(text, to: targets, plain: plain)
+                    case .file(let messageDBId, let message)?:
+                        Task { await forwardFile(messageDBId, message, to: targets, plain: plain) }
+                    case nil:
+                        break
+                    }
+                }
+                let waiting = destinations.filter { isWaitingForAcceptance($0) }
+                if waiting.isEmpty {
+                    dispatch(destinations, false)
+                } else {
+                    let ready = destinations.filter { destination in !waiting.contains { $0.isEqual(toContact: destination) } }
+                    askToSendWithoutEncryption({
+                        if !waiting.isEmpty {
+                            dispatch(waiting, true)
+                        }
+                        if !ready.isEmpty {
+                            dispatch(ready, false)
+                        }
+                    }, cancel: {
+                        if !ready.isEmpty {
+                            dispatch(ready, false)
+                        }
+                    })
                 }
             }
         }
@@ -1884,6 +1985,23 @@ struct ChatView: View {
             }
         }) { file in
             ActivityViewController(activityItems: [file.url])
+        }
+        //isaCloud: after all the sheets (see the note above the camera alert): the send to a contact that has not accepted yet
+        .alert(Text("Contact has not accepted yet"), isPresented: $plainSendPrompt) {
+            Button("Send without encryption this time") {
+                let action = plainSendAction
+                plainSendAction = nil
+                plainSendCancelAction = nil
+                action?()
+            }
+            Button("Cancel", role: .cancel) {
+                let cancel = plainSendCancelAction
+                plainSendAction = nil
+                plainSendCancelAction = nil
+                cancel?()
+            }
+        } message: {
+            Text("Without encryption keys the message can't be encrypted. You can send it without encryption just this time, or cancel and wait for the contact to accept.")
         }
         .toolbarRole(.editor)       //make sure to never show the title of the previous view in the back bar button
         .canContainExternalLinks()
@@ -1967,6 +2085,12 @@ struct ChatView: View {
                         checkOmemoSupport(withAlert:true)
                     }
                 }
+            }
+        }
+        //isaCloud: the contact accepted (roster update) or its keys came: the line above the input goes away
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kMonalContactRefresh)).receive(on: RunLoop.main)) { notification in
+            if let notificationContact = notification.userInfo?["contact"] as? MLContact, notificationContact.isEqual(toContact: contact.obj) {
+                waitingForAcceptance = isWaitingForAcceptance()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kMonalNewMessageNotice)).receive(on: RunLoop.main)) { notification in

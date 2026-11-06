@@ -4,8 +4,8 @@ Todas as funcionalidades do isaCloud numa tabela só: o que está **feito** (ris
 
 A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23/10/2026 sobre a `develop` (Monal 7), base atual do fork. As reações (XEP-0444), que eram o item mais trabalhoso, saíram da lista porque já existem na `develop`.
 
-**Total de features no roadmap:** 153
-**Features concluídas:** 140
+**Total de features no roadmap:** 154
+**Features concluídas:** 141
 
 | # | Funcionalidade | Esforço | Observações |
 |---|---|---|---|
@@ -175,6 +175,7 @@ A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23
 | 156 | ~~Reconectar pela rede só quando ela muda de verdade~~ | **feito (build 95, 05/11/2026)**: medido no iPhone (`.dev`) | Os avisos de rede repetidos do iOS (um por segundo, sem mudança) e o primeiro aviso depois da abertura derrubavam logins que estavam andando: abertura a frio de até ~22 s (`isacloud.im`) e ~31 s (`autozona.cc`). Agora a conta não vinculada só reconecta quando a assinatura da rede muda (`isaCloudPathSignature`, `MLXMPPManager.m`), e a pausa de 5 s saiu. Depois: abertura a frio de 0,7 s e 3,2 s; rede de volta com as contas prontas em 0,55 a 2,3 s. Decisão em `docs/decisoes.md`, seção "Reconectar na hora quando a rede volta". |
 | 157 | ~~Citação com miniatura de foto, GIF e figurinha (entre clientes isaCloud)~~ | **feito (build 96, 06/11/2026)**: PR 46 e PR 21 do fork | A resposta leva o ID da mídia citada (`<isacloud-quote>`, namespace `urn:isacloud:quote:0`) e o app mostra a miniatura dentro da citação, sem pulo. Miniatura de 200 × 80 pt, abaixo do autor e do rótulo. Só vale para foto, GIF e figurinha já baixadas. Código no app e no fork do ExyteChat (PR 21, `7d3292b`). Decisão em `docs/decisoes.md` (06/11/2026). |
 | 158 | Citação com miniatura no isaCloud Android | pendente, sem código (anotado em 06/11/2026) | Mesmo comportamento do item 157: responder a foto, GIF e figurinha, enviar e ler o elemento, guardar o ID (migração própria) e mostrar a miniatura. O passo a passo está em `docs/citacao-com-miniatura-android.md`. Depende de responder a mídia no Android, que hoje só cita texto. |
+| 159 | ~~Contato pendente sem chaves OMEMO: sem alerta, com aviso discreto no chat~~ **feito em 06/11/2026** (testado no `.dev`; inclui o encaminhamento) | baixo a médio | Ao adicionar um contato que ainda não aceitou, o chat mostra o alerta "No OMEMO keys found" com "Disable Encryption", que culpa o contato e sugere desligar a criptografia. Decisão (06/11/2026): com a subscrição pendente, sem alerta; uma linha discreta no chat ("Aguardando [nome] aceitar o contato…") e a criptografia escolhida pela pessoa fica como está. O alerta só aparece se o contato já aceitou e as chaves não chegam. Ao enviar para esse contato, um alerta pergunta: "Enviar sem criptografia só desta vez" ou cancelar (o texto fica na caixa). A causa (solicitação pendente) é inferida e não foi verificada no código. Detalhes em `docs/decisoes.md`. |
 
 ## Aguardando o Monal
 
