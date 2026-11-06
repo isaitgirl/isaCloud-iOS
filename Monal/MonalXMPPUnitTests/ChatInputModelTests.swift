@@ -332,4 +332,34 @@ struct MentionAutocompleteTests {
         #expect(MentionAutocomplete.replacing(query: "li", with: "Lucas", in: "oi @li") == "oi Lucas, ")
         #expect(MentionAutocomplete.replacing(query: "", with: "Lucas", in: "@") == "Lucas, ")
     }
+
+    @Test("a quote of a photo sends its id while the quote line is in the text, and forgets it after sending")
+    func quotedIdIsSentWithItsLine() {
+        let model = ChatInputModel()
+        model.quote(author: nil, text: "foto", quotedMessageId: "abc")
+        model.setText(model.text + " resposta")
+        let draft = model.send()
+        #expect(draft?.quotedMessageId == "abc")
+        #expect(model.quotedMessageId == nil)
+
+        model.quote(author: nil, text: "foto", quotedMessageId: "abc")
+        model.send()
+        #expect(model.send() == nil)
+    }
+
+    @Test("a quote of a photo sends no id when the person deleted the quote line")
+    func quotedIdDroppedWhenLineDeleted() {
+        let model = ChatInputModel()
+        model.quote(author: nil, text: "foto", quotedMessageId: "abc")
+        model.setText("so a resposta")
+        #expect(model.send()?.quotedMessageId == nil)
+    }
+
+    @Test("a quote of text sends no id")
+    func textQuoteHasNoId() {
+        let model = ChatInputModel()
+        model.quote(author: nil, text: "texto")
+        model.setText(model.text + " ok")
+        #expect(model.send()?.quotedMessageId == nil)
+    }
 }

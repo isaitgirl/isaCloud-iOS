@@ -109,6 +109,9 @@ static NSMutableDictionary* _singletonCache;
     message.retracted = [(NSNumber*)[dic objectForKey:@"retracted"] boolValue];
     //isaCloud: a missing key (dictionaries built without the column) means "not a sticker"
     message.isSticker = [(NSNumber*)[dic objectForKey:@"isacloud_sticker"] boolValue];
+    //isaCloud: a missing key means "quotes nothing"
+    NSString* quotedId = [dic objectForKey:@"isacloud_quote_id"];
+    message.quotedMessageId = [quotedId isKindOfClass:[NSString class]] && quotedId.length > 0 ? quotedId : nil;
 }
 
 +(MLMessage* _Nullable) createDraftMessageFromDatabaseWithJid:(NSString*) jid andAccountID:(NSNumber*) accountID

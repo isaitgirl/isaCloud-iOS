@@ -282,6 +282,12 @@ extern NSString* const kMessageTypeFiletransfer;
 -(void) setStickerForHistoryId:(NSNumber*) historyId;
 //isaCloud: YES if the outbound message with this messageid (our own id, the one sent in the stanza) was sent as a sticker
 -(BOOL) isStickerMessageId:(NSString*) messageId forAccount:(NSNumber*) accountID;
+//isaCloud: stores the id of the message a reply quotes (see the isacloud_quote_id column, migration 6 of +migrateISACloudDB:)
+-(void) setQuotedMessageIdForHistoryId:(NSNumber*) historyId quotedId:(NSString*) quotedId;
+//isaCloud: the id of the message quoted by our outbound message with this messageid (nil when it quotes nothing); used when sending and resending it
+-(NSString* _Nullable) quotedMessageIdForOutboundMessageId:(NSString*) messageId forAccount:(NSNumber*) accountID;
+//isaCloud: the history id of the message in this chat whose messageid or stanzaid is `quotedId` (nil if it is not in the database)
+-(NSNumber* _Nullable) historyIdOfQuotedMessageId:(NSString*) quotedId inChat:(NSString*) buddy forAccount:(NSNumber*) accountID;
 -(NSDictionary*) messageDataForHistoryID:(NSNumber*) historyID;
 //isaCloud: like messageDataForHistoryID:, but nil instead of an assertion if the message does not exist (anymore), e.g. after removing its account
 -(NSDictionary* _Nullable) optionalMessageDataForHistoryID:(NSNumber*) historyID;

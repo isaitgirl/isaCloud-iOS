@@ -109,6 +109,8 @@ NS_ASSUME_NONNULL_BEGIN
  It returns an MLMessage object (corresponding to the sent message) on success, and nil on failure.
  */
 -(MLMessage* _Nullable) sendMessageAndAddToHistory:(NSString*) message havingType:(NSString*) messageType toContact:(MLContact*) contact isEncrypted:(BOOL) encrypted uploadInfo:(NSDictionary* _Nullable) uploadInfo NS_SWIFT_NAME(sendMessageAndAddToHistory(message:havingType:toContact:isEncrypted:uploadInfo:));
+//isaCloud: the same, for a message that replies to (quotes) a photo, a GIF or a sticker: `quotedMessageId` is the id of that message (messageid in 1:1, stanzaid in groups and channels), see xmpp sendMessage:
+-(MLMessage* _Nullable) sendMessageAndAddToHistory:(NSString*) message havingType:(NSString*) messageType toContact:(MLContact*) contact isEncrypted:(BOOL) encrypted uploadInfo:(NSDictionary* _Nullable) uploadInfo quotedMessageId:(NSString* _Nullable) quotedMessageId NS_SWIFT_NAME(sendMessageAndAddToHistory(message:havingType:toContact:isEncrypted:uploadInfo:quotedMessageId:));
 -(void)sendMessage:(NSString*) message toContact:(MLContact*) contact isEncrypted:(BOOL) encrypted isUpload:(BOOL) isUpload messageId:(NSString*) messageId withCompletionHandler:(void (^ _Nullable)(BOOL success, NSString* messageId)) completion;
 -(void) sendChatState:(BOOL) isTyping toContact:(MLContact*) contact;
 

@@ -4223,6 +4223,16 @@ static NSRegularExpression* fastTokenRemovalRegex;
     if(isUpload && messageId && [[DataLayer sharedInstance] isStickerMessageId:messageId forAccount:self.accountID])
         [messageNode addChildNode:[[MLXMLNode alloc] initWithElement:@"sticker" andNamespace:@"urn:xmpp:stickers:0"]];
 
+    //isaCloud: a reply to a photo, a GIF or a sticker carries the id of the quoted message (urn:isacloud:quote:0). Only the id goes in the stanza,
+    //never content, file name or key. Stored with the message, so resends carry it too. The body keeps the quote as text for the other clients.
+    NSString* quotedMessageId = messageId ? [[DataLayer sharedInstance] quotedMessageIdForOutboundMessageId:messageId forAccount:self.accountID] : nil;
+    if(quotedMessageId != nil)
+    {
+        MLXMLNode* quoteNode = [[MLXMLNode alloc] initWithElement:@"isacloud-quote" andNamespace:@"urn:isacloud:quote:0"];
+        [quoteNode.attributes setObject:quotedMessageId forKey:@"id"];
+        [messageNode addChildNode:quoteNode];
+    }
+
     //set message type
     if(contact.isMuc)
         [messageNode.attributes setObject:kMessageGroupChatType forKey:@"type"];

@@ -774,6 +774,14 @@ static NSMutableDictionary* _typingNotifications;
             if(historyId != nil && messageType == kMessageTypeFiletransfer && [messageNode check:@"{urn:xmpp:stickers:0}sticker"])
                 [[DataLayer sharedInstance] setStickerForHistoryId:historyId];
 
+            //isaCloud: a reply to a photo, a GIF or a sticker carries the id of the quoted message (element urn:isacloud:quote:0, see isacloud_quote_id)
+            if(historyId != nil && [messageNode check:@"{urn:isacloud:quote:0}isacloud-quote"])
+            {
+                NSString* quotedId = [messageNode findFirst:@"{urn:isacloud:quote:0}isacloud-quote@id"];
+                if(quotedId != nil && quotedId.length > 0)
+                    [[DataLayer sharedInstance] setQuotedMessageIdForHistoryId:historyId quotedId:quotedId];
+            }
+
             if(historyId != nil)
                 message = [MLMessage createMessageFromHistoryID:historyId];
             if(message != nil && historyId != nil)      //check historyId to make static analyzer happy

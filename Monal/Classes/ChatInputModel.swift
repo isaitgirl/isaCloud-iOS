@@ -54,6 +54,8 @@ struct ChatInputDraft: Equatable {
     let text: String
     let reply: ChatInputReply?
     let attachments: [ChatInputAttachment]
+    /// isaCloud: the id of the photo, GIF or sticker the text quotes (sent as urn:isacloud:quote:0), nil when it quotes none
+    var quotedMessageId: String? = nil
 }
 
 final class ChatInputModel: ObservableObject {
@@ -75,6 +77,10 @@ final class ChatInputModel: ObservableObject {
     @Published private(set) var noticeIsError = false
     private var noticeToken = 0
     @Published private(set) var reply: ChatInputReply?
+    /// isaCloud: the photo, GIF or sticker being quoted in the text (see quote), and the quote line it came with: the id is sent only
+    /// while that line is still in the text
+    private(set) var quotedMessageId: String?
+    private var quoteLine: String?
     @Published private(set) var edit: ChatInputEdit?
     @Published private(set) var attachments: [ChatInputAttachment] = []
     @Published private(set) var recording: ChatRecordingState?
@@ -238,12 +244,15 @@ final class ChatInputModel: ObservableObject {
     }
 
     /// starts a reply by quoting a message: the quote line goes in front of the text, and the answer is written after it
-    func quote(author: String?, text: String) {
+    /// isaCloud: `quotedMessageId` is the id of the quoted photo, GIF or sticker (nil for any other message): the reply then carries it
+    func quote(author: String?, text: String, quotedMessageId: String? = nil) {
         guard edit == nil else {
             return
         }
         let line = QuoteFormatting.quoteLine(author: author, text: text)
         self.text = self.text.isEmpty ? line + "\n" : line + "\n" + self.text
+        self.quotedMessageId = quotedMessageId
+        self.quoteLine = line
     }
 
     func startReply(to messageId: String, previewText: String) {
@@ -263,6 +272,13 @@ final class ChatInputModel: ObservableObject {
         self.text = text
         reply = nil
         attachments = []
+        clearQuote()
+    }
+
+    /// isaCloud: forgets the photo, GIF or sticker quoted in the text (the quote line itself stays where it is)
+    private func clearQuote() {
+        quotedMessageId = nil
+        quoteLine = nil
     }
 
     func cancelEdit() {
@@ -290,14 +306,21 @@ final class ChatInputModel: ObservableObject {
         guard canSend, edit == nil else {
             return nil
         }
+        //isaCloud: the quoted id goes only while its quote line is still in the text (a quote the person deleted quotes nothing)
+        var quoted: String? = nil
+        if let quotedMessageId, let quoteLine, text.contains(quoteLine) {
+            quoted = quotedMessageId
+        }
         let draft = ChatInputDraft(
             text: text.trimmingCharacters(in: .whitespacesAndNewlines),
             reply: reply,
-            attachments: attachments
+            attachments: attachments,
+            quotedMessageId: quoted
         )
         text = ""
         reply = nil
         attachments = []
+        clearQuote()
         return draft
     }
 

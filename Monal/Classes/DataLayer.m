@@ -2153,6 +2153,38 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
     return [sticker isKindOfClass:[NSNumber class]] && sticker.boolValue;
 }
 
+//isaCloud: see the header
+-(void) setQuotedMessageIdForHistoryId:(NSNumber*) historyId quotedId:(NSString*) quotedId
+{
+    if(historyId == nil || quotedId == nil)
+        return;
+    [self.db voidWriteTransaction:^{
+        [self.db executeNonQuery:@"UPDATE message_history SET isacloud_quote_id=? WHERE message_history_id=?;" andArguments:@[quotedId, historyId]];
+    }];
+}
+
+//isaCloud: see the header
+-(NSString* _Nullable) quotedMessageIdForOutboundMessageId:(NSString*) messageId forAccount:(NSNumber*) accountID
+{
+    if(messageId == nil || accountID == nil)
+        return nil;
+    NSString* quotedId = [self.db idReadTransaction:^{
+        return (NSString*)[self.db executeScalar:@"SELECT isacloud_quote_id FROM message_history WHERE account_id=? AND messageid=? AND inbound=0 LIMIT 1;" andArguments:@[accountID, messageId]];
+    }];
+    return [quotedId isKindOfClass:[NSString class]] && quotedId.length > 0 ? quotedId : nil;
+}
+
+//isaCloud: see the header
+-(NSNumber* _Nullable) historyIdOfQuotedMessageId:(NSString*) quotedId inChat:(NSString*) buddy forAccount:(NSNumber*) accountID
+{
+    if(quotedId == nil || buddy == nil || accountID == nil)
+        return nil;
+    NSNumber* historyId = [self.db idReadTransaction:^{
+        return (NSNumber*)[self.db executeScalar:@"SELECT message_history_id FROM message_history WHERE account_id=? AND buddy_name=? AND (messageid=? OR stanzaid=?) AND retracted=0 ORDER BY message_history_id DESC LIMIT 1;" andArguments:@[accountID, buddy, quotedId, quotedId]];
+    }];
+    return [historyId isKindOfClass:[NSNumber class]] ? historyId : nil;
+}
+
 -(MLMessage*) lastMessageForContact:(NSString*) contact forAccount:(NSNumber*) accountID
 {
     if(accountID == nil || !contact)
