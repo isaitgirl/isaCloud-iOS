@@ -1,6 +1,8 @@
 # Citação com miniatura: instruções para o isaCloud Android
 
-Status: **iOS em desenvolvimento** (branch `feature/citacao-com-miniatura`, sem build de TestFlight ainda). Android: **a fazer**, depois que o iOS estiver validado no `.dev`.
+Status: **iOS funcionando no `.dev`** (branch `feature/citacao-com-miniatura`, commit `1caa3da`; depende do fork ExyteChat na branch `feature/citacao-miniatura`, ainda não mesclado; sem TestFlight). Android: **a fazer**. Roadmap item 158; decisão em `docs/decisoes.md` (06/11/2026).
+
+Valores finais já validados no iOS: miniatura de **200 × 80 pt** (gerada em 240 px), **abaixo** do autor e do rótulo (`📷 Foto`), dentro da barra da citação. A mensagem pendente (enviada, ainda sem o ID salvo) recalcula a miniatura quando o envio termina; no Android, faça o mesmo ao concluir o envio.
 
 Este documento é o que o agente do Android precisa para replicar o comportamento. Ele vale junto com [`docs/decisoes.md`](decisoes.md) (entrada de 06/11/2026) e com [`docs/exytechat-fork.md`](exytechat-fork.md), que trata só do iOS.
 
@@ -65,7 +67,7 @@ Caminho: `~/projects/java/isaCloudMessenger`.
 
 1. **Responder a mídia:** o gesto de puxar (ou o menu de toque longo) de foto, GIF e figurinha monta a citação com o rótulo (texto igual ao do iOS, com o emoji na frente da palavra), e guarda o `id` da mensagem citada para o envio.
 2. **Envio:** ao enviar, se houver `id` guardado, incluir o elemento da seção 2.2 no stanza. Ao cancelar ou enviar, limpar o `id` guardado.
-3. **Miniatura na citação:** a citação mostra a miniatura acima do texto, com cantos arredondados, altura pequena (até ~64 dp). GIF usa o primeiro quadro. Usar o cache de miniaturas que o app já tiver; não carregar o arquivo original em tamanho cheio na lista.
+3. **Miniatura na citação:** a citação mostra o autor e o rótulo primeiro, e a miniatura **abaixo**, com cantos arredondados, até 200 × 80 dp (gerada em cerca de 240 px). GIF usa o primeiro quadro. Usar o cache de miniaturas que o app já tiver; não carregar o arquivo original em tamanho cheio na lista.
 4. **Sem miniatura:** o rótulo de texto continua sendo a citação. Não mostrar espaço vazio.
 
 ## 6. Casos de borda

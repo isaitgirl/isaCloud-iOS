@@ -4,7 +4,7 @@ Todas as funcionalidades do isaCloud numa tabela só: o que está **feito** (ris
 
 A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23/10/2026 sobre a `develop` (Monal 7), base atual do fork. As reações (XEP-0444), que eram o item mais trabalhoso, saíram da lista porque já existem na `develop`.
 
-**Total de features no roadmap:** 151
+**Total de features no roadmap:** 153
 **Features concluídas:** 139
 
 | # | Funcionalidade | Esforço | Observações |
@@ -173,6 +173,8 @@ A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23
 | 154 | ~~Busca de GIF: mais GIFs ao rolar e "em alta" diferentes a cada abertura~~ | **feito (build 91, 04/11/2026)** | Paginação da Giphy ao chegar no fim da lista e trending variado a cada abertura (`GiphySearch.swift`, `GifPickerView.swift`; testes em `GiphySearchTests.swift`). Commits `3a692d86f` e `f9baf20d5`. |
 | 155 | Figurinhas em conformidade com a XEP-0449 (`<file-sharing/>` junto do `<sticker/>`) | **pendente, sem código (anotado em 04/11/2026)** | Hoje vai só o `<sticker/>` (o Monal não tem SFS). Opção planejada: acrescentar `<file-sharing xmlns='urn:xmpp:sfs:0'>` com `media-type`, `size`, `dimensions`, hash SHA-256 (XEP-0300) e a URL do upload. Junto, para depois: sincronizar a biblioteca de figurinhas entre aparelhos e com o Android (PEP). Análise: `docs/analise-figurinhas.md`; decisão em `docs/decisoes.md`. |
 | 156 | ~~Reconectar pela rede só quando ela muda de verdade~~ | **feito (build 95, 05/11/2026)**: medido no iPhone (`.dev`) | Os avisos de rede repetidos do iOS (um por segundo, sem mudança) e o primeiro aviso depois da abertura derrubavam logins que estavam andando: abertura a frio de até ~22 s (`isacloud.im`) e ~31 s (`autozona.cc`). Agora a conta não vinculada só reconecta quando a assinatura da rede muda (`isaCloudPathSignature`, `MLXMPPManager.m`), e a pausa de 5 s saiu. Depois: abertura a frio de 0,7 s e 3,2 s; rede de volta com as contas prontas em 0,55 a 2,3 s. Decisão em `docs/decisoes.md`, seção "Reconectar na hora quando a rede volta". |
+| 157 | Citação com miniatura de foto, GIF e figurinha (entre clientes isaCloud) | **em teste no `.dev` (06/11/2026)**; falta mesclar o fork do ExyteChat e o app | A resposta leva o ID da mídia citada (`<isacloud-quote>`, namespace `urn:isacloud:quote:0`) e o app mostra a miniatura dentro da citação, sem pulo. Miniatura de 200 × 80 pt, abaixo do autor e do rótulo. Só vale para foto, GIF e figurinha já baixadas. Código no app e na branch `feature/citacao-miniatura` do fork (ExyteChat). Decisão em `docs/decisoes.md` (06/11/2026). |
+| 158 | Citação com miniatura no isaCloud Android | pendente, sem código (anotado em 06/11/2026) | Mesmo comportamento do item 157: responder a foto, GIF e figurinha, enviar e ler o elemento, guardar o ID (migração própria) e mostrar a miniatura. O passo a passo está em `docs/citacao-com-miniatura-android.md`. Depende de responder a mídia no Android, que hoje só cita texto. |
 
 ## Aguardando o Monal
 
