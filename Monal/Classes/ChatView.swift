@@ -964,7 +964,7 @@ struct ChatView: View {
         }
     }
 
-    private func uploadAndSendFile(_ localFileURL: URL?, isSticker: Bool = false, photoNumber: ChatInputPreparing? = nil, plain: Bool = false) async {
+    private func uploadAndSendFile(_ localFileURL: URL?, isSticker: Bool = false, photoNumber: ChatInputPreparing? = nil, isVideo: Bool = false, plain: Bool = false) async {
         guard let localFileURL = localFileURL else {
             DDLogError("Couldn't get file location in order to upload it!")
             return
@@ -972,7 +972,18 @@ struct ChatView: View {
         inputModel.beginUpload()
         //isaCloud: a photo can be resized first (docs/analise-comprimir-imagens.md); stickers keep their PNG. The resized copy is removed when the upload is over.
         var fileToSend = localFileURL
-        if !isSticker && MLFiletransfer.imageFileNeedsCompression(localFileURL) {
+        if isVideo {
+            //isaCloud: a gallery video is converted to 480p first (docs/analise-comprimir-videos.md); a video longer than 5 minutes is not sent
+            inputModel.setPreparing(ChatInputPreparing(current: 1, total: 1, isVideo: true))
+            let (convertedUrl, reason) = await MLFiletransfer.compressVideoFileIfNeeded(localFileURL)
+            inputModel.setPreparing(nil)
+            if reason == "too_long" || convertedUrl == nil {
+                inputModel.endUpload()
+                inputModel.showNotice(NSLocalizedString("Video is too long to send (max. 5 minutes).", comment: "notice above the input when a video is longer than the limit and is not sent"), duration: 4, isError: true)
+                return
+            }
+            fileToSend = convertedUrl ?? localFileURL
+        } else if !isSticker && MLFiletransfer.imageFileNeedsCompression(localFileURL) {
             inputModel.setPreparing(photoNumber ?? ChatInputPreparing(current: 1, total: 1))
             fileToSend = await MLFiletransfer.compressImageFileIfNeeded(localFileURL)
             inputModel.setPreparing(nil)
@@ -1097,7 +1108,9 @@ struct ChatView: View {
                         photoCount += 1
                         photoNumber = ChatInputPreparing(current: photoCount, total: photoTotal)
                     }
-                    await uploadAndSendFile(attachment.url, photoNumber: photoNumber, plain: plain)
+                    //isaCloud: only a video picked from the gallery is converted (the camera and the other files are sent as before)
+                    let isGalleryVideo = attachment.isFromGallery && attachment.kind == .file
+                    await uploadAndSendFile(attachment.url, photoNumber: photoNumber, isVideo: isGalleryVideo, plain: plain)
                 }
             }
         }
@@ -1177,10 +1190,10 @@ struct ChatView: View {
     }
 
     /// isaCloud: medias from the picker are copied to attachments; they are uploaded when sent
-    private func addPickedMedias(_ medias: [(url: URL, isVideo: Bool)]) {
+    private func addPickedMedias(_ medias: [(url: URL, isVideo: Bool)], fromGallery: Bool = false) {
         for media in medias {
             let kind: ChatInputAttachment.Kind = media.isVideo ? .file : .image
-            inputModel.addAttachment(ChatInputAttachment(kind: kind, url: media.url))
+            inputModel.addAttachment(ChatInputAttachment(kind: kind, url: media.url, isFromGallery: fromGallery))
         }
     }
 
@@ -1624,7 +1637,7 @@ struct ChatView: View {
         .sheet(isPresented: $showMediaPicker) {
             //isaCloud: the system picker (see SystemMediaPicker)
             SystemMediaPicker(isPresented: $showMediaPicker, onPicked: { medias in
-                addPickedMedias(medias)
+                addPickedMedias(medias, fromGallery: true)
             })
         }
         .fullScreenCover(isPresented: $showCamera) {

@@ -433,7 +433,9 @@ private struct SendingHint: View {
                 ProgressView()
                     .controlSize(.small)
                 if let preparing {
-                    Text(preparing.total > 1
+                    Text(preparing.isVideo
+                         ? NSLocalizedString("Preparing video...", comment: "hint above the input while a video is converted before the upload")
+                         : preparing.total > 1
                          ? String(format: NSLocalizedString("Preparing %d of %d...", comment: "hint above the input while photos are resized before the upload: photo number and count of photos"), preparing.current, preparing.total)
                          : NSLocalizedString("Preparing photo...", comment: "hint above the input while a photo is resized before the upload"))
                         .font(.footnote)

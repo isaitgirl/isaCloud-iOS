@@ -41,6 +41,12 @@ NS_ASSUME_NONNULL_BEGIN
 +(nullable NSURL*) resizedImageFileForUrl:(NSURL*) fileUrl maxPixelSize:(CGFloat) maxSize quality:(double) quality;
 +(nullable NSData*) resizedJPEGDataForImage:(UIImage*) image maxPixelSize:(CGFloat) maxSize quality:(double) quality;
 
+//isaCloud: video conversion before the upload (docs/analise-comprimir-videos.md); the mode is the "videoCompressionMode" setting ("480" or "original")
++(NSString*) videoCompressionMode;
++(BOOL) videoFileNeedsCompression:(NSURL*) fileUrl;
+//the reason is the result: "converted", "kept_small", "kept_original_mode", "kept_original_after_failure" or "too_long" (then the url is nil and the video is not sent)
++(void) compressVideoFileIfNeeded:(NSURL*) fileUrl completion:(void (^)(NSURL* _Nullable resultUrl, NSString* _Nullable reason)) completion;
+
 @end
 
 NS_ASSUME_NONNULL_END

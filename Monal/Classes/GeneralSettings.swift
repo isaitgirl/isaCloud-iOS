@@ -133,6 +133,10 @@ class GeneralSettingsDefaultsDB: ObservableObject {
     //isaCloud: "never", "large" (photos above 2 MiB) or "always"; replaces uploadImagesOriginal (see MLXMPPManager)
     @defaultsDB("imageCompressionMode")
     var imageCompressionMode: String
+
+    //isaCloud: "480" (videos converted to 480p H.264 + AAC before the upload) or "original" (the video is sent as it is)
+    @defaultsDB("videoCompressionMode")
+    var videoCompressionMode: String
     
     @defaultsDB("hardlinkFiletransfersIntoDocuments")
     var hardlinkFiletransfersIntoDocuments: Bool
@@ -729,6 +733,14 @@ struct AttachmentSettings: View {
                     )
                     Text("Image Upload JPEG-Quality: \(String(format: "%.0f%%", generalSettingsDefaultsDB.imageUploadQuality*100))")
                 }
+                //isaCloud: videos from the gallery are converted to 480p before the upload (Original: sent as they are)
+                Picker(selection: $generalSettingsDefaultsDB.videoCompressionMode, label: Text("Compress videos before sending")) {
+                    Text("480p").tag("480")
+                    Text("Original").tag("original")
+                }
+                Text("Videos are converted to 480p before sending. The conversion runs only while the app is open. Videos longer than 5 minutes are not sent.")
+                    .foregroundColor(.secondary)
+                    .font(.footnote)
             }
         }
     }

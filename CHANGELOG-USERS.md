@@ -4,7 +4,12 @@ O que mudou em cada versão, em poucas palavras. A lista técnica completa está
 
 ## Em breve (próxima versão)
 
-Nada por enquanto.
+### Novidades
+- 🎬 Vídeos da galeria agora são comprimidos antes de enviar, para chegar mais rápido e gastar menos internet.
+- ⚙️ Em Anexos, escolha entre enviar o vídeo original ou em 480p.
+
+### Melhorias
+- 📍 A localização do vídeo não vai junto no envio.
 
 ## Build 97 · 06/11/2026
 
