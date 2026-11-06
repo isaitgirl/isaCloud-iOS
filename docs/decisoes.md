@@ -895,3 +895,11 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - **Em aberto:** (1) confirmar no código que a busca falha por causa da subscrição pendente (inferido, não verificado); (2) encaminhar mensagem para contato pendente (`forward`/`forwardFile`, `ChatView.swift`) tem o mesmo problema e ainda não tem o alerta.
 - **Merge e tradução:** muda `ChatView.swift`, que também existe na `develop` do Monal, então a mudança precisa ser validada no próximo merge. Textos novos entram com tradução pt-BR no override do isaCloud.
 - **Teste:** duas contas, uma adiciona a outra sem ela aceitar. Conferir nos simuladores iOS 18 e 27 e no `.dev`, depois de aceitar e com a conversa aberta.
+
+## Encaminhar: a busca sai do foco ao marcar um contato, e o filtro fica (06/11/2026)
+- **Problema:** com a busca aberta na folha de Encaminhar, o botão **Encaminhar** da barra superior fica escondido sob o X da busca. Era preciso tocar no X antes de enviar.
+- **Decisão da Isadora:** ao marcar um contato, a busca **sai do foco** (o teclado fecha e o botão volta), mas o **texto continua**, para a lista seguir filtrada e dar para marcar outro contato sem refazer a busca. Desmarcar não mexe no foco.
+- **Por que não copiar o Compartilhar 1:1:** lá a folha escolhe um destino só, então fechar a busca e limpar o texto é natural (`SharePickerView.swift`, `pickedWhileSearching`). Aqui são até 5 destinos, e limpar o texto a cada toque obrigaria a refazer a busca.
+- **Como:** `@State isSearching` ligado ao `.searchable(isPresented:)`; no toque de marcar, `isSearching = false` (só ao marcar, não ao desmarcar).
+- **Teste:** no isaCloud.dev (iPhone), a Isadora confirmou em 06/11/2026. Ainda não testado nos simuladores iOS 18 e 27.
+- **Merge:** o arquivo é do isaCloud (`MessageForwardPicker.swift`), sem risco com o Monal.

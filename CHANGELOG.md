@@ -4,6 +4,9 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## Não publicado
 
+### Correções
+- **Encaminhar: ao marcar um contato com a busca aberta, a busca sai do foco e o botão Encaminhar aparece sem precisar tocar no X; o texto da busca continua filtrando** (`MessageForwardPicker.swift`, `isSearching` no `.searchable`). Testado no isaCloud.dev (iPhone). Sem commit ainda.
+
 ## 0.0.1 (build 96) — 06/11/2026
 
 Enviado ao TestFlight às 12:48. PRs 46 (`feature/citacao-com-miniatura`) e 47 (`fix/c17-wakeup-deadlock`); fork ExyteChat PR 21 (`7d3292b`).
