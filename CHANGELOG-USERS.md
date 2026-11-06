@@ -6,6 +6,14 @@ O que mudou em cada versão, em poucas palavras. A lista técnica completa está
 
 Nada por enquanto.
 
+## Build 96 · 06/11/2026
+
+### Novidades
+- 🖼️ Ao responder a uma foto, GIF ou figurinha, a resposta mostra uma miniatura dela.
+
+### Correções
+- 🛡️ O app não fecha mais sozinho em segundo plano quando chegam notificações seguidas.
+
 ## Build 95 · 05/11/2026
 
 ### Melhorias

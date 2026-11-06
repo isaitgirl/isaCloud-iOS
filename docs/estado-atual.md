@@ -1,4 +1,4 @@
-# Estado atual e handoff (05/11/2026, build 95)
+# Estado atual e handoff (06/11/2026, build 96)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,11 +7,11 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 95** (mensagem "Build 95 ..."), tag `build-95`; `git log --oneline -3` |
-| TestFlight | **95** (05/11/2026, 13:35; antes 94 às 10:56, tag `build-94`) |
-| `.dev` no iPhone | **95**, igual ao TestFlight (05/11/2026; **sem push**, então a extensão de notificação não roda nele) |
+| Commit | o do **build 96** (mensagem "Build 96 ..."), tag `build-96`; `git log --oneline -3` |
+| TestFlight | **96** (06/11/2026, 12:48; antes 95 em 05/11 às 13:35, tag `build-95`) |
+| `.dev` no iPhone | **96**, igual ao TestFlight (06/11/2026; **sem push**, então a extensão de notificação não roda nele) |
 | Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o código do build 94 (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261105-1036-linha-lido-2/` e `-1037-linha-lido-2/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
-| ExyteChat | `e168ed8` na `isaCloud` (visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
+| ExyteChat | `7d3292b` na `isaCloud` (miniatura opcional dentro da citação, `Message.quotePreview`, PR 21; antes `e168ed8`: visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
@@ -19,6 +19,12 @@ Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 ## Em andamento (05/11/2026)
 
 - Nada em aberto deste lote. Conferidos pela Isadora no iPhone em 05/11/2026: a linha "Lido até este ponto" (roadmap 153), compartilhar pelo contato sugerido (152), entrar num canal público escolhendo a conta (151), "Compartilhar…" de áudio e documento (120) e o aviso de falha de upload (141).
+
+## O que entrou no build 96 (sobre o 95)
+
+- **C17** (watchdog `0x8BADF00D` em segundo plano no build 95, 05/11 22:20): o timer do wakeup não segura mais `@synchronized(self)` enquanto espera a principal, e reconfere o estado no lock antes de desligar e congelar (`MonalAppDelegate.m`, PR 47). **Validar em produção:** nenhum `0x8BADF00D` com `incomingWakeupWithCompletionHandler:` na pilha; no log, `Main queue did not run our block` seguido de `Handling wakeup completion` sem travar, e às vezes `state changed while preparing the shutdown`. O `.dev` não recebe push, então esse caminho só é exercitado no TestFlight.
+- **Citação com miniatura** de foto, GIF e figurinha (roadmap 157, PR 46 + PR 21 do fork). Falta o Android (roadmap 158, `docs/citacao-com-miniatura-android.md`).
+- **Em aberto:** o bug da caixa de escrever (cursor uma linha acima e a linha escondida pelo teclado, `ChatInputBar.swift`, `TextField(axis: .vertical).lineLimit(1...8)`): diagnosticado, plano de trocar por um `UITextView` aguardando a Isadora escolher o limite de linhas (6 ou manter 8).
 
 ## O que entrou no build 95 (sobre o 94)
 

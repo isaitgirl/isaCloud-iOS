@@ -4,6 +4,16 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## Não publicado
 
+## 0.0.1 (build 96) — 06/11/2026
+
+Enviado ao TestFlight às 12:48. PRs 46 (`feature/citacao-com-miniatura`) e 47 (`fix/c17-wakeup-deadlock`); fork ExyteChat PR 21 (`7d3292b`).
+
+### Novidades
+- **Citação de foto, GIF e figurinha com miniatura** (roadmap 157, PR 46): ao responder a uma dessas mídias, a citação mostra uma miniatura (200 × 80 pt, gerada em 240 px, com cache) abaixo do autor e do rótulo, se a mídia já estiver no aparelho. Entre clientes isaCloud a resposta leva `<isacloud-quote xmlns='urn:isacloud:quote:0' id='…'/>` com o ID da citada (`stanza-id` em grupo, ID do stanza em 1:1); o corpo não muda, então os outros clientes continuam vendo o rótulo. ID guardado em `isacloud_quote_id` (migração 6 de `+migrateISACloudDB:`, idempotente). A mensagem pendente recalcula a miniatura quando o envio termina. Depende do PR 21 do fork ExyteChat (`Message.quotePreview`, `MessageTextView.quoteView`). Guia para o Android em `docs/citacao-com-miniatura-android.md`; decisão em `docs/decisoes.md`.
+
+### Correções
+- **O app não é mais morto em segundo plano ao receber um push enquanto o timer de um wakeup anterior termina (C17, PR 47).** O timer, rodando no fallback de fundo de `runOnMainQueue:withTimeout:`, segurava `@synchronized(self)` enquanto esperava a principal no `scheduleBackgroundTask`, e a principal esperava o mesmo lock num push novo (`0x8BADF00D`, build 95). Agora o lock só decide o estado; sincronizar erros, desconectar e congelar ficam fora dele, com uma reconferência no lock logo antes de desligar (para não congelar contas que um push novo ou a volta para a frente acabaram de reconectar), e o `scheduleBackgroundTask` é assíncrono nesse ponto (`MonalAppDelegate.m`). Análise e revisão em `docs/analises-crashes.md`.
+
 ## 0.0.1 (build 95) — 05/11/2026
 
 Enviado ao TestFlight às 13:35. PR 45 (`fix/c16-bloco-tls-stream-em-erro`).
