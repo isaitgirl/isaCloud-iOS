@@ -52,9 +52,10 @@ final class ChatInputBaselineTests: XCTestCase {
     }
 
     private func messageField(_ app: XCUIApplication) -> XCUIElement {
-        // the placeholder disappears when the input has text (a draft), so also match the typed value
+        // the input is a UITextView, which has no placeholderValue: while it is empty its value is the placeholder (see ChatPlaceholderTextView),
+        // and with text its value is the text, so also match the typed value
         // the placeholder is translated (pt-BR: "Escreva uma mensagem..."), so both texts are accepted
-        return app.descendants(matching: .any).matching(NSPredicate(format: "placeholderValue IN %@ OR value BEGINSWITH %@", ["Type a message...", "Escreva uma mensagem..."], "uitest-")).firstMatch
+        return app.descendants(matching: .any).matching(NSPredicate(format: "value IN %@ OR value BEGINSWITH %@", ["Type a message...", "Escreva uma mensagem..."], "uitest-")).firstMatch
     }
 
     /// any element with this label: the microphone is a button, the attach icon is an image inside a button
