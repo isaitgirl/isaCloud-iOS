@@ -916,7 +916,7 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - **Escopo:** só o vídeo escolhido na galeria. A câmera e a folha de compartilhar ficam para depois. Separação feita por um campo `isFromGallery` no `ChatInputAttachment`, ligado só no picker da galeria (`addPickedMedias(_:fromGallery:)`). Motivo: câmera e galeria chegam pelo mesmo caminho e só o tipo do arquivo não basta.
 - **Preset:** `AVAssetExportPreset640x480` (480p), `AVFileTypeMPEG4`, `shouldOptimizeForNetworkUse`. Vídeo até 512 KiB passa sem conversão.
 - **Localização:** `metadataItemFilter = AVMetadataItemFilter.forSharing()`. Ainda não confirmado no `.dev`: o log traz `gps=sim/não` para conferir.
-- **Limite:** duração acima de 300 s é recusada antes da conversão, também no modo "Original" (o limite de 150 MB vale nos dois).
+- **Limite:** duração acima de 300 s é recusada antes da conversão, também no modo "Original" (o limite de 200 MB vale nos dois; o servidor passou de 150 para 200 MB em 06/11/2026).
 - **Espera:** tempo máximo de 10 minutos na conversão; passou disso, cancela e envia o original.
 - **Resultados possíveis no log:** `converted`, `kept_small`, `kept_original_mode`, `kept_original_after_failure`, `too_long`. Sem nome nem caminho do arquivo.
 - **Pendente:** a string "Keep the app open while the video is prepared." existe em pt-BR, mas ainda não tem uso na interface.

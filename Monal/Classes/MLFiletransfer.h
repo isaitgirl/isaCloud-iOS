@@ -44,6 +44,12 @@ NS_ASSUME_NONNULL_BEGIN
 //isaCloud: video conversion before the upload (docs/analise-comprimir-videos.md); the mode is the "videoCompressionMode" setting ("480" or "original")
 +(NSString*) videoCompressionMode;
 +(BOOL) videoFileNeedsCompression:(NSURL*) fileUrl;
+//isaCloud: size the video will have when uploaded: the file size if it is sent as it is, else the 480p estimate (duration x 490000 bytes/s)
++(int64_t) estimatedUploadBytesForVideo:(NSURL*) fileUrl;
+//isaCloud: checks a gallery video before it is attached (the camera is not checked): YES if it is longer than 300 s (reason "too_long") or its estimated upload is bigger than uploadSize (reason "over_server_limit"); uploadSize 0 (unknown) always gives NO
++(BOOL) videoIsTooLargeForServer:(NSURL*) fileUrl uploadSize:(NSInteger) uploadSize reason:(NSString* _Nullable* _Nullable) reason;
+//isaCloud: the server's limit as the people who set it write it: in MiB (200 MiB is 209715200 bytes), e.g. "200 MiB" or "1.5 MiB"
++(NSString*) serverLimitTextForBytes:(NSInteger) bytes;
 //the reason is the result: "converted", "kept_small", "kept_original_mode", "kept_original_after_failure" or "too_long" (then the url is nil and the video is not sent)
 +(void) compressVideoFileIfNeeded:(NSURL*) fileUrl completion:(void (^)(NSURL* _Nullable resultUrl, NSString* _Nullable reason)) completion;
 

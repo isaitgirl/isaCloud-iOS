@@ -22,6 +22,16 @@
 
 @import SAMKeychain;
 
+//isaCloud: XEP-0363 announces the limit as a field "max-file-size" of the data form in disco#info (Prosody and ejabberd both do it),
+//not as an attribute of the result element; reading an attribute always gave 0 ("Zero kB" in Server details). See docs/analises-crashes.md
+static NSInteger isaCloudMaxFilesizeFromUploadDiscoInfo(MLXMLNode* iqNode)
+{
+    for(MLXMLNode* field in [iqNode find:@"{http://jabber.org/protocol/disco#info}query/{jabber:x:data}x/field"])
+        if([field.attributes[@"var"] isEqualToString:@"max-file-size"])
+            return [[field findFirst:@"value#"] integerValue];
+    return 0;
+}
+
 /**
  Validate and process any iq elements.
  @link https://xmpp.org/rfcs/rfc6120.html#stanzas-semantics-iq
@@ -687,7 +697,7 @@ $$class_handler(handleServerDiscoInfo, $$ID(xmpp*, account), $$ID(XMPPIQ*, iqNod
     if([features containsObject:@"urn:xmpp:http:upload:0"])
     {
         DDLogInfo(@"supports http upload with server: %@", iqNode.from);
-        NSInteger maxFilesize = [[iqNode findFirst:@"{http://jabber.org/protocol/disco#info}query/\\{urn:xmpp:http:upload:0}result@max-file-size\\|int"] integerValue];
+        NSInteger maxFilesize = isaCloudMaxFilesizeFromUploadDiscoInfo(iqNode);
         if(!account.connectionProperties.supportsHTTPUpload || maxFilesize > account.connectionProperties.uploadSize)
         {
             account.connectionProperties.supportsHTTPUpload = YES;
@@ -723,7 +733,7 @@ $$class_handler(handleServiceDiscoInfo, $$ID(xmpp*, account), $$ID(XMPPIQ*, iqNo
     if([features containsObject:@"urn:xmpp:http:upload:0"] && ![features containsObject:@"http://jabber.org/protocol/muc"])
     {
         DDLogInfo(@"supports http upload with server: %@", iqNode.from);
-        NSInteger maxFilesize = [[iqNode findFirst:@"{http://jabber.org/protocol/disco#info}query/\\{urn:xmpp:http:upload:0}result@max-file-size\\|int"] integerValue];
+        NSInteger maxFilesize = isaCloudMaxFilesizeFromUploadDiscoInfo(iqNode);
         if(!account.connectionProperties.supportsHTTPUpload || maxFilesize > account.connectionProperties.uploadSize)
         {
             account.connectionProperties.supportsHTTPUpload = YES;

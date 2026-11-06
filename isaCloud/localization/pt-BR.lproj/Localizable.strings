@@ -272,6 +272,10 @@
 "Videos are converted to 480p before sending. The conversion runs only while the app is open. Videos longer than 5 minutes are not sent." = "Os vídeos são convertidos para 480p antes do envio. A conversão só acontece com o app aberto. Vídeos com mais de 5 minutos não são enviados.";
 "Preparing video..." = "Preparando vídeo...";
 "Video is too long to send (max. 5 minutes)." = "O vídeo é longo demais para enviar (máximo de 5 minutos).";
+"This video is larger than the server limit (%@)." = "Este vídeo passa do limite de %@ do servidor.";
+"This video is larger than the server limit." = "Este vídeo passa do limite do servidor.";
+"This file is larger than the server limit (%@)." = "Este arquivo passa do limite de %@ do servidor.";
+"This file is larger than the server limit." = "Este arquivo passa do limite do servidor.";
 "Keep the app open while the video is prepared." = "Mantenha o app aberto enquanto o vídeo é preparado.";
 "Read up to here" = "Lido até este ponto";
 "Waiting for %@ to accept the contact. Encryption starts when the keys arrive." = "Aguardando %@ aceitar o contato. A criptografia começa quando as chaves chegarem.";

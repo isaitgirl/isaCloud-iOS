@@ -5,7 +5,7 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 ## Não publicado
 
 ### Adicionado
-- **Compressão de vídeos da galeria (480p).** Vídeo escolhido na galeria acima de 512 KB vai em MP4 H.264 + AAC 480p (`AVAssetExportPreset640x480`), sem a localização (filtro de compartilhamento). Opção "Compressão de vídeos" em Anexos (Original ou 480p, padrão 480p). Vídeo com mais de 300 s é recusado com aviso antes de converter (limite de 150 MB). A conversão só roda com o app aberto. Câmera e folha de compartilhar não entram nesta versão. Análise em `docs/analise-comprimir-videos.md`; roadmap 161. Ainda não testado no iPhone.
+- **Compressão de vídeos da galeria (480p).** Vídeo escolhido na galeria acima de 512 KB vai em MP4 H.264 + AAC 480p (`AVAssetExportPreset640x480`), sem a localização (filtro de compartilhamento). Opção "Compressão de vídeos" em Anexos (Original ou 480p, padrão 480p). Vídeo com mais de 300 s é recusado com aviso antes de converter (limite de 200 MB). A conversão só roda com o app aberto. Câmera e folha de compartilhar não entram nesta versão. Análise em `docs/analise-comprimir-videos.md`; roadmap 161. Ainda não testado no iPhone.
 
 ## 0.0.1 (build 97) — 06/11/2026
 

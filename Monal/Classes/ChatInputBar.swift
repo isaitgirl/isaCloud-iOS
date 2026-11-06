@@ -65,7 +65,8 @@ struct ChatInputBar: View {
         .background(.bar)
         //isaCloud: the "sending" hint floats above the bar, so the chat does not move up and down while a file goes out
         .overlay(alignment: .top) {
-            if model.isUploading {
+            //isaCloud: a video being checked (before any attachment exists) shows the hint too
+            if model.isUploading || model.preparing != nil {
                 SendingHint(preparing: model.preparing).dynamicTypeSize(sendingHintTypeSize)
             } else if let notice = model.notice {
                 SendingHint(notice: notice, isError: model.noticeIsError).dynamicTypeSize(sendingHintTypeSize)

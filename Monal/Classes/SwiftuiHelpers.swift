@@ -400,6 +400,8 @@ struct SystemMediaPicker: UIViewControllerRepresentable {
 
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
             isPresented = false
+            //isaCloud: diagnostic log for the gallery (what the system returned, and how many were copied)
+            DDLogInfo("Gallery picker: \(results.count) result(s)")
             guard !results.isEmpty else {
                 return
             }
@@ -436,6 +438,7 @@ struct SystemMediaPicker: UIViewControllerRepresentable {
                 lock.lock()
                 let ordered = picked.keys.sorted().compactMap { picked[$0] }
                 lock.unlock()
+                DDLogInfo("Gallery picker: \(ordered.count) of \(results.count) copied, \(ordered.filter { $0.isVideo }.count) video(s)")
                 onPicked(ordered)
             }
         }

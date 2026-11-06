@@ -7,13 +7,13 @@ Data: 04/11/2026; medições com vídeo real de iPhone acrescentadas em 06/11/20
 Decidido pela Isadora em 06/11/2026, depois das medições:
 
 - **Escopo:** só a galeria (seletor de mídia do chat). Câmera (gravação direta) e folha de compartilhar ficam para a segunda etapa, quando a galeria estiver validada no `.dev`.
-- **Só 480p.** A opção 720p sai do escopo: o preset passa do limite de 150 MB em menos de 2 minutos de vídeo (medido). Volta quando houver conversão com bitrate próprio (`AVAssetWriter`) ou um limite de duração para ela.
+- **Só 480p.** A opção 720p sai do escopo: o preset passa do limite de 200 MB em cerca de 2 min e 25 s de vídeo (medido). Volta quando houver conversão com bitrate próprio (`AVAssetWriter`) ou um limite de duração para ela.
 - **Opções em Anexos:** "Original" ou "480p" (padrão 480p). Configuração própria, separada da de fotos (chave `videoCompressionMode`).
 - **Não converter abaixo de 512 KB** (igual ao Android).
-- **Duração máxima de 300 s.** Acima disso o envio é recusado antes da conversão, com aviso. Margem com o limite de 150 MB: 480p de 250 s deu 123 MB.
+- **Duração máxima de 300 s.** Acima disso o envio é recusado antes da conversão, com aviso. Margem com o limite de 200 MB: 480p de 250 s deu 123 MB, então 300 s dá cerca de 147 MB (estimativa linear a partir da medição).
 - **Localização (GPS): remover com o filtro de compartilhamento** (`AVMetadataItemFilter.forSharing()` no `AVAssetExportSession`). Ainda **não verificado**: antes de liberar qualquer build, conferir no log do `.dev` que a saída sai com `gps=não`. Se sair `gps=sim`, o recurso não vai para o TestFlight.
 - **Só com o app aberto**, sem tarefa em segundo plano. Aviso "Mantenha o app aberto" durante a conversão.
-- **Falha da conversão:** envia o original e registra no log. Se o original passar de 150 MB, o envio falha pelo caminho de erro que já existe.
+- **Falha da conversão:** envia o original e registra no log. Se o original passar de 200 MB, o envio falha pelo caminho de erro que já existe.
 - **Miniatura:** não gerada no MVP (usa a do original, como hoje).
 - **Log:** tamanho original, duração, dimensões, codec, taxa, tamanho final, tempo, resultado (`converted`, `kept_small`, `kept_original_after_failure`, `too_long`) e `gps=sim/não`. Sem nome nem caminho do arquivo.
 
@@ -25,7 +25,7 @@ Pergunta: vídeos gravados pelo iPhone são `.mov` (HEVC por padrão), e no Andr
 - **Para o iPhone, quase todo vídeo precisa ser convertido.** Gravações e vídeos da galeria são `.mov` HEVC. O modo "Apenas se necessário" converteria quase tudo, então, na prática, a escolha real é **a resolução de saída** e se existe um modo "Original".
 - **Os presets da Apple servem:** `Preset1280x720` e `Preset640x480` geram H.264 + AAC em MP4 (testado). `PresetMediumQuality` saiu pequeno demais (568×320) e os `PresetHEVC*` mantêm HEVC, então não servem.
 - **Metadados:** o `avconvert` padrão **apaga a localização** (GPS). Só mantém com `--disableMetadataFilter` (testado). **Com `AVAssetExportSession` (o caminho proposto), a localização continua no arquivo** (medido em 06/11/2026 com vídeo real). Para remover o GPS é preciso filtrar os metadados ou usar `AVAssetWriter`.
-- **Vídeo real de iPhone (06/11/2026, medido no Mac):** 480p saiu em 123 MB para 4 min e 11 s, em 10 s. 720p saiu em 346 MB, em 28 s. O 720p **não reduz o suficiente** para o limite de 150 MB (ver "Limite" abaixo).
+- **Vídeo real de iPhone (06/11/2026, medido no Mac):** 480p saiu em 123 MB para 4 min e 11 s, em 10 s. 720p saiu em 346 MB, em 28 s. O 720p **não reduz o suficiente** para o limite de 200 MB (ver "Limite" abaixo).
 - **Ainda falta medir no iPhone XR** (tempo e aquecimento) e confirmar a rotação com um vídeo gravado em retrato.
 
 ## Os três caminhos de entrada
@@ -105,7 +105,7 @@ Leituras:
 
 Como o iPhone grava HEVC `.mov` por padrão, o modo "Apenas se necessário" (converter só o que não é H.264 em MP4) **converteria quase todo vídeo do iPhone**. Por isso o desenho é espelhar as opções do Android:
 
-- **Original:** envia como hoje (sem conversão). Não serve para vídeo acima de 150 MB (limite de upload do isaCloud).
+- **Original:** envia como hoje (sem conversão). Não serve para vídeo acima de 200 MB (limite de upload do isaCloud, aumentado de 150 MB pela Isadora em 06/11/2026).
 - **720p:** converte para H.264 + AAC, até 720 px, 2 Mbps.
 - **480p (padrão):** igual, até 480 px, 1 Mbps (economia de dados e de tempo). Decidido.
 
@@ -118,8 +118,8 @@ Vídeo abaixo de 512 KB passa sem conversão, como no Android. Acima disso, segu
 - **Conversão: Opção A, `AVAssetExportSession` com preset** (`Preset640x480` para 480p, `Preset1280x720` para 720p, `outputFileType = .mp4`). **Decidido.** Simples, sem bibliotecas, testado. Limitação: sem controle de bitrate, então o 720p sai acima do alvo do Android. A Opção B (`AVAssetWriter`, bitrate igual ao Android) fica de reserva, só se o tamanho incomodar.
 - **Progresso:** `exportSession.progress` (ou o callback do writer) alimenta "Preparando vídeo N de M…", como no plano de fotos.
 - **Falha:** se a conversão falhar, enviar o original e avisar que o vídeo foi enviado sem conversão. O aviso vermelho de falha só aparece se o upload falhar.
-- **Segundo plano: esperar (decidido).** A conversão só continua com o app aberto. Se a pessoa sair, a conversão recomeça ao voltar, e a mensagem fica pendente até lá. Mostrar o aviso "mantenha o app aberto" durante a conversão. Não cancelamos nem enviamos o original: o original de vídeo longo (350 MB para 4 minutos) passa do limite de 150 MB, então não tem como sair.
-- **Limite de 150 MB (decidido: prever antes de converter).** Checar a duração no início e recusar com aviso antes de converter, com margem de segurança. Com o vídeo real (06/11/2026): **480p** saiu 123 MB para 250 s, ou seja, **cerca de 5 minutos** para bater 150 MB (150 ÷ 123 × 250 s ≈ 305 s). **720p** saiu 346 MB para 250 s, ou seja, **cerca de 1 min e 49 s** para bater 150 MB. Isso já mostra que o 720p do preset não serve para vídeos longos; a opção 720p precisaria de limite de duração próprio ou de `AVAssetWriter`. Testar `estimatedOutputFileLength` do `AVAssetExportSession` no iPhone antes de confiar nele. Depois da conversão, conferir o tamanho real de novo antes do envio.
+- **Segundo plano: esperar (decidido).** A conversão só continua com o app aberto. Se a pessoa sair, a conversão recomeça ao voltar, e a mensagem fica pendente até lá. Mostrar o aviso "mantenha o app aberto" durante a conversão. Não cancelamos nem enviamos o original: o original de vídeo longo (350 MB para 4 minutos) passa do limite de 200 MB, então não tem como sair.
+- **Limite de 200 MB (decidido: prever antes de converter).** O servidor passou a aceitar 200 MB (decisão da Isadora em 06/11/2026). Checar a duração no início e recusar com aviso antes de converter, com margem de segurança. Com o vídeo real (06/11/2026): **480p** saiu 123 MB para 250 s, ou seja, **cerca de 6 min e 47 s** para bater 200 MB (200 ÷ 123 × 250 s ≈ 407 s); o teto de 300 s segura antes disso, com cerca de 147 MB no pior caso. **720p** saiu 346 MB para 250 s, ou seja, **cerca de 2 min e 25 s** para bater 200 MB. Isso já mostra que o 720p do preset não serve para vídeos longos; a opção 720p precisaria de limite de duração próprio ou de `AVAssetWriter`. Testar `estimatedOutputFileLength` do `AVAssetExportSession` no iPhone antes de confiar nele. Depois da conversão, conferir o tamanho real de novo antes do envio.
 - **Log (decidido, como nas fotos):** registrar o original (tamanho, duração, resolução, codec, bitrate), o preset usado, o arquivo final (tamanho), o tempo de conversão e o resultado (convertido, falha, recusado pelo limite). Sem nome de arquivo nem caminho completo.
 - **Extensão de compartilhar:** adiar a conversão para o app principal (`sendAllOutboxes`), igual às fotos.
 - **Metadados:** `avconvert` padrão **remove a localização** (testado: GPS presente na entrada, ausente na saída). Com `--disableMetadataFilter` ela se mantém. **`AVAssetExportSession` mantém a localização** (medido em 06/11/2026: GPS presente na entrada e na saída de 480p e 720p). Por isso o GPS **não sai só com o preset**: é preciso filtrar os metadados ou converter com `AVAssetWriter`. **Decidido: remover o GPS** (privacidade). Dizer isso na tela de Anexos.
@@ -147,16 +147,16 @@ Vídeo abaixo de 512 KB passa sem conversão, como no Android. Acima disso, segu
 2. **Conversão:** Opção A (preset da Apple). Opção B fica de reserva.
 3. **GPS:** removido.
 4. **Segundo plano:** esperar, com o app aberto. Sem envio do original em caso de espera longa.
-5. **Limite de 150 MB:** checado pela duração antes de converter.
+5. **Limite de 200 MB:** checado pela duração antes de converter.
 6. **Configuração de vídeo separada da de imagens.** Não herda nada da configuração de imagens; começa em 480p.
 7. **Log como nas fotos** (original, preset, arquivo final, tempo, resultado).
 
 ## Pendências (não bloqueiam as decisões acima)
 
 1. **Rotação e tempo no iPhone:** não verificados. O tempo medido (10 s a 28 s para 4 min) foi no Mac; no iPhone XR precisa de medição. A Isadora testa no `.dev`, com a instrumentação do log. Rotação: o vídeo real de 06/11/2026 é paisagem (matriz 0°); falta um em retrato.
-1b. **720p acima do limite de 150 MB** para vídeos de mais de cerca de 1 min e 49 s (medido em 06/11/2026). Decidir: 720p só para vídeos curtos, 720p com `AVAssetWriter` (bitrate próprio), ou tirar a opção 720p por enquanto.
+1b. **720p acima do limite de 200 MB** para vídeos de mais de cerca de 2 min e 25 s (medido em 06/11/2026). Decidir: 720p só para vídeos curtos, 720p com `AVAssetWriter` (bitrate próprio), ou tirar a opção 720p por enquanto.
 1c. **GPS no `AVAssetExportSession`:** a localização continua no arquivo (medido em 06/11/2026). Decidir o caminho para remover (filtro de metadados ou `AVAssetWriter`).
 2. **`estimatedOutputFileLength`:** testar no iPhone antes de usar a estimativa.
-3. **Opção "Original" para vídeo acima de 150 MB:** decidir se ela some, fica desabilitada ou só avisa.
+3. **Opção "Original" para vídeo acima de 200 MB:** decidir se ela some, fica desabilitada ou só avisa.
 4. **Mensagens antigas:** não convertemos o que já foi enviado.
 5. **Android não testado em aparelho:** a hipótese de HEVC/QuickTime como causa precisa de um teste com `.mov` real no cliente Android.

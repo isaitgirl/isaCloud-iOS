@@ -222,6 +222,8 @@ struct ChatView: View {
     @State private var showMediaPicker = false
     @State private var showCamera = false
     @State private var showCameraPermissionAlert = false
+    //isaCloud: the alert for a gallery video that the server limit does not allow (the text is the alert title)
+    @State private var serverLimitAlertMessage: String? = nil
     @State private var showGifPicker = false
     //isaCloud: the sticker sheet (Stickers.swift): a tap there sends the sticker at once
     @State private var showStickerPicker = false
@@ -1012,9 +1014,24 @@ struct ChatView: View {
             //isaCloud: no pop-up for a failed upload (a technical message, often just a connection that is reconnecting): the log and a notice above the input.
             //The upload ends before the notice, so the "sending" hint does not cover the error.
             DDLogError("Couldn't upload file! error:  \(error.localizedDescription)")
+            //isaCloud: the server refused the size (code 1, see xmpp.m): say so, because trying again does not help
+            let tooLarge = (error as NSError).domain == "MonalError" && (error as NSError).code == 1
+            let limit = self.account.connectionProperties.uploadSize
+            let notice: String
+            if tooLarge && limit > 0 {
+                notice = isVideo
+                    ? String(format: NSLocalizedString("This video is larger than the server limit (%@).", comment: "notice above the input when the server refuses a video for its size; %@ is the limit; trying again does not help"), MLFiletransfer.serverLimitText(forBytes: limit))
+                    : String(format: NSLocalizedString("This file is larger than the server limit (%@).", comment: "notice above the input when the server refuses a file for its size; %@ is the limit; trying again does not help"), MLFiletransfer.serverLimitText(forBytes: limit))
+            } else if tooLarge {
+                notice = isVideo
+                    ? NSLocalizedString("This video is larger than the server limit.", comment: "notice above the input when the server refuses a video for its size and the limit is not known; trying again does not help")
+                    : NSLocalizedString("This file is larger than the server limit.", comment: "notice above the input when the server refuses a file for its size and the limit is not known; trying again does not help")
+            } else {
+                notice = NSLocalizedString("Could not send. Try again!", comment: "notice above the input when a file could not be uploaded to be sent")
+            }
             await MainActor.run {
                 inputModel.endUpload()
-                inputModel.showNotice(NSLocalizedString("Could not send. Try again!", comment: "notice above the input when a file could not be uploaded to be sent"), duration: 4, isError: true)
+                inputModel.showNotice(notice, duration: 6, isError: true)
             }
         }
     }
@@ -1195,6 +1212,36 @@ struct ChatView: View {
             let kind: ChatInputAttachment.Kind = media.isVideo ? .file : .image
             inputModel.addAttachment(ChatInputAttachment(kind: kind, url: media.url, isFromGallery: fromGallery))
         }
+    }
+
+    /// isaCloud: a gallery video that will not fit the upload limit of the server is left out (the alert tells why); photos and other videos pass.
+    /// It reads the duration of each video, so it runs off the main thread (see the picker's onPicked); returns the accepted medias and the alert text, if any
+    private nonisolated static func checkVideosOverServerLimit(_ medias: [(url: URL, isVideo: Bool)], uploadSize: Int) -> (accepted: [(url: URL, isVideo: Bool)], alert: String?) {
+        //0 means the server did not tell its limit
+        guard uploadSize > 0 else {
+            return (medias, nil)
+        }
+        var accepted: [(url: URL, isVideo: Bool)] = []
+        var alert: String? = nil
+        for media in medias {
+            guard media.isVideo else {
+                accepted.append(media)
+                continue
+            }
+            var reason: NSString? = nil
+            if MLFiletransfer.videoIsTooLarge(forServer: media.url, uploadSize: uploadSize, reason: &reason) {
+                if reason == "too_long" {
+                    alert = NSLocalizedString("Video is too long to send (max. 5 minutes).", comment: "notice above the input when a video is longer than the limit and is not sent")
+                } else {
+                    let limit = MLFiletransfer.serverLimitText(forBytes: uploadSize)
+                    alert = String(format: NSLocalizedString("This video is larger than the server limit (%@).", comment: "alert when a gallery video does not fit the upload limit of the server; %@ is the limit"), limit)
+                }
+                DDLogInfo("Gallery video not attached, reason \(reason ?? "unknown")")
+            } else {
+                accepted.append(media)
+            }
+        }
+        return (accepted, alert)
     }
 
     /// isaCloud: opens the camera for an attachment; asks for the permission the first time, and offers Settings when it is off
@@ -1637,7 +1684,28 @@ struct ChatView: View {
         .sheet(isPresented: $showMediaPicker) {
             //isaCloud: the system picker (see SystemMediaPicker)
             SystemMediaPicker(isPresented: $showMediaPicker, onPicked: { medias in
-                addPickedMedias(medias, fromGallery: true)
+                //isaCloud: only a gallery video has a check; photos are added at once. While a video is checked, the input shows "Preparing video..."
+                guard medias.contains(where: { $0.isVideo }) else {
+                    addPickedMedias(medias, fromGallery: true)
+                    return
+                }
+                inputModel.setPreparing(ChatInputPreparing(current: 1, total: 1, isVideo: true))
+                //the live account of the chat (the upload uses it too); the view's own account may be an old object with no limit
+                let liveAccount = MLXMPPManager.sharedInstance().getEnabledAccount(forID: contact.obj.accountID) ?? account
+                let uploadSize = liveAccount.connectionProperties.uploadSize
+                DDLogInfo("Gallery pick: \(medias.count) item(s), server upload limit \(uploadSize) bytes")
+                //read on the main thread; the background task gets only the URLs and this number
+                Task.detached {
+                    let checked = ChatView.checkVideosOverServerLimit(medias, uploadSize: uploadSize)
+                    DDLogInfo("Gallery pick checked: \(checked.accepted.count) accepted, alert: \(checked.alert ?? "none")")
+                    await MainActor.run {
+                        inputModel.setPreparing(nil)
+                        if let alert = checked.alert {
+                            serverLimitAlertMessage = alert
+                        }
+                        addPickedMedias(checked.accepted, fromGallery: true)
+                    }
+                }
             })
         }
         .fullScreenCover(isPresented: $showCamera) {
@@ -1687,6 +1755,12 @@ struct ChatView: View {
             }
         } message: {
             Text(NSLocalizedString("Monal is not allowed to access the camera", comment: "Camera permissions missing warning"))
+        }
+        //isaCloud: one OK button; the message is the title, so the alert has no body text
+        .alert(serverLimitAlertMessage ?? "", isPresented: Binding(get: { serverLimitAlertMessage != nil }, set: { if !$0 { serverLimitAlertMessage = nil } })) {
+            Button("OK", role: .cancel) {
+                serverLimitAlertMessage = nil
+            }
         }
         .alert(isPresented: $alertPrompt.optionalMappedToBool()) {
             let callback = alertPrompt!.dismissCallback

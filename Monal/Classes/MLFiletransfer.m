@@ -31,6 +31,8 @@
 //isaCloud: video conversion before the upload (docs/analise-comprimir-videos.md): up to 512 KiB is sent as it is, longer than 300 s is not sent
 #define ISACLOUD_VIDEO_KEEP_BYTES (512 * 1024)
 #define ISACLOUD_VIDEO_MAX_SECONDS 300
+//isaCloud: 480p takes about 490 kB per second of video (measured: 123 MB for 250.8 s, rounded up); used to warn before the attach
+#define ISACLOUD_VIDEO_480_BYTES_PER_SECOND 490000.0
 #define ISACLOUD_VIDEO_CONVERSION_TIMEOUT (10 * 60)
 static CGImageRef createWhiteBackedCopyOfImage(CGImageRef image) CF_RETURNS_RETAINED;
 //isaCloud: describes pixel size and EXIF orientation of an image, only for the photo log lines
@@ -1004,6 +1006,47 @@ static NSString* describeVideoAssetForLog(AVURLAsset* asset, unsigned long long 
     return attributes.fileSize > ISACLOUD_VIDEO_KEEP_BYTES;
 }
 
++(int64_t) estimatedUploadBytesForVideo:(NSURL*) fileUrl
+{
+    //a video that is sent as it is has the size of the file
+    if(![self videoFileNeedsCompression:fileUrl])
+        return [[_fileManager attributesOfItemAtPath:fileUrl.path error:nil] fileSize];
+    //a converted video has about 490 kB per second at 480p
+    double seconds = CMTimeGetSeconds([AVURLAsset URLAssetWithURL:fileUrl options:nil].duration);
+    if(!isfinite(seconds) || seconds <= 0)
+        return 0;
+    return (int64_t) ceil(seconds * ISACLOUD_VIDEO_480_BYTES_PER_SECOND);
+}
+
+//isaCloud: moved from ChatView.swift so the chat and the share sheet (MonalAppDelegate) write the limit the same way
++(NSString*) serverLimitTextForBytes:(NSInteger) bytes
+{
+    double mib = (double) bytes / 1048576.0;
+    if(round(mib) == mib)
+        return [NSString stringWithFormat:@"%.0f MiB", mib];
+    return [NSString stringWithFormat:@"%.1f MiB", mib];
+}
+
++(BOOL) videoIsTooLargeForServer:(NSURL*) fileUrl uploadSize:(NSInteger) uploadSize reason:(NSString* _Nullable* _Nullable) reason
+{
+    //0 means the server did not tell its limit, so nothing is blocked
+    if(uploadSize <= 0)
+        return NO;
+    if(CMTimeGetSeconds([AVURLAsset URLAssetWithURL:fileUrl options:nil].duration) > ISACLOUD_VIDEO_MAX_SECONDS)
+    {
+        if(reason != NULL)
+            *reason = @"too_long";
+        return YES;
+    }
+    if([self estimatedUploadBytesForVideo:fileUrl] > uploadSize)
+    {
+        if(reason != NULL)
+            *reason = @"over_server_limit";
+        return YES;
+    }
+    return NO;
+}
+
 static NSURL* convertVideoFileForAsset(AVURLAsset* asset, NSURL* fileUrl);
 
 +(void) compressVideoFileIfNeeded:(NSURL*) fileUrl completion:(void (^)(NSURL* _Nullable resultUrl, NSString* _Nullable reason)) completion
@@ -1015,7 +1058,7 @@ static NSURL* convertVideoFileForAsset(AVURLAsset* asset, NSURL* fileUrl);
         unsigned long long bytes = [[_fileManager attributesOfItemAtPath:fileUrl.path error:nil] fileSize];
         DDLogInfo(@"Video before conversion (mode %@): %@", mode, describeVideoAssetForLog(asset, bytes));
 
-        //a longer video is not sent at all: the upload limit is 150 MB, and 480p of 4 minutes is already about 123 MB
+        //a longer video is not sent at all: the upload limit is 200 MB, and 480p of 4 minutes is already about 123 MB
         if(CMTimeGetSeconds(asset.duration) > ISACLOUD_VIDEO_MAX_SECONDS)
         {
             DDLogInfo(@"Video result too_long (mode %@): not sent", mode);
