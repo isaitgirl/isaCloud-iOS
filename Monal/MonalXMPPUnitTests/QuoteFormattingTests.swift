@@ -158,4 +158,18 @@ struct ChatMessageBatchingTests {
         let result = ChatMessageBatching.split([Int](), shownDays: []) { _ in Date() }
         #expect(result.shownDays.isEmpty && result.newDays.isEmpty)
     }
+
+    @Test("a reply quotes a photo, a GIF or a sticker by the stanza id in groups and by the message id in one-to-one chats")
+    func quotedMessageId() {
+        #expect(QuoteFormatting.quotedMessageId(isMedia: true, isMuc: false, messageId: "m1", stanzaId: "s1") == "m1")
+        #expect(QuoteFormatting.quotedMessageId(isMedia: true, isMuc: true, messageId: "m1", stanzaId: "s1") == "s1")
+    }
+
+    @Test("nothing is quoted by id when the quoted message is not a photo, a GIF or a sticker, or its id is unknown")
+    func quotedMessageIdNone() {
+        #expect(QuoteFormatting.quotedMessageId(isMedia: false, isMuc: false, messageId: "m1", stanzaId: nil) == nil)
+        #expect(QuoteFormatting.quotedMessageId(isMedia: true, isMuc: true, messageId: "m1", stanzaId: nil) == nil)
+        #expect(QuoteFormatting.quotedMessageId(isMedia: true, isMuc: false, messageId: nil, stanzaId: "s1") == nil)
+        #expect(QuoteFormatting.quotedMessageId(isMedia: true, isMuc: false, messageId: "", stanzaId: nil) == nil)
+    }
 }

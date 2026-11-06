@@ -1038,7 +1038,7 @@ struct ChatView: View {
             }
         }
         if !draft.text.isEmpty {
-            sendTextAtOnce(draft.text)
+            sendTextAtOnce(draft.text, quotedMessageId: draft.quotedMessageId)
         }
         sendChatState(isTyping: false)
         // Clear the draft to show the newly sent message in active chats
@@ -1051,13 +1051,14 @@ struct ChatView: View {
     /// thread waits when the database is busy with other writes (a few seconds, now and then): the chat stood still and the message came late.
     /// Now a message that is on its way (the spinner takes the place of the check mark) is shown at once, saved and sent in the background,
     /// and swapped for the real one when that is done. The time of the message is still the time it was saved.
-    private func sendTextAtOnce(_ text: String) {
+    private func sendTextAtOnce(_ text: String, quotedMessageId: String? = nil) {
         let destination = contact.obj
         let encrypted: Bool = contact.isEncrypted
         let pending = ChatViewMessage.pending(text: text, to: destination, ownJid: account.connectionProperties.identity.jid)
         messages.append(pending)
         ChatView.sendQueue.async {
-            let sent = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: text, havingType: kMessageTypeText, toContact: destination, isEncrypted: encrypted, uploadInfo: nil)
+            //isaCloud: a reply that quotes a photo, a GIF or a sticker carries the id of that message (see MLXMPPManager)
+            let sent = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: text, havingType: kMessageTypeText, toContact: destination, isEncrypted: encrypted, uploadInfo: nil, quotedMessageId: quotedMessageId)
             DispatchQueue.main.async {
                 finishSending(pending, as: sent, text: text)
             }
@@ -1321,7 +1322,7 @@ struct ChatView: View {
                     defaultActionClosure(message, .copy)
                 case .quote:
                     // the author is only needed where several people write: groups and channels
-                    inputModel.quote(author: mlMessage.isMuc ? mlMessage.contactDisplayName : nil, text: (message as! ChatViewMessage).replyQuoteText ?? mlMessage.messageText)
+                    inputModel.quote(author: mlMessage.isMuc ? mlMessage.contactDisplayName : nil, text: (message as! ChatViewMessage).replyQuoteText ?? mlMessage.messageText, quotedMessageId: (message as! ChatViewMessage).quotableMessageId)
                 case .forward:
                     if mlMessage.messageType == kMessageTypeFiletransfer {
                         messageToForward = .file(messageDBId: messageDBId, message: mlMessage)
@@ -1453,7 +1454,7 @@ struct ChatView: View {
             guard let text = chatMessage.replyQuoteText else {
                 return
             }
-            inputModel.quote(author: chatMessage.innerMessage.obj.isMuc ? chatMessage.innerMessage.obj.contactDisplayName : nil, text: text)
+            inputModel.quote(author: chatMessage.innerMessage.obj.isMuc ? chatMessage.innerMessage.obj.contactDisplayName : nil, text: text, quotedMessageId: chatMessage.quotableMessageId)
         })
         .onMessageReaction(didReactTo: { message, reaction in
             let mlMessage = (message as! ChatViewMessage).innerMessage.obj
@@ -2065,6 +2066,52 @@ struct ChatView: View {
     }
 }
 
+/// isaCloud: the thumbnail of a photo, GIF or sticker that a reply quotes. The quoted message is looked up by the id the reply carries
+/// (see DataLayer historyIdOfQuotedMessageId), in the same chat. Only a file already on the device is shown; a downsampled copy is
+/// made (never the original size in a list) and kept in a cache. Nil in every other case: the quote stays a text label.
+enum QuotedMediaPreview {
+    static let maxPixelSize: CGFloat = 240
+    private static let cache = NSCache<NSString, UIImage>()
+
+    static func image(for message: MLMessage) -> UIImage? {
+        guard let quotedId = message.quotedMessageId else {
+            return nil
+        }
+        guard let historyId = DataLayer.sharedInstance().historyId(ofQuotedMessageId: quotedId, inChat: message.buddyName, forAccount: message.accountID),
+              let quoted = MLMessage.createMessage(fromHistoryID: historyId) as MLMessage?,
+              quoted.messageType == kMessageTypeFiletransfer, !quoted.retracted,
+              let info = MLFiletransferInfo.createFiletransferInfo(for: quoted) as MLFiletransferInfo?,
+              info.downloadState == .complete,
+              info.isImage || quoted.isSticker,
+              let url = info.fileURL
+        else {
+            return nil
+        }
+        let key = url.path as NSString
+        if let cached = cache.object(forKey: key) {
+            return cached
+        }
+        guard let thumbnail = downsampledImage(at: url) else {
+            return nil
+        }
+        cache.setObject(thumbnail, forKey: key)
+        return thumbnail
+    }
+
+    private static func downsampledImage(at url: URL) -> UIImage? {
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+        ]
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            return nil
+        }
+        return UIImage(cgImage: cgImage)
+    }
+}
+
 class ChatViewMessage: ExyteChat.Message {
     @ObservedObject var chatViewDefaultsDB = ChatViewDefaultsDB()
     private(set) var innerMessage: ObservableKVOWrapper<MLMessage>
@@ -2119,6 +2166,18 @@ class ChatViewMessage: ExyteChat.Message {
             return QuoteFormatting.attachmentLabel(.audio)
         }
         return QuoteFormatting.attachmentLabel(.file(name: (fileInfo.filename as String?) ?? ""))
+    }
+    /// isaCloud: the id a reply sends when it quotes this message (element urn:isacloud:quote:0): only a photo, a GIF or a sticker,
+    /// and only with its id known (see QuoteFormatting.quotedMessageId). Nil for everything else: the quote is text only.
+    var quotableMessageId: String? {
+        let mlMessage = innerMessage.obj
+        guard !mlMessage.retracted, mlMessage.messageType == kMessageTypeFiletransfer, let fileInfo = fileInfo else {
+            return nil
+        }
+        //isaCloud: the same nullable reads as replyQuoteText (see the crash of 29/10/2026)
+        let isGif = (fileInfo.mimeType as String?) == "image/gif"
+        let isMedia = mlMessage.isSticker || isGif || (fileInfo.isImage as Bool?) == true
+        return QuoteFormatting.quotedMessageId(isMedia: isMedia, isMuc: mlMessage.isMuc, messageId: mlMessage.messageId, stanzaId: mlMessage.stanzaId)
     }
     /// isaCloud: the label line of a forwarded message, in bold (the text colour in our own bubbles)
     private func forwardLabelText(_ label: String) -> AttributedString {
@@ -2338,6 +2397,8 @@ class ChatViewMessage: ExyteChat.Message {
         super.init(id: message.id, user: user, createdAt: Date(), text: "")
 
         observeInnerMessage()
+        //isaCloud: the thumbnail of a photo, GIF or sticker that this message quotes, when it is already on the device (see QuotedMediaPreview)
+        quotePreview = QuotedMediaPreview.image(for: message)
 
         // Forward fileInfo changes as ChatViewMessage changes
         fileInfo?.objectWillChange
@@ -2358,6 +2419,8 @@ class ChatViewMessage: ExyteChat.Message {
     func adopt(_ saved: MLMessage) {
         innerMessage = ObservableKVOWrapper(saved)
         isPending = false
+        //isaCloud: the pending message was built before the id of the quoted media was saved: its thumbnail is looked up again now
+        quotePreview = QuotedMediaPreview.image(for: saved)
         observeInnerMessage()
         objectWillChange.send()
     }

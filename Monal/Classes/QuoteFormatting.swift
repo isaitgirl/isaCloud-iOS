@@ -136,6 +136,20 @@ enum QuoteFormatting {
     static func lines(of body: String) -> [(depth: Int, text: String)] {
         return body.components(separatedBy: "\n").map { parse($0) }
     }
+
+    /// isaCloud: the id a reply sends to quote a message (element urn:isacloud:quote:0, see xmpp sendMessage:). Only a photo, a GIF or a
+    /// sticker is sent as a thumbnail; the id is the stanza id in groups and channels and the message id in one-to-one chats. Nil when the
+    /// quoted message is anything else, or when its id is not known (e.g. an own message not yet confirmed by the group).
+    static func quotedMessageId(isMedia: Bool, isMuc: Bool, messageId: String?, stanzaId: String?) -> String? {
+        guard isMedia else {
+            return nil
+        }
+        let id = isMuc ? stanzaId : messageId
+        guard let id, !id.isEmpty else {
+            return nil
+        }
+        return id
+    }
 }
 
 //isaCloud: kept in this file because it is one of the few chat helpers that are also compiled into the unit tests

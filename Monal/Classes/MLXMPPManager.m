@@ -817,6 +817,12 @@ static void isaCloudPingOrReconnect(xmpp* account, BOOL networkCameBack, BOOL le
 #pragma mark -  XMPP commands
 -(MLMessage*) sendMessageAndAddToHistory:(NSString*) message havingType:(NSString*) messageType toContact:(MLContact*) contact isEncrypted:(BOOL) encrypted uploadInfo:(NSDictionary* _Nullable) uploadInfo
 {
+    return [self sendMessageAndAddToHistory:message havingType:messageType toContact:contact isEncrypted:encrypted uploadInfo:uploadInfo quotedMessageId:nil];
+}
+
+//isaCloud: see the header. The quoted id is stored before the message is sent, like the sticker flag, so that the stanza carries it
+-(MLMessage*) sendMessageAndAddToHistory:(NSString*) message havingType:(NSString*) messageType toContact:(MLContact*) contact isEncrypted:(BOOL) encrypted uploadInfo:(NSDictionary* _Nullable) uploadInfo quotedMessageId:(NSString* _Nullable) quotedMessageId
+{
     NSString* msgid = [[NSUUID UUID] UUIDString];
     xmpp* account = contact.account;
 
@@ -854,6 +860,10 @@ static void isaCloudPingOrReconnect(xmpp* account, BOOL networkCameBack, BOOL le
         //isaCloud: a sticker is a file message with the XEP-0449 marker (see sendMessage:... below and isSticker)
         if([uploadInfo[@"isSticker"] boolValue])
             [[DataLayer sharedInstance] setStickerForHistoryId:messageDBId];
+
+        //isaCloud: the reply quotes a photo, a GIF or a sticker: its id is sent with the message (see xmpp sendMessage:)
+        if(quotedMessageId != nil)
+            [[DataLayer sharedInstance] setQuotedMessageIdForHistoryId:messageDBId quotedId:quotedMessageId];
 
         // MLMessage object that will be returned by the method
         MLMessage* newMLMessage = [MLMessage createMessageFromHistoryID:messageDBId];
