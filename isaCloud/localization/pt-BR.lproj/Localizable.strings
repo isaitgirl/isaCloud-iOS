@@ -268,3 +268,7 @@
 "Preparing photo..." = "Preparando foto...";
 "Preparing %d of %d..." = "Preparando foto %d de %d...";
 "Read up to here" = "Lido até este ponto";
+"Waiting for %@ to accept the contact. Encryption starts when the keys arrive." = "Aguardando %@ aceitar o contato. A criptografia começa quando as chaves chegarem.";
+"Contact has not accepted yet" = "O contato ainda não aceitou sua solicitação";
+"Without encryption keys the message can't be encrypted. You can send it without encryption just this time, or cancel and wait for the contact to accept." = "Sem chaves de criptografia, a mensagem não pode ser cifrada. Você pode enviá-la sem criptografia só desta vez, ou cancelar e esperar o contato aceitar.";
+"Send without encryption this time" = "Enviar sem criptografia só desta vez";
