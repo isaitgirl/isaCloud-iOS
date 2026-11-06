@@ -4,7 +4,8 @@ O que mudou em cada versão, em poucas palavras. A lista técnica completa está
 
 ## Em breve (próxima versão)
 
-Nada por enquanto.
+### Melhorias
+- ➦ Ao encaminhar, marcar um contato não esconde mais o botão Encaminhar: não precisa tocar no X da busca.
 
 ## Build 96 · 06/11/2026
 

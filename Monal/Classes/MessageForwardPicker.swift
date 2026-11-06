@@ -11,6 +11,8 @@ struct MessageForwardPicker: View {
     let onForward: ([MLContact]) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var searchText = ""
+    //isaCloud: whether the search field is active; picking a contact there takes it out of focus, because the Forward button (in the toolbar) is hidden under the search's close button while it is active. The text stays, so the list stays filtered
+    @State private var isSearching = false
     @State private var chosen: [String] = []
     private let destinations: [MLContact]
 
@@ -48,7 +50,12 @@ struct MessageForwardPicker: View {
                     let isChosen = chosen.contains(key)
                     let full = !isChosen && chosen.count >= MessageForward.maxDestinations
                     Button {
+                        let wasChosen = chosen.contains(key)
                         chosen = MessageForward.toggled(chosen, key)
+                        //isaCloud: a contact picked while searching leaves the search's focus; the search text stays (unlike the Send picker, the list keeps filtering)
+                        if !wasChosen && isSearching {
+                            isSearching = false
+                        }
                     } label: {
                         HStack {
                             ContactEntry(contact: contact, additionalContent: {
@@ -70,7 +77,7 @@ struct MessageForwardPicker: View {
                 }
             }
             .listStyle(.plain)
-            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always))
+            .searchable(text: $searchText, isPresented: $isSearching, placement: .navigationBarDrawer(displayMode: .always))
             .autocorrectionDisabled()
             .textInputAutocapitalization(.never)
             .navigationTitle(Text("Forward to"))
