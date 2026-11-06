@@ -1962,25 +1962,46 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                 DDLogWarn(@"### Wakeup timer triggered for ID %@ ###", completionId);
                 [self runOnMainQueue:^{
                     if([NSThread isMainThread]) [self updateBackgroundState];       //make sure we are in the correct state (only the main thread may ask UIApplication)
+                    //only state is read/written under the lock. Nothing that waits for the main thread (HelperTools, MLXMPPManager, NotificationCenter) may run while holding self
+                    BOOL stopped = NO;
+                    BOOL shouldDisconnect = NO;
                     @synchronized(self) {
                         DDLogInfo(@"Handling wakeup completion %@", completionId);
                         BOOL background = [HelperTools isInBackground];
                         
                         //we have to check if an ui bg task or background processing/refreshing task is running and don't disconnect, if so
-                        BOOL stopped = NO;
                         if(background && self->_voipProcessor.pendingCallsCount == 0 && self->_bgTask == UIBackgroundTaskInvalid && self.bgProcessing == nil && self.bgRefreshing == nil)
                         {
                             DDLogVerbose(@"Setting _shutdownPending to YES...");
                             self->_shutdownPending = YES;
                             DDLogDebug(@"background && _bgTask == UIBackgroundTaskInvalid && self.bgProcessing == nil && self.bgRefreshing == nil --> disconnecting and feeding wakeup completion");
-                            
-                            //this has to be before account disconnects, to detect which accounts are/are not idle (e.g. don't have/have a sync error)
-                            BOOL wasIdle = [[MLXMPPManager sharedInstance] allAccountsIdle] && [MLFiletransfer isIdle];
-                            [HelperTools updateSyncErrorsWithDeleteOnly:NO andWaitForCompletion:YES];
-                            
+                            shouldDisconnect = YES;
+                        }
+                        else
+                            DDLogDebug(@"NOT (background && _bgTask == UIBackgroundTaskInvalid && self.bgProcessing == nil && self.bgRefreshing == nil) --> not disconnecting");
+                    }
+                    
+                    if(shouldDisconnect)
+                    {
+                        //this has to be before account disconnects, to detect which accounts are/are not idle (e.g. don't have/have a sync error)
+                        BOOL wasIdle = [[MLXMPPManager sharedInstance] allAccountsIdle] && [MLFiletransfer isIdle];
+                        [HelperTools updateSyncErrorsWithDeleteOnly:NO andWaitForCompletion:YES];
+                        
+                        //isaCloud (C17): we left the lock above, so the state may have changed meanwhile (the app came to the foreground
+                        //or a new wakeup registered its own timer and reconnected): check again right before disconnecting and freezing
+                        BOOL stillShuttingDown = NO;
+                        @synchronized(self) {
+                            stillShuttingDown = self->_shutdownPending && [HelperTools isInBackground] && self->_wakeupCompletions.count == 1 && self->_wakeupCompletions[completionId] != nil;
+                        }
+                        if(stillShuttingDown)
+                        {
                             //schedule a new BGProcessingTaskRequest to process this further as soon as possible, if we are not idle
                             //(if we end up here, the graceful shuttdown did not work out because we are not idle --> we need more cpu time)
-                            [HelperTools scheduleBackgroundTask:!wasIdle];
+                            //isaCloud (C17): async, this block may run on a background thread while the main thread is busy
+                            BOOL scheduleProcessing = !wasIdle;
+                            [HelperTools dispatchAsync:YES reentrantOnQueue:dispatch_get_main_queue() withBlock:^{
+                                [HelperTools scheduleBackgroundTask:scheduleProcessing];
+                            }];
                             
                             //disconnect all accounts to prevent TCP buffer leaking
                             [[MLXMPPManager sharedInstance] disconnectAll];
@@ -1992,23 +2013,29 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                             stopped = YES;
                         }
                         else
-                            DDLogDebug(@"NOT (background && _bgTask == UIBackgroundTaskInvalid && self.bgProcessing == nil && self.bgRefreshing == nil) --> not disconnecting");
-                        
-                        //call completion (should be done *after* the idle state check because it could freeze the app)
-                        DDLogInfo(@"Calling wakeup completion handler...");
-                        [HelperTools flushLogsWithTimeout:0.1];
-                        [self->_wakeupCompletions removeObjectForKey:completionId];
-                        completionHandler(UIBackgroundFetchResultFailed);
-                        
-                        if(stopped)
-                            [HelperTools signalSuspension];
-                        
-                        //trigger disconnect if we are idle and no timer is blocking us now
-                        if(self->_bgTask != UIBackgroundTaskInvalid || self.bgProcessing != nil || self.bgRefreshing != nil)
-                            dispatch_async(dispatch_get_main_queue(), ^{
-                                [self checkIfBackgroundTaskIsStillNeeded];
-                            });
+                            DDLogWarn(@"Wakeup %@: state changed while preparing the shutdown (foregrounded or new wakeup), not disconnecting", completionId);
                     }
+                    
+                    //call completion (should be done *after* the idle state check because it could freeze the app)
+                    DDLogInfo(@"Calling wakeup completion handler...");
+                    [HelperTools flushLogsWithTimeout:0.1];
+                    @synchronized(self) {
+                        [self->_wakeupCompletions removeObjectForKey:completionId];
+                    }
+                    completionHandler(UIBackgroundFetchResultFailed);
+                    
+                    if(stopped)
+                        [HelperTools signalSuspension];
+                    
+                    //trigger disconnect if we are idle and no timer is blocking us now
+                    BOOL needsCheck = NO;
+                    @synchronized(self) {
+                        needsCheck = self->_bgTask != UIBackgroundTaskInvalid || self.bgProcessing != nil || self.bgRefreshing != nil;
+                    }
+                    if(needsCheck)
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            [self checkIfBackgroundTaskIsStillNeeded];
+                        });
                 } withTimeout:1.0];
             }))
         };
