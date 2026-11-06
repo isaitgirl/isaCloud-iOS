@@ -268,6 +268,7 @@
 		C117F7E12B086390001F2BC6 /* CreateGroupMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D88BB76295BB6DC00FB30BA /* CreateGroupMenu.swift */; };
 		A1C0FFEE00000000000000E2 /* ChatInputModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000000E1 /* ChatInputModel.swift */; };
 		A1C0FFEE00000000000000F2 /* ChatInputBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000000F1 /* ChatInputBar.swift */; };
+		A1C0FFEE00000000000000F4 /* ChatTextInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000000F3 /* ChatTextInput.swift */; };
 		A1C0FFEE00000000000001C2 /* ChatAudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001C1 /* ChatAudioRecorder.swift */; };
 		A1C0FFEE00000000000001D2 /* GiphySearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001D1 /* GiphySearch.swift */; };
 		A1C0FFEE00000000000001E2 /* ChatLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001E1 /* ChatLocation.swift */; };
@@ -636,6 +637,7 @@
 		3D88BB76295BB6DC00FB30BA /* CreateGroupMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateGroupMenu.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000000E1 /* ChatInputModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatInputModel.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000000F1 /* ChatInputBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatInputBar.swift; sourceTree = "<group>"; };
+		A1C0FFEE00000000000000F3 /* ChatTextInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatTextInput.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000001C1 /* ChatAudioRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAudioRecorder.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000001D1 /* GiphySearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GiphySearch.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000001E1 /* ChatLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatLocation.swift; sourceTree = "<group>"; };
@@ -1269,6 +1271,7 @@
 				3D88BB76295BB6DC00FB30BA /* CreateGroupMenu.swift */,
 				A1C0FFEE00000000000000E1 /* ChatInputModel.swift */,
 				A1C0FFEE00000000000000F1 /* ChatInputBar.swift */,
+				A1C0FFEE00000000000000F3 /* ChatTextInput.swift */,
 				A1C0FFEE00000000000001C1 /* ChatAudioRecorder.swift */,
 				A1C0FFEE00000000000001D1 /* GiphySearch.swift */,
 				A1C0FFEE00000000000001E1 /* ChatLocation.swift */,
@@ -2457,6 +2460,7 @@
 				C117F7E12B086390001F2BC6 /* CreateGroupMenu.swift in Sources */,
 				A1C0FFEE00000000000000E2 /* ChatInputModel.swift in Sources */,
 				A1C0FFEE00000000000000F2 /* ChatInputBar.swift in Sources */,
+				A1C0FFEE00000000000000F4 /* ChatTextInput.swift in Sources */,
 				A1C0FFEE00000000000001C2 /* ChatAudioRecorder.swift in Sources */,
 				A1C0FFEE00000000000001D2 /* GiphySearch.swift in Sources */,
 				A1C0FFEE00000000000001E2 /* ChatLocation.swift in Sources */,

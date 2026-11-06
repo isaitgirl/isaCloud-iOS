@@ -158,10 +158,9 @@ struct ChatInputBar: View {
 
     private var inputField: some View {
         HStack(alignment: .bottom, spacing: 0) {
-            //isaCloud: a height limit of its own (whole lines): without it the layout squeezed the field and the text was cut off at the top or
-            //the bottom, and the field did not scroll to the cursor in that case
-            TextField("Type a message...", text: textBinding, axis: .vertical)
-                .lineLimit(1...8)
+            //isaCloud: a UITextView (ChatTextInput): up to 6 lines, then it scrolls to the cursor. TextField(axis: .vertical) left the cursor
+            //out of view past its line limit.
+            ChatTextInput(text: textBinding, placeholder: NSLocalizedString("Type a message...", comment: "placeholder of the chat input"), maxLines: 6)
                 .padding(.vertical, 10)
                 .padding(.leading, 12)
             if !model.text.isEmpty {
