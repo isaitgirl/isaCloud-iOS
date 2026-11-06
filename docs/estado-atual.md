@@ -1,4 +1,4 @@
-# Estado atual e handoff (06/11/2026, build 96)
+# Estado atual e handoff (06/11/2026, build 97)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,9 +7,9 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 96** (mensagem "Build 96 ..."), tag `build-96`; `git log --oneline -3` |
-| TestFlight | **96** (06/11/2026, 12:48; antes 95 em 05/11 às 13:35, tag `build-95`) |
-| `.dev` no iPhone | **96**, igual ao TestFlight (06/11/2026; **sem push**, então a extensão de notificação não roda nele) |
+| Commit | o do **build 97** (mensagem "Build 97 ..."), tag `build-97`; `git log --oneline -3` |
+| TestFlight | **97** (06/11/2026, 14:20; antes 96 em 06/11 às 12:48, tag `build-96`) |
+| `.dev` no iPhone | **97**, igual ao TestFlight (06/11/2026; **sem push**, então a extensão de notificação não roda nele) |
 | Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o código do build 94 (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261105-1036-linha-lido-2/` e `-1037-linha-lido-2/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
 | ExyteChat | `7d3292b` na `isaCloud` (miniatura opcional dentro da citação, `Message.quotePreview`, PR 21; antes `e168ed8`: visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
@@ -19,6 +19,13 @@ Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 ## Em andamento (05/11/2026)
 
 - Nada em aberto deste lote. Conferidos pela Isadora no iPhone em 05/11/2026: a linha "Lido até este ponto" (roadmap 153), compartilhar pelo contato sugerido (152), entrar num canal público escolhendo a conta (151), "Compartilhar…" de áudio e documento (120) e o aviso de falha de upload (141).
+
+## O que entrou no build 97 (sobre o 96)
+
+- **Caixa de escrever com `UITextView`** (roadmap 160, `ChatTextInput.swift`): cresce até 6 linhas e depois rola, mantendo o cursor visível. Resolve o bug que estava em aberto no 96 (cursor uma linha acima e linha escondida). Testes de UI escritos (`ChatInputBaselineTests`), **não rodados** nos simuladores; falta confirmar no iPhone.
+- **Encaminhar com a busca aberta** (PR 50, mesclado na `isaCloud`): marcar um contato tira o foco da busca e mantém o filtro, para o botão Encaminhar aparecer sem tocar no X. Testado no `.dev` pela Isadora.
+- **OMEMO: contato pendente** (roadmap 159, commit `89dee4999`): sem alerta de chaves e com aviso antes do envio sem criptografia. Testado no `.dev`.
+- Os textos novos têm tradução pt-BR no override do isaCloud.
 
 ## O que entrou no build 96 (sobre o 95)
 

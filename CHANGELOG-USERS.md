@@ -4,8 +4,16 @@ O que mudou em cada versão, em poucas palavras. A lista técnica completa está
 
 ## Em breve (próxima versão)
 
+Nada por enquanto.
+
+## Build 97 · 06/11/2026
+
 ### Melhorias
+- ✍️ A caixa de escrever cresce até 6 linhas e acompanha o cursor enquanto você digita.
 - ➦ Ao encaminhar, marcar um contato não esconde mais o botão Encaminhar: não precisa tocar no X da busca.
+
+### Correções
+- 🔐 Conversa com contato que ainda não aceitou não mostra mais alerta de chaves à toa. Antes de enviar, o app avisa se a mensagem sairá sem criptografia.
 
 ## Build 96 · 06/11/2026
 

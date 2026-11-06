@@ -4,8 +4,16 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## Não publicado
 
+## 0.0.1 (build 97) — 06/11/2026
+
+Enviado ao TestFlight às 14:20. Merge do PR 50 (`feature/encaminhar-busca-sem-x`).
+
+### Melhorias
+- **Caixa de escrever com UITextView: 6 linhas e rolagem até o cursor** (`ChatTextInput.swift` novo, `ChatInputBar.swift`, `ChatView.swift`): o campo cresce até 6 linhas e depois rola, mantendo o cursor visível enquanto a pessoa digita. Antes, com `TextField(axis: .vertical)` e `lineLimit(1...8)`, o cursor e a linha digitada podiam sumir da área visível. Placeholder próprio (`UILabel`) e `accessibilityValue` igual ao placeholder quando vazio e ao texto quando não. Texto de fora (limpar, enviar, editar, menção) não mexe no cursor quando veio da digitação; ditado e acentos não são interrompidos. Testes de UI (`ChatInputBaselineTests`) não rodados nos simuladores.
+
 ### Correções
-- **Encaminhar: ao marcar um contato com a busca aberta, a busca sai do foco e o botão Encaminhar aparece sem precisar tocar no X; o texto da busca continua filtrando** (`MessageForwardPicker.swift`, `isSearching` no `.searchable`). Testado no isaCloud.dev (iPhone). Sem commit ainda.
+- **Encaminhar: ao marcar um contato com a busca aberta, a busca sai do foco e o botão Encaminhar aparece sem precisar tocar no X; o texto da busca continua filtrando** (`MessageForwardPicker.swift`, `isSearching` no `.searchable`). Testado no isaCloud.dev (iPhone).
+- **OMEMO: contato que ainda não aceitou não mostra mais o alerta "No OMEMO keys found"** (`ChatView.swift`): sem alerta e sem busca de chaves para contato pendente (a busca reenviaria a solicitação). Uma linha discreta acima da caixa diz que a criptografia começa quando o contato aceitar ou as chaves chegarem. Ao enviar para contato pendente (texto, foto, arquivo, figurinha, áudio, localização ou encaminhamento), um alerta pergunta "Enviar sem criptografia só desta vez" ou "Cancelar"; cancelar mantém o texto e os anexos na caixa. O aviso roda antes de gravar a mensagem no histórico. Motivo: sem chaves, o envio criptografado saía com o corpo "[This message is OMEMO encrypted]" e sem conteúdo. Decisão em `docs/decisoes.md`.
 
 ## 0.0.1 (build 96) — 06/11/2026
 

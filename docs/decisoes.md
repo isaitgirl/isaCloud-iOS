@@ -903,3 +903,10 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - **Como:** `@State isSearching` ligado ao `.searchable(isPresented:)`; no toque de marcar, `isSearching = false` (só ao marcar, não ao desmarcar).
 - **Teste:** no isaCloud.dev (iPhone), a Isadora confirmou em 06/11/2026. Ainda não testado nos simuladores iOS 18 e 27.
 - **Merge:** o arquivo é do isaCloud (`MessageForwardPicker.swift`), sem risco com o Monal.
+
+## Caixa de escrever com UITextView: 6 linhas e rolagem até o cursor (06/11/2026, roadmap 160, build 97)
+- **Problema:** `TextField(axis: .vertical)` com `lineLimit(1...8)` deixava o cursor uma linha acima e a linha digitada escondida pelo teclado, quando o texto passava do limite.
+- **Decisão:** trocar por um `UITextView` embrulhado em `UIViewRepresentable` (`ChatTextInput.swift`): cresce até 6 linhas e depois rola, mantendo o cursor visível enquanto a pessoa digita.
+- **Cuidados:** texto de fora (limpar, enviar, editar, menção) é escrito sem mexer no cursor quando veio da digitação; composição aberta (ditado, acentos) não é interrompida; autocorreção, ortografia, teclado e Enter como quebra de linha continuam padrão; placeholder próprio (`UILabel`) e `accessibilityValue` igual ao placeholder quando vazio e ao texto quando não.
+- **Teste:** `ChatInputBaselineTests` (o campo é achado pelo `value`, porque `UITextView` não tem `placeholderValue`) foi escrito, mas **não rodado** nos simuladores. Falta confirmar no iPhone e no TestFlight.
+- **Merge:** `ChatInputBar.swift` e `ChatView.swift` são do app; sem mudança na biblioteca.
