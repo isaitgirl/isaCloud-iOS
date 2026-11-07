@@ -2,6 +2,8 @@
 
 Rotina para enviar um build de distribuição ao App Store Connect e liberá-lo para os testadores internos.
 
+Problemas de build e worktrees: `docs/build-e-branches.md`.
+
 Equipe: `K8Y6S5RF2S`. Bundle da distribuição: `br.com.isacloud.messenger`. Rode os comandos a partir da raiz do repositório, salvo quando indicado.
 
 ## Antes de começar

@@ -387,7 +387,7 @@ Plano e raciocínio completos: `docs/plano-nick-por-sala.md`.
 
 ## iOS 27 e iOS 18 (24 a 26/10/2026)
 - Builds e testes sempre do iOS 18 ao 27, no simulador de cada versão (um app compilado para o iOS 27 não abre no 18: falta `libswiftCompatibilitySpan`).
-- iOS 27: o app usa o ciclo de vida por cenas (`SceneDelegate` repassa os eventos); o vigia de travamento do KSCrash fica desligado; o aviso de "primeiro plano" na abertura não espera filas (`nowForegroundedAtLaunch`). Detalhes e como investigar: `docs/troubleshooting.md`.
+- iOS 27: o app usa o ciclo de vida por cenas (`SceneDelegate` repassa os eventos); o vigia de travamento do KSCrash fica desligado; o aviso de "primeiro plano" na abertura não espera filas (`nowForegroundedAtLaunch`), mas só quando o processo nunca foi congelado (07/11/2026: depois de um congelamento o primeiro primeiro plano segue o caminho normal, ver "Primeiro plano depois de uma noite em segundo plano" no fim deste arquivo). Detalhes e como investigar: `docs/troubleshooting.md`.
 - Seletor de fotos do chat: o do sistema (`PHPicker`), porque o do ExyteMediaPicker não rola no iOS 27.
 - Seletores das telas de ajustes: margem direita de 26 pt em `MLSwitchCell.xib` (no iOS 27 o conteúdo da célula passa da borda visível; 26 pt ficou bom nos dois sistemas). É uma mudança de uma linha num xib do Monal: pode conflitar em merge.
 
@@ -910,3 +910,10 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - **Cuidados:** texto de fora (limpar, enviar, editar, menção) é escrito sem mexer no cursor quando veio da digitação; composição aberta (ditado, acentos) não é interrompida; autocorreção, ortografia, teclado e Enter como quebra de linha continuam padrão; placeholder próprio (`UILabel`) e `accessibilityValue` igual ao placeholder quando vazio e ao texto quando não.
 - **Teste:** `ChatInputBaselineTests` (o campo é achado pelo `value`, porque `UITextView` não tem `placeholderValue`) foi escrito, mas **não rodado** nos simuladores. Falta confirmar no iPhone e no TestFlight.
 - **Merge:** `ChatInputBar.swift` e `ChatView.swift` são do app; sem mudança na biblioteca.
+
+## Primeiro plano depois de uma noite em segundo plano (07/11/2026, C19)
+
+- **Problema:** o atalho de abertura a frio do `SceneDelegate` (`nowForegroundedAtLaunch`, de 24/10/2026) valia para o primeiro primeiro plano de qualquer processo. Um processo acordado por tarefas de segundo plano e já congelado voltava por esse atalho e as contas ficavam paradas (~96 s no log de 07/11).
+- **Decisão:** o atalho só vale se as contas nunca foram congeladas (`MonalAppDelegate.isaCloudWasFrozen`); depois do primeiro congelamento, o primeiro primeiro plano usa `applicationWillEnterForeground`, como todos os seguintes. A espera por filas ocupadas que o atalho evitava só existe na abertura a frio.
+- **Merge com o Monal:** `SwiftuiHelpers.swift` e a propriedade no `MonalAppDelegate` são do isaCloud (o Monal não usa cenas assim); atrito baixo.
+- **Descartado:** (a) decidir pelo estado do app em `didFinishLaunching` (durante o lançamento por cena o estado é "background" mesmo na abertura a frio, então não discrimina); (b) usar o tempo desde o lançamento (frágil).

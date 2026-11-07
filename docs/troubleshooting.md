@@ -1,6 +1,6 @@
 # Troubleshooting do isaCloud (TestFlight e isaCloud.dev)
 
-Procedimentos e comandos que já funcionaram para investigar problemas. Rode a partir da raiz do repositório, salvo quando indicado.
+Procedimentos e comandos que já funcionaram para investigar problemas. Rode a partir da raiz do repositório, salvo quando indicado. Problemas de build, worktrees e criação de branches: `docs/build-e-branches.md`.
 
 ## Identificadores
 
@@ -223,6 +223,7 @@ xcrun devicectl device copy from --device <UDID> --domain-type systemCrashLogs -
 - `Library/metrics/metrickit-diagnostic-*.json`: diagnósticos do MetricKit (`crashDiagnostics`, com `terminationReason` e pilhas só por deslocamento, sem símbolos). `0xdead10cc` = app morto por segurar um arquivo bloqueado ao ir para segundo plano.
 - `Library/metrics/samples-AAAA-MM-DD.jsonl`: amostras (`thermal`, `cpu_ms`, memória, `db_lock_*`). Estado térmico `serious` deixa o iPhone lento.
 - `Library/metrics/connects-AAAA-MM-DD.jsonl`: uma linha por tentativa de conexão de cada conta (`reason`, `outcome`, `dns_ms`, `tls_ms`, `login_ms`, `catchup_ms`, `idle_ms`, desde o início da tentativa). Para puxar: `xcrun devicectl device copy from --device <UDID> --domain-type appGroupDataContainer --domain-identifier group.br.com.isacloud.messenger --source "Library/metrics/connects-AAAA-MM-DD.jsonl" --destination /tmp/connects.jsonl`. Sem `idle` no `outcome` é porque a conta não ficou ociosa antes de terminar (ver `docs/decisoes.md`, "Tempo de conexão por conta").
+- **Contas que não conectam ao abrir o app (C19, 07/11/2026):** no log da abertura, procure `App now foregrounded (launch), only updating flags...` e confira se há um `App launching` logo antes. Sem ele, o processo já vivia em segundo plano; depois, se aparecer `Not pinging ... parse queue frozen!` e não aparecer `Entering FG` nem `existing account, calling unfreeze`, o primeiro plano foi tratado como abertura a frio e as contas ficaram congeladas. O caminho certo registra `Entering FG`, `App now foregrounded...` e `Reloading UNfrozen account`. Código: `SceneDelegate.sceneWillEnterForeground` (`SwiftuiHelpers.swift`) e `isaCloudWasFrozen` (`MonalAppDelegate`).
 - O `.ips` do `0x8BADF00D` mostra na thread 0 o que a thread principal esperava; o `termination.reasons` diz o prazo (`scene-update watchdog`, 10 s ou 30 s) e a visibilidade (`Background`).
 
 ## Notificação fantasma "New Message?" ou vazia (investigação de 02/11/2026)
