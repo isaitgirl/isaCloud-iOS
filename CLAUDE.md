@@ -68,6 +68,7 @@ Fork do Monal (cliente XMPP para iOS) com a marca e os ajustes do isaCloud. Bran
 
 ## Troubleshooting
 
+- **Branches, worktrees e problemas de build** (Rust, `Package.resolved`, SQLite/FTS5, Pods, assinatura): `docs/build-e-branches.md`. Leia antes de criar uma worktree ou quando o build falhar por algo que parece "de ambiente".
 - Comandos e procedimentos para investigar crashes e travamentos (TestFlight e isaCloud.dev, iPhone e simulador): `docs/troubleshooting.md`. Quando aprender um comando útil novo, acrescente lá.
 - **Todo crash ou travamento analisado vai para `docs/analises-crashes.md`** (tabela do resumo + entrada com o modelo do fim do arquivo), desde 04/11/2026. Detalhes longos e decisões continuam em `docs/decisoes.md`.
 

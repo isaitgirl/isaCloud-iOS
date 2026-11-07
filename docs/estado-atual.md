@@ -1,4 +1,4 @@
-# Estado atual e handoff (06/11/2026, build 97)
+# Estado atual e handoff (07/11/2026, build 98)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,9 +7,9 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 97** (mensagem "Build 97 ..."), tag `build-97`; `git log --oneline -3` |
-| TestFlight | **97** (06/11/2026, 14:20; antes 96 em 06/11 às 12:48, tag `build-96`) |
-| `.dev` no iPhone | **97**, igual ao TestFlight (06/11/2026; **sem push**, então a extensão de notificação não roda nele) |
+| Commit | o do **build 98** (mensagem "Build 98 ..."), tag `build-98`; `git log --oneline -3` |
+| TestFlight | **98** (07/11/2026, 08:25; antes 97 em 06/11 às 14:20, tag `build-97`) |
+| `.dev` no iPhone | **98**, igual ao TestFlight (07/11/2026; **sem push**, então a extensão de notificação não roda nele) |
 | Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o código do build 94 (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261105-1036-linha-lido-2/` e `-1037-linha-lido-2/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
 | ExyteChat | `7d3292b` na `isaCloud` (miniatura opcional dentro da citação, `Message.quotePreview`, PR 21; antes `e168ed8`: visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
@@ -19,6 +19,11 @@ Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 ## Em andamento (05/11/2026)
 
 - Nada em aberto deste lote. Conferidos pela Isadora no iPhone em 05/11/2026: a linha "Lido até este ponto" (roadmap 153), compartilhar pelo contato sugerido (152), entrar num canal público escolhendo a conta (151), "Compartilhar…" de áudio e documento (120) e o aviso de falha de upload (141).
+
+## O que entrou no build 98 (sobre o 97)
+
+- **C19, contas congeladas ao abrir o app depois de uma noite** (produção, 07/11 07:37, build 96): o primeiro primeiro plano de um processo que já vivia em segundo plano e já tinha sido congelado era tratado como abertura a frio (só flags). Agora `SceneDelegate.sceneWillEnterForeground` só usa o atalho se `isaCloudWasFrozen` é falso; senão segue `applicationWillEnterForeground` (descongela e reconecta). **Validar em produção** (o `.dev` fica com as contas desligadas): deixar o app em segundo plano uma noite e abrir; o log deve mostrar `Entering FG` e `existing account, calling unfreeze` e as contas conectarem em poucos segundos. Análise em `docs/analises-crashes.md` (C19), decisão em `docs/decisoes.md`, como reconhecer no log em `docs/troubleshooting.md`.
+- **Novo doc `docs/build-e-branches.md`:** branches, worktrees e problemas de build (Rust, `Package.resolved`, FTS5, Pods, assinatura). Ao criar uma worktree: copiar `Monal/Pods`, `rust/LibMonalRustSwiftBridge`, `rust/target` e a chave do Giphy do checkout principal.
 
 ## O que entrou no build 97 (sobre o 96)
 
@@ -55,7 +60,7 @@ Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 - **Reconexão na hora quando a rede volta** (`ISACLOUD_RECONNECT_UNBOUND_ON_NETWORK_CHANGE` + pausa `ISACLOUD_NETWORK_RECONNECT_COOLDOWN` de 5 s, `MLXMPPManager.m`): modo avião de ~15 s para 1,4–3,9 s, testado no iPhone às 20:34. A primeira versão sem pausa derrubava o login do `autozona.cc` a cada aviso de rede (um por segundo); a pausa resolveu.
 - **Spinner só quando não conecta** (roadmap 150, `ISACLOUD_SYNC_INDICATOR_ONLY_WHEN_CONNECTING`): acende depois de 5 s com alguma conta sem bind, com o app em primeiro plano; rótulo "Conectando...". Testado sem rede no iPhone.
 - **Rodapé da tela de abertura** "Copyright © 2026 isaCloud. Todos os direitos reservados.", preso à área segura.
-- **A observar:** o caminho do primeiro plano depois de muito tempo dormindo ("Spinner que gira sem conectar", roadmap) ainda não tem a conferência de ~25 s; se o spinner ficar aceso, colher o log e o `connects`. Aviso inofensivo `Could not invalidate already invalid timer` no `reinitLoginTimer`/`reconnect` (não investigado).
+- **A observar:** o caminho do primeiro plano depois de muito tempo dormindo ("Spinner que gira sem conectar", roadmap) ainda não tem a conferência de ~25 s (em 07/11/2026 apareceu a causa de um caso: C19, corrigido no build 98); se o spinner ficar aceso, colher o log e o `connects`. Aviso inofensivo `Could not invalidate already invalid timer` no `reinitLoginTimer`/`reconnect` (não investigado).
 
 ## O que entrou no build 89 (sobre o 88)
 
