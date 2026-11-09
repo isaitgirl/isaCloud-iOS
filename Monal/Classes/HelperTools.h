@@ -91,6 +91,10 @@ NSDictionary* _Nullable dictionaryComprehension(NSDictionary* _Nullable dict, id
 +(void) signalSuspension;
 +(void) signalResumption;
 +(void) activateTerminationLogging;
+//isaCloud: C20, lock free check and recording of database accesses made while the app is frozen
++(BOOL) isaCloudSuspendedFast;
++(void) isaCloudRecordDbAccessAfterFreeze:(NSString*) query;
++(void) isaCloudDumpDbAfterFreezeRecords;
 +(void) __attribute__((noreturn)) MLAssertWithText:(NSString*) text andUserData:(id _Nullable) additionalData andFile:(const char* const) file andLine:(int) line andFunc:(const char* const) func;
 +(void) __attribute__((noreturn)) handleRustPanicWithText:(NSString*) text andBacktrace:(NSString*) backtrace;
 +(void) __attribute__((noreturn)) throwExceptionWithName:(NSString*) name reason:(NSString*) reason userInfo:(NSDictionary* _Nullable) userInfo;

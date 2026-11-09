@@ -18,6 +18,8 @@
 #include <mach/mach_traps.h>
 #include <os/proc.h>
 #include <os/lock.h>
+#include <os/log.h>
+#include <stdatomic.h>
 #include <pthread/introspection.h>
 #include <objc/runtime.h> 
 #include <objc/message.h>
@@ -107,6 +109,10 @@ static char _profilePath[1024] = "";
 static NSObject* _isAppExtensionLock = nil;
 static NSObject* _suspensionHandling_lock = nil;
 static BOOL _suspensionHandling_isSuspended = NO;
+//isaCloud: C20, mirror of _suspensionHandling_isSuspended that can be read without any lock (database code calls it)
+static atomic_bool _isaCloudSuspendedFast = false;
+//isaCloud: C20, how many database accesses were recorded in the current suspension (at most 30)
+static atomic_int _isaCloudDbAccessRecords = 0;
 static NSMutableDictionary* _versionInfoCache;
 static NSCharacterSet* _invalidXMLCharacters;
 static NSCharacterSet* _validVs16Emojis;
@@ -808,7 +814,10 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     }
     else
         [self configureXcodeLogging];
-    
+
+    //isaCloud: C20, lines written while the logger was frozen in the last run of this process go to the normal log now
+    [self isaCloudDumpDbAfterFreezeRecords];
+
     //enable logging of all NSNotifications only on debug builds or if the debug menu was activated
 #ifdef DEBUG
     BOOL enableNotificationObserver = YES;
@@ -2755,7 +2764,10 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
             [HelperTools flushLogsWithTimeout:0.100];
             dispatch_suspend([DDLog loggingQueue]);
             _suspensionHandling_isSuspended = YES;
-            
+            //isaCloud: C20, start a new record of database accesses for this suspension
+            atomic_store(&_isaCloudDbAccessRecords, 0);
+            atomic_store(&_isaCloudSuspendedFast, true);
+
             DDLogVerbose(@"Posting kMonalFrozen notification now...");
             [[NSNotificationCenter defaultCenter] postNotificationName:kMonalFrozen object:nil];
         }
@@ -2770,7 +2782,10 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
             DDLogVerbose(@"Resuming logger queue...");
             dispatch_resume([DDLog loggingQueue]);
             _suspensionHandling_isSuspended = NO;
-            
+            atomic_store(&_isaCloudSuspendedFast, false);
+            //isaCloud: C20, the logger works again: write the database accesses recorded while it was frozen
+            [HelperTools isaCloudDumpDbAfterFreezeRecords];
+
             DDLogVerbose(@"Posting kMonalUnfrozen notification now...");
             [[NSNotificationCenter defaultCenter] postNotificationName:kMonalUnfrozen object:nil];
         }
@@ -2785,8 +2800,73 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
             DDLogVerbose(@"Activating logging for app termination...");
             dispatch_resume([DDLog loggingQueue]);
             _suspensionHandling_isSuspended = NO;
+            atomic_store(&_isaCloudSuspendedFast, false);
         }
     }
+}
+
+//isaCloud: C20, lock free read, used by database code that must not wait for the suspension lock
++(BOOL) isaCloudSuspendedFast
+{
+    return atomic_load(&_isaCloudSuspendedFast);
+}
+
+//isaCloud: C20, called by MLSQLite for every statement while the app is frozen. The logging queue is suspended here,
+//so this must never call DDLog (a synchronous log already caused C04). Writes one line to a small file in the app group
+//(at most 30 lines per suspension and 64 KB per file), which is written to the normal log on the next resumption or start
++(void) isaCloudRecordDbAccessAfterFreeze:(NSString*) query
+{
+    if(atomic_fetch_add(&_isaCloudDbAccessRecords, 1) >= 30)
+        return;
+
+    NSString* sql = [[(query ?: @"") componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]] componentsJoinedByString:@" "];
+    if(sql.length > 80)
+        sql = [sql substringToIndex:80];
+
+    NSArray* frames = [NSThread callStackSymbols];
+    NSArray* topFrames = [frames subarrayWithRange:NSMakeRange(0, MIN((NSUInteger)12, frames.count))];
+    NSString* stack = [[topFrames componentsJoinedByString:@" | "] stringByReplacingOccurrencesOfString:@"\n" withString:@" "];
+
+    const char* queueLabel = dispatch_queue_get_label(DISPATCH_CURRENT_QUEUE_LABEL);
+    NSISO8601DateFormatter* dateFormatter = [NSISO8601DateFormatter new];
+    dateFormatter.formatOptions = NSISO8601DateFormatWithInternetDateTime | NSISO8601DateFormatWithFractionalSeconds;
+
+    NSString* line = [NSString stringWithFormat:@"%@ %@ queue=%s sql=%@ stack=%@",
+        [dateFormatter stringFromDate:[NSDate date]],
+        [self isAppExtension] ? @"appex" : @"app",
+        queueLabel != NULL ? queueLabel : "none",
+        sql,
+        stack
+    ];
+
+    //isaCloud: no DDLog here, only the file below and os_log (which does not depend on the suspended queue)
+    NSURL* fileURL = [self getContainerURLForPathComponents:@[@"isacloud-db-after-freeze.log"]];
+    FILE* file = fopen(fileURL.path.UTF8String, "a");
+    if(file != NULL)
+    {
+        fseek(file, 0, SEEK_END);
+        if(ftell(file) < 64 * 1024)
+        {
+            fputs(line.UTF8String, file);
+            fputs("\n", file);
+        }
+        fclose(file);
+    }
+    os_log_error(OS_LOG_DEFAULT, "isaCloud C20: %{public}s", line.UTF8String);
+}
+
+//isaCloud: C20, moves the lines recorded by isaCloudRecordDbAccessAfterFreeze to the normal log and deletes the file.
+//Call only when the logging queue is running and outside any database lock
++(void) isaCloudDumpDbAfterFreezeRecords
+{
+    NSURL* fileURL = [self getContainerURLForPathComponents:@[@"isacloud-db-after-freeze.log"]];
+    NSString* content = [NSString stringWithContentsOfURL:fileURL encoding:NSUTF8StringEncoding error:nil];
+    if(content == nil)
+        return;
+    for(NSString* line in [content componentsSeparatedByString:@"\n"])
+        if(line.length > 0)
+            DDLogWarn(@"isaCloud C20: %@", line);
+    [[NSFileManager defaultManager] removeItemAtURL:fileURL error:nil];
 }
 
 +(void) configureXcodeLogging
