@@ -334,7 +334,7 @@ static NSMutableDictionary* _typingNotifications;
         else
             ;   //continue processing for backscrolling history but don't call mucProcessor.processMessage to not process ancient status/memberlist updates
     }
-    else if([account.mucProcessor processMessage:messageNode])
+    else if([account.mucProcessor processMessage:messageNode withIsFromMucMam:[outerMessageNode check:@"{urn:xmpp:mam:2}result"] && [outerMessageNode.fromUser isEqualToString:messageNode.fromUser]])
     {
         DDLogVerbose(@"Muc processor said we have to stop message processing here...");
         return nil;     //the muc processor said we have stop processing
@@ -460,7 +460,14 @@ static NSMutableDictionary* _typingNotifications;
                 DDLogInfo(@"Ignoring encrypted mam history message without fallback body");
         }
         else
+        {
             decrypted = [account.omemo decryptMessage:messageNode withMucParticipantJid:participantJid];
+            if(decrypted == nil)
+            {
+                DDLogInfo(@"Ignoring OMEMO message indicated as 'throwaway' by MLOMEMO...");
+                return nil;
+            }
+        }
         
         DDLogVerbose(@"Decrypted: %@", decrypted);
     }
@@ -881,10 +888,12 @@ static NSMutableDictionary* _typingNotifications;
         NSNumber* historyId = [[DataLayer sharedInstance] hasMessageForStanzaId:stanzaid orMessageID:messageId withInboundDir:inbound occupantId:occupantId andJid:buddyName onAccount:account.accountID];
         if(historyId != nil)
         {
-            message = [MLMessage createMessageFromHistoryID:historyId];
+            //don't use `message = ...` because we don't want to return an MLMessage object as "new" message
+            //if we only updated the stanzaid in our db
+            MLMessage* updatedMessage = [MLMessage createMessageFromHistoryID:historyId];
             DDLogInfo(@"Sending out kMonalUpdatedMessageNotice notification for historyId %@", historyId);
                 [[MLNotificationQueue currentQueue] postNotificationName:kMonalUpdatedMessageNotice object:account userInfo:@{
-                    @"message": message,
+                    @"message": updatedMessage,
                     @"showAlert": @(NO),
                     @"contact": possiblyUnknownContact,
                     @"LMCReplaced": @NO,
@@ -892,9 +901,9 @@ static NSMutableDictionary* _typingNotifications;
                     @"reactionsUpdate": @NO,
                 }];
             if(stanzaid)
-                DDLogDebug(@"Managed to update stanzaid of message (or stanzaid already known): %@", message);
+                DDLogDebug(@"Managed to update stanzaid of message (or stanzaid already known): %@", updatedMessage);
             else
-                DDLogWarn(@"MUC reflection without a stanzaid! This likely means that the MUC server doesn't support stanzaids. message: %@", message);
+                DDLogWarn(@"MUC reflection without a stanzaid! This likely means that the MUC server doesn't support stanzaids. message: %@", updatedMessage);
         }
     }
     

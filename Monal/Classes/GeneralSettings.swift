@@ -707,6 +707,9 @@ struct AttachmentSettings: View {
                 Text("Load over cellular up to: \(String(describing:UInt(generalSettingsDefaultsDB.autodownloadFiletransfersMobileMaxSize/(1024*1024)))) MiB")
             }
             
+// Upload settings are used only when selecting uploads via the media picker (i.e. not when using the file picker)
+// Since the media picker is disabled on macOS, hide these settings as they don't have any effect on mac
+#if !targetEnvironment(macCatalyst)
             Section(header: Text("Upload Settings")) {
                 //isaCloud: photos are resized before the upload (Never: the original; Only large: photos above 2 MB; Always: every photo)
                 //the menu goes on the line below the title, like the video one, so the row keeps its layout for every option
@@ -754,6 +757,7 @@ struct AttachmentSettings: View {
                     .foregroundColor(.secondary)
                     .font(.footnote)
             }
+#endif
         }
     }
 }

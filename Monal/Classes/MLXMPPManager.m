@@ -940,7 +940,7 @@ static void isaCloudPingOrReconnect(xmpp* account, BOOL networkCameBack, BOOL le
     return [self login:jid password:password hardcodedServer:nil hardcodedPort:nil forceDirectTLS:NO allowPlainAuth:plainActivated];
 }
 
--(NSNumber*) login:(NSString*) jid password:(NSString*) password hardcodedServer:(NSString*) hardcodedServer hardcodedPort:(NSString*) hardcodedPort forceDirectTLS:(BOOL) directTLS allowPlainAuth:(BOOL) plainActivated
+-(NSNumber*) addAccountForJid:(NSString*) jid hardcodedServer:(NSString*) hardcodedServer hardcodedPort:(NSString*) hardcodedPort forceDirectTLS:(BOOL) directTLS allowPlainAuth:(BOOL) plainActivated
 {
     //check if it is a JID
     NSArray* elements = [jid componentsSeparatedByString:@"@"];
@@ -967,6 +967,14 @@ static void isaCloudPingOrReconnect(xmpp* account, BOOL networkCameBack, BOOL le
     [dic setObject:@(plainActivated) forKey:kPlainActivated];
 
     NSNumber* accountID = [[DataLayer sharedInstance] addAccountWithDictionary:dic];
+    if(accountID == nil)
+        return nil;
+    return accountID;
+}
+
+-(NSNumber*) login:(NSString*) jid password:(NSString*) password hardcodedServer:(NSString*) hardcodedServer hardcodedPort:(NSString*) hardcodedPort forceDirectTLS:(BOOL) directTLS allowPlainAuth:(BOOL) plainActivated
+{
+    NSNumber* accountID = [self addAccountForJid:jid hardcodedServer:hardcodedServer hardcodedPort:hardcodedPort forceDirectTLS:directTLS allowPlainAuth:plainActivated];
     if(accountID == nil)
         return nil;
     [self addNewAccountToKeychainAndConnectWithPassword:password andAccountID:accountID];

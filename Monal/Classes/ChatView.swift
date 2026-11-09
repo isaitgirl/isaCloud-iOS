@@ -202,8 +202,11 @@ struct ChatView: View {
                 inputModel.setText("")
                 sendTextAtOnce(body, plain: plain)
                 //the quote left the field: the stored draft has to go with it, or it comes back the next time the chat opens
+                //read on the main actor first: the closure below runs on another thread (and the wrapper needs explicit types)
+                let draftContactJid: String = self.contact.contactJid
+                let draftAccountID: NSNumber = self.account.accountID
                 DispatchQueue.global(qos: .userInitiated).async {
-                    DataLayer.sharedInstance().saveMessageDraft(self.contact.contactJid, forAccount: self.account.accountID, withComment: "")
+                    DataLayer.sharedInstance().saveMessageDraft(draftContactJid, forAccount: draftAccountID, withComment: "")
                 }
             }
             await uploadAndSendFile(url, plain: plain)
@@ -665,32 +668,24 @@ struct ChatView: View {
 
         // if we didn't get enough (or any) messages from the DB, try to get some from MAM
         if oldMessages.count < kMonalBackscrollingMsgCount && !contact.hasReachedMamArchiveTop {
-            self.isLoadingMamHistory = true
-
             guard let oldestStanzaId = self.findOldestStanzaId() else {
                 DDLogError("Couldn't find a stanzaId to perform a mam query with! (oldestStanzaId is nil)")
                 return
             }
+            
             // now try to load more (older) messages from mam
             DDLogVerbose("Loading more messages from mam before stanzaId \(oldestStanzaId)")
+            self.isLoadingMamHistory = true
             firstly {
                 self.account.setMAMQueryMostRecentFor(self.contact.obj, before: oldestStanzaId)
             }
             .done { returnedMessages in
                 let returnedMessages = returnedMessages as! [MLMessage]
-                if returnedMessages.isEmpty {
-                    DDLogVerbose("Reached the top of the mam archive for \(self.contact.obj.contactJid)")
-                    // Don't block the main thread while writing to the db
-                    DispatchQueue.global(qos: .default).async {
-                        contact.obj.markReachedMamArchiveTop()
-                    }
-                } else {
-                    DDLogVerbose("Got backscrolling mam response: \(returnedMessages.count) messages: \(String(describing:returnedMessages))")
-                    // When backscrolling in 1-1 chats, the oldest stanzaId may not correspond to the earliest
-                    // message we have, because messages we send don't have a stanzaId => There's a risk of
-                    // getting duplicate messages in the messages array => we need to deduplicate.
-                    self.messages = OrderedSet(returnedMessages.map {ChatViewMessage($0)} + self.messages).elements
-                }
+                DDLogVerbose("Got backscrolling mam response: \(returnedMessages.count) messages: \(String(describing:returnedMessages))")
+                // When backscrolling in 1-1 chats, the oldest stanzaId may not correspond to the earliest
+                // message we have, because messages we send don't have a stanzaId
+                // but: those messages won't be returned by backscrolling, so no need to deduplicate them here
+                self.messages = returnedMessages.map {ChatViewMessage($0)} + self.messages
             }
             .catch { error in
                 //isaCloud: no pop-up when the older messages can't be fetched (a technical message, usually a connection that is reconnecting): only the log
@@ -970,6 +965,13 @@ struct ChatView: View {
         guard let localFileURL = localFileURL else {
             DDLogError("Couldn't get file location in order to upload it!")
             return
+        }
+        //Monal (709b50189): a file from outside the app sandbox (Files app) is only readable while its security-scoped access is open
+        let accessingSecurityScope = localFileURL.startAccessingSecurityScopedResource()
+        defer {
+            if accessingSecurityScope {
+                localFileURL.stopAccessingSecurityScopedResource()
+            }
         }
         inputModel.beginUpload()
         //isaCloud: a photo can be resized first (docs/analise-comprimir-imagens.md); stickers keep their PNG. The resized copy is removed when the upload is over.
@@ -1568,8 +1570,9 @@ struct ChatView: View {
                     //isaCloud: resent at once, without asking first (Isadora, 03/11/2026): "Resend" is already the answer. The question was a
                     //root action sheet, which on iOS 26+ came up as a popover cut down to one line on the navigation bar
                     Task { @MainActor in
+                        let messageId = mlMessage.messageId
                         await Task.detached(priority: .userInitiated) {
-                            DataLayer.sharedInstance().clearError(ofMessageId: mlMessage.messageId)
+                            DataLayer.sharedInstance().clearError(ofMessageId: messageId)
                         }.value
 
                         mlMessage.errorType = ""
