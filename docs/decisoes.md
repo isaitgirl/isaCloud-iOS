@@ -931,3 +931,15 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - **Decisão:** o atalho só vale se as contas nunca foram congeladas (`MonalAppDelegate.isaCloudWasFrozen`); depois do primeiro congelamento, o primeiro primeiro plano usa `applicationWillEnterForeground`, como todos os seguintes. A espera por filas ocupadas que o atalho evitava só existe na abertura a frio.
 - **Merge com o Monal:** `SwiftuiHelpers.swift` e a propriedade no `MonalAppDelegate` são do isaCloud (o Monal não usa cenas assim); atrito baixo.
 - **Descartado:** (a) decidir pelo estado do app em `didFinishLaunching` (durante o lançamento por cena o estado é "background" mesmo na abertura a frio, então não discrimina); (b) usar o tempo desde o lançamento (frágil).
+
+## Reações do menu: os 6 últimos emojis usados (09/11/2026, build 99, roadmap 163)
+
+- **Decisão:** a fileira de reações do menu mostra os 6 últimos emojis usados (LRU), começando por ❤️ 👍 👎 😂 😨 🥲. Só adicionar uma reação move o emoji para o início; remover não muda a lista. O botão de outro emoji continua no fim. Reações já postas na mensagem que saíram da lista vão para o fim da fileira, para poderem ser removidas.
+- **Onde fica:** `RecentReactions.swift`, nas preferências do aparelho (global, não sincroniza). Sem `@defaultsDB`, que aborta quando a chave não existe (C18).
+- **Merge com o Monal:** só `ChatView.swift` (`availableReactionsFor`) e um arquivo novo; nada no fork do ExyteChat.
+
+## Tamanho do arquivo nas mídias (09/11/2026, build 99, roadmap 162)
+
+- **Decisão:** pílula com o tamanho no canto inferior esquerdo de fotos e vídeos (também no álbum, escondida durante o upload) e "0:42 · 120 KB" no áudio. O número é o do arquivo que viaja (comprimido, no envio), igual para quem envia e quem recebe.
+- **Descartado:** pílula no GIF (testado no `.dev` em 09/11/2026: tapava a legenda); figurinhas nunca tiveram.
+- **Onde fica:** fork do ExyteChat (PR 22, `3eb0aa1`) e `ChatViewMessage` em `ChatView.swift`. Detalhes em `docs/analise-tamanho-de-midias.md`.

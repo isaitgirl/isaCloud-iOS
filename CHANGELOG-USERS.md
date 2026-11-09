@@ -4,7 +4,11 @@ O que mudou em cada versão, em poucas palavras. A lista técnica completa está
 
 ## Em breve (próxima versão)
 
+## Build 99 · 09/11/2026
+
 ### Novidades
+- 📦 Fotos, vídeos e áudios mostram o tamanho do arquivo.
+- 😍 As reações do menu mostram os emojis que você mais usou por último.
 - 🎬 Vídeos da galeria e da câmera agora são comprimidos antes de enviar, para chegar mais rápido e gastar menos internet.
 - 📏 O app avisa na hora quando um vídeo passa do limite do servidor, sem esperar o envio falhar.
 - ⚙️ Em Anexos, escolha entre enviar o vídeo original ou em 480p.

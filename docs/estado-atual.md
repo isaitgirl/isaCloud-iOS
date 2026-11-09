@@ -1,4 +1,4 @@
-# Estado atual e handoff (07/11/2026, build 98)
+# Estado atual e handoff (09/11/2026, build 99)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,39 +7,21 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 98** (mensagem "Build 98 ..."), tag `build-98`; `git log --oneline -3` |
-| TestFlight | **98** (07/11/2026, 08:25; antes 97 em 06/11 às 14:20, tag `build-97`) |
-| `.dev` no iPhone | **98**, igual ao TestFlight (07/11/2026; **sem push**, então a extensão de notificação não roda nele) |
+| Commit | o do **build 99** (mensagem "Build 99 ..."), tag `build-99`; `git log --oneline -3` |
+| TestFlight | **99** (09/11/2026, 12:51; antes 98 em 07/11 às 08:25, tag `build-98`) |
+| `.dev` no iPhone | **99**, igual ao TestFlight (09/11/2026; **sem push**, então a extensão de notificação não roda nele) |
 | Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o código do build 94 (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261105-1036-linha-lido-2/` e `-1037-linha-lido-2/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
-| ExyteChat | `7d3292b` na `isaCloud` (miniatura opcional dentro da citação, `Message.quotePreview`, PR 21; antes `e168ed8`: visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
+| ExyteChat | `3eb0aa1` na `isaCloud` (tamanho do arquivo nas mídias e nos áudios, PR 22; antes `7d3292b`: miniatura opcional dentro da citação, `Message.quotePreview`, PR 21; antes `e168ed8`: visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 
-## Em andamento (06/11/2026): compressão de vídeo e limite do servidor
+## O que entrou no build 99 (sobre o 98)
 
-**Onde está:** branch `feature/comprimir-video-galeria` (worktree `/Users/isadora/projects/swift/isaCloud-iOS-comprimir-video`). **Não mesclado** no `isaCloud` e **sem build**: o último build no ar é o 97. Commit do dia: o da mensagem "Vídeo da galeria: aviso de limite do servidor e correções do teste no .dev" (sobre `105aa1871`, "Compressão de vídeos da galeria em 480p"). Só testado no `.dev`, por decisão da Isadora (créditos).
-
-**O que já funciona no `.dev` (testado pela Isadora em 06/11/2026):**
-- Vídeo da galeria em 480p (preset `AVAssetExportPreset640x480`), sem localização (GPS removido). Vídeo de 1:10 em Original enviado.
-- Limite do servidor lido do disco#info (campo `max-file-size`), com o valor guardado na sessão. Ao escolher um vídeo maior que o limite da conta, aviso "Este vídeo passa do limite de 200 MiB do servidor." e o vídeo não anexa. Com recusa do servidor por tamanho, o mesmo aviso (não o "tente de novo").
-- "Preparando vídeo..." desde a escolha, com a checagem fora da thread principal.
-- Compartilhamento de vídeo de outro app: checa o tamanho do arquivo original antes de subir (sem regra de 300 s), com o mesmo aviso. **Não testado ainda.**
-- Correção: `videoCompressionMode` era lido sem valor gravado e derrubava o app ao abrir Anexos (C18, `docs/analises-crashes.md`).
-
-**Regras decididas:**
-- 480p é o padrão; "Original" é a outra opção. **Sem regra de 300 s desde 09/11/2026:** vale só o limite da conta, e o tamanho real é conferido antes de subir qualquer arquivo.
-- O limite vem do servidor, nunca fixo no código. Medido em 06/11/2026: `isacloud.im` (Prosody) anuncia 200 MiB (209715200 bytes); `autozona.cc` (ejabberd) anuncia 150 MiB (157286400 bytes). O aviso mostra em MiB; a tela de Detalhes do servidor (código do Monal) ainda mostra em MB decimal.
-- Limite zero (desconhecido) não bloqueia nada. Por isso o login completo precisa ter acontecido com a versão nova para o valor estar guardado.
-- Dados e decisões: `docs/analise-comprimir-videos.md`, `docs/decisoes.md` (seção de compressão de vídeos), `CHANGELOG.md` ("Não publicado").
-
-**Em aberto:**
-- Decidir a mesclagem no `isaCloud` (ela ainda não pediu).
-- Testar o compartilhamento de vídeo no `.dev` (grande e pequeno).
-- Mexidas em código legado do Monal que precisam de atenção no merge: `xmpp.m` (uploadSize no estado salvo e restaurado; código 1 para "File too large"), `MLIQProcessor.m` (leitura do limite), `MLXMPPManager.m` (migração do `videoCompressionMode`), `MonalAppDelegate.m` (checagem no envio pelo compartilhamento), `SwiftuiHelpers.swift` (logs do seletor). Os trechos têm comentário `//isaCloud:`.
-- Os textos "Failed to share file" e "Error: %@" são do Monal (Weblate), e não estão no repositório.
-- **Testes de 09/11/2026 no `.dev` (Isadora):** alerta do limite na galeria em modo Original, câmera curta convertida e alerta no compartilhar funcionaram; seletor de vídeo em Anexos passou para a linha de baixo do título. Pendentes, não bloqueiam: parada automática da câmera e vídeo da galeria > 5 min dentro do limite (sem amostra).
-- **Câmera (09/11/2026, no `.dev`):** o vídeo gravado é convertido como o da galeria, e a gravação para no tempo que cabe no limite (cerca de 6 min e 25 s no `isacloud.im`, 4 min e 49 s no `autozona.cc`). O compartilhar não converte (só confere o tamanho).
+- **Compressão de vídeos da galeria e da câmera (480p) e limite do servidor** (PR 54, roadmap 161): MP4 H.264 + AAC 480p sem GPS; opção Original em Anexos. Limite de upload lido do servidor (`max-file-size` no formulário do disco; `isacloud.im` 200 MiB, `autozona.cc` 150 MiB) e guardado no estado da conexão. Aviso antes de anexar, tamanho real conferido antes de subir qualquer arquivo e recusa do servidor com a mensagem do limite. Sem duração fixa (a regra de 300 s saiu em 09/11/2026). A câmera para a gravação no tempo que cabe no limite. Compartilhar de outro app confere só o tamanho, sem converter. Anexos: seletores na linha de baixo do título; fotos "Sempre" por padrão em instalação nova. C18 corrigido. Testado no `.dev`. **Pendentes, não bloqueiam:** parada automática da câmera (~6 min 25 s no `isacloud.im`) e vídeo da galeria > 5 min dentro do limite (sem amostra). Atenção no merge com o Monal: `xmpp.m`, `MLIQProcessor.m`, `MLXMPPManager.m`, `MonalAppDelegate.m`, `SwiftuiHelpers.swift` (trechos `//isaCloud:`). Detalhes: `docs/analise-comprimir-videos.md`, `docs/decisoes.md`.
+- **Tamanho do arquivo nas fotos, vídeos e áudios** (PR 55 + PR 22 do fork, roadmap 162): pílula no canto inferior esquerdo e "0:42 · 120 KB" no áudio; GIFs e figurinhas sem. `docs/analise-tamanho-de-midias.md`.
+- **Reações do menu com os 6 últimos emojis usados** (PR 53, roadmap 163): `RecentReactions.swift`.
+- **Observação:** `scripts/isacloud-dev-device.sh` sai com código 0 mesmo quando a compilação falha (não instala nada nesse caso); conferir no log se aparece "Installing".
 
 ## Em andamento (05/11/2026)
 
