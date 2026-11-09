@@ -1291,6 +1291,15 @@ struct ChatListSearchResults : View {
                                 Text(contact.contactJid)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
+                                //isaCloud: with more than one account enabled, tell which account the result belongs to (like the messages tab)
+                                if let accountJid = HelperTools.accountJidToShow(forAccountID: contact.accountID) {
+                                    HStack(spacing: 3) {
+                                        Image(systemName: "person.crop.circle")
+                                        Text(accountJid)
+                                    }
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                }
                             }
                         }
                     }
