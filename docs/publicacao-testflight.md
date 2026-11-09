@@ -4,11 +4,11 @@ Rotina para enviar um build de distribuição ao App Store Connect e liberá-lo 
 
 Problemas de build e worktrees: `docs/build-e-branches.md`.
 
-Equipe: `K8Y6S5RF2S`. Bundle da distribuição: `br.com.isacloud.messenger`. Rode os comandos a partir da raiz do repositório, salvo quando indicado.
+Equipe: `<TEAM_ID>`. Bundle da distribuição: `br.com.isacloud.messenger`. Rode os comandos a partir da raiz do repositório, salvo quando indicado.
 
 ## Antes de começar
 
-- O app de Xcode tem a conta da equipe K8Y6S5RF2S configurada (Xcode → Settings → Accounts).
+- O app de Xcode tem a conta da equipe <TEAM_ID> configurada (Xcode → Settings → Accounts).
 - A chave do Giphy está em `isaCloud/local/giphy-api-key.txt` (fora do Git). Sem ela o build sai sem a busca de GIF.
 - Confira que o trabalho que vai para o build está no estado certo. O build é feito a partir dos arquivos no disco, não de um commit.
 
@@ -35,7 +35,7 @@ Ajuste o número do build na mesma conta toda vez. Se a versão de marketing (`M
 Use a configuração `AppStore`. A configuração `Release` não existe no projeto.
 
 ```bash
-cd Monal && xcodebuild archive -workspace Monal.xcworkspace -scheme Monal -sdk iphoneos -configuration AppStore -archivePath "$(pwd)/../build/isaCloud-AppStore.xcarchive" -allowProvisioningUpdates DEVELOPMENT_TEAM=K8Y6S5RF2S ISACLOUD_BUNDLE_ID=br.com.isacloud.messenger ISACLOUD_ENTITLEMENTS_DIR= GIPHY_API_KEY="$(tr -d '[:space:]' < ../isaCloud/local/giphy-api-key.txt)"
+cd Monal && xcodebuild archive -workspace Monal.xcworkspace -scheme Monal -sdk iphoneos -configuration AppStore -archivePath "$(pwd)/../build/isaCloud-AppStore.xcarchive" -allowProvisioningUpdates DEVELOPMENT_TEAM=<TEAM_ID> ISACLOUD_BUNDLE_ID=br.com.isacloud.messenger ISACLOUD_ENTITLEMENTS_DIR= GIPHY_API_KEY="$(tr -d '[:space:]' < ../isaCloud/local/giphy-api-key.txt)"
 ```
 
 **Depois de mudar as opções (traits) de um pacote, como o `ENABLE_FTS5` do `sqlite3-package`, arquive com uma pasta de compilação nova** (acrescente `-derivedDataPath /tmp/ddarch` e apague a pasta antes): o Xcode reaproveita a SQLite compilada antes e o arquivo sai sem a opção nova, sem avisar (aconteceu no build 32). Confira no arquivo, antes de enviar:
@@ -57,7 +57,7 @@ APP=$(ls -d build/isaCloud-AppStore.xcarchive/Products/Applications/*.app) && /u
 Use o plist de upload (`destination` = `upload`), com caminhos absolutos:
 
 ```bash
-xcodebuild -exportArchive -archivePath /Users/isadora/projects/swift/isaCloud-iOS/build/isaCloud-AppStore.xcarchive -exportOptionsPlist /Users/isadora/projects/swift/isaCloud-iOS/scripts/exportOptions/isaCloud_AppStore_Upload_ExportOptions.plist -allowProvisioningUpdates
+xcodebuild -exportArchive -archivePath <RAIZ_DO_REPO>/build/isaCloud-AppStore.xcarchive -exportOptionsPlist <RAIZ_DO_REPO>/scripts/exportOptions/isaCloud_AppStore_Upload_ExportOptions.plist -allowProvisioningUpdates
 ```
 
 Quando termina sem erro, o build aparece no App Store Connect depois de processado (alguns minutos, às vezes meia hora).
@@ -75,7 +75,7 @@ Os testadores são **internos**: o build fica disponível no app TestFlight assi
 - **"App record with bundle identifier not found"** na hora de enviar: o app não está criado com o bundle `br.com.isacloud.messenger` no App Store Connect. Confira o nome exato no cadastro.
 - **Build repetido**: o número do build já foi enviado para a mesma versão. Suba `CURRENT_PROJECT_VERSION` e arquive de novo.
 - **Erro de assinatura ou de entitlements no arquivo**: o App ID precisa ter as capacidades ativas (Push, App Groups, Communication Notifications). Ative no portal de desenvolvedor e rode o arquivamento de novo com `-allowProvisioningUpdates`.
-- **`exportArchive Failed to Use Accounts` / "App Store Connect access for K8Y6S5RF2S is required"** (visto em 26/10/2026, com a conta aparecendo normalmente em Xcode > Settings > Accounts; **resolvido saindo e entrando de novo na conta no Xcode**, depois o envio funcionou): o `xcodebuild` de linha de comando usa um token de sessão do App Store Connect que pode ficar inválido sem aviso. Primeiro tente sair e entrar de novo na conta (Settings > Accounts). Outras saídas: (a) abrir o archive no Organizer (`open build/isaCloud-AppStore.xcarchive`) e usar **Distribute App > App Store Connect > Upload**, onde o Xcode renova a sessão; (b) conferir o papel da conta na equipe (precisa de Admin, App Manager ou Developer com acesso ao App Store Connect); (c) para o envio por linha de comando funcionar sempre, criar uma chave da API do App Store Connect (Users and Access > Integrations) e usar `-authenticationKeyPath`, `-authenticationKeyID` e `-authenticationKeyIssuerID` no `xcodebuild -exportArchive`; o caminho do `.p8` e os ids ficam em `isaCloud/local/NOTAS-LOCAIS.md`, nunca aqui.
+- **`exportArchive Failed to Use Accounts` / "App Store Connect access for <TEAM_ID> is required"** (visto em 26/10/2026, com a conta aparecendo normalmente em Xcode > Settings > Accounts; **resolvido saindo e entrando de novo na conta no Xcode**, depois o envio funcionou): o `xcodebuild` de linha de comando usa um token de sessão do App Store Connect que pode ficar inválido sem aviso. Primeiro tente sair e entrar de novo na conta (Settings > Accounts). Outras saídas: (a) abrir o archive no Organizer (`open build/isaCloud-AppStore.xcarchive`) e usar **Distribute App > App Store Connect > Upload**, onde o Xcode renova a sessão; (b) conferir o papel da conta na equipe (precisa de Admin, App Manager ou Developer com acesso ao App Store Connect); (c) para o envio por linha de comando funcionar sempre, criar uma chave da API do App Store Connect (Users and Access > Integrations) e usar `-authenticationKeyPath`, `-authenticationKeyID` e `-authenticationKeyIssuerID` no `xcodebuild -exportArchive`; o caminho do `.p8` e os ids ficam em `isaCloud/local/NOTAS-LOCAIS.md`, nunca aqui.
 - **Build sem push**: o build de distribuição tem push. O build `.dev` para o iPhone (`scripts/isacloud-dev-device.sh`) não tem push **por escolha nossa** (os entitlements de `isaCloud/dev-entitlements/` não pedem `aps-environment`), e não por limite da conta: ele é assinado com a conta paga e tem o App Group do `.dev`. Detalhes em `docs/troubleshooting.md`, seção "Instalar e abrir o isaCloud.dev no iPhone".
 
 ## Marcar o build no Git

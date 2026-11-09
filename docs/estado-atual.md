@@ -261,14 +261,14 @@ Tudo isso deve ficar em `#if DEBUG` (o `.dev` é Debug; o TestFlight é Release)
 
 ```bash
 # .dev no iPhone (Debug, com App Group do .dev)
-scripts/isacloud-dev-device.sh K8Y6S5RF2S 00008101-000C1DD01198001E
+scripts/isacloud-dev-device.sh <TEAM_ID> <UDID_DO_IPHONE>
 
 # arquivo de produção (Release/AppStore)
 cd Monal && xcodebuild archive -workspace Monal.xcworkspace -scheme Monal \
   -sdk iphoneos -configuration AppStore \
   -archivePath "$(pwd)/../build/isaCloud-AppStore.xcarchive" \
   -derivedDataPath /tmp/ddarch -allowProvisioningUpdates \
-  DEVELOPMENT_TEAM=K8Y6S5RF2S ISACLOUD_BUNDLE_ID=br.com.isacloud.messenger \
+  DEVELOPMENT_TEAM=<TEAM_ID> ISACLOUD_BUNDLE_ID=br.com.isacloud.messenger \
   ISACLOUD_ENTITLEMENTS_DIR= \
   GIPHY_API_KEY="$(tr -d '[:space:]' < ../isaCloud/local/giphy-api-key.txt)"
 

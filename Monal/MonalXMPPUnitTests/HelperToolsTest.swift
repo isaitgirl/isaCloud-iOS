@@ -48,14 +48,14 @@ struct HelperToolsTest {
     }
 
     //isaCloud: mention = whole word of the names, any case and accents
-    @Test("text mentions a name as a whole word", arguments: ["oi isa", "isa, vem aqui", "@isa pode ver?", "ISA!", "obrigada, isa.", "(isa)", "isa@isacloud.im escreveu", "Isa", "isá aqui"])
+    @Test("text mentions a name as a whole word", arguments: ["oi isa", "isa, vem aqui", "@isa pode ver?", "ISA!", "obrigada, isa.", "(isa)", "usuaria@example.org escreveu", "Isa", "isá aqui"])
     func testTextMentionsWholeWord(_ text: String) {
-        #expect(HelperTools.text(text, mentionsAnyOfNames: ["isa", "isa@isacloud.im"]))
+        #expect(HelperTools.text(text, mentionsAnyOfNames: ["isa", "usuaria@example.org"]))
     }
 
     @Test("text does not mention a name inside another word", arguments: ["isafashiondev", "precisa", "analisar", "avisar", "pesquisa", "Elisa", "isaías", "isa_dev", "visão", "íisa"])
     func testTextIgnoresNameInsideWord(_ text: String) {
-        #expect(!HelperTools.text(text, mentionsAnyOfNames: ["isa", "isa@isacloud.im"]))
+        #expect(!HelperTools.text(text, mentionsAnyOfNames: ["isa", "usuaria@example.org"]))
     }
 
     @Test("text mentions a name ignoring case and accents", arguments: ["oi zé", "ZE aqui", "Zé!"])

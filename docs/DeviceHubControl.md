@@ -168,7 +168,7 @@ Clicar numa janela **traz essa janela para a frente** — não tem como evitar, 
 xcrun simctl push <UDID> br.com.isacloud.messenger payload.json
 
 # convites e deep links
-xcrun simctl openurl <UDID> "xmpp:poli@isacloud.im?roster;preauth=<token>;ibr=y"
+xcrun simctl openurl <UDID> "xmpp:<JID_DO_CONVIDANTE>?roster;preauth=<token>;ibr=y"
 
 # log do app
 xcrun simctl spawn <UDID> log show --last 3m --style compact --predicate 'process == "isaCloud"'

@@ -18,7 +18,7 @@ Análise e decisões completas do iOS: `docs/analise-figurinhas.md`. Decisões c
 A figurinha é **uma imagem enviada como qualquer foto**, pelo HTTP Upload (XEP-0363) e pelo OOB (`jabber:x:oob`). Ela leva **um marcador** da XEP-0449 (Stickers, *Experimental*, 0.2.0):
 
 ```xml
-<message type='chat' to='lu@isacloud.im' id='…'>
+<message type='chat' to='<JID_DO_DESTINATARIO>' id='…'>
   <body>https://upload.isacloud.im/file_share/…/E91D….png</body>
   <x xmlns='jabber:x:oob'><url>https://upload.isacloud.im/file_share/…/E91D….png</url></x>
   <sticker xmlns='urn:xmpp:stickers:0'/>

@@ -9,7 +9,7 @@ Procedimentos e comandos que já funcionaram para investigar problemas. Rode a p
 | App de distribuição (TestFlight) | `br.com.isacloud.messenger` |
 | App de desenvolvimento (iPhone) | `br.com.isacloud.messenger.dev` |
 | App Group (produção / dev) | `group.br.com.isacloud.messenger` / `group.br.com.isacloud.messenger.dev` |
-| Equipe | `K8Y6S5RF2S` |
+| Equipe | `<TEAM_ID>` |
 | Seu iPhone | `<UDID_DO_IPHONE>` (em `isaCloud/local/NOTAS-LOCAIS.md`; `xcrun devicectl list devices` mostra) |
 | Simulador iPhone XR (iOS 18.6) | `7AA8D91B-C04C-460E-A4CB-F400FA1F5D5D` |
 | Simulador iOS 27 ("isaCloud iOS27") | `346E97D1-7A60-4671-A481-FB22437B8380` |
@@ -63,10 +63,10 @@ Dicas para interpretar:
 ## 2. Instalar e abrir o isaCloud.dev no iPhone
 
 ```bash
-scripts/isacloud-dev-device.sh K8Y6S5RF2S <UDID_DO_IPHONE>
+scripts/isacloud-dev-device.sh <TEAM_ID> <UDID_DO_IPHONE>
 ```
 
-Compila em Debug, instala e abre. O `.dev` é assinado com a conta paga da equipe `K8Y6S5RF2S` (perfil automático "iOS Team Provisioning Profile", válido por um ano; confira a validade com `security cms -D -i <app>/embedded.mobileprovision`) e **tem o App Group** `group.br.com.isacloud.messenger.dev`, então o app e as extensões compartilham os dados. Ele **não recebe push do APNs**, mas por escolha nossa: `isaCloud/dev-entitlements/` não pede `aps-environment` (nem as notificações de comunicação nem o limite de memória maior). As notificações que aparecem no `.dev` são **locais**, criadas pelo próprio app enquanto a conexão XMPP está viva. Para ter push no `.dev` seria preciso a capacidade Push Notifications no App ID `.dev` e `aps-environment = development` nesses entitlements (o app já usa o módulo `-sandbox` quando detecta o APNs de desenvolvimento).
+Compila em Debug, instala e abre. O `.dev` é assinado com a conta paga da equipe `<TEAM_ID>` (perfil automático "iOS Team Provisioning Profile", válido por um ano; confira a validade com `security cms -D -i <app>/embedded.mobileprovision`) e **tem o App Group** `group.br.com.isacloud.messenger.dev`, então o app e as extensões compartilham os dados. Ele **não recebe push do APNs**, mas por escolha nossa: `isaCloud/dev-entitlements/` não pede `aps-environment` (nem as notificações de comunicação nem o limite de memória maior). As notificações que aparecem no `.dev` são **locais**, criadas pelo próprio app enquanto a conexão XMPP está viva. Para ter push no `.dev` seria preciso a capacidade Push Notifications no App ID `.dev` e `aps-environment = development` nesses entitlements (o app já usa o módulo `-sandbox` quando detecta o APNs de desenvolvimento).
 
 Abrir, fechar e listar processos no iPhone:
 
