@@ -281,3 +281,8 @@
 "Contact has not accepted yet" = "O contato ainda não aceitou sua solicitação";
 "Without encryption keys the message can't be encrypted. You can send it without encryption just this time, or cancel and wait for the contact to accept." = "Sem chaves de criptografia, a mensagem não pode ser cifrada. Você pode enviá-la sem criptografia só desta vez, ou cancelar e esperar o contato aceitar.";
 "Send without encryption this time" = "Enviar sem criptografia só desta vez";
+
+/* isaCloud: arquivamento local (rótulo nas listas, tela de detalhes; ContactEntry.swift, ContactDetails.swift) */
+"Archived" = "Arquivado";
+"Unarchive" = "Desarquivar";
+"Notifications disabled while archived" = "Notificações desativadas enquanto arquivado";

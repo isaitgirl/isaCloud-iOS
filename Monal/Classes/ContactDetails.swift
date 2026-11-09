@@ -74,6 +74,12 @@ struct ContactDetails: View {
         }
     }
 
+    //isaCloud: the wrapper's dynamic members are read with an explicit type (see ObservableKVOWrapper)
+    private var isArchivedContact: Bool {
+        let archived: Bool = contact.isArchived
+        return archived
+    }
+
     private func isaCloudMucPersonCount() -> Int {
         return countMucPersons(of: contact, ownJid: account.connectionProperties.identity.jid)
     }
@@ -372,7 +378,45 @@ struct ContactDetails: View {
             
             // info/nondestructive buttons
             Section {
-                if !contact.isSelf {
+                //isaCloud: an archived chat is hidden from the chat list; unarchive brings it back (groups and channels stay archived until then)
+                if isArchivedContact {
+                    Label {
+                        Text("Archived")
+                    } icon: {
+                        Image(systemName: "tray.and.arrow.down.fill")
+                    }
+                    //isaCloud: light gray, because this line is only information (the action is "Unarchive" below)
+                    .foregroundStyle(Color(UIColor.tertiaryLabel))
+                    Button {
+                        DataLayer.sharedInstance().unarchiveBuddy(contact.obj.contactJid, forAccount: contact.obj.accountID)
+                        contact.obj.refresh()
+                        MLNotificationQueue.current().post(
+                            name: Notification.Name(kMonalUpdateUnread),
+                            object: nil
+                        )
+                        MLNotificationQueue.current().post(
+                            name: Notification.Name(kMonalContactRefresh),
+                            object: contact.obj.account,
+                            userInfo: ["contact": contact.obj, "archivedChanged": true]
+                        )
+                    } label: {
+                        Label {
+                            Text("Unarchive")
+                        } icon: {
+                            Image(systemName: "tray.and.arrow.up.fill")
+                        }
+                    }
+                }
+
+                //isaCloud: an archived chat is totally silent whatever its own setting, so the setting is shown as disabled (it comes back on unarchive)
+                if !contact.isSelf && isArchivedContact {
+                    Label {
+                        Text("Notifications disabled while archived")
+                    } icon: {
+                        Image(systemName: "bell.slash.fill")
+                    }
+                    .foregroundStyle(Color.secondary)
+                } else if !contact.isSelf {
                     Button {
                         if contact.isMuc {
                             if !contact.isMuted && !contact.isMentionOnly {

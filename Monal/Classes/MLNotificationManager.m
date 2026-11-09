@@ -308,7 +308,8 @@ typedef NS_ENUM(NSUInteger, MLNotificationState) {
     {
         //only show notifications for reactions from other people to our own messages, but only if configured to do so
         //showAlert will be NO if this is our own reaction and YES it it is from somebody else
-        if(!message.inbound && showAlert && [[HelperTools defaultsDB] boolForKey:@"showNotificationsForReactions"] && ([HelperTools isNotInFocus] || ![message isEqualToContact:self.currentContact]))
+        //isaCloud: an archived chat sends no notifications for reactions either
+        if(!message.inbound && showAlert && [[HelperTools defaultsDB] boolForKey:@"showNotificationsForReactions"] && ([HelperTools isNotInFocus] || ![message isEqualToContact:self.currentContact]) && ![[DataLayer sharedInstance] isArchivedBuddy:message.buddyName forAccount:message.accountID])
         {
             DDLogVerbose(@"Notification manager will show notification for reaction: %@", notification.userInfo[@"changedReactions"]);
             [self showNotificationForReactions:notification.userInfo[@"changedReactions"]];
@@ -329,6 +330,13 @@ typedef NS_ENUM(NSUInteger, MLNotificationState) {
     if(!showAlert)
     {
         DDLogDebug(@"not showing notification: showAlert is NO");
+        return;
+    }
+    
+    //isaCloud: an archived chat is totally silent, mentions included (no exception for mentions)
+    if([[DataLayer sharedInstance] isArchivedBuddy:message.buddyName forAccount:message.accountID])
+    {
+        DDLogDebug(@"not showing notification: chat is archived");
         return;
     }
     
@@ -461,6 +469,23 @@ typedef NS_ENUM(NSUInteger, MLNotificationState) {
 -(NSString*) threadIdentifierWithContact:(MLContact*) contact
 {
     return [NSString stringWithFormat:@"thread(%@, %@)", contact.accountID, contact.contactJid];
+}
+
+//isaCloud: removes the delivered notifications of a chat without marking its messages as read (used when archiving the chat)
+-(void) removeDeliveredNotificationsForContact:(MLContact*) contact
+{
+    NSString* threadIdentifier = [self threadIdentifierWithContact:contact];
+    [[UNUserNotificationCenter currentNotificationCenter] getDeliveredNotificationsWithCompletionHandler:^(NSArray<UNNotification*>* notifications) {
+        NSMutableArray<NSString*>* identifiers = [NSMutableArray new];
+        for(UNNotification* notification in notifications)
+            if([notification.request.content.threadIdentifier isEqualToString:threadIdentifier])
+                [identifiers addObject:notification.request.identifier];
+        if([identifiers count] > 0)
+        {
+            DDLogVerbose(@"Removing %lu delivered notifications of archived chat '%@'", (unsigned long)[identifiers count], contact.contactJid);
+            [[UNUserNotificationCenter currentNotificationCenter] removeDeliveredNotificationsWithIdentifiers:identifiers];
+        }
+    }];
 }
 
 -(UNMutableNotificationContent*) updateBadgeForContent:(UNMutableNotificationContent*) content

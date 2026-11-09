@@ -48,7 +48,7 @@ struct ContactViewEntry: View {
             Text("").frame(maxWidth: 0)
             Button(action: { dismissWithContact(contact) }) {
                 HStack {
-                    ContactEntry(contact: contact).showingAccount(of: contact)
+                    ContactEntry(contact: contact).showingAccount(of: contact).showingArchivedLabel()
                     Spacer()
                     Button {
                         selectedContactForContactDetails = contact

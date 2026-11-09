@@ -29,7 +29,8 @@ if [[ ! -f "$TARGET" ]]; then
 fi
 
 # SQLite lists its compile options as plain strings ("ENABLE_FTS5") inside the binary
-if [[ "$(strings -a "$TARGET" | grep -c '^ENABLE_FTS5$')" == "1" ]]; then
+# (once per architecture: a build for any simulator has two, x86_64 and arm64, so it shows up twice)
+if [[ "$(strings -a "$TARGET" | grep -c '^ENABLE_FTS5$' || true)" -ge 1 ]]; then
     echo "FTS5 ok: $TARGET"
     exit 0
 fi

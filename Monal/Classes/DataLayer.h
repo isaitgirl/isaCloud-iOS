@@ -311,6 +311,12 @@ extern NSString* const kMessageTypeFiletransfer;
 -(BOOL) isActiveBuddy:(NSString*) buddyname forAccount:(NSNumber*) accountID;
 -(BOOL) updateActiveBuddy:(NSString*) buddyname setTime:(NSString*)timestamp forAccount:(NSNumber*) accountID;
 
+#pragma mark isaCloud: archived state
+//isaCloud: archived chats stay in buddylist and activechats (pinned and lastMessageTime survive) and only leave the lists; see migration 7 of +migrateISACloudDB:
+-(BOOL) isArchivedBuddy:(NSString*) buddy forAccount:(NSNumber*) accountID;
+-(void) archiveBuddy:(NSString*) buddy forAccount:(NSNumber*) accountID;
+-(void) unarchiveBuddy:(NSString*) buddy forAccount:(NSNumber*) accountID;
+
 
 
 #pragma mark count unread

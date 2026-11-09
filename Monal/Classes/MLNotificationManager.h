@@ -20,5 +20,7 @@
 
 @property (atomic, strong) MLContact* currentContact;
 -(void) donateInteractionForOutgoingDBId:(NSNumber*) messageDBId;
+//isaCloud: removes the delivered notifications of a chat without marking its messages as read (used when archiving)
+-(void) removeDeliveredNotificationsForContact:(MLContact*) contact;
 
 @end

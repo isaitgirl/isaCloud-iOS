@@ -4,6 +4,15 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## Não publicado
 
+Branch `feature/arquivamento-local` (release ainda indefinida).
+
+### Adicionado
+- **Arquivamento duradouro de conversas, como no Android** (PR 1 do roadmap 134). Arquivar (swipe "Arquivar" ou o menu do Mac) passa a gravar `buddylist.archived` (migração 7 da escada do isaCloud, com `archived_updated` e `archived_pending` para a futura sincronização pelo PEP) em vez de apagar `activechats`. Por isso não marca mais as mensagens como lidas e a conversa fixada continua fixada. A lista de conversas, o badge, o contador por conversa e as não lidas ignoram as arquivadas. Grupo/canal arquivado fica totalmente mudo (nem a @ notifica, nem reações), continua na sala e não volta com mensagem nova nem ao entrar na sala; só volta pelo "Desarquivar" nos detalhes. Conversa 1:1 arquivada volta ao receber, abrir ou enviar (`addActiveBuddies`). Rótulo "Arquivado" com ícone na lista de Contatos, abaixo da conta; nos detalhes, a linha "Arquivado", o botão "Desarquivar" e as notificações mostradas como desativadas enquanto arquivado (o ajuste próprio volta ao desarquivar). Arquivar também apaga as notificações entregues da conversa. Conversas arquivadas antes desta versão voltam do jeito antigo e precisam ser arquivadas de novo uma vez. Testado pela Isadora no `.dev`. Decisões em `docs/decisoes-sincronizacao-arquivados.md`.
+- **Busca por nomes mostra a conta de cada resultado.** Com mais de uma conta ativa, os resultados da aba "Nomes" da busca da tela inicial ganham a linha da conta (ícone + JID), como a aba "Mensagens" e a lista de Contatos; antes, o mesmo canal em duas contas aparecia duas vezes igual.
+
+### Corrigido
+- **Checagem de FTS5 com alarme falso em build para qualquer simulador.** `scripts/isacloud-check-fts5.sh` exigia exatamente uma ocorrência de `ENABLE_FTS5`, mas um binário com duas arquiteturas (x86_64 e arm64) tem duas; agora aceita uma ou mais.
+
 ## 0.0.1 (build 99) — 09/11/2026
 
 Enviado ao TestFlight às 12:51. PRs 53, 54 e 55 do app e PR 22 do fork do ExyteChat (`3eb0aa1`).

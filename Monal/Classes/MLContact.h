@@ -75,6 +75,8 @@ FOUNDATION_EXPORT NSString* const kAskSubscribe;
 @property (nonatomic, readonly) BOOL isBlocked;
 @property (nonatomic, readonly) BOOL isMuted;
 @property (nonatomic, readonly) BOOL isActiveChat;
+//isaCloud: archived chats are hidden from the lists and send no notifications
+@property (nonatomic, readonly) BOOL isArchived;
 @property (nonatomic, assign) BOOL isEncrypted;
 
 @property (nonatomic, readonly) NSString* groupSubject;
