@@ -92,6 +92,9 @@ class ChatViewDefaultsDB: ObservableObject {
 
     @defaultsDB("ShowGeoLocation")
     var showGeoLocation: Bool
+
+    @defaultsDB("uploadImagesOriginal")
+    var uploadImagesOriginal: Bool
 }
 
 struct ChatView: View {
@@ -390,32 +393,24 @@ struct ChatView: View {
 
         // if we didn't get enough (or any) messages from the DB, try to get some from MAM
         if oldMessages.count < kMonalBackscrollingMsgCount && !contact.hasReachedMamArchiveTop {
-            self.isLoadingMamHistory = true
-
             guard let oldestStanzaId = self.findOldestStanzaId() else {
                 DDLogError("Couldn't find a stanzaId to perform a mam query with! (oldestStanzaId is nil)")
                 return
             }
+            
             // now try to load more (older) messages from mam
             DDLogVerbose("Loading more messages from mam before stanzaId \(oldestStanzaId)")
+            self.isLoadingMamHistory = true
             firstly {
                 self.account.setMAMQueryMostRecentFor(self.contact.obj, before: oldestStanzaId)
             }
             .done { returnedMessages in
                 let returnedMessages = returnedMessages as! [MLMessage]
-                if returnedMessages.isEmpty {
-                    DDLogVerbose("Reached the top of the mam archive for \(self.contact.obj.contactJid)")
-                    // Don't block the main thread while writing to the db
-                    DispatchQueue.global(qos: .default).async {
-                        contact.obj.markReachedMamArchiveTop()
-                    }
-                } else {
-                    DDLogVerbose("Got backscrolling mam response: \(returnedMessages.count) messages: \(String(describing:returnedMessages))")
-                    // When backscrolling in 1-1 chats, the oldest stanzaId may not correspond to the earliest
-                    // message we have, because messages we send don't have a stanzaId => There's a risk of
-                    // getting duplicate messages in the messages array => we need to deduplicate.
-                    self.messages = OrderedSet(returnedMessages.map {ChatViewMessage($0)} + self.messages).elements
-                }
+                DDLogVerbose("Got backscrolling mam response: \(returnedMessages.count) messages: \(String(describing:returnedMessages))")
+                // When backscrolling in 1-1 chats, the oldest stanzaId may not correspond to the earliest
+                // message we have, because messages we send don't have a stanzaId
+                // but: those messages won't be returned by backscrolling, so no need to deduplicate them here
+                self.messages = returnedMessages.map {ChatViewMessage($0)} + self.messages
             }
             .catch { error in
                 alertPrompt = AlertPrompt(
@@ -430,14 +425,24 @@ struct ChatView: View {
         }
     }
 
-    private func uploadAndSendFile(_ localFileURL: URL?) async {
+    private func uploadAndSendFile(_ localFileURL: URL?, useMediaCompression: Bool = false) async {
         guard let localFileURL = localFileURL else {
             DDLogError("Couldn't get file location in order to upload it!")
             return
         }
         self.isUploadingFile = true
         do {
-            let (url, mimeType, size) = try await MLFiletransfer.uploadFile(localFileURL, onAccount: self.account, withEncryption: self.contact.isEncrypted)
+            localFileURL.startAccessingSecurityScopedResource()
+            var url: String, mimeType: String, size: NSNumber
+            let isImage = MLFiletransfer.getMimeType(ofOriginalFile: localFileURL.path).starts(with: "image/")
+            if useMediaCompression && isImage && !chatViewDefaultsDB.uploadImagesOriginal,
+                let image = UIImage(contentsOfFile: localFileURL.path) {
+                // Use uploadUIImage to apply compression
+                (url, mimeType, size) = try await MLFiletransfer.uploadUIImage(image, onAccount: self.account, withEncryption: self.contact.isEncrypted)
+            } else {
+                (url, mimeType, size) = try await MLFiletransfer.uploadFile(localFileURL, onAccount: self.account, withEncryption: self.contact.isEncrypted)
+            }
+            localFileURL.stopAccessingSecurityScopedResource()
             await MainActor.run {
                 guard let newMLMessage = MLXMPPManager.sharedInstance().sendMessageAndAddToHistory(message: url, havingType: kMessageTypeFiletransfer, toContact: self.contact.obj, isEncrypted: self.contact.isEncrypted, uploadInfo: ["mimeType": mimeType, "size": size]) else {
                     self.isUploadingFile = false
@@ -446,6 +451,7 @@ struct ChatView: View {
                 messages.append(ChatViewMessage(newMLMessage))
             }
         } catch {
+            localFileURL.stopAccessingSecurityScopedResource()
             DDLogError("Couldn't upload file! error:  \(error.localizedDescription)")
             alertPrompt = AlertPrompt(
                 title: Text("Could not upload file"),
@@ -465,10 +471,11 @@ struct ChatView: View {
                     }
                     for media in draft.medias {
                         let localFileURL = await media.getURL()
-                        await uploadAndSendFile(localFileURL)
+                        await uploadAndSendFile(localFileURL, useMediaCompression: true)
                     }
                     for file in draft.files {
-                        await uploadAndSendFile(file.localURL)
+                        // We don't want to compress media selected using the file picker
+                        await uploadAndSendFile(file.localURL, useMediaCompression: false)
                     }
                 }
             }
@@ -554,8 +561,9 @@ struct ChatView: View {
                                     Text("Retry"),
                                     action: {
                                         Task { @MainActor in
+                                            let messageId = mlMessage.messageId
                                             await Task.detached(priority: .userInitiated) {
-                                                DataLayer.sharedInstance().clearError(ofMessageId: mlMessage.messageId)
+                                                DataLayer.sharedInstance().clearError(ofMessageId: messageId)
                                             }.value
 
                                             mlMessage.errorType = ""
