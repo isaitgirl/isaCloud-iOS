@@ -65,7 +65,8 @@ struct ChatInputBar: View {
         .background(.bar)
         //isaCloud: the "sending" hint floats above the bar, so the chat does not move up and down while a file goes out
         .overlay(alignment: .top) {
-            if model.isUploading {
+            //isaCloud: a video being checked (before any attachment exists) shows the hint too
+            if model.isUploading || model.preparing != nil {
                 SendingHint(preparing: model.preparing).dynamicTypeSize(sendingHintTypeSize)
             } else if let notice = model.notice {
                 SendingHint(notice: notice, isError: model.noticeIsError).dynamicTypeSize(sendingHintTypeSize)
@@ -433,7 +434,9 @@ private struct SendingHint: View {
                 ProgressView()
                     .controlSize(.small)
                 if let preparing {
-                    Text(preparing.total > 1
+                    Text(preparing.isVideo
+                         ? NSLocalizedString("Preparing video...", comment: "hint above the input while a video is converted before the upload")
+                         : preparing.total > 1
                          ? String(format: NSLocalizedString("Preparing %d of %d...", comment: "hint above the input while photos are resized before the upload: photo number and count of photos"), preparing.current, preparing.total)
                          : NSLocalizedString("Preparing photo...", comment: "hint above the input while a photo is resized before the upload"))
                         .font(.footnote)

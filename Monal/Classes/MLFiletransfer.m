@@ -20,6 +20,7 @@
 @import MobileCoreServices;
 @import UniformTypeIdentifiers;
 @import UIKit.UIImage;
+@import AVFoundation;
 
 //monal version 7.x, state counter: 001
 #define CURRENT_FILETRANSFER_DATA_VERSION @7001
@@ -27,6 +28,11 @@
 //isaCloud: photo reduction before the upload (docs/analise-comprimir-imagens.md): "large" reduces photos above 2 MiB, "always" every photo
 #define ISACLOUD_IMAGE_COMPRESSION_LARGE_BYTES (2 * 1024 * 1024)
 #define ISACLOUD_IMAGE_MAX_PIXEL_SIZE 1920
+//isaCloud: video conversion before the upload (docs/analise-comprimir-videos.md): up to 512 KiB is sent as it is
+#define ISACLOUD_VIDEO_KEEP_BYTES (512 * 1024)
+//isaCloud: 480p takes about 490 kB per second of video (measured: 123 MB for 250.8 s, rounded up); used to warn before the attach
+#define ISACLOUD_VIDEO_480_BYTES_PER_SECOND 490000.0
+#define ISACLOUD_VIDEO_CONVERSION_TIMEOUT (10 * 60)
 static CGImageRef createWhiteBackedCopyOfImage(CGImageRef image) CF_RETURNS_RETAINED;
 //isaCloud: describes pixel size and EXIF orientation of an image, only for the photo log lines
 static NSString* describeImageSource(CGImageSourceRef source);
@@ -790,8 +796,8 @@ $$
 
 +(NSString*) imageCompressionMode
 {
-    //"large" is the default (also when the setting is missing, e.g. in tests)
-    return [[HelperTools defaultsDB] stringForKey:@"imageCompressionMode"] ?: @"large";
+    //"always" is the default (also when the setting is missing, e.g. in tests)
+    return [[HelperTools defaultsDB] stringForKey:@"imageCompressionMode"] ?: @"always";
 }
 
 +(BOOL) shouldCompressImageOfSize:(unsigned long long) bytes inMode:(NSString*) mode
@@ -938,6 +944,178 @@ $$
         reason = @"under the limit";
     unsigned long long bytes = [[_fileManager attributesOfItemAtPath:fileUrl.path error:nil] fileSize];
     DDLogInfo(@"Attachment %@ sent as it is (%@): %llu bytes%@", fileUrl.lastPathComponent, reason, bytes, isStillImage ? [NSString stringWithFormat:@", %@", describeImageFileForLog(fileUrl)] : @"");
+}
+
+#pragma mark - isaCloud: video conversion before the upload
+
+//the four character code of a codec ("avc1", "hvc1"...), only for the video log lines
+static NSString* fourCCStringForLog(FourCharCode code)
+{
+    char chars[5] = {
+        (char) ((code >> 24) & 0xFF),
+        (char) ((code >> 16) & 0xFF),
+        (char) ((code >> 8) & 0xFF),
+        (char) (code & 0xFF),
+        0,
+    };
+    NSString* result = [NSString stringWithCString:chars encoding:NSASCIIStringEncoding];
+    return result ?: @"unknown";
+}
+
+//true if the file has a location (GPS) in its common metadata
+static BOOL videoAssetHasLocationForLog(AVAsset* asset)
+{
+    for(AVMetadataItem* item in asset.commonMetadata)
+        if([item.commonKey isEqualToString:AVMetadataCommonKeyLocation])
+            return YES;
+    return NO;
+}
+
+//size, duration, pixels, codec, frame rate and location of a video, only for the video log lines
+static NSString* describeVideoAssetForLog(AVURLAsset* asset, unsigned long long bytes)
+{
+    AVAssetTrack* track = [[asset tracksWithMediaType:AVMediaTypeVideo] firstObject];
+    NSString* codec = @"none";
+    CGSize size = CGSizeZero;
+    float fps = 0;
+    if(track != nil)
+    {
+        size = track.naturalSize;
+        fps = track.nominalFrameRate;
+        CMFormatDescriptionRef description = (__bridge CMFormatDescriptionRef) track.formatDescriptions.firstObject;
+        if(description != NULL)
+            codec = fourCCStringForLog(CMFormatDescriptionGetMediaSubType(description));
+    }
+    return [NSString stringWithFormat:@"%llu bytes, %.1f s, %.0fx%.0f px, codec %@, %.1f fps, gps=%@",
+        bytes, CMTimeGetSeconds(asset.duration), size.width, size.height, codec, fps, videoAssetHasLocationForLog(asset) ? @"sim" : @"não"];
+}
+
++(NSString*) videoCompressionMode
+{
+    //"480" is the default (also when the setting is missing, e.g. in tests)
+    return [[HelperTools defaultsDB] stringForKey:@"videoCompressionMode"] ?: @"480";
+}
+
++(BOOL) videoFileNeedsCompression:(NSURL*) fileUrl
+{
+    //"original" sends the video as it is; a small video is not worth the time of a conversion
+    if([[self videoCompressionMode] isEqualToString:@"original"])
+        return NO;
+    NSDictionary* attributes = [_fileManager attributesOfItemAtPath:fileUrl.path error:nil];
+    return attributes.fileSize > ISACLOUD_VIDEO_KEEP_BYTES;
+}
+
++(int64_t) estimatedUploadBytesForVideo:(NSURL*) fileUrl
+{
+    //a video that is sent as it is has the size of the file
+    if(![self videoFileNeedsCompression:fileUrl])
+        return [[_fileManager attributesOfItemAtPath:fileUrl.path error:nil] fileSize];
+    //a converted video has about 490 kB per second at 480p
+    double seconds = CMTimeGetSeconds([AVURLAsset URLAssetWithURL:fileUrl options:nil].duration);
+    if(!isfinite(seconds) || seconds <= 0)
+        return 0;
+    return (int64_t) ceil(seconds * ISACLOUD_VIDEO_480_BYTES_PER_SECOND);
+}
+
+//isaCloud: moved from ChatView.swift so the chat and the share sheet (MonalAppDelegate) write the limit the same way
++(NSString*) serverLimitTextForBytes:(NSInteger) bytes
+{
+    double mib = (double) bytes / 1048576.0;
+    if(round(mib) == mib)
+        return [NSString stringWithFormat:@"%.0f MiB", mib];
+    return [NSString stringWithFormat:@"%.1f MiB", mib];
+}
+
++(BOOL) videoIsTooLargeForServer:(NSURL*) fileUrl uploadSize:(NSInteger) uploadSize reason:(NSString* _Nullable* _Nullable) reason
+{
+    //0 means the server did not tell its limit, so nothing is blocked
+    if(uploadSize <= 0)
+        return NO;
+    if([self estimatedUploadBytesForVideo:fileUrl] > uploadSize)
+    {
+        if(reason != NULL)
+            *reason = @"over_server_limit";
+        return YES;
+    }
+    return NO;
+}
+
+static NSURL* convertVideoFileForAsset(AVURLAsset* asset, NSURL* fileUrl);
+
++(void) compressVideoFileIfNeeded:(NSURL*) fileUrl completion:(void (^)(NSURL* _Nullable resultUrl, NSString* _Nullable reason)) completion
+{
+    //the work runs on a utility queue, never on the main thread; a failed conversion sends the original file
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+        NSString* mode = [self videoCompressionMode];
+        AVURLAsset* asset = [AVURLAsset URLAssetWithURL:fileUrl options:nil];
+        unsigned long long bytes = [[_fileManager attributesOfItemAtPath:fileUrl.path error:nil] fileSize];
+        DDLogInfo(@"Video before conversion (mode %@): %@", mode, describeVideoAssetForLog(asset, bytes));
+
+        if(![self videoFileNeedsCompression:fileUrl])
+        {
+            NSString* result = [mode isEqualToString:@"original"] ? @"kept_original_mode" : @"kept_small";
+            DDLogInfo(@"Video result %@ (mode %@): sent as it is, %@, conversion 0.0 s", result, mode, describeVideoAssetForLog(asset, bytes));
+            completion(fileUrl, result);
+            return;
+        }
+        CFAbsoluteTime started = CFAbsoluteTimeGetCurrent();
+        NSURL* convertedUrl = convertVideoFileForAsset(asset, fileUrl);
+        CFAbsoluteTime seconds = CFAbsoluteTimeGetCurrent() - started;
+        if(convertedUrl == nil)
+        {
+            DDLogInfo(@"Video result kept_original_after_failure (mode %@): sent as it is, %@, conversion %.1f s", mode, describeVideoAssetForLog(asset, bytes), seconds);
+            completion(fileUrl, @"kept_original_after_failure");
+            return;
+        }
+        AVURLAsset* convertedAsset = [AVURLAsset URLAssetWithURL:convertedUrl options:nil];
+        unsigned long long convertedBytes = [[_fileManager attributesOfItemAtPath:convertedUrl.path error:nil] fileSize];
+        DDLogInfo(@"Video result converted (mode %@): %@ -> %@, conversion %.1f s", mode, describeVideoAssetForLog(asset, bytes), describeVideoAssetForLog(convertedAsset, convertedBytes), seconds);
+        completion(convertedUrl, @"converted");
+    });
+}
+
+//exports the video at 480p (H.264 + AAC in an MP4) into a folder of its own in the temporary directory; the caller removes the folder
+//returns nil if the conversion fails or takes too long (the folder is removed then)
+static NSURL* convertVideoFileForAsset(AVURLAsset* asset, NSURL* fileUrl)
+{
+    NSString* folder = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"video-%@", [[NSUUID UUID] UUIDString]]];
+    NSString* file = [folder stringByAppendingPathComponent:[[fileUrl.lastPathComponent stringByDeletingPathExtension] stringByAppendingPathExtension:@"mp4"]];
+    NSError* error;
+    [_fileManager createDirectoryAtPath:folder withIntermediateDirectories:YES attributes:nil error:&error];
+    if(error)
+    {
+        DDLogError(@"Could not create folder for the converted video: %@", error.localizedDescription);
+        return nil;
+    }
+    AVAssetExportSession* session = [AVAssetExportSession exportSessionWithAsset:asset presetName:AVAssetExportPreset640x480];
+    if(session == nil)
+    {
+        DDLogError(@"480p export is not available for this video");
+        [_fileManager removeItemAtPath:folder error:nil];
+        return nil;
+    }
+    session.outputURL = [NSURL fileURLWithPath:file];
+    session.outputFileType = AVFileTypeMPEG4;
+    session.shouldOptimizeForNetworkUse = YES;
+    //the location (GPS) and the other metadata that is not needed to play the video are left out
+    session.metadataItemFilter = [AVMetadataItemFilter metadataItemFilterForSharing];
+    dispatch_semaphore_t finished = dispatch_semaphore_create(0);
+    //the export is started and waited for on this utility queue (the video is only converted while the app is open)
+    [session exportAsynchronouslyWithCompletionHandler:^{
+        dispatch_semaphore_signal(finished);
+    }];
+    long timedOut = dispatch_semaphore_wait(finished, dispatch_time(DISPATCH_TIME_NOW, ISACLOUD_VIDEO_CONVERSION_TIMEOUT * NSEC_PER_SEC));
+    if(timedOut)
+        [session cancelExport];
+    if(timedOut || session.status != AVAssetExportSessionStatusCompleted)
+    {
+        //the error text can contain the file name, so only its code is logged
+        DDLogError(@"Video conversion failed (status %ld, error code %ld, timed out %d)", (long) session.status, (long) session.error.code, (int) timedOut);
+        [_fileManager removeItemAtPath:folder error:nil];
+        return nil;
+    }
+    [HelperTools configureFileProtectionFor:file];
+    return [NSURL fileURLWithPath:file];
 }
 
 +(NSData*) resizedJPEGDataForImage:(UIImage*) image maxPixelSize:(CGFloat) maxSize quality:(double) quality

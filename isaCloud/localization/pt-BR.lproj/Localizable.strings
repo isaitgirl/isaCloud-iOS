@@ -267,6 +267,15 @@
 "Photos are resized to at most 1920 pixels on the longest side. GIFs and other files are sent as they are." = "As fotos são reduzidas para no máximo 1920 pixels no lado maior. GIFs e outros arquivos são enviados como estão.";
 "Preparing photo..." = "Preparando foto...";
 "Preparing %d of %d..." = "Preparando foto %d de %d...";
+"Compress videos before sending" = "Reduzir vídeos antes de enviar";
+"Original" = "Original";
+"Videos are converted to 480p before sending. The conversion runs only while the app is open. A video larger than the server limit is not sent." = "Os vídeos são convertidos para 480p antes do envio. A conversão só acontece com o app aberto. Vídeos acima do limite do servidor não são enviados.";
+"Preparing video..." = "Preparando vídeo...";
+"This video is larger than the server limit (%@)." = "Este vídeo passa do limite de %@ do servidor.";
+"This video is larger than the server limit." = "Este vídeo passa do limite do servidor.";
+"This file is larger than the server limit (%@)." = "Este arquivo passa do limite de %@ do servidor.";
+"This file is larger than the server limit." = "Este arquivo passa do limite do servidor.";
+"Keep the app open while the video is prepared." = "Mantenha o app aberto enquanto o vídeo é preparado.";
 "Read up to here" = "Lido até este ponto";
 "Waiting for %@ to accept the contact. Encryption starts when the keys arrive." = "Aguardando %@ aceitar o contato. A criptografia começa quando as chaves chegarem.";
 "Contact has not accepted yet" = "O contato ainda não aceitou sua solicitação";

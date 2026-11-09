@@ -2208,6 +2208,58 @@ static void waitForAccountConnectionPoll(xmpp* account, NSUInteger tries, dispat
     }];
 }
 
+//isaCloud: a shared video is the "audiovisual" type, or a "file" whose mimeType is a video (the same way the chat tells them apart)
+-(BOOL) isaCloudPayloadIsVideo:(NSDictionary*) payload
+{
+    if([payload[@"type"] isEqualToString:@"audiovisual"])
+        return YES;
+    if(![payload[@"type"] isEqualToString:@"file"] || ![payload[@"data"] isKindOfClass:[MLHandler class]])
+        return NO;
+    NSString* mimeType = [(MLHandler*)payload[@"data"] boundArgumentForName:@"mimeType"];
+    return [mimeType isKindOfClass:[NSString class]] && [mimeType hasPrefix:@"video/"];
+}
+
+//isaCloud: the reason ("over_server_limit") when a shared video must not be uploaded (its file size is above the server limit), nil otherwise. No 5-minute rule here: the gallery's rule belongs to its 480p conversion
+-(NSString* _Nullable) isaCloudRefusalReasonForPayload:(NSDictionary*) payload toAccount:(xmpp*) account
+{
+    if(![self isaCloudPayloadIsVideo:payload])
+        return nil;
+    NSString* file = [(MLHandler*)payload[@"data"] boundArgumentForName:@"file"];
+    if(![file isKindOfClass:[NSString class]])
+        return nil;
+    //isaCloud: a shared video goes up as it is (no 480p conversion), so the size that counts is the file's own size, not the gallery estimate
+    NSInteger uploadSize = account.connectionProperties.uploadSize;
+    if(uploadSize <= 0)
+        return nil;
+    NSNumber* fileSize = [[NSFileManager defaultManager] attributesOfItemAtPath:file error:nil][NSFileSize];
+    if(fileSize != nil && fileSize.longLongValue > uploadSize)
+        return @"over_server_limit";
+    return nil;
+}
+
+//isaCloud: the notice for a video or file the server refuses for its size (limit 0 = unknown); same texts as the chat
+-(NSString*) isaCloudLimitMessageForVideo:(BOOL) isVideo limit:(NSInteger) limit
+{
+    if(limit > 0)
+    {
+        NSString* limitText = [MLFiletransfer serverLimitTextForBytes:limit];
+        if(isVideo)
+            return [NSString stringWithFormat:NSLocalizedString(@"This video is larger than the server limit (%@).", @"alert when a shared video does not fit the upload limit of the server; %@ is the limit"), limitText];
+        return [NSString stringWithFormat:NSLocalizedString(@"This file is larger than the server limit (%@).", @"alert when a shared file does not fit the upload limit of the server; %@ is the limit"), limitText];
+    }
+    if(isVideo)
+        return NSLocalizedString(@"This video is larger than the server limit.", @"alert when a shared video does not fit the upload limit of the server and the limit is not known");
+    return NSLocalizedString(@"This file is larger than the server limit.", @"alert when a shared file does not fit the upload limit of the server and the limit is not known");
+}
+
+//isaCloud: a size refused by the server (code 1, see xmpp.m) gets the limit text, because trying again does not help; other errors keep the technical text
+-(NSString*) isaCloudUploadErrorMessage:(NSError*) error forVideo:(BOOL) isVideo account:(xmpp*) account
+{
+    if([error.domain isEqualToString:@"MonalError"] && error.code == 1)
+        return [self isaCloudLimitMessageForVideo:isVideo limit:account.connectionProperties.uploadSize];
+    return [NSString stringWithFormat:NSLocalizedString(@"Error: %@", @""), error];
+}
+
 -(void) sendAllOutboxes
 {
     //delay outbox sending until we have an active chats ui
@@ -2285,6 +2337,22 @@ static void waitForAccountConnectionPoll(xmpp* account, NSUInteger tries, dispat
                     [[MLNotificationQueue currentQueue] postNotificationName:kMonalShareOutboxUpdate object:nil userInfo:@{@"contact": contact, @"uploading": @YES}];
                     [self waitForAccountConnection:account then:^{
                     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                        //isaCloud: a video that does not fit the server limit is not uploaded (its file size, as it goes up)
+                        NSString* refusalReason = [self isaCloudRefusalReasonForPayload:payload toAccount:account];
+                        if(refusalReason != nil)
+                        {
+                            DDLogInfo(@"Shared video not uploaded, reason %@", refusalReason);
+                            NSMutableDictionary* payloadCopy = [NSMutableDictionary dictionaryWithDictionary:payload];
+                            dispatch_async(dispatch_get_main_queue(), ^{
+                                cleanup(payloadCopy);
+                                NSString* message = [self isaCloudLimitMessageForVideo:YES limit:account.connectionProperties.uploadSize];
+                                UIAlertController* messageAlert = [UIAlertController alertControllerWithTitle:NSLocalizedString(@"Failed to share file", @"") message:message preferredStyle:UIAlertControllerStyleAlert];
+                                [messageAlert addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"Close", @"") style:UIAlertActionStyleCancel handler:^(UIAlertAction* action __unused) {
+                                }]];
+                                [self.activeChats presentViewController:messageAlert animated:YES completion:nil];
+                            });
+                            return;
+                        }
                         [self uploadOutboxPayload:payload toAccount:account encrypted:encrypted completion:(^(NSString* url, NSString* mimeType, NSNumber* size, NSError* error) {
                             dispatch_async(dispatch_get_main_queue(), ^{
                                 if(error != nil)
@@ -2292,8 +2360,9 @@ static void waitForAccountConnectionPoll(xmpp* account, NSUInteger tries, dispat
                                     DDLogError(@"Failed to upload outbox file: %@", error);
                                     NSMutableDictionary* payloadCopy = [NSMutableDictionary dictionaryWithDictionary:payload];
                                     cleanup(payloadCopy);
-                                    
-                                    UIAlertController* messageAlert = [UIAlertController alertControllerWithTitle:NSLocalizedString(@"Failed to share file", @"") message:[NSString stringWithFormat:NSLocalizedString(@"Error: %@", @""), error] preferredStyle:UIAlertControllerStyleAlert];
+
+                                    //isaCloud: the message of a size refused by the server is the limit (see isaCloudUploadErrorMessage:forVideo:account:)
+                                    UIAlertController* messageAlert = [UIAlertController alertControllerWithTitle:NSLocalizedString(@"Failed to share file", @"") message:[self isaCloudUploadErrorMessage:error forVideo:[self isaCloudPayloadIsVideo:payload] account:account] preferredStyle:UIAlertControllerStyleAlert];
                                     [messageAlert addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"Close", @"") style:UIAlertActionStyleCancel handler:^(UIAlertAction* action __unused) {
                                     }]];
                                     [self.activeChats presentViewController:messageAlert animated:YES completion:nil];

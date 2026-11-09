@@ -133,6 +133,10 @@ class GeneralSettingsDefaultsDB: ObservableObject {
     //isaCloud: "never", "large" (photos above 2 MiB) or "always"; replaces uploadImagesOriginal (see MLXMPPManager)
     @defaultsDB("imageCompressionMode")
     var imageCompressionMode: String
+
+    //isaCloud: "480" (videos converted to 480p H.264 + AAC before the upload) or "original" (the video is sent as it is)
+    @defaultsDB("videoCompressionMode")
+    var videoCompressionMode: String
     
     @defaultsDB("hardlinkFiletransfersIntoDocuments")
     var hardlinkFiletransfersIntoDocuments: Bool
@@ -705,10 +709,16 @@ struct AttachmentSettings: View {
             
             Section(header: Text("Upload Settings")) {
                 //isaCloud: photos are resized before the upload (Never: the original; Only large: photos above 2 MB; Always: every photo)
-                Picker(selection: $generalSettingsDefaultsDB.imageCompressionMode, label: Text("Resize photos before sending")) {
-                    Text("Never").tag("never")
-                    Text("Only large").tag("large")
-                    Text("Always").tag("always")
+                //the menu goes on the line below the title, like the video one, so the row keeps its layout for every option
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Resize photos before sending")
+                    Picker(selection: $generalSettingsDefaultsDB.imageCompressionMode, label: Text("Resize photos before sending")) {
+                        Text("Never").tag("never")
+                        Text("Only large").tag("large")
+                        Text("Always").tag("always")
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
                 }
                 Text("Photos are resized to at most 1920 pixels on the longest side. GIFs and other files are sent as they are.")
                     .foregroundColor(.secondary)
@@ -729,6 +739,20 @@ struct AttachmentSettings: View {
                     )
                     Text("Image Upload JPEG-Quality: \(String(format: "%.0f%%", generalSettingsDefaultsDB.imageUploadQuality*100))")
                 }
+                //isaCloud: videos from the gallery and the camera are converted to 480p before the upload (Original: sent as they are)
+                //the menu goes on the line below the title, so the row does not change its layout between "480p" and "Original"
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Compress videos before sending")
+                    Picker(selection: $generalSettingsDefaultsDB.videoCompressionMode, label: Text("Compress videos before sending")) {
+                        Text("480p").tag("480")
+                        Text("Original").tag("original")
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                }
+                Text("Videos are converted to 480p before sending. The conversion runs only while the app is open. A video larger than the server limit is not sent.")
+                    .foregroundColor(.secondary)
+                    .font(.footnote)
             }
         }
     }

@@ -400,6 +400,8 @@ struct SystemMediaPicker: UIViewControllerRepresentable {
 
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
             isPresented = false
+            //isaCloud: diagnostic log for the gallery (what the system returned, and how many were copied)
+            DDLogInfo("Gallery picker: \(results.count) result(s)")
             guard !results.isEmpty else {
                 return
             }
@@ -436,6 +438,7 @@ struct SystemMediaPicker: UIViewControllerRepresentable {
                 lock.lock()
                 let ordered = picked.keys.sorted().compactMap { picked[$0] }
                 lock.unlock()
+                DDLogInfo("Gallery picker: \(ordered.count) of \(results.count) copied, \(ordered.filter { $0.isVideo }.count) video(s)")
                 onPicked(ordered)
             }
         }
@@ -446,12 +449,17 @@ struct SystemMediaPicker: UIViewControllerRepresentable {
 /// a temporary file, like the pictures of SystemMediaPicker. It uses the system's default video quality, so the upload stays small.
 struct CameraPicker: UIViewControllerRepresentable {
     @Binding var isPresented: Bool
+    var maximumVideoDuration: TimeInterval? = nil
     let onPicked: ([(url: URL, isVideo: Bool)]) -> Void
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let picker = UIImagePickerController()
         picker.sourceType = .camera
         picker.mediaTypes = [UTType.image.identifier, UTType.movie.identifier]
+        //isaCloud: a recording that would not fit the server limit is stopped by the system (see ChatView.cameraMaximumVideoDuration)
+        if let maximumVideoDuration {
+            picker.videoMaximumDuration = maximumVideoDuration
+        }
         picker.delegate = context.coordinator
         return picker
     }

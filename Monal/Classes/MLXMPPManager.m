@@ -211,11 +211,18 @@ static void isaCloudPingOrReconnect(xmpp* account, BOOL networkCameBack, BOOL le
     //isaCloud: skip the onboarding cards (welcome, features, privacy settings) and go straight to the WelcomeLogIn view
     [self upgradeBoolUserSettingsIfUnset:@"hasCompletedOnboarding" toDefault:YES];
     
-    //isaCloud: "imageCompressionMode" replaces uploadImagesOriginal: "never" for those who had the original images on, "large" otherwise
+    //isaCloud: "imageCompressionMode" replaces uploadImagesOriginal: "never" for those who had the original images on, "always" otherwise
     //(the old key is kept, nothing reads it anymore)
     if([[HelperTools defaultsDB] objectForKey:@"imageCompressionMode"] == nil)
     {
-        [[HelperTools defaultsDB] setObject:([[HelperTools defaultsDB] boolForKey:@"uploadImagesOriginal"] ? @"never" : @"large") forKey:@"imageCompressionMode"];
+        [[HelperTools defaultsDB] setObject:([[HelperTools defaultsDB] boolForKey:@"uploadImagesOriginal"] ? @"never" : @"always") forKey:@"imageCompressionMode"];
+        [[HelperTools defaultsDB] synchronize];
+    }
+
+    //isaCloud: "videoCompressionMode" must exist before the Anexos screen reads it (defaultsDB throws on a missing key, see C18)
+    if([[HelperTools defaultsDB] objectForKey:@"videoCompressionMode"] == nil)
+    {
+        [[HelperTools defaultsDB] setObject:@"480" forKey:@"videoCompressionMode"];
         [[HelperTools defaultsDB] synchronize];
     }
 
