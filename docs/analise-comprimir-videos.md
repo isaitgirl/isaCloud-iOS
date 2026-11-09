@@ -1,6 +1,6 @@
 # Análise: comprimir vídeos ao enviar e deixar num formato compatível
 
-Data: 04/11/2026; medições com vídeo real de iPhone acrescentadas em 06/11/2026; decisões da primeira entrega (galeria, 480p) em 06/11/2026. Status: **implementação da galeria em andamento** (branch `feature/comprimir-video-galeria`, sem PR; roadmap 161). Câmera e folha de compartilhar ainda não implementadas. Teste pela Isadora no `.dev`, sem simulador (créditos).
+Data: 04/11/2026; medições com vídeo real de iPhone acrescentadas em 06/11/2026; decisões da primeira entrega (galeria, 480p) em 06/11/2026. Status: **implementação da galeria em andamento** (branch `feature/comprimir-video-galeria`, sem PR; roadmap 161). Câmera implementada em 09/11/2026 (conversão + duração máxima pelo limite); a folha de compartilhar só confere o tamanho, sem converter. Teste pela Isadora no `.dev`, sem simulador (créditos).
 
 ## Primeira entrega: galeria, 480p (06/11/2026)
 
@@ -10,7 +10,7 @@ Decidido pela Isadora em 06/11/2026, depois das medições:
 - **Só 480p.** A opção 720p sai do escopo: o preset passa do limite de 200 MB em cerca de 2 min e 25 s de vídeo (medido). Volta quando houver conversão com bitrate próprio (`AVAssetWriter`) ou um limite de duração para ela.
 - **Opções em Anexos:** "Original" ou "480p" (padrão 480p). Configuração própria, separada da de fotos (chave `videoCompressionMode`).
 - **Não converter abaixo de 512 KB** (igual ao Android).
-- **Duração máxima de 300 s.** Acima disso o envio é recusado antes da conversão, com aviso. Margem com o limite de 200 MB: 480p de 250 s deu 123 MB, então 300 s dá cerca de 147 MB (estimativa linear a partir da medição).
+- ~~**Duração máxima de 300 s.**~~ (Removida em 09/11/2026: vale só o limite de upload da conta, com o tamanho real conferido antes de subir; ver `docs/decisoes.md`.) Acima disso o envio era recusado antes da conversão, com aviso. Margem com o limite de 200 MB: 480p de 250 s deu 123 MB, então 300 s dá cerca de 147 MB (estimativa linear a partir da medição).
 - **Localização (GPS): remover com o filtro de compartilhamento** (`AVMetadataItemFilter.forSharing()` no `AVAssetExportSession`). Ainda **não verificado**: antes de liberar qualquer build, conferir no log do `.dev` que a saída sai com `gps=não`. Se sair `gps=sim`, o recurso não vai para o TestFlight.
 - **Só com o app aberto**, sem tarefa em segundo plano. Aviso "Mantenha o app aberto" durante a conversão.
 - **Falha da conversão:** envia o original e registra no log. Se o original passar de 200 MB, o envio falha pelo caminho de erro que já existe.

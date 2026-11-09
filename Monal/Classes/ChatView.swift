@@ -975,15 +975,10 @@ struct ChatView: View {
         //isaCloud: a photo can be resized first (docs/analise-comprimir-imagens.md); stickers keep their PNG. The resized copy is removed when the upload is over.
         var fileToSend = localFileURL
         if isVideo {
-            //isaCloud: a gallery video is converted to 480p first (docs/analise-comprimir-videos.md); a video longer than 5 minutes is not sent
+            //isaCloud: a gallery or camera video is converted to 480p first (docs/analise-comprimir-videos.md)
             inputModel.setPreparing(ChatInputPreparing(current: 1, total: 1, isVideo: true))
-            let (convertedUrl, reason) = await MLFiletransfer.compressVideoFileIfNeeded(localFileURL)
+            let (convertedUrl, _) = await MLFiletransfer.compressVideoFileIfNeeded(localFileURL)
             inputModel.setPreparing(nil)
-            if reason == "too_long" || convertedUrl == nil {
-                inputModel.endUpload()
-                inputModel.showNotice(NSLocalizedString("Video is too long to send (max. 5 minutes).", comment: "notice above the input when a video is longer than the limit and is not sent"), duration: 4, isError: true)
-                return
-            }
             fileToSend = convertedUrl ?? localFileURL
         } else if !isSticker && MLFiletransfer.imageFileNeedsCompression(localFileURL) {
             inputModel.setPreparing(photoNumber ?? ChatInputPreparing(current: 1, total: 1))
@@ -996,6 +991,22 @@ struct ChatView: View {
             if fileToSend != localFileURL {
                 try? FileManager.default.removeItem(at: fileToSend.deletingLastPathComponent())
             }
+        }
+        //isaCloud: the file that will go up is checked against the server limit first, so nobody waits for an upload the server will refuse
+        //(it covers the "Original" mode, a conversion that failed and a 480p video bigger than the estimate)
+        let uploadLimit = liveAccount.connectionProperties.uploadSize
+        let fileBytes = (try? FileManager.default.attributesOfItem(atPath: fileToSend.path)[.size] as? NSNumber)?.int64Value ?? 0
+        if uploadLimit > 0 && fileBytes > Int64(uploadLimit) {
+            DDLogInfo("File not uploaded: \(fileBytes) bytes, server upload limit \(uploadLimit) bytes")
+            let limitText = MLFiletransfer.serverLimitText(forBytes: uploadLimit)
+            let notice = isVideo
+                ? String(format: NSLocalizedString("This video is larger than the server limit (%@).", comment: "notice above the input when the server refuses a video for its size; %@ is the limit; trying again does not help"), limitText)
+                : String(format: NSLocalizedString("This file is larger than the server limit (%@).", comment: "notice above the input when the server refuses a file for its size; %@ is the limit; trying again does not help"), limitText)
+            await MainActor.run {
+                inputModel.endUpload()
+                inputModel.showNotice(notice, duration: 6, isError: true)
+            }
+            return
         }
         do {
             //isaCloud: plain = sent without encryption this time only (see askToSendWithoutEncryption); the chat keeps its setting
@@ -1016,7 +1027,7 @@ struct ChatView: View {
             DDLogError("Couldn't upload file! error:  \(error.localizedDescription)")
             //isaCloud: the server refused the size (code 1, see xmpp.m): say so, because trying again does not help
             let tooLarge = (error as NSError).domain == "MonalError" && (error as NSError).code == 1
-            let limit = self.account.connectionProperties.uploadSize
+            let limit = liveAccount.connectionProperties.uploadSize
             let notice: String
             if tooLarge && limit > 0 {
                 notice = isVideo
@@ -1125,9 +1136,9 @@ struct ChatView: View {
                         photoCount += 1
                         photoNumber = ChatInputPreparing(current: photoCount, total: photoTotal)
                     }
-                    //isaCloud: only a video picked from the gallery is converted (the camera and the other files are sent as before)
-                    let isGalleryVideo = attachment.isFromGallery && attachment.kind == .file
-                    await uploadAndSendFile(attachment.url, photoNumber: photoNumber, isVideo: isGalleryVideo, plain: plain)
+                    //isaCloud: a video from the gallery or the camera is converted; other files are sent as before
+                    let convertsVideo = attachment.convertsVideo && attachment.kind == .file
+                    await uploadAndSendFile(attachment.url, photoNumber: photoNumber, isVideo: convertsVideo, plain: plain)
                 }
             }
         }
@@ -1206,11 +1217,24 @@ struct ChatView: View {
         editSaveClosure = nil
     }
 
+    /// isaCloud: the live account of this chat (the upload uses it); the view's own account may be an old object with no upload limit
+    private var liveAccount: xmpp {
+        MLXMPPManager.sharedInstance().getEnabledAccount(forID: contact.obj.accountID) ?? account
+    }
+
+    /// isaCloud: the camera stops recording when the video would no longer fit the server limit after its 480p conversion
+    /// (limit / 490 kB per second, with 10% to spare, at most the 10 minutes of the system); nil keeps the system default
+    private var cameraMaximumVideoDuration: TimeInterval? {
+        let limit = liveAccount.connectionProperties.uploadSize
+        guard limit > 0, MLFiletransfer.videoCompressionMode() != "original" else { return nil }
+        return min(600, Double(limit) / 490000.0 * 0.9)
+    }
+
     /// isaCloud: medias from the picker are copied to attachments; they are uploaded when sent
-    private func addPickedMedias(_ medias: [(url: URL, isVideo: Bool)], fromGallery: Bool = false) {
+    private func addPickedMedias(_ medias: [(url: URL, isVideo: Bool)], convertsVideo: Bool = false) {
         for media in medias {
             let kind: ChatInputAttachment.Kind = media.isVideo ? .file : .image
-            inputModel.addAttachment(ChatInputAttachment(kind: kind, url: media.url, isFromGallery: fromGallery))
+            inputModel.addAttachment(ChatInputAttachment(kind: kind, url: media.url, convertsVideo: convertsVideo))
         }
     }
 
@@ -1230,12 +1254,8 @@ struct ChatView: View {
             }
             var reason: NSString? = nil
             if MLFiletransfer.videoIsTooLarge(forServer: media.url, uploadSize: uploadSize, reason: &reason) {
-                if reason == "too_long" {
-                    alert = NSLocalizedString("Video is too long to send (max. 5 minutes).", comment: "notice above the input when a video is longer than the limit and is not sent")
-                } else {
-                    let limit = MLFiletransfer.serverLimitText(forBytes: uploadSize)
-                    alert = String(format: NSLocalizedString("This video is larger than the server limit (%@).", comment: "alert when a gallery video does not fit the upload limit of the server; %@ is the limit"), limit)
-                }
+                let limit = MLFiletransfer.serverLimitText(forBytes: uploadSize)
+                alert = String(format: NSLocalizedString("This video is larger than the server limit (%@).", comment: "alert when a gallery video does not fit the upload limit of the server; %@ is the limit"), limit)
                 DDLogInfo("Gallery video not attached, reason \(reason ?? "unknown")")
             } else {
                 accepted.append(media)
@@ -1686,12 +1706,10 @@ struct ChatView: View {
             SystemMediaPicker(isPresented: $showMediaPicker, onPicked: { medias in
                 //isaCloud: only a gallery video has a check; photos are added at once. While a video is checked, the input shows "Preparing video..."
                 guard medias.contains(where: { $0.isVideo }) else {
-                    addPickedMedias(medias, fromGallery: true)
+                    addPickedMedias(medias, convertsVideo: true)
                     return
                 }
                 inputModel.setPreparing(ChatInputPreparing(current: 1, total: 1, isVideo: true))
-                //the live account of the chat (the upload uses it too); the view's own account may be an old object with no limit
-                let liveAccount = MLXMPPManager.sharedInstance().getEnabledAccount(forID: contact.obj.accountID) ?? account
                 let uploadSize = liveAccount.connectionProperties.uploadSize
                 DDLogInfo("Gallery pick: \(medias.count) item(s), server upload limit \(uploadSize) bytes")
                 //read on the main thread; the background task gets only the URLs and this number
@@ -1703,15 +1721,15 @@ struct ChatView: View {
                         if let alert = checked.alert {
                             serverLimitAlertMessage = alert
                         }
-                        addPickedMedias(checked.accepted, fromGallery: true)
+                        addPickedMedias(checked.accepted, convertsVideo: true)
                     }
                 }
             })
         }
         .fullScreenCover(isPresented: $showCamera) {
             //isaCloud: the camera for an attachment (see CameraPicker)
-            CameraPicker(isPresented: $showCamera, onPicked: { medias in
-                addPickedMedias(medias)
+            CameraPicker(isPresented: $showCamera, maximumVideoDuration: cameraMaximumVideoDuration, onPicked: { medias in
+                addPickedMedias(medias, convertsVideo: true)
             })
             .ignoresSafeArea()
         }

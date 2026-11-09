@@ -211,11 +211,11 @@ static void isaCloudPingOrReconnect(xmpp* account, BOOL networkCameBack, BOOL le
     //isaCloud: skip the onboarding cards (welcome, features, privacy settings) and go straight to the WelcomeLogIn view
     [self upgradeBoolUserSettingsIfUnset:@"hasCompletedOnboarding" toDefault:YES];
     
-    //isaCloud: "imageCompressionMode" replaces uploadImagesOriginal: "never" for those who had the original images on, "large" otherwise
+    //isaCloud: "imageCompressionMode" replaces uploadImagesOriginal: "never" for those who had the original images on, "always" otherwise
     //(the old key is kept, nothing reads it anymore)
     if([[HelperTools defaultsDB] objectForKey:@"imageCompressionMode"] == nil)
     {
-        [[HelperTools defaultsDB] setObject:([[HelperTools defaultsDB] boolForKey:@"uploadImagesOriginal"] ? @"never" : @"large") forKey:@"imageCompressionMode"];
+        [[HelperTools defaultsDB] setObject:([[HelperTools defaultsDB] boolForKey:@"uploadImagesOriginal"] ? @"never" : @"always") forKey:@"imageCompressionMode"];
         [[HelperTools defaultsDB] synchronize];
     }
 

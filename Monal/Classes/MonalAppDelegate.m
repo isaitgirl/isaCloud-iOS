@@ -2345,7 +2345,7 @@ static void waitForAccountConnectionPoll(xmpp* account, NSUInteger tries, dispat
                             NSMutableDictionary* payloadCopy = [NSMutableDictionary dictionaryWithDictionary:payload];
                             dispatch_async(dispatch_get_main_queue(), ^{
                                 cleanup(payloadCopy);
-                                NSString* message = [refusalReason isEqualToString:@"too_long"] ? NSLocalizedString(@"Video is too long to send (max. 5 minutes).", @"notice above the input when a video is longer than the limit and is not sent") : [self isaCloudLimitMessageForVideo:YES limit:account.connectionProperties.uploadSize];
+                                NSString* message = [self isaCloudLimitMessageForVideo:YES limit:account.connectionProperties.uploadSize];
                                 UIAlertController* messageAlert = [UIAlertController alertControllerWithTitle:NSLocalizedString(@"Failed to share file", @"") message:message preferredStyle:UIAlertControllerStyleAlert];
                                 [messageAlert addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"Close", @"") style:UIAlertActionStyleCancel handler:^(UIAlertAction* action __unused) {
                                 }]];

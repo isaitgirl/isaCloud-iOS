@@ -28,9 +28,8 @@
 //isaCloud: photo reduction before the upload (docs/analise-comprimir-imagens.md): "large" reduces photos above 2 MiB, "always" every photo
 #define ISACLOUD_IMAGE_COMPRESSION_LARGE_BYTES (2 * 1024 * 1024)
 #define ISACLOUD_IMAGE_MAX_PIXEL_SIZE 1920
-//isaCloud: video conversion before the upload (docs/analise-comprimir-videos.md): up to 512 KiB is sent as it is, longer than 300 s is not sent
+//isaCloud: video conversion before the upload (docs/analise-comprimir-videos.md): up to 512 KiB is sent as it is
 #define ISACLOUD_VIDEO_KEEP_BYTES (512 * 1024)
-#define ISACLOUD_VIDEO_MAX_SECONDS 300
 //isaCloud: 480p takes about 490 kB per second of video (measured: 123 MB for 250.8 s, rounded up); used to warn before the attach
 #define ISACLOUD_VIDEO_480_BYTES_PER_SECOND 490000.0
 #define ISACLOUD_VIDEO_CONVERSION_TIMEOUT (10 * 60)
@@ -797,8 +796,8 @@ $$
 
 +(NSString*) imageCompressionMode
 {
-    //"large" is the default (also when the setting is missing, e.g. in tests)
-    return [[HelperTools defaultsDB] stringForKey:@"imageCompressionMode"] ?: @"large";
+    //"always" is the default (also when the setting is missing, e.g. in tests)
+    return [[HelperTools defaultsDB] stringForKey:@"imageCompressionMode"] ?: @"always";
 }
 
 +(BOOL) shouldCompressImageOfSize:(unsigned long long) bytes inMode:(NSString*) mode
@@ -1032,12 +1031,6 @@ static NSString* describeVideoAssetForLog(AVURLAsset* asset, unsigned long long 
     //0 means the server did not tell its limit, so nothing is blocked
     if(uploadSize <= 0)
         return NO;
-    if(CMTimeGetSeconds([AVURLAsset URLAssetWithURL:fileUrl options:nil].duration) > ISACLOUD_VIDEO_MAX_SECONDS)
-    {
-        if(reason != NULL)
-            *reason = @"too_long";
-        return YES;
-    }
     if([self estimatedUploadBytesForVideo:fileUrl] > uploadSize)
     {
         if(reason != NULL)
@@ -1058,13 +1051,6 @@ static NSURL* convertVideoFileForAsset(AVURLAsset* asset, NSURL* fileUrl);
         unsigned long long bytes = [[_fileManager attributesOfItemAtPath:fileUrl.path error:nil] fileSize];
         DDLogInfo(@"Video before conversion (mode %@): %@", mode, describeVideoAssetForLog(asset, bytes));
 
-        //a longer video is not sent at all: the upload limit is 200 MB, and 480p of 4 minutes is already about 123 MB
-        if(CMTimeGetSeconds(asset.duration) > ISACLOUD_VIDEO_MAX_SECONDS)
-        {
-            DDLogInfo(@"Video result too_long (mode %@): not sent", mode);
-            completion(nil, @"too_long");
-            return;
-        }
         if(![self videoFileNeedsCompression:fileUrl])
         {
             NSString* result = [mode isEqualToString:@"original"] ? @"kept_original_mode" : @"kept_small";

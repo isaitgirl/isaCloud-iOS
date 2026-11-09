@@ -269,9 +269,8 @@
 "Preparing %d of %d..." = "Preparando foto %d de %d...";
 "Compress videos before sending" = "Reduzir vídeos antes de enviar";
 "Original" = "Original";
-"Videos are converted to 480p before sending. The conversion runs only while the app is open. Videos longer than 5 minutes are not sent." = "Os vídeos são convertidos para 480p antes do envio. A conversão só acontece com o app aberto. Vídeos com mais de 5 minutos não são enviados.";
+"Videos are converted to 480p before sending. The conversion runs only while the app is open. A video larger than the server limit is not sent." = "Os vídeos são convertidos para 480p antes do envio. A conversão só acontece com o app aberto. Vídeos acima do limite do servidor não são enviados.";
 "Preparing video..." = "Preparando vídeo...";
-"Video is too long to send (max. 5 minutes)." = "O vídeo é longo demais para enviar (máximo de 5 minutos).";
 "This video is larger than the server limit (%@)." = "Este vídeo passa do limite de %@ do servidor.";
 "This video is larger than the server limit." = "Este vídeo passa do limite do servidor.";
 "This file is larger than the server limit (%@)." = "Este arquivo passa do limite de %@ do servidor.";

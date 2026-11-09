@@ -28,7 +28,7 @@ Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 - Correção: `videoCompressionMode` era lido sem valor gravado e derrubava o app ao abrir Anexos (C18, `docs/analises-crashes.md`).
 
 **Regras decididas:**
-- 480p é o padrão; "Original" é a outra opção. Limite de 300 s só para a galeria (é o teto da conversão), não para o compartilhamento.
+- 480p é o padrão; "Original" é a outra opção. **Sem regra de 300 s desde 09/11/2026:** vale só o limite da conta, e o tamanho real é conferido antes de subir qualquer arquivo.
 - O limite vem do servidor, nunca fixo no código. Medido em 06/11/2026: `isacloud.im` (Prosody) anuncia 200 MiB (209715200 bytes); `autozona.cc` (ejabberd) anuncia 150 MiB (157286400 bytes). O aviso mostra em MiB; a tela de Detalhes do servidor (código do Monal) ainda mostra em MB decimal.
 - Limite zero (desconhecido) não bloqueia nada. Por isso o login completo precisa ter acontecido com a versão nova para o valor estar guardado.
 - Dados e decisões: `docs/analise-comprimir-videos.md`, `docs/decisoes.md` (seção de compressão de vídeos), `CHANGELOG.md` ("Não publicado").
@@ -38,7 +38,8 @@ Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 - Testar o compartilhamento de vídeo no `.dev` (grande e pequeno).
 - Mexidas em código legado do Monal que precisam de atenção no merge: `xmpp.m` (uploadSize no estado salvo e restaurado; código 1 para "File too large"), `MLIQProcessor.m` (leitura do limite), `MLXMPPManager.m` (migração do `videoCompressionMode`), `MonalAppDelegate.m` (checagem no envio pelo compartilhamento), `SwiftuiHelpers.swift` (logs do seletor). Os trechos têm comentário `//isaCloud:`.
 - Os textos "Failed to share file" e "Error: %@" são do Monal (Weblate), e não estão no repositório.
-- Não há compressão de vídeo da câmera nem do compartilhamento (segunda etapa, não começada).
+- **Testes de 09/11/2026 no `.dev` (Isadora):** alerta do limite na galeria em modo Original, câmera curta convertida e alerta no compartilhar funcionaram; seletor de vídeo em Anexos passou para a linha de baixo do título. Pendentes, não bloqueiam: parada automática da câmera e vídeo da galeria > 5 min dentro do limite (sem amostra).
+- **Câmera (09/11/2026, no `.dev`):** o vídeo gravado é convertido como o da galeria, e a gravação para no tempo que cabe no limite (cerca de 6 min e 25 s no `isacloud.im`, 4 min e 49 s no `autozona.cc`). O compartilhar não converte (só confere o tamanho).
 
 ## Em andamento (05/11/2026)
 

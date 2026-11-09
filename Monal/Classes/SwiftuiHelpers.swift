@@ -449,12 +449,17 @@ struct SystemMediaPicker: UIViewControllerRepresentable {
 /// a temporary file, like the pictures of SystemMediaPicker. It uses the system's default video quality, so the upload stays small.
 struct CameraPicker: UIViewControllerRepresentable {
     @Binding var isPresented: Bool
+    var maximumVideoDuration: TimeInterval? = nil
     let onPicked: ([(url: URL, isVideo: Bool)]) -> Void
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let picker = UIImagePickerController()
         picker.sourceType = .camera
         picker.mediaTypes = [UTType.image.identifier, UTType.movie.identifier]
+        //isaCloud: a recording that would not fit the server limit is stopped by the system (see ChatView.cameraMaximumVideoDuration)
+        if let maximumVideoDuration {
+            picker.videoMaximumDuration = maximumVideoDuration
+        }
         picker.delegate = context.coordinator
         return picker
     }

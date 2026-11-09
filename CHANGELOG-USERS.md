@@ -5,11 +5,13 @@ O que mudou em cada versão, em poucas palavras. A lista técnica completa está
 ## Em breve (próxima versão)
 
 ### Novidades
-- 🎬 Vídeos da galeria agora são comprimidos antes de enviar, para chegar mais rápido e gastar menos internet.
+- 🎬 Vídeos da galeria e da câmera agora são comprimidos antes de enviar, para chegar mais rápido e gastar menos internet.
+- 📏 O app avisa na hora quando um vídeo passa do limite do servidor, sem esperar o envio falhar.
 - ⚙️ Em Anexos, escolha entre enviar o vídeo original ou em 480p.
 
 ### Melhorias
 - 📍 A localização do vídeo não vai junto no envio.
+- 🎨 As opções de fotos e vídeos em Anexos ficaram mais arrumadas.
 
 ## Build 98 · 07/11/2026
 
