@@ -11,6 +11,7 @@ Branch `feature/arquivamento-local` (release ainda indefinida).
 - **Busca por nomes mostra a conta de cada resultado.** Com mais de uma conta ativa, os resultados da aba "Nomes" da busca da tela inicial ganham a linha da conta (ícone + JID), como a aba "Mensagens" e a lista de Contatos; antes, o mesmo canal em duas contas aparecia duas vezes igual.
 
 ### Corrigido
+- **Crash ao voltar a conexão (C16, quarta ocorrência).** Ao desligar o modo avião com o app aberto, o evento de abertura da conexão que acabara de ser fechada podia rodar o bloco de login da conexão nova, ainda abrindo, e a asserção `Stream must be open` em `-[MLStream tlsVersion]` derrubava o app. O bloco do `NSStreamEventOpenCompleted` em `xmpp.m` agora só segue se o evento for do stream atual e ele estiver aberto; os outros são ignorados e o bloco espera o evento verdadeiro. Branch `fix/c16-open-completed-conexao-antiga`. Detalhes em `docs/analises-crashes.md` (C16).
 - **Checagem de FTS5 com alarme falso em build para qualquer simulador.** `scripts/isacloud-check-fts5.sh` exigia exatamente uma ocorrência de `ENABLE_FTS5`, mas um binário com duas arquiteturas (x86_64 e arm64) tem duas; agora aceita uma ou mais.
 
 ## 0.0.1 (build 99) — 09/11/2026
