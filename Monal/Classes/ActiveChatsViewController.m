@@ -266,6 +266,7 @@ static NSMutableSet* _mamWarningDisplayed;
 static NSMutableSet* _smacksWarningDisplayed;
 static NSMutableSet* _pushWarningDisplayed;
 static BOOL _dnssecWarningDisplayed;
+static NSMutableSet<NSNumber*>* _hiddenChatListAccountIDs;      //isaCloud: only in memory on purpose (see the header)
 
 +(void) initialize
 {
@@ -696,9 +697,34 @@ static BOOL _dnssecWarningDisplayed;
     return [NSSet setWithArray:[stored isKindOfClass:[NSArray class]] ? stored : @[]];
 }
 
++(NSSet<NSNumber*>*) hiddenChatListAccountIDs
+{
+    return [_hiddenChatListAccountIDs copy] ?: [NSSet new];
+}
+
++(BOOL) isChatListAccountHidden:(NSNumber*) accountID
+{
+    if(accountID == nil || _hiddenChatListAccountIDs == nil)
+        return NO;
+    return [_hiddenChatListAccountIDs containsObject:@([accountID integerValue])];
+}
+
++(void) setChatListAccount:(NSNumber*) accountID hidden:(BOOL) hidden
+{
+    if(accountID == nil)
+        return;
+    if(_hiddenChatListAccountIDs == nil)
+        _hiddenChatListAccountIDs = [NSMutableSet new];
+    if(hidden)
+        [_hiddenChatListAccountIDs addObject:@([accountID integerValue])];
+    else
+        [_hiddenChatListAccountIDs removeObject:@([accountID integerValue])];
+}
+
 -(BOOL) chatListFiltersActive
 {
-    return [self chatListFilterUnread] || [self chatListFilterTypes].count > 0;
+    //isaCloud: a hidden account also makes the list incomplete, so it counts as an active filter
+    return [self chatListFilterUnread] || [self chatListFilterTypes].count > 0 || [ActiveChatsViewController hiddenChatListAccountIDs].count > 0;
 }
 
 //isaCloud: a chat passes when it is unread (if the filter asks for that) and its type is one of the selected ones: with no type
@@ -707,6 +733,9 @@ static BOOL _dnssecWarningDisplayed;
 //(4.8 ms each, 650 ms for the 135 chats of the Isadora's database) and that was the delay felt when turning "Unread" on.
 -(BOOL) contactPassesChatListFilter:(MLContact*) contact unreadChats:(NSSet<NSString*>*) unreadChats
 {
+    //isaCloud: chats of a hidden account (eye button in the accounts screen) never show in the list
+    if([ActiveChatsViewController isChatListAccountHidden:contact.accountID])
+        return NO;
     if([self chatListFilterUnread] && unreadChats != nil)
     {
         NSString* key = [NSString stringWithFormat:@"%@:%@", contact.accountID, contact.contactJid];
@@ -1827,7 +1856,11 @@ static BOOL _dnssecWarningDisplayed;
 -(NSAttributedString*) titleForEmptyDataSet:(UIScrollView*) scrollView
 {
     //isaCloud: with the filters on, say why the list is empty instead of showing the "no conversations yet" text
-    NSString* text = [self chatListFiltersActive] ? NSLocalizedString(@"No conversations with these filters", @"") : NSLocalizedString(@"No active conversations", @"");
+    NSString* text;
+    if([ActiveChatsViewController hiddenChatListAccountIDs].count > 0)
+        text = NSLocalizedString(@"No conversations in the visible accounts", @"");
+    else
+        text = [self chatListFiltersActive] ? NSLocalizedString(@"No conversations with these filters", @"") : NSLocalizedString(@"No active conversations", @"");
     
     NSDictionary* attributes = @{NSFontAttributeName: [UIFont boldSystemFontOfSize:18.0f],
                                  NSForegroundColorAttributeName: (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark ? [UIColor whiteColor] : [UIColor blackColor])};
