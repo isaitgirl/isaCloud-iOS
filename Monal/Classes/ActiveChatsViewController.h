@@ -44,6 +44,12 @@ NS_ASSUME_NONNULL_BEGIN
 -(void) presentSplitPlaceholder;
 -(void) refreshDisplay;
 
+//isaCloud: accounts whose chats are hidden from the chat list (the eye button in the accounts screen). Only in memory on purpose:
+//it is not saved anywhere, so every launch starts with all accounts visible.
++(NSSet<NSNumber*>*) hiddenChatListAccountIDs;
++(BOOL) isChatListAccountHidden:(NSNumber*) accountID;
++(void) setChatListAccount:(NSNumber*) accountID hidden:(BOOL) hidden;
+
 -(void) showContacts;
 -(void) deleteConversation;
 -(void) showSettings;

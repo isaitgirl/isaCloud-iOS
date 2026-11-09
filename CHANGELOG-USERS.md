@@ -6,6 +6,7 @@ O que mudou em cada versão, em poucas palavras. A lista técnica completa está
 
 ### Novidades
 - 🗄️ Grupos e canais arquivados ficam em silêncio e não voltam para a lista sozinhos; para trazer de volta, use "Desarquivar" nos detalhes.
+- 👁️ Na tela de contas, toque no olho de uma conta para esconder as conversas dela da lista (vale até fechar o app).
 - 🏷️ Contatos, grupos e canais arquivados aparecem com o rótulo "Arquivado".
 
 ### Melhorias
