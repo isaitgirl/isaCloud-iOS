@@ -14,6 +14,8 @@ O que mudou em cada versão, em poucas palavras. A lista técnica completa está
 
 ### Correções
 - 📶 O app não fecha mais sozinho ao sair do modo avião.
+- 📁 Enviar arquivos escolhidos pelo app Arquivos ficou mais confiável.
+- 🔐 Se um aparelho de um contato muda a chave de segurança, o isaCloud mantém a anterior por precaução e avisa na conversa.
 
 ## Build 99 · 09/11/2026
 
