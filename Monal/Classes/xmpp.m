@@ -4411,6 +4411,8 @@ static NSRegularExpression* fastTokenRemovalRegex;
             [values setObject:[NSNumber numberWithBool:self.connectionProperties.supportsPubSubMax] forKey:@"supportsPubSubMax"];
             [values setObject:[NSNumber numberWithBool:self.connectionProperties.supportsModernPubSub] forKey:@"supportsModernPubSub"];
             [values setObject:[NSNumber numberWithBool:self.connectionProperties.supportsHTTPUpload] forKey:@"supportsHTTPUpload"];
+            //isaCloud: the server's upload limit is kept with the state too: a resumed session does not repeat disco#info, so it would stay 0 (no limit check, see C18 notes in docs/analises-crashes.md)
+            [values setObject:[NSNumber numberWithLongLong:self.connectionProperties.uploadSize] forKey:@"uploadSize"];
             [values setObject:[NSNumber numberWithBool:self.connectionProperties.accountDiscoDone] forKey:@"accountDiscoDone"];
             [values setObject:[NSNumber numberWithBool:self.connectionProperties.supportsSSDP] forKey:@"supportsSSDP"];
             [values setObject:[NSNumber numberWithBool:self.connectionProperties.supportsTDP] forKey:@"supportsTDP"];
@@ -4626,6 +4628,13 @@ static NSRegularExpression* fastTokenRemovalRegex;
             {
                 NSNumber* supportsHTTPUpload = [dic objectForKey:@"supportsHTTPUpload"];
                 self.connectionProperties.supportsHTTPUpload = supportsHTTPUpload.boolValue;
+            }
+
+            //isaCloud: restored with the state (see the save above)
+            if([dic objectForKey:@"uploadSize"])
+            {
+                NSNumber* uploadSize = [dic objectForKey:@"uploadSize"];
+                self.connectionProperties.uploadSize = uploadSize.longLongValue;
             }
             
             if([dic objectForKey:@"lastInteractionDate"])
@@ -5169,7 +5178,18 @@ static NSRegularExpression* fastTokenRemovalRegex;
         });
     } andErrorHandler:^(XMPPIQ* error) {
         if(completion)
-            completion(nil, error == nil ? [NSError errorWithDomain:@"MonalError" code:0 userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Upload Error: your account got disconnected while requesting upload slot", @"")}] : [NSError errorWithDomain:@"MonalError" code:0 userInfo:@{NSLocalizedDescriptionKey: [HelperTools extractXMPPError:error withDescription:NSLocalizedString(@"Upload Error", @"")]}]);
+        {
+            //isaCloud: the server refused the file for its size (XEP-0363 not-acceptable, Prosody says "File too large", ejabberd "File larger than N bytes").
+            //code 1 tells the chat to say that, instead of "try again" (retrying does not help)
+            BOOL tooLarge = error != nil && (
+                [error findFirst:@"error/{urn:ietf:params:xml:ns:xmpp-stanzas}not-acceptable"] != nil ||
+                [[HelperTools extractXMPPError:error withDescription:@""] rangeOfString:@"too large" options:NSCaseInsensitiveSearch].location != NSNotFound ||
+                [[HelperTools extractXMPPError:error withDescription:@""] rangeOfString:@"larger than" options:NSCaseInsensitiveSearch].location != NSNotFound);
+            if(tooLarge)
+                completion(nil, [NSError errorWithDomain:@"MonalError" code:1 userInfo:@{NSLocalizedDescriptionKey: [HelperTools extractXMPPError:error withDescription:NSLocalizedString(@"Upload Error", @"")]}]);
+            else
+                completion(nil, error == nil ? [NSError errorWithDomain:@"MonalError" code:0 userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Upload Error: your account got disconnected while requesting upload slot", @"")}] : [NSError errorWithDomain:@"MonalError" code:0 userInfo:@{NSLocalizedDescriptionKey: [HelperTools extractXMPPError:error withDescription:NSLocalizedString(@"Upload Error", @"")]}]);
+        }
     }];
 }
 

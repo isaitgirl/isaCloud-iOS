@@ -34,12 +34,16 @@ struct ChatInputAttachment: Equatable {
     }
     let kind: Kind
     let url: URL
+    /// isaCloud: a video picked from the gallery or recorded by the camera is converted before its upload (see MLFiletransfer)
+    var convertsVideo: Bool = false
 }
 
 /// isaCloud: which photo of a batch is being resized before its upload, out of how many photos the batch has
+/// (isVideo: a video is being converted before its upload, shown as "Preparing video...")
 struct ChatInputPreparing: Equatable {
     let current: Int
     let total: Int
+    var isVideo: Bool = false
 }
 
 /// What the trailing button of the input bar does right now.

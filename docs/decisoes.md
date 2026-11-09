@@ -774,7 +774,7 @@ No iOS 27, "Adicionar contato ou canal" (`AddContactMenu`) e "Convidar para o is
 
 ## Compressão de fotos no envio (04/11/2026, roadmap 147 e 148, build 90)
 
-- **Critério:** "Apenas grandes" (padrão) reduz fotos acima de 2 MB ou com tag de orientação EXIF. "Sempre" reduz tudo que é foto; "Nunca" envia a original. GIF nunca é reduzido. A redução nunca amplia (o lado máximo é o da própria foto, se for menor).
+- **Critério:** "Apenas grandes" (padrão até 09/11/2026; desde então o padrão de instalação nova é "Sempre", pedido da Isadora; quem já tinha a chave gravada mantém o valor) reduz fotos acima de 2 MB ou com tag de orientação EXIF. "Sempre" reduz tudo que é foto; "Nunca" envia a original. GIF nunca é reduzido. A redução nunca amplia (o lado máximo é o da própria foto, se for menor).
 - **Tamanho:** 1920 px no lado mais longo, JPEG no nível do slider de qualidade (já existia). Ficou no valor do Android (`Config.IMAGE_SIZE`), para as fotos terem o mesmo tamanho nos dois apps.
 - **Orientação:** a redução aplica a orientação real aos pixels (ImageIO com transformação) e não copia a tag. Assim a foto sai vertical nos dois lados, mesmo que o app de destino ignore a tag. No modo Nunca a original vai intacta, como pedido.
 - **Onde reduz:** no envio pela conversa (`uploadAndSendFile`), na outbox do app principal (fotos compartilhadas pela folha de compartilhar, que sobem em segundo plano) e no encaminhar (uma redução por encaminhamento, usada em todos os destinos). A extensão de compartilhar não reduz: quem reduz é o app principal, na hora de subir a outbox.
@@ -910,6 +910,20 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - **Cuidados:** texto de fora (limpar, enviar, editar, menção) é escrito sem mexer no cursor quando veio da digitação; composição aberta (ditado, acentos) não é interrompida; autocorreção, ortografia, teclado e Enter como quebra de linha continuam padrão; placeholder próprio (`UILabel`) e `accessibilityValue` igual ao placeholder quando vazio e ao texto quando não.
 - **Teste:** `ChatInputBaselineTests` (o campo é achado pelo `value`, porque `UITextView` não tem `placeholderValue`) foi escrito, mas **não rodado** nos simuladores. Falta confirmar no iPhone e no TestFlight.
 - **Merge:** `ChatInputBar.swift` e `ChatView.swift` são do app; sem mudança na biblioteca.
+
+## Compressão de vídeos da galeria, 480p (06/11/2026, roadmap 161)
+
+- **Escopo:** só o vídeo escolhido na galeria. A câmera e a folha de compartilhar ficam para depois. Separação feita por um campo `isFromGallery` no `ChatInputAttachment`, ligado só no picker da galeria (`addPickedMedias(_:fromGallery:)`). Motivo: câmera e galeria chegam pelo mesmo caminho e só o tipo do arquivo não basta.
+- **Preset:** `AVAssetExportPreset640x480` (480p), `AVFileTypeMPEG4`, `shouldOptimizeForNetworkUse`. Vídeo até 512 KiB passa sem conversão.
+- **Localização:** `metadataItemFilter = AVMetadataItemFilter.forSharing()`. Ainda não confirmado no `.dev`: o log traz `gps=sim/não` para conferir.
+- **Limite:** ~~duração acima de 300 s é recusada antes da conversão~~. **Revisto em 09/11/2026:** a regra fixa de 300 s saiu. Era arbitrária (valia até no modo Original e com servidor sem limite) e incoerente com o compartilhar. Vale só o limite de upload da conta: estimativa antes de anexar (490 kB/s) e **tamanho real antes de subir** (qualquer arquivo), porque a estimativa veio de um vídeo de 30 fps e a margem no `autozona.cc` (150 MiB) era pequena.
+- **Câmera (09/11/2026):** o vídeo gravado também passa pela conversão (campo `isFromGallery` virou `convertsVideo`), o que tira o GPS e entrega MP4/H.264, mais compatível com o Android que o `.mov` HEVC. A gravação para no tempo que cabe no limite: `videoMaximumDuration` = limite ÷ 490 kB/s × 0,9, no máximo 600 s; no modo Original fica o padrão do sistema. `videoQuality` não mudou. Descartado: só limitar a duração sem converter (o GPS e o HEVC continuariam).
+- **Configurações (09/11/2026):** em Anexos, os seletores de fotos e de vídeo ficam na linha de baixo do título (`.pickerStyle(.menu)` + `.labelsHidden()`), para a linha não quebrar diferente conforme a opção. Padrões: fotos "Sempre", vídeo "480p".
+- **Conta viva:** o aviso de recusa e as conferências usam `getEnabledAccount(forID:)`, porque o `account` da tela pode ser um objeto antigo com `uploadSize` 0.
+- **Espera:** tempo máximo de 10 minutos na conversão; passou disso, cancela e envia o original.
+- **Resultados possíveis no log:** `converted`, `kept_small`, `kept_original_mode`, `kept_original_after_failure`, `too_long`. Sem nome nem caminho do arquivo.
+- **Pendente:** a string "Keep the app open while the video is prepared." existe em pt-BR, mas ainda não tem uso na interface.
+- **Pendente:** o teste no iPhone XR (tempo, aquecimento) e a rotação com vídeo gravado em retrato.
 
 ## Primeiro plano depois de uma noite em segundo plano (07/11/2026, C19)
 
