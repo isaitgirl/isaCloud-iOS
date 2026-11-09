@@ -2,9 +2,9 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
-## Não publicado
+## 0.0.1 (build 100) — 09/11/2026
 
-Branch `feature/arquivamento-local` (release ainda indefinida).
+Enviado ao TestFlight às 17:15. PRs 56, 57, 58, 59 e 60 do app (ExyteChat sem mudança, `3eb0aa1`).
 
 ### Adicionado
 - **Arquivamento duradouro de conversas, como no Android** (PR 1 do roadmap 134). Arquivar (swipe "Arquivar" ou o menu do Mac) passa a gravar `buddylist.archived` (migração 7 da escada do isaCloud, com `archived_updated` e `archived_pending` para a futura sincronização pelo PEP) em vez de apagar `activechats`. Por isso não marca mais as mensagens como lidas e a conversa fixada continua fixada. A lista de conversas, o badge, o contador por conversa e as não lidas ignoram as arquivadas. Grupo/canal arquivado fica totalmente mudo (nem a @ notifica, nem reações), continua na sala e não volta com mensagem nova nem ao entrar na sala; só volta pelo "Desarquivar" nos detalhes. Conversa 1:1 arquivada volta ao receber, abrir ou enviar (`addActiveBuddies`). Rótulo "Arquivado" com ícone na lista de Contatos, abaixo da conta; nos detalhes, a linha "Arquivado", o botão "Desarquivar" e as notificações mostradas como desativadas enquanto arquivado (o ajuste próprio volta ao desarquivar). Arquivar também apaga as notificações entregues da conversa. Conversas arquivadas antes desta versão voltam do jeito antigo e precisam ser arquivadas de novo uma vez. Testado pela Isadora no `.dev`. Decisões em `docs/decisoes-sincronizacao-arquivados.md`.

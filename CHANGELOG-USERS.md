@@ -2,7 +2,7 @@
 
 O que mudou em cada versão, em poucas palavras. A lista técnica completa está no [CHANGELOG.md](CHANGELOG.md).
 
-## Em breve (próxima versão)
+## Build 100 · 09/11/2026
 
 ### Novidades
 - 🗄️ Grupos e canais arquivados ficam em silêncio e não voltam para a lista sozinhos; para trazer de volta, use "Desarquivar" nos detalhes.

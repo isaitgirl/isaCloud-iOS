@@ -1,4 +1,4 @@
-# Estado atual e handoff (09/11/2026, build 99)
+# Estado atual e handoff (09/11/2026, build 100)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,14 +7,22 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 99** (mensagem "Build 99 ..."), tag `build-99`; `git log --oneline -3` |
-| TestFlight | **99** (09/11/2026, 12:51; antes 98 em 07/11 às 08:25, tag `build-98`) |
-| `.dev` no iPhone | **99**, igual ao TestFlight (09/11/2026; **sem push**, então a extensão de notificação não roda nele) |
-| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o código do build 94 (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261105-1036-linha-lido-2/` e `-1037-linha-lido-2/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
+| Commit | o do **build 100** (mensagem "Build 100 ..."), tag `build-100`; `git log --oneline -3` |
+| TestFlight | **100** (09/11/2026, 17:15; antes 99 em 09/11 às 12:51, tag `build-99`) |
+| `.dev` no iPhone | **100**, igual ao TestFlight (09/11/2026; **sem push**, então a extensão de notificação não roda nele) |
+| Simuladores | iPhone XR (iOS 18.6) com o código do build 100 (09/11/2026) e isaCloud iOS27 com o do build 94 (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261105-1036-linha-lido-2/` e `-1037-linha-lido-2/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
 | ExyteChat | `3eb0aa1` na `isaCloud` (tamanho do arquivo nas mídias e nos áudios, PR 22; antes `7d3292b`: miniatura opcional dentro da citação, `Message.quotePreview`, PR 21; antes `e168ed8`: visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
+
+## O que entrou no build 100 (sobre o 99)
+
+- **Arquivamento duradouro, como no Android** (PR 56, PR 1 do roadmap 134): `buddylist.archived` (migração 7 da escada do isaCloud); grupo/canal arquivado fica mudo e só volta pelo "Desarquivar"; arquivar não marca como lido nem desafixa. Junto, a **busca por nomes com a conta** de cada resultado. Falta o PR 2 (sincronização pelo PEP com o Android). `docs/decisoes-sincronizacao-arquivados.md`.
+- **C16, quarta ocorrência** (PR 57): `NSStreamEventOpenCompleted` de uma conexão antiga não roda mais o login da nova (crash ao sair do modo avião).
+- **Merge do Monal/develop, 24 commits** (PR 58): crash no catchup do MAM, regra nova de chave OMEMO (com aviso traduzido), arquivos do app Arquivos, backscroll do Monal, banco modelo 7.013. A migração do Snikket que veio junto fica desligada (`SNIKKET_MIGRATION` não definido; ver `docs/decisoes.md`).
+- **Olho para esconder as conversas de uma conta** (PR 59, roadmap 165): só em memória; bolinha verde e alerta laranja menores.
+- **C20, diagnóstico** (PR 60): todo acesso ao banco com o app congelado vira linha em `isacloud-db-after-freeze.log` e sai no log normal como `isaCloud C20:` ao voltar. **A validar em produção:** procurar `isaCloud C20:` nos próximos logs do iPhone; a limpeza automática não roda mais com o app congelado.
 
 ## O que entrou no build 99 (sobre o 98)
 

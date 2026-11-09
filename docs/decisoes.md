@@ -943,3 +943,17 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - **Decisão:** pílula com o tamanho no canto inferior esquerdo de fotos e vídeos (também no álbum, escondida durante o upload) e "0:42 · 120 KB" no áudio. O número é o do arquivo que viaja (comprimido, no envio), igual para quem envia e quem recebe.
 - **Descartado:** pílula no GIF (testado no `.dev` em 09/11/2026: tapava a legenda); figurinhas nunca tiveram.
 - **Onde fica:** fork do ExyteChat (PR 22, `3eb0aa1`) e `ChatViewMessage` em `ChatView.swift`. Detalhes em `docs/analise-tamanho-de-midias.md`.
+
+## Olho para esconder as conversas de uma conta (09/11/2026, build 100, roadmap 165)
+
+- **Decisão:** na tela de contas, cada conta ativa ganha um olho antes da bolinha de status; conta oculta some da lista de conversas, com ou sem os chips. Conta desativada fica sem olho (ela já some da lista).
+- **Só em memória, de propósito:** o estado fica num `static NSMutableSet` em `ActiveChatsViewController` (`+setChatListAccount:hidden:`), sem chave no `defaultsDB` nem coluna no banco. Ao reabrir o app (ou se o iOS encerrar o app suspenso), todas voltam visíveis. Se um dia for preciso guardar, só os dois métodos de acesso mudam.
+- **Não muda:** contador de não lidas, badge, notificações e a busca da tela inicial (a busca serve para achar). Uma conversa aberta de conta que acabou de ser oculta continua aberta (só se nota no iPad).
+- **Descartado:** um chip por conta na barra de filtros (lotaria a barra) e coluna nova na tabela de contas (migração para uma preferência de exibição).
+- **Merge com o Monal:** uma linha no começo de `contactPassesChatListFilter`, o texto da lista vazia e o `accessoryView` em `AccountListController.m` (a bolinha verde passou de 30×30 esticada para 20×20, e o alerta laranja do símbolo 22 para 15).
+
+## Migração do Snikket do Monal fica desligada (09/11/2026, merge do Monal/develop)
+
+- **Contexto:** em 08/11/2026 o Monal publicou um alpha (`3bbc34d64`, "Some more snikket stuff") e pediu no canal para não instalar (risco de crash e de apagar conta e histórico). Aqueles 7 commits ficaram fora da `develop`; a `develop` recebeu a versão reunida, `23225aa3c` ("Add snikket migration template"), que veio no PR 58.
+- **Por que não afeta o isaCloud:** a migração (importar contas, senhas do keychain `group.snikket.shared` e histórico) e a abertura do banco do Snikket ficam em `#ifdef SNIKKET_MIGRATION`, que não é definido em nenhum lugar do projeto. O que roda: `login:` do `MLXMPPManager` dividido em `addAccountForJid:` + `login:` (mesmo comportamento) e o banco modelo novo, que só é copiado numa instalação nova.
+- **Em merges futuros:** procurar `SNIKKET_MIGRATION` no `project.pbxproj` e nos `.xcconfig`; se o Monal passar a defini-lo, avaliar antes de aceitar.
