@@ -7,6 +7,16 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 ### Adicionado
 - **Compressão de vídeos da galeria (480p).** Vídeo escolhido na galeria acima de 512 KB vai em MP4 H.264 + AAC 480p (`AVAssetExportPreset640x480`), sem a localização (filtro de compartilhamento). Opção "Compressão de vídeos" em Anexos (Original ou 480p, padrão 480p). Vídeo com mais de 300 s é recusado com aviso antes de converter (limite de 200 MB). A conversão só roda com o app aberto. Câmera e folha de compartilhar não entram nesta versão. Análise em `docs/analise-comprimir-videos.md`; roadmap 161. Ainda não testado no iPhone.
 
+## 0.0.1 (build 98) — 07/11/2026
+
+Enviado ao TestFlight às 08:25. Branch `fix/primeiro-plano-apos-segundo-plano`.
+
+### Técnico
+- **Documentação de build e branches** (`docs/build-e-branches.md`): como criar branches de feature e de correção, inclusive em worktree separada (o que copiar do checkout principal: `Monal/Pods`, `rust/LibMonalRustSwiftBridge`, `rust/target`, chave do Giphy), e os problemas de build conhecidos (Rust, `Package.resolved`, SQLite/FTS5, `pod install`, assinatura).
+
+### Correções
+- **Contas não ficam mais congeladas ao abrir o app depois de uma noite em segundo plano (C19).** O primeiro primeiro plano de um processo que já vivia em segundo plano era tratado como abertura a frio (`SceneDelegate.sceneWillEnterForeground`): só as flags mudavam, sem descongelar nem reconectar, e as contas ficaram ~96 s paradas até a Isadora encerrar o app (07/11/2026, produção, build 96). Agora o atalho de abertura a frio só vale se o processo nunca foi congelado (`MonalAppDelegate.isaCloudWasFrozen`, `SwiftuiHelpers.swift`); depois disso a abertura segue o caminho normal de volta ao primeiro plano. Análise em `docs/analises-crashes.md`.
+
 ## 0.0.1 (build 97) — 06/11/2026
 
 Enviado ao TestFlight às 14:20. Merge do PR 50 (`feature/encaminhar-busca-sem-x`).

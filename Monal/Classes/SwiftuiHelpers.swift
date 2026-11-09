@@ -1350,13 +1350,17 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     func sceneWillEnterForeground(_ scene: UIScene) {
         //the app state is "background" while a scene launches, so the first foreground has to be handled, too (otherwise the accounts stay in the background state and never connect)
-        guard hasEnteredForeground else {
+        //isaCloud: the shortcut is only for a real launch. A process that lived in the background first (woken by a background task, accounts frozen) comes back to the foreground here for the first time:
+        //that is a normal return, and the accounts have to be unfrozen and reconnected (seen on 07/11/2026: accounts stayed frozen for 96 s)
+        let wasFrozen = (UIApplication.shared.delegate as? MonalAppDelegate)?.isaCloudWasFrozen ?? false
+        if !hasEnteredForeground && !wasFrozen {
             //launch: everything else was set up by didFinishLaunching, only the flags have to learn that we are in the foreground
             //(unfreezing the accounts here waits for their receive queues, which can be busy for a long time and froze the app)
             hasEnteredForeground = true
             MLXMPPManager.sharedInstance().nowForegroundedAtLaunch()
             return
         }
+        hasEnteredForeground = true
         appDelegate?.applicationWillEnterForeground?(UIApplication.shared)
     }
 

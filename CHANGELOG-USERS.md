@@ -11,6 +11,11 @@ O que mudou em cada versão, em poucas palavras. A lista técnica completa está
 ### Melhorias
 - 📍 A localização do vídeo não vai junto no envio.
 
+## Build 98 · 07/11/2026
+
+### Correções
+- 🔌 Depois de uma noite com o app em segundo plano, as contas conectam sozinhas ao abrir.
+
 ## Build 97 · 06/11/2026
 
 ### Melhorias

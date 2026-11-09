@@ -25,6 +25,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign) MLAudioState audioState;
 @property (nonatomic, assign) UIInterfaceOrientationMask orientationLock;
 @property (nonatomic, assign) BOOL showOneClickButton;
+/// isaCloud: YES if the accounts were frozen at least once since the process started (the app lived in the background before its first scene foreground)
+@property (nonatomic, readonly) BOOL isaCloudWasFrozen;
 
 -(UIViewController*) getTopViewController;
 -(void) updateUnread;

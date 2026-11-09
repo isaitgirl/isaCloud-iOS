@@ -1113,6 +1113,12 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
     return topViewController;
 }
 
+/// isaCloud: see MonalAppDelegate.h
+-(BOOL) isaCloudWasFrozen
+{
+    return _wasFrozen;
+}
+
 -(void) prepareForFreeze:(NSNotification*) notification
 {
     for(xmpp* account in [MLXMPPManager sharedInstance].connectedXMPP)

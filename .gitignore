@@ -90,3 +90,7 @@ isaCloud/local/
 
 # Prosody config of the isaCloud server: holds secrets (component, TURN, API tokens)
 docs/prosody.cfg.lua
+
+# Fora do Git (decisão de 09/11/2026): infra do servidor, capturas de tela e instruções do agente
+docs/fpush/
+CLAUDE.md
