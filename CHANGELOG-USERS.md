@@ -12,6 +12,9 @@ O que mudou em cada versão, em poucas palavras. A lista técnica completa está
 - 📌 Arquivar não marca mais as mensagens como lidas, e a conversa fixada continua fixada.
 - 👤 Na busca por nomes, cada resultado mostra a qual conta pertence (quando há mais de uma conta).
 
+### Correções
+- 📶 O app não fecha mais sozinho ao sair do modo avião.
+
 ## Build 99 · 09/11/2026
 
 ### Novidades

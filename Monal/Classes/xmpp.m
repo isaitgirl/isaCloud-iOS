@@ -5645,6 +5645,18 @@ static NSRegularExpression* fastTokenRemovalRegex;
                 
                 //we want this to be sync instead of async to make sure we are in kStateConnected before sending anything
                 [self dispatchOnReceiveQueue:^{
+                    //isaCloud (C16, 4th occurrence, 09/11/2026): this event waits for the receive queue and a reconnect can run before it
+                    //(airplane mode off: every account reconnects at once). Then it belongs to the stream that was just closed, while
+                    //self.oStream and _blockToCallOnTCPOpen already are the new ones, still opening, and the block asserted in
+                    //-[MLStream tlsVersion] (streamStatus = 1). MLStream sets "open" before generating this event, so the real event of
+                    //the current stream always sees NSStreamStatusOpen. Anything else is stale: keep the block for the real event
+                    //(a closed or failed stream is cleaned up by the reconnect, which also drops the block)
+                    NSStreamStatus openedStreamStatus = [((MLStream*)stream) streamStatus];
+                    if(stream != self.oStream || openedStreamStatus != NSStreamStatusOpen)
+                    {
+                        DDLogWarn(@"Ignoring stale open completed event of stream %@ (current: %@, status %ld), waiting for the event of the current stream...", stream, self.oStream, (long)openedStreamStatus);
+                        return;
+                    }
                     self->_accountState = kStateConnected;
                     if(self->_blockToCallOnTCPOpen != nil)
                     {
