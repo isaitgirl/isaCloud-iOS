@@ -258,6 +258,10 @@ static NSString* _isaCloudLockMaxHolders = nil;     //who was holding the write 
 {
     sqlite3_stmt* statement;
 
+    //isaCloud: C20, every statement (BEGIN included) goes through here: record the ones that run while the app is frozen
+    if([HelperTools isaCloudSuspendedFast])
+        [HelperTools isaCloudRecordDbAccessAfterFreeze:query];
+
     if(sqlite3_prepare_v2(self->_database, [query cStringUsingEncoding:NSUTF8StringEncoding], -1, &statement, NULL) != SQLITE_OK)
     {
         [self throwErrorForQuery:query andArguments:args];

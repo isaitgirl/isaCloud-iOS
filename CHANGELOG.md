@@ -16,6 +16,9 @@ Branch `feature/arquivamento-local` (release ainda indefinida).
 - **Crash ao voltar a conexão (C16, quarta ocorrência).** Ao desligar o modo avião com o app aberto, o evento de abertura da conexão que acabara de ser fechada podia rodar o bloco de login da conexão nova, ainda abrindo, e a asserção `Stream must be open` em `-[MLStream tlsVersion]` derrubava o app. O bloco do `NSStreamEventOpenCompleted` em `xmpp.m` agora só segue se o evento for do stream atual e ele estiver aberto; os outros são ignorados e o bloco espera o evento verdadeiro. Branch `fix/c16-open-completed-conexao-antiga`. Detalhes em `docs/analises-crashes.md` (C16).
 - **Checagem de FTS5 com alarme falso em build para qualquer simulador.** `scripts/isacloud-check-fts5.sh` exigia exatamente uma ocorrência de `ENABLE_FTS5`, mas um binário com duas arquiteturas (x86_64 e arm64) tem duas; agora aceita uma ou mais.
 
+### Técnico
+- **Registro C20 de acesso ao banco depois do congelamento, e limpeza automática pausada com o app suspenso.** `MLSQLite` (`prepareQuery`, ponto comum de todo SQL, BEGIN incluído) grava em `isacloud-db-after-freeze.log` (grupo de apps), sem passar pelo log suspenso, até 30 linhas por suspensão e 64 KB: data, processo, fila, 80 caracteres do SQL (sem argumentos) e 12 frames. `signalResumption` e a inicialização despejam as linhas no log normal como `isaCloud C20:`. A flag `isaCloudSuspendedFast` não usa trava. A thread `im.monal.timeouts` não apaga mensagens por intervalo enquanto o app está congelado. Ver `docs/analises-crashes.md` (C20).
+
 ## 0.0.1 (build 99) — 09/11/2026
 
 Enviado ao TestFlight às 12:51. PRs 53, 54 e 55 do app e PR 22 do fork do ExyteChat (`3eb0aa1`).

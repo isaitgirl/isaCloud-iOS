@@ -488,6 +488,9 @@ static void isaCloudPingOrReconnect(xmpp* account, BOOL networkCameBack, BOOL le
             //the crash report then contains: message at /usr/lib/system/libdispatch.dylib: API MISUSE: Resurrection of an object
             //(triggered by [HelperTools dispatchAsync:reentrantOnQueue:withBlock:] in it's call to dispatch_get_current_queue())
             dispatch_async(dispatch_get_main_queue(), ^{
+                //isaCloud: C20, no automatic deletion while the app is frozen (it would write to the database next to the extension's catch-up)
+                if([HelperTools isaCloudSuspendedFast])
+                    return;
                 NSInteger autodeleteInterval = [[HelperTools defaultsDB] integerForKey:@"AutodeleteInterval"];
                 if(autodeleteInterval > 0)
                 {
