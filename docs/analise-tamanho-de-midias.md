@@ -44,6 +44,7 @@
 
 - **Áudio:** o balão de áudio baixado é do fork (`Recording`, em `Sources/ExyteChat/Model/Message.swift`, desenhado por `RecordWaveform.swift`, que hoje mostra só a duração). `ChatViewMessage.recording` (`ChatView.swift`) monta o `Recording` com duração, URL e mimeType. Mudança: `Recording` ganha `size: Int?` opcional e o texto da duração vira "0:42 · 120 KB". Áudio ainda não baixado já cai no placeholder de arquivo, que mostra o tamanho.
 - **GIF:** o GIF animado não usa o balão do ExyteChat: é o `GifMessageBubble` do app (`Monal/Classes/GifPickerView.swift`), o mesmo das figurinhas. Mudança só no app: um parâmetro de tamanho opcional e a mesma pílula no canto inferior esquerdo; a figurinha passa `nil`.
+- **GIF revisto (09/11/2026, teste no `.dev`):** a pílula saiu dos GIFs. Eles às vezes têm legenda, e a pílula ficava por cima dela. Ficam com tamanho: fotos, vídeos (inclusive no álbum) e áudios.
 - **Fonte do número:** `MLFiletransferInfo.size` (NSNumber) para os quatro tipos; sem tamanho conhecido, nada aparece.
 - **Esforço revisto:** pequeno a médio, cerca de um dia: um PR do fork (`Attachment.size`, pílula no `AttachmentCell`, `Recording.size` e o texto do `RecordWaveform`) e um PR do app (passar os tamanhos e a pílula no `GifMessageBubble`).
 - **Branch:** é independente da compressão de vídeo; implementar num branch próprio a partir de `isaCloud` deixa os PRs menores (a análise ficou nesta branch só por acaso).
