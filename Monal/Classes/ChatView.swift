@@ -2474,11 +2474,13 @@ class ChatViewMessage: ExyteChat.Message {
 
             let attachmentID = innerMessage.obj.messageDBId.stringValue
             if fileInfo.isImage {
-                let attachment = Attachment(id: attachmentID, url: fileInfo.fileURL, type: .image, mimeType: fileInfo.mimeType)
+                //isaCloud: the size is shown over the photo (see AttachmentCell in the ExyteChat fork)
+                let attachment = Attachment(id: attachmentID, url: fileInfo.fileURL, type: .image, mimeType: fileInfo.mimeType, size: (fileInfo.size as NSNumber?)?.intValue)
                 return [attachment]
             } else {
                 let thumbnail = fileInfo.thumbnailURL as URL? ?? URL(string: "about:blank")!
-                let attachment = Attachment(id: attachmentID, thumbnail: thumbnail, full: fileInfo.fileURL, type: .video, mimeType: fileInfo.mimeType)
+                //isaCloud: the size is shown over the video (see AttachmentCell in the ExyteChat fork)
+                let attachment = Attachment(id: attachmentID, thumbnail: thumbnail, full: fileInfo.fileURL, type: .video, mimeType: fileInfo.mimeType, size: (fileInfo.size as NSNumber?)?.intValue)
                 return [attachment]
             }
         }
@@ -2494,7 +2496,8 @@ class ChatViewMessage: ExyteChat.Message {
                 return nil
             }
 
-            return Recording(duration: fileInfo.mediaDuration, url: fileInfo.fileURL, mimeType: fileInfo.mimeType)
+            //isaCloud: the size is shown next to the duration (see RecordWaveformWithButtons in the ExyteChat fork)
+            return Recording(duration: fileInfo.mediaDuration, url: fileInfo.fileURL, mimeType: fileInfo.mimeType, size: (fileInfo.size as NSNumber?)?.intValue)
         }
         set {}
     }
