@@ -1550,6 +1550,7 @@ struct ChatView: View {
                         currentReactions.remove(emoji)
                     } else {
                         currentReactions.add(emoji)
+                        RecentReactions.record(emoji)     //isaCloud: only adding a reaction moves its emoji to the front of the row
                     }
                     self.account.sendReactions(currentReactions, for:mlMessage)
             }
@@ -1564,6 +1565,17 @@ struct ChatView: View {
                 (mlMessage.stanzaId != nil && self.account.mucProcessor.getRoomFeatures(forMuc:mlMessage.chatContact.contactJid).contains("urn:xmpp:occupant-id:0"))
             DDLogDebug("Checking if we can react to: \(String(describing:mlMessage)) --> \(String(describing:retval))")
             return retval
+        }, availableReactionsFor: { message in
+            //isaCloud: the row of the long press menu: the recently used emojis, then the ones already on this message
+            let mlMessage = (message as! ChatViewMessage).innerMessage.obj
+            var ownReactions: [String] = []
+            for reactionsInfo in mlMessage.reactions {
+                if reactionsInfo.contact.isSelf {
+                    ownReactions = reactionsInfo.reactions.array.compactMap { $0 as? String }
+                }
+            }
+            let row: [String] = RecentReactions.row(recent: RecentReactions.current(), own: ownReactions)
+            return row.map { ReactionType.emoji($0) }
         }, shouldShowOverviewFor: { _ in
             // who reacted with what is shown by tapping the reactions of a message, not above the long press menu
             false

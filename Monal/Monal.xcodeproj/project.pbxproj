@@ -281,6 +281,7 @@
 		A1C0FFEE00000000000001F5 /* MucHatViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001F4 /* MucHatViews.swift */; };
 		A1C0FFEE00000000000001E5 /* LocationPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001E4 /* LocationPickerView.swift */; };
 		A1C0FFEE00000000000001D5 /* GifPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001D4 /* GifPickerView.swift */; };
+		A1C0FFEE0000000000000C01 /* RecentReactions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000C02 /* RecentReactions.swift */; };
 		A1C0FFEE0000000000000E02 /* Stickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000E01 /* Stickers.swift */; };
 		A1C0FFEE0000000000000402 /* IsaCloudColorMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000401 /* IsaCloudColorMath.swift */; };
 		A1C0FFEE00000000000000B1 /* PublicChannelsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000000A1 /* PublicChannelsView.swift */; };
@@ -652,6 +653,7 @@
 		A1C0FFEE00000000000001F4 /* MucHatViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MucHatViews.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000001E4 /* LocationPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPickerView.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000001D4 /* GifPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GifPickerView.swift; sourceTree = "<group>"; };
+		A1C0FFEE0000000000000C02 /* RecentReactions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentReactions.swift; sourceTree = "<group>"; };
 		A1C0FFEE0000000000000E01 /* Stickers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Stickers.swift; sourceTree = "<group>"; };
 		A1C0FFEE0000000000000401 /* IsaCloudColorMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IsaCloudColorMath.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000000A1 /* PublicChannelsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicChannelsView.swift; sourceTree = "<group>"; };
@@ -1284,6 +1286,7 @@
 				A1C0FFEE00000000000001F4 /* MucHatViews.swift */,
 				A1C0FFEE00000000000001E4 /* LocationPickerView.swift */,
 				A1C0FFEE00000000000001D4 /* GifPickerView.swift */,
+				A1C0FFEE0000000000000C02 /* RecentReactions.swift */,
 				A1C0FFEE0000000000000E01 /* Stickers.swift */,
 				A1C0FFEE0000000000000401 /* IsaCloudColorMath.swift */,
 				A1C0FFEE00000000000000A1 /* PublicChannelsView.swift */,
@@ -2473,6 +2476,7 @@
 				A1C0FFEE00000000000001F5 /* MucHatViews.swift in Sources */,
 				A1C0FFEE00000000000001E5 /* LocationPickerView.swift in Sources */,
 				A1C0FFEE00000000000001D5 /* GifPickerView.swift in Sources */,
+				A1C0FFEE0000000000000C01 /* RecentReactions.swift in Sources */,
 				A1C0FFEE0000000000000E02 /* Stickers.swift in Sources */,
 				A1C0FFEE0000000000000402 /* IsaCloudColorMath.swift in Sources */,
 				A1C0FFEE00000000000000B1 /* PublicChannelsView.swift in Sources */,
