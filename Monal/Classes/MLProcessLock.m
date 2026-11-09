@@ -104,21 +104,6 @@ static volatile int _ownLockFD;
     return lock != 0;
 }
 
-+(void) waitForRemoteStartup:(NSString*) processName
-{
-    [self waitForRemoteStartup:processName withLoopHandler:nil];
-}
-
-+(void) waitForRemoteStartup:(NSString*) processName withLoopHandler:(monal_void_block_t _Nullable) handler
-{
-    while(![[NSThread currentThread] isCancelled] && ![self checkRemoteRunning:processName])
-    {
-        if(handler)
-            handler();
-        [self sleep:0.250];
-    }
-}
-
 +(void) waitForRemoteTermination:(NSString*) processName
 {
     [self waitForRemoteTermination:processName withLoopHandler:nil];
@@ -144,7 +129,7 @@ static volatile int _ownLockFD;
     NSRunLoop* main_runloop = [NSRunLoop mainRunLoop];
     NSDate* timeout = [NSDate dateWithTimeIntervalSinceNow:time];
     //we have to spin the runloop instead of simply sleeping to not get killed for unresponsiveness
-    if(was_called_in_mainthread)
+    if(was_called_in_mainthread && [main_runloop currentMode])
         while([timeout timeIntervalSinceNow] > 0)
             //isaCloud: during launch with scenes the main run loop has no current mode yet (nil would throw), so use the default mode
             [main_runloop runMode:([main_runloop currentMode] ?: NSDefaultRunLoopMode) beforeDate:timeout];
