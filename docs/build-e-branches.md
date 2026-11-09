@@ -6,7 +6,10 @@ Complementa `docs/publicacao-testflight.md` (enviar ao TestFlight) e `docs/troub
 
 ## 1. Regras das branches
 
-- `isaCloud` é a branch principal e a única que vai para o TestFlight. A `develop` só serve para buscar commits do Monal; nunca se desenvolve nela.
+- `isaCloud` é a branch principal do repositório (a padrão no GitHub `isaitgirl/isaCloud-iOS`) e a única que vai para o TestFlight. A `develop` só serve para buscar commits do Monal; nunca se desenvolve nela.
+- **"develop" quer dizer a `develop` do Monal** (`upstream/develop`, de `monal-im/Monal`), não a `develop` do nosso repositório. Para ver o que há de novo: `git fetch upstream` e `git log --oneline refs/heads/isaCloud..upstream/develop`. O merge com o Monal é feito numa branch própria (ex.: `merge/monal-develop-2026-11`) a partir da `isaCloud`, juntando `upstream/develop`, e volta por PR para a `isaCloud`.
+- **O checkout tem dois remotes** (`origin` = `isaitgirl/isaCloud-iOS`, `upstream` = `monal-im/Monal`), então o `gh` pode escolher o repositório errado e falhar com "Head sha can't be blank... No commits between...". O padrão do `gh` neste checkout é `isaitgirl/isaCloud-iOS` (`gh repo set-default isaitgirl/isaCloud-iOS`, feito em 09/11/2026); na dúvida, passe `--repo isaitgirl/isaCloud-iOS` em todo `gh pr ...`. Nunca abra PR no `monal-im/Monal`.
+- Nos comandos do git, escreva `refs/heads/isaCloud`: o nome `isaCloud` sozinho é ambíguo com a pasta `isaCloud/` do repositório.
 - Toda mudança nasce em uma branch nova **criada a partir de `isaCloud`** e volta por PR para a `isaCloud` (nunca para `develop`, `main` ou `master`).
 - Nomes: `feature/<assunto>` para funcionalidade, `fix/<assunto>` para correção (ex.: `fix/primeiro-plano-apos-segundo-plano`). Em minúsculas, com hífens. O disco do Mac não diferencia maiúsculas: `isaCloud` e `isacloud/...` colidem, então não use esse prefixo.
 - Todo PR tem a `isaitgirl` como revisora e responsável e traz prints de antes e depois das mudanças visíveis (só com dados de teste). No app o merge é com **merge commit**; no fork do ExyteChat é com `--rebase`.
@@ -86,8 +89,8 @@ git push origin --delete fix/nome-da-correcao
 ## 4. Do commit ao merge (resumo)
 
 1. Commitar na branch de trabalho (mensagem descritiva em português) e dar push: `git push -u origin fix/nome-da-correcao`.
-2. `gh pr create --base isaCloud --head fix/nome-da-correcao --assignee isaitgirl` (revisora também).
-3. Mesclar com merge commit **quando a Isadora autorizar**: `gh pr merge <n> --merge`.
+2. `gh pr create --repo isaitgirl/isaCloud-iOS --base isaCloud --head fix/nome-da-correcao --assignee isaitgirl --reviewer isaitgirl`.
+3. Mesclar com merge commit **quando a Isadora autorizar**: `gh pr merge <n> --repo isaitgirl/isaCloud-iOS --merge`.
 4. No checkout principal: `git switch isaCloud && git pull --ff-only`.
 5. Se for sair em build: subir o número, TestFlight e o resto da rotina de `CLAUDE.md` ("fazer novo build e push") e a tag `build-N`.
 
