@@ -16,6 +16,30 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 
+## Em andamento (06/11/2026): compressão de vídeo e limite do servidor
+
+**Onde está:** branch `feature/comprimir-video-galeria` (worktree `/Users/isadora/projects/swift/isaCloud-iOS-comprimir-video`). **Não mesclado** no `isaCloud` e **sem build**: o último build no ar é o 97. Commit do dia: o da mensagem "Vídeo da galeria: aviso de limite do servidor e correções do teste no .dev" (sobre `105aa1871`, "Compressão de vídeos da galeria em 480p"). Só testado no `.dev`, por decisão da Isadora (créditos).
+
+**O que já funciona no `.dev` (testado pela Isadora em 06/11/2026):**
+- Vídeo da galeria em 480p (preset `AVAssetExportPreset640x480`), sem localização (GPS removido). Vídeo de 1:10 em Original enviado.
+- Limite do servidor lido do disco#info (campo `max-file-size`), com o valor guardado na sessão. Ao escolher um vídeo maior que o limite da conta, aviso "Este vídeo passa do limite de 200 MiB do servidor." e o vídeo não anexa. Com recusa do servidor por tamanho, o mesmo aviso (não o "tente de novo").
+- "Preparando vídeo..." desde a escolha, com a checagem fora da thread principal.
+- Compartilhamento de vídeo de outro app: checa o tamanho do arquivo original antes de subir (sem regra de 300 s), com o mesmo aviso. **Não testado ainda.**
+- Correção: `videoCompressionMode` era lido sem valor gravado e derrubava o app ao abrir Anexos (C18, `docs/analises-crashes.md`).
+
+**Regras decididas:**
+- 480p é o padrão; "Original" é a outra opção. Limite de 300 s só para a galeria (é o teto da conversão), não para o compartilhamento.
+- O limite vem do servidor, nunca fixo no código. Medido em 06/11/2026: `isacloud.im` (Prosody) anuncia 200 MiB (209715200 bytes); `autozona.cc` (ejabberd) anuncia 150 MiB (157286400 bytes). O aviso mostra em MiB; a tela de Detalhes do servidor (código do Monal) ainda mostra em MB decimal.
+- Limite zero (desconhecido) não bloqueia nada. Por isso o login completo precisa ter acontecido com a versão nova para o valor estar guardado.
+- Dados e decisões: `docs/analise-comprimir-videos.md`, `docs/decisoes.md` (seção de compressão de vídeos), `CHANGELOG.md` ("Não publicado").
+
+**Em aberto:**
+- Decidir a mesclagem no `isaCloud` (ela ainda não pediu).
+- Testar o compartilhamento de vídeo no `.dev` (grande e pequeno).
+- Mexidas em código legado do Monal que precisam de atenção no merge: `xmpp.m` (uploadSize no estado salvo e restaurado; código 1 para "File too large"), `MLIQProcessor.m` (leitura do limite), `MLXMPPManager.m` (migração do `videoCompressionMode`), `MonalAppDelegate.m` (checagem no envio pelo compartilhamento), `SwiftuiHelpers.swift` (logs do seletor). Os trechos têm comentário `//isaCloud:`.
+- Os textos "Failed to share file" e "Error: %@" são do Monal (Weblate), e não estão no repositório.
+- Não há compressão de vídeo da câmera nem do compartilhamento (segunda etapa, não começada).
+
 ## Em andamento (05/11/2026)
 
 - Nada em aberto deste lote. Conferidos pela Isadora no iPhone em 05/11/2026: a linha "Lido até este ponto" (roadmap 153), compartilhar pelo contato sugerido (152), entrar num canal público escolhendo a conta (151), "Compartilhar…" de áudio e documento (120) e o aviso de falha de upload (141).
