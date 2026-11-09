@@ -304,10 +304,11 @@ ser um campo em `buddylist` e a lista filtra por ele.
 
 ### Diagnóstico do código atual
 
-- `DataLayer.removeActiveBuddy:` (`DataLayer.m:2293`) marca tudo como lido e apaga
-  `activechats`.
-- `DataLayer.addActiveBuddies:` (`DataLayer.m:2310`) insere `activechats` de novo.
-- A lista de conversas vem de `activeContactsWithPinned:` (`DataLayer.m:2258`).
+- `DataLayer.removeActiveBuddy:` (`DataLayer.m:2385`, linhas conferidas em 09/11/2026) marca
+  tudo como lido e apaga `activechats`.
+- `DataLayer.addActiveBuddies:` (`DataLayer.m:2402`) insere `activechats` de novo.
+- A lista de conversas vem de `activeContactsWithPinned:` (`DataLayer.m:2349`).
+- Os demais números de linha desta seção são de 03/11 e podem ter andado.
 - `MLMessageProcessor.m:823`, `MLMucProcessor.m:1803`, `MonalAppDelegate.m:815/847`,
   `ActiveChatsViewController.m:1467`, `chatViewController.m:1778` e `ChatView.swift:580/669`
   chamam `addActiveBuddies`.
@@ -318,8 +319,9 @@ ser um campo em `buddylist` e a lista filtra por ele.
 
 ### Banco e migração
 
-Usar a escada própria `updateISACloudDB` (`DataLayerMigrations.m`), hoje na versão 4. Nova
-migração **5**, idempotente, na tabela `buddylist`:
+Usar a escada própria `updateISACloudDB` (`DataLayerMigrations.m`), hoje na versão 6 (a 5 é das
+figurinhas, a 6 é a citação com miniatura; conferido em 09/11/2026). Nova migração **7**,
+idempotente, na tabela `buddylist`:
 
 ```
 archived          BOOL DEFAULT FALSE
@@ -510,8 +512,10 @@ grava e atualiza a UI.
   deve publicar o estado.
 - **Sem tela de arquivados:** no Android, a recuperação é bookmark/busca; no iOS, contatos e
   detalhes. Se o bookmark for removido, o grupo/canal só é alcançável por busca/contatos.
-- **Sair e reentrar:** sair de um grupo/canal não publica estado; se ele estava arquivado, volta
-  arquivado ao reentrar. O desarquivamento é explícito.
+- **Sair e reentrar:** sair de um grupo/canal não publica estado. Entrar num canal arquivado
+  **não** desarquiva: a Isadora testou no Android em 09/11/2026 e ele continua arquivado; o iOS
+  faz igual. O código do Android limpa `archived_locally` só em `rejoinConversationLocally`, que
+  é o caso de um canal do qual a pessoa tinha **saído**.
 - **PEP do servidor:** se `publish-options` ou `config-node-max` não forem anunciados, a feature
   fica desligada. Validar antes de ligar por padrão.
 
@@ -519,11 +523,13 @@ grava e atualiza a UI.
 
 1. **Validar o servidor:** com uma conta de teste, confirmar PEP e as features de configuração;
    criar o nó e conferir `whitelist`/`max_items` com um cliente XMPP.
-2. **Android local:** modelo, manager, atributos, publicação e aplicação remota; testar só no
-   Android, inspecionando o nó com outro cliente.
-3. **iOS local:** migração 6 (a 5 é das figurinhas), `archiveBuddy`/`unarchiveBuddy`, filtro da lista, badge e
-   notificações; testar só no iOS, sem PEP.
-4. **iOS PEP:** registro, fetch, handler, publicação e flush; testar Android ↔ iOS.
+2. **iOS local (PR 1):** migração 7 (a 5 é das figurinhas e a 6 é da citação com miniatura),
+   `archiveBuddy`/`unarchiveBuddy`, filtro da lista, badge e notificações; testar só no iOS,
+   sem PEP. (O arquivamento local do Android já existe desde 01/11/2026.)
+3. **iOS PEP (PR 2):** registro, fetch, handler, publicação e flush, seguindo este doc;
+   inspecionar o nó com outro cliente XMPP.
+4. **Android PEP:** a Isadora implementa no mesmo dia em que o PR 2 estiver pronto; testar
+   Android ↔ iOS com a matriz abaixo.
 5. **Ligar por padrão** e publicar na release seguinte (proposta: 43).
 
 ## Testes
@@ -574,29 +580,111 @@ grava e atualiza a UI.
 - Módulo customizado no Prosody ou API HTTP.
 - Mudar o comportamento do menu “Archive chat” de grupo/canal.
 
-## Decisões tomadas para o iOS (03/11/2026, Isadora)
+## O que o Android tem de fato (conferido em 09/11/2026)
 
-Tomadas na avaliação do iOS, antes de qualquer implementação. **Nada foi implementado; a Isadora pediu para não começar o PR 1 ainda.**
+Conferido no código do `isaCloudMessenger` (branch `custom`, release 2.21.0-61). Os docs internos
+do Android (incluindo `deslizar-para-arquivar.md` e a versão original deste doc) saíram do
+repositório em 08/11 e não estão neste Mac; a comparação foi feita só pelo código.
 
-1. **Menções (@) em grupo/canal arquivado:** só uma **menção** (@ para o meu nick/nome) notifica; mensagem comum fica muda. Uma menção **só notifica**: **não** traz o grupo de volta à lista.
-2. **Badge e contador por conversa:** em grupo/canal arquivado contam **só as menções**.
-3. **Mensagem nova em grupo/canal arquivado:** continua escondida e sem notificação, como no Android. Não desarquiva.
-4. **Rótulo "Arquivado":** aparece nas **listas** (contatos, grupos e canais) **e** na tela de detalhes.
-5. **"Abrir no ponto da última menção"** vale para **todos** os grupos e canais (não só arquivados), mas é uma **feature separada**, que será implementada **antes** deste trabalho (roadmap 135; a feature mais geral "abrir na primeira não lida", roadmap 136 e `docs/feature-abrir-na-primeira-nao-lida.md`, cobre a maior parte e pode absorvê-la). Quando o PR 1 vier, o ponto da última menção já existe; o PR 1 não implementa isso.
-6. **Ordem de entrega:** o PR 1 (arquivamento local duradouro, sem PEP) **não começa ainda**; o PR 2 (PEP) espera o nó do Android validado.
+**A sincronização por PEP não existe.** Não há nó `im.isacloud:conversation-state:0`, nem
+`Config.SYNC_ARCHIVED_STATE`, nem manager de estado arquivado. O que está implementado é só o
+**arquivamento local** (commit `3346ea12d`, 01/11/2026, "Implementa arquivamento local e fluxo
+de saída de grupos/canais"). As seções "Protocolo" e "Android — o que muda" deste doc continuam
+sendo plano, não descrição. **O iOS implementa o PEP primeiro; a Isadora implementa o lado do
+Android no mesmo dia em que o iOS estiver pronto** (decisão de 09/11/2026).
+
+### O que bate com o desenho
+
+| Ponto | Android hoje | Onde |
+|---|---|---|
+| Só grupo/canal arquiva localmente | `archiveConversationLocally` só age em `MODE_MULTI`; 1:1 cai no `archiveConversation` original | `XmppConnectionService.java` |
+| Estado guardado | `archived_locally` no JSON de atributos da conversa | `Conversation.java` |
+| Continua na sala | não sai, bookmark e `autoJoin` intactos | `archiveConversationLocally` |
+| Não marca como lido | só limpa as notificações (`NotificationService.clear`) | idem |
+| Some dos recentes | `matches()` filtra `isArchivedLocally` | `ConversationsOverviewFragment.java` |
+| Abrir não desarquiva | nenhum caminho de abertura chama `unarchiveConversationLocally` | — |
+| Desarquivar | só pelo menu do bookmark ("Desarquivar"), na tela de contatos/grupos | `StartConversationActivity.java` |
+| Rótulo "Arquivado" | linha "Arquivado" na lista de grupos e canais | `ListItemAdapter.java` |
+| Swipe arquiva; menu "Arquivar" do chat sai da sala | o swipe usa `archiveConversationLocally`; o menu do chat continua no `archiveConversation` | `ConversationsOverviewFragment.java`, `ConversationFragment.java` |
+
+### Onde o Android divergia do que tínhamos decidido para o iOS
+
+Em 09/11/2026 a Isadora decidiu que **o iOS acompanha o Android** nos três pontos:
+
+1. **Menção não notifica.** `notifyMessage` descarta tudo de conversa arquivada, inclusive
+   menção. No iOS também: conversa arquivada fica totalmente muda.
+2. **Badge.** O Android tira a conversa arquivada inteira do badge (`unreadCount`). No iOS
+   também, sem contar menções.
+3. **Entrar na sala não desarquiva.** No teste da Isadora no Android (09/11/2026), entrar no
+   canal arquivado deixou ele arquivado. (`rejoinConversationLocally` limpa o estado, mas só vale
+   para um canal do qual a pessoa tinha saído.) O iOS faz igual.
+
+### O que o Android fez e este doc não previa
+
+- **Sair do grupo/canal localmente** (`leaveConversationLocally`, atributo `left_locally`): sai
+  da sala, remove o bookmark se a pessoa escolher, mas a conversa fica nos recentes em modo
+  somente leitura. Não reingressa sozinha em reconexão. Um **canal** saído reingressa ao ser
+  aberto; um **grupo** continua somente leitura.
+- **Tipo da sala guardado** (`channel_locally` e `MucTypeCache`), para saber se é grupo ou canal
+  mesmo depois de sair.
+- **Apagar a conversa de verdade** (`deleteConversationCompletely`): apaga o histórico, remove o
+  bookmark e tira dos recentes.
+
+Em 09/11/2026 a Isadora decidiu que o iOS **também acompanha** isso. Não é arquivamento e não é
+sincronizado; fica numa frente própria do roadmap ("Sair do grupo/canal e apagar conversa como no
+Android"), avaliada contra o que o Monal já faz ao sair de uma sala.
+
+## Decisões tomadas para o iOS
+
+**Regra geral (09/11/2026): o iOS acompanha o comportamento do Android.** As decisões de 03/11
+que divergiam dele (menção notifica, badge só com menções) foram substituídas.
+**Nada foi implementado; o PR 1 só começa quando a Isadora mandar.**
+
+1. **Grupo/canal arquivado fica totalmente mudo**, inclusive para menções (@). Mensagem nova
+   continua escondida e não desarquiva. *(09/11, substitui a decisão de 03/11 de que a @
+   notificava.)*
+2. **Badge e contador por conversa** ignoram a conversa arquivada inteira. *(09/11, substitui
+   "contar só as menções".)*
+3. **Entrar num grupo/canal arquivado não desarquiva**, como no Android (teste da Isadora,
+   09/11, que corrigiu a leitura do código). Só o "Desarquivar" explícito traz de volta.
+7. **Detalhes de conversa arquivada:** a linha de notificações mostra "Notificações desativadas
+   enquanto arquivado", no lugar do ajuste próprio da conversa (silenciar ou "só menções"), que
+   continua guardado e volta ao desarquivar. *(09/11)*
+8. **Rótulo "Arquivado"** com ícone (caixa com seta para baixo, `tray.and.arrow.down.fill`) na
+   cor de destaque. *(09/11)*
+4. **Rótulo "Arquivado":** aparece nas **listas** (contatos, grupos e canais) **e** na tela de
+   detalhes. *(03/11)*
+5. **Ordem de entrega:** o PR 1 (arquivamento local duradouro, sem PEP) só começa quando a
+   Isadora mandar. O PR 2 (PEP) **não espera mais o Android**: o iOS implementa o protocolo
+   deste doc e, quando estiver pronto, a Isadora implementa o lado do Android no mesmo dia.
+   *(09/11, substitui "o PR 2 espera o nó do Android validado".)*
+6. **"Abrir no ponto da última menção"** (roadmap 135) está pausada desde 05/11 e não é mais
+   pré-requisito. Com a conversa arquivada muda, ela também deixa de ter ligação com este
+   trabalho.
 
 ### Efeito no desenho do iOS
 
-- **Notificação** (`MLNotificationManager internalMessageHandlerWithMessage:`): em vez de "retornar cedo se arquivado", retornar cedo **exceto se a mensagem menciona o usuário**. Reaproveitar o `HelperTools text:mentionsAnyOfNames:` que o ramo "só menções" do mesmo método já usa (nick da sala, nome de exibição, parte local do JID e JID), valendo também para a extensão (mesmo código). Reação não notifica.
-- **Badge e contador:** `countUnreadMessages`, `chatsWithUnreadMessages` e o contador por conversa, para grupo/canal arquivado, contam apenas mensagens que mencionam o usuário (em vez de excluir a conversa por inteiro, como o desenho do Android sugeria). Precisa de um jeito barato de saber "é menção" nas consultas (por exemplo, marcar a mensagem como menção quando chega, em coluna ou flag, na mesma escada do isaCloud) a definir no PR 1.
-- **Rótulo nas listas:** `ContactsView` e as listas de grupos/canais mostram "Arquivado" (texto novo em inglês + pt-BR). A lista de conversas recentes continua escondendo os arquivados.
-- **Menção não desarquiva:** a notificação aparece, mas a conversa continua fora da lista; tocar na notificação abre o chat sem desarquivar (consistente com "abrir grupo/canal arquivado não desarquiva").
+- **Notificação** (`MLNotificationManager internalMessageHandlerWithMessage:`): retornar cedo se
+  `isArchivedBuddy`, sem exceção para menção. Vale para a extensão (mesmo código) e para
+  reações. Não precisa mais do `mentionsAnyOfNames` nem de marcar mensagens como menção.
+- **Badge e contador:** `countUnreadMessages`, `chatsWithUnreadMessages` e o contador por
+  conversa filtram `archived = 0`, como já está na seção "Lista, badge e notificações". Sem
+  coluna nova de menção.
+- **Entrar na sala:** não mexe no estado arquivado (nada em `joinMuc:` nem em `MLMucProcessor join:`).
+- **Rótulo nas listas:** `ContactsView` e as listas de grupos/canais mostram "Arquivado" (texto
+  novo em inglês + pt-BR). A lista de conversas recentes continua escondendo os arquivados.
+- **PR 2:** o iOS segue as seções "Protocolo" e "Sincronização PEP" deste doc ao pé da letra,
+  porque elas viram a especificação que o Android vai seguir. Antes, validar PEP,
+  `publish-options` e `config-node-max` no Prosody e no ejabberd 26.09 (autozona.cc).
 
-## Decisões ainda em aberto
+## Decisões fechadas em 09/11/2026 (antes "em aberto")
 
-1. Release (proposta do doc: 43, é do Android; o iOS sai com o próximo build que a Isadora pedir).
-2. Abrir 1:1 arquivado desarquiva (como no Android): confirmar para o iOS.
-3. **Namespace do nó PEP:** o documento do Android usa `im.isacloud:conversation-state:0` (domínio `isacloud.im` invertido, sufixo `:0` de versão) e o lista como definitivo; **sugestão: manter** esse nome nos dois clientes, porque trocá-lo depois deixa os estados já publicados órfãos. Aguarda o ok da Isadora.
+1. **Release:** indefinida. O trabalho fica numa branch à parte (`feature/arquivamento-local`)
+   até a Isadora decidir.
+2. **Abrir 1:1 arquivado desarquiva**, como no Android. Confirmado.
+3. **Nome do nó PEP:** `im.isacloud:conversation-state:0`, nos dois clientes. Aceito.
+4. ~~Reentrar publica o desarquivamento no PEP~~: deixou de valer em 09/11, porque entrar na sala
+   não desarquiva mais.
 
 ## Referências de código
 

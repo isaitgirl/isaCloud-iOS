@@ -515,9 +515,10 @@ static NSDateFormatter* dbFormatter;
     return [self.db idReadTransaction:^{
         NSArray* results = [self.db executeReader:@"SELECT b.buddy_id, b.buddy_name, state, status, b.full_name, b.nick_name, Muc, muc_subject, muc_type, muc_nick, mentionOnly, b.account_id, 0 AS 'count', subscription, ask, IFNULL(pinned, 0) AS 'pinned', encrypt, muted, reached_mam_archive_top, explicit_omemo_trust_activated, \
             CASE \
-                WHEN a.buddy_name IS NOT NULL THEN 1 \
+                WHEN a.buddy_name IS NOT NULL AND b.archived = 0 THEN 1 \
                 ELSE 0 \
-            END AS 'isActiveChat' \
+            END AS 'isActiveChat', \
+            b.archived AS 'isArchived' \
             FROM buddylist AS b LEFT JOIN activechats AS a \
             ON a.buddy_name = b.buddy_name AND a.account_id = b.account_id \
             WHERE b.buddy_name=? AND b.account_id=?;" andArguments:@[username, accountID]];
@@ -2316,6 +2317,7 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
                                         WHERE M.message_history_id > (SELECT Min(latest_read_message_history_id) FROM buddylist) \
                                             AND A.enabled \
                                             AND B.muted = 0 \
+                                            AND IFNULL(B.archived,0) = 0 \
                                             AND M.inbound = 1 \
                                             AND M.unread = 1 \
                                             AND ( \
@@ -2349,7 +2351,8 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
 -(NSMutableArray<MLContact*>*) activeContactsWithPinned:(BOOL) pinned
 {
     NSArray* contacts = [self.db idReadTransaction:^{
-        NSString* query = @"SELECT a.buddy_name, a.account_id FROM activechats AS a JOIN buddylist AS b ON (a.buddy_name = b.buddy_name AND a.account_id = b.account_id) JOIN account ON a.account_id = account.account_id WHERE a.pinned=? AND account.enabled ORDER BY lastMessageTime DESC;";
+        //isaCloud: archived chats are hidden here (their activechats row stays, so pinned and lastMessageTime survive)
+        NSString* query = @"SELECT a.buddy_name, a.account_id FROM activechats AS a JOIN buddylist AS b ON (a.buddy_name = b.buddy_name AND a.account_id = b.account_id) JOIN account ON a.account_id = account.account_id WHERE a.pinned=? AND account.enabled AND b.archived=0 ORDER BY lastMessageTime DESC;";
         return [self.db executeReader:query andArguments:@[[NSNumber numberWithBool:pinned]]];
     }];
     NSMutableArray<MLContact*>* toReturn = [[NSMutableArray<MLContact*> alloc] init];
@@ -2361,7 +2364,8 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
 -(NSSet<NSString*>*) chatsWithUnreadMessages
 {
     NSArray* rows = [self.db idReadTransaction:^{
-        return [self.db executeReader:@"SELECT h.account_id, h.buddy_name, COUNT(*) AS cnt FROM message_history AS h JOIN buddylist AS b ON (b.account_id = h.account_id AND b.buddy_name = h.buddy_name) WHERE h.unread=1 AND h.inbound=1 AND h.message_history_id > COALESCE(b.latest_read_message_history_id, 0) GROUP BY h.account_id, h.buddy_name;"];
+        //isaCloud: archived chats do not count (see archived in migration 7 of +migrateISACloudDB:)
+        return [self.db executeReader:@"SELECT h.account_id, h.buddy_name, COUNT(*) AS cnt FROM message_history AS h JOIN buddylist AS b ON (b.account_id = h.account_id AND b.buddy_name = h.buddy_name) WHERE h.unread=1 AND h.inbound=1 AND b.archived=0 AND h.message_history_id > COALESCE(b.latest_read_message_history_id, 0) GROUP BY h.account_id, h.buddy_name;"];
     }];
     NSMutableSet* chats = [NSMutableSet new];
     for(NSDictionary* row in rows)
@@ -2399,6 +2403,12 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
     }];
 }
 
+//isaCloud: epoch in milliseconds, used as archived_updated
+static NSNumber* isacloudNowMillis(void)
+{
+    return [NSNumber numberWithLongLong:(long long)([[NSDate date] timeIntervalSince1970] * 1000)];
+}
+
 -(void) addActiveBuddies:(NSString*) buddyname forAccount:(NSNumber*) accountID
 {
     if(!buddyname || accountID == nil)
@@ -2411,8 +2421,44 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
         // insert active chat (do nothing if it's already there)
         NSString* query = @"INSERT INTO activechats (buddy_name, account_id, lastMessageTime) VALUES(?, ?, current_timestamp) ON CONFLICT(buddy_name, account_id) DO NOTHING;";
         [self.db executeNonQuery:query andArguments:@[buddyname, accountID]];
+
+        //isaCloud: a 1:1 chat that comes back (new message, opened or sent to) is unarchived, like on Android. Groups and channels stay archived.
+        [self.db executeNonQuery:@"UPDATE buddylist SET archived=0, archived_updated=?, archived_pending=1 WHERE account_id=? AND buddy_name=? AND archived=1 AND Muc=0;" andArguments:@[isacloudNowMillis(), accountID, buddyname]];
     }];
     return;
+}
+
+#pragma mark isaCloud: archived state
+
+-(BOOL) isArchivedBuddy:(NSString*) buddy forAccount:(NSNumber*) accountID
+{
+    if(!buddy || accountID == nil)
+        return NO;
+    return [self.db boolReadTransaction:^{
+        NSNumber* archived = (NSNumber*)[self.db executeScalar:@"SELECT archived FROM buddylist WHERE account_id=? AND buddy_name=?;" andArguments:@[accountID, buddy]];
+        return (BOOL)(archived != nil && [archived boolValue]);
+    }];
+}
+
+//isaCloud: keeps the chat (and its activechats row, so pinned and lastMessageTime survive) and only hides it; messages are NOT marked as read
+-(void) archiveBuddy:(NSString*) buddy forAccount:(NSNumber*) accountID
+{
+    if(!buddy || accountID == nil)
+        return;
+    [self.db voidWriteTransaction:^{
+        [self.db executeNonQuery:@"UPDATE buddylist SET archived=1, archived_updated=?, archived_pending=1 WHERE account_id=? AND buddy_name=?;" andArguments:@[isacloudNowMillis(), accountID, buddy]];
+    }];
+}
+
+//isaCloud: brings an archived chat back; recreates its activechats row in case an older build removed it
+-(void) unarchiveBuddy:(NSString*) buddy forAccount:(NSNumber*) accountID
+{
+    if(!buddy || accountID == nil)
+        return;
+    [self.db voidWriteTransaction:^{
+        [self.db executeNonQuery:@"UPDATE buddylist SET archived=0, archived_updated=?, archived_pending=1 WHERE account_id=? AND buddy_name=?;" andArguments:@[isacloudNowMillis(), accountID, buddy]];
+        [self.db executeNonQuery:@"INSERT INTO activechats (buddy_name, account_id, lastMessageTime) VALUES(?, ?, current_timestamp) ON CONFLICT(buddy_name, account_id) DO NOTHING;" andArguments:@[buddy, accountID]];
+    }];
 }
 
 
@@ -2460,7 +2506,8 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
         return @0;
     return [self.db idReadTransaction:^{
         // count # messages from a specific user in messages table
-        return [self.db executeScalar:@"SELECT COALESCE(COUNT(message_history_id),0) FROM message_history AS h WHERE h.message_history_id > (SELECT COALESCE(latest_read_message_history_id, 0) FROM buddylist WHERE account_id=? AND buddy_name=?) AND h.unread=1 AND h.account_id=? AND h.buddy_name=? AND h.inbound=1;" andArguments:@[accountID, buddy, accountID, buddy]];
+        //isaCloud: an archived chat has no unread messages for the badge (0 while it is archived)
+        return [self.db executeScalar:@"SELECT COALESCE(COUNT(message_history_id),0) FROM message_history AS h WHERE h.message_history_id > (SELECT COALESCE(latest_read_message_history_id, 0) FROM buddylist WHERE account_id=? AND buddy_name=?) AND h.unread=1 AND h.account_id=? AND h.buddy_name=? AND h.inbound=1 AND 0 = (SELECT IFNULL(MAX(archived),0) FROM buddylist WHERE account_id=? AND buddy_name=?);" andArguments:@[accountID, buddy, accountID, buddy, accountID, buddy]];
     }];
 }
 

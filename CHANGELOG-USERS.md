@@ -4,6 +4,13 @@ O que mudou em cada versão, em poucas palavras. A lista técnica completa está
 
 ## Em breve (próxima versão)
 
+### Novidades
+- 🗄️ Grupos e canais arquivados ficam em silêncio e não voltam para a lista sozinhos; para trazer de volta, use "Desarquivar" nos detalhes.
+- 🏷️ Contatos, grupos e canais arquivados aparecem com o rótulo "Arquivado".
+
+### Melhorias
+- 📌 Arquivar não marca mais as mensagens como lidas, e a conversa fixada continua fixada.
+
 ## Build 99 · 09/11/2026
 
 ### Novidades

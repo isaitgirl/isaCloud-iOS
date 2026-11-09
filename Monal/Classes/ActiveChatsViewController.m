@@ -846,7 +846,8 @@ static BOOL _dnssecWarningDisplayed;
     });
     
     // if pinning changed we have to move the user to a other section
-    if([notification.userInfo objectForKey:@"pinningChanged"])
+    //isaCloud: an unarchived chat (archivedChanged) has no row yet, so it has to be inserted as well
+    if([notification.userInfo objectForKey:@"pinningChanged"] || [notification.userInfo objectForKey:@"archivedChanged"])
         [self insertOrMoveContact:contact completion:nil];
     else
     {
@@ -940,6 +941,12 @@ static BOOL _dnssecWarningDisplayed;
 
 -(void) insertOrMoveContact:(MLContact*) contact completion:(void (^ _Nullable)(BOOL finished)) completion
 {
+    //isaCloud: an archived chat does not come back into the list by a message or a send (a 1:1 chat was unarchived in the db before this call by addActiveBuddies)
+    if([[DataLayer sharedInstance] isArchivedBuddy:contact.contactJid forAccount:contact.accountID])
+    {
+        if(completion) completion(YES);
+        return;
+    }
     //isaCloud: a chat that does not pass the filter chips does not enter the list (a new message in a channel must not show up
     //while "Contacts" is the only filter, for instance). Chats already on screen keep updating through the normal paths.
     if(![self contactPassesChatListFilter:contact unreadChats:([self chatListFilterUnread] ? [[DataLayer sharedInstance] chatsWithUnreadMessages] : nil)])
@@ -1661,10 +1668,15 @@ static BOOL _dnssecWarningDisplayed;
             [self.unpinnedContacts removeObjectAtIndex:indexPath.row];
         }
         [self.chatListTable deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
-        // removeActiveBuddy in db
-        [[DataLayer sharedInstance] removeActiveBuddy:contact.contactJid forAccount:contact.accountID];
-        // remove contact from activechats table
+        //isaCloud: archive the chat in db: its activechats row stays (pinned and lastMessageTime survive) and its messages stay unread
+        [[DataLayer sharedInstance] archiveBuddy:contact.contactJid forAccount:contact.accountID];
+        //isaCloud: remove the delivered notifications of the chat, without marking its messages as read
+        [[MLNotificationManager sharedInstance] removeDeliveredNotificationsForContact:contact];
+        //isaCloud: every MLContact of this chat (the contacts list, open details) rereads the db and shows "Archived" right away
+        [[MLNotificationQueue currentQueue] postNotificationName:kMonalContactRefresh object:contact.account userInfo:@{@"contact": contact}];
         [self refreshDisplay];
+        //isaCloud: update the badge (the archived chat does not count anymore)
+        [[MLNotificationQueue currentQueue] postNotificationName:kMonalUpdateUnread object:nil];
         // open placeholder
         [self presentChatWithContact:nil];
     }

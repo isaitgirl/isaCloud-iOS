@@ -1307,6 +1307,18 @@
             [db executeNonQuery:@"ALTER TABLE message_history ADD COLUMN isacloud_quote_id TEXT;"];
     }];
 
+    //isaCloud: archived conversations stay in buddylist (with pinned and lastMessageTime in activechats) and only hide from the lists.
+    //archived_updated and archived_pending are for the archived state sync: the time of the last change (epoch millis) and whether it still has to be published.
+    //Harmless to run again: each column is only added if it is missing.
+    [self updateISACloudDB:db toVersion:7 withBlock:^{
+        if(![[db executeScalar:@"SELECT count(*) FROM pragma_table_info('buddylist') WHERE name='archived';"] boolValue])
+            [db executeNonQuery:@"ALTER TABLE buddylist ADD COLUMN archived INTEGER NOT NULL DEFAULT 0;"];
+        if(![[db executeScalar:@"SELECT count(*) FROM pragma_table_info('buddylist') WHERE name='archived_updated';"] boolValue])
+            [db executeNonQuery:@"ALTER TABLE buddylist ADD COLUMN archived_updated INTEGER NOT NULL DEFAULT 0;"];
+        if(![[db executeScalar:@"SELECT count(*) FROM pragma_table_info('buddylist') WHERE name='archived_pending';"] boolValue])
+            [db executeNonQuery:@"ALTER TABLE buddylist ADD COLUMN archived_pending INTEGER NOT NULL DEFAULT 0;"];
+    }];
+
     //...and at every start it indexes what the hooks of the DataLayer did not see (messages written by an older build, for example)
     [MLMessageSearch catchUpIndexInDatabase:db];
 }

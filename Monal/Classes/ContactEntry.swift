@@ -15,6 +15,8 @@ struct ContactEntry<AdditionalContent: View>: View {
     @StateObject var contact: ObservableKVOWrapper<MLContact>
     //isaCloud: the jid of the account this contact belongs to, shown under the contact's own jid (nil: not shown)
     private var accountJid: String? = nil
+    //isaCloud: a small "Archived" label under the jid, only shown in the contacts lists (see showingArchivedLabel)
+    private var showsArchivedLabel = false
     
     init(contact:MLContact, selfnotesPrefix: Bool = true, fallback: String? = nil) where AdditionalContent == EmptyView {
         self.init(contact:contact, selfnotesPrefix:selfnotesPrefix, fallback:fallback, additionalContent:{ EmptyView() })
@@ -79,6 +81,17 @@ struct ContactEntry<AdditionalContent: View>: View {
                         .foregroundColor(Color(UIColor.secondaryLabel))
                         .font(.caption)
                     }
+                    if showsArchivedLabel && isArchivedEntry {
+                        //isaCloud: icon (box with an arrow down) and the accent color make the label stand out; below the account, aligned with it
+                        //(an HStack like the account row: a Label inside a List gets a wide icon column)
+                        //(baseline alignment: this symbol's arrow sticks out above the tray, so centering pushed the tray down and the text looked too high)
+                        HStack(alignment: .firstTextBaseline, spacing: 3) {
+                            Image(systemName: "tray.and.arrow.down.fill")
+                            Text("Archived")
+                        }
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(.accentColor)
+                    }
                 }
             }
         }
@@ -89,6 +102,19 @@ struct ContactEntry<AdditionalContent: View>: View {
         var copy = self
         copy.accountJid = HelperTools.accountJidToShow(forAccountID: contact.accountID)
         return copy
+    }
+    
+    //isaCloud: the contacts lists mark archived groups and channels (and contacts) with "Archived"
+    func showingArchivedLabel() -> Self {
+        var copy = self
+        copy.showsArchivedLabel = true
+        return copy
+    }
+    
+    //isaCloud: the wrapper's dynamic members are read with an explicit type (see ObservableKVOWrapper)
+    private var isArchivedEntry: Bool {
+        let archived: Bool = contact.isArchived
+        return archived
     }
 }
 

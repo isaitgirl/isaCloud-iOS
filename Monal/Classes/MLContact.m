@@ -67,6 +67,8 @@ static NSMutableDictionary* _singletonCache;
 @property (nonatomic, assign) BOOL isBlocked;
 @property (nonatomic, assign) BOOL isMuted;
 @property (nonatomic, assign) BOOL isActiveChat;
+//isaCloud: archived chats (see archived in buddylist, migration 7 of +migrateISACloudDB:)
+@property (nonatomic, assign) BOOL isArchived;
 
 @property (nonatomic, assign) BOOL isMuc;
 @property (nonatomic, strong) NSString* groupSubject;
@@ -110,6 +112,7 @@ static NSMutableDictionary* _singletonCache;
             @"state": @"online",
             @"count": @1,
             @"isActiveChat": @YES,
+            @"isArchived": @NO,
             @"lastInteraction": [[NSDate date] initWithTimeIntervalSince1970:0],
             @"rosterGroups": [NSSet new],
             @"reached_mam_archive_top": @NO,
@@ -136,6 +139,7 @@ static NSMutableDictionary* _singletonCache;
             @"state": @"online",
             @"count": @2,
             @"isActiveChat": @YES,
+            @"isArchived": @NO,
             @"lastInteraction": [[NSDate date] initWithTimeIntervalSince1970:1640153174],
             @"rosterGroups": [NSSet new],
             @"reached_mam_archive_top": @NO,
@@ -162,6 +166,7 @@ static NSMutableDictionary* _singletonCache;
             @"state": @"online",
             @"count": @3,
             @"isActiveChat": @YES,
+            @"isArchived": @NO,
             @"lastInteraction": [[NSDate date] initWithTimeIntervalSince1970:1640157074],
             @"rosterGroups": [NSSet new],
             @"reached_mam_archive_top": @NO,
@@ -187,6 +192,7 @@ static NSMutableDictionary* _singletonCache;
             @"state": @"online",
             @"count": @4,
             @"isActiveChat": @YES,
+            @"isArchived": @NO,
             @"lastInteraction": [[NSDate date] initWithTimeIntervalSince1970:1640157174],
             @"rosterGroups": [NSSet new],
             @"reached_mam_archive_top": @NO,
@@ -247,6 +253,7 @@ static NSMutableDictionary* _singletonCache;
             @"state": @"offline",
             @"count": @0,
             @"isActiveChat": @NO,
+            @"isArchived": @NO,
             @"lastInteraction": nilWrapper(nil),
             @"rosterGroups": [NSSet set],
             @"reached_mam_archive_top": @NO,
@@ -840,6 +847,7 @@ static NSMutableDictionary* _singletonCache;
     updateIfIdNotEqual(self.state, contact.state);
     updateIfPrimitiveNotEqual(self->_unreadCount, contact->_unreadCount);
     updateIfPrimitiveNotEqual(self.isActiveChat, contact.isActiveChat);
+    updateIfPrimitiveNotEqual(self.isArchived, contact.isArchived);
     updateIfPrimitiveNotEqual(self.isEncrypted, contact.isEncrypted);
     updateIfPrimitiveNotEqual(self.isMuted, contact.isMuted);
     //don't update lastInteractionTime from contact, we dynamically update ourselves by handling kMonalLastInteractionUpdatedNotice
@@ -919,6 +927,7 @@ static NSMutableDictionary* _singletonCache;
     contact.state = nilDefault([dic objectForKey:@"state"], @"online");
     contact->_unreadCount = -1;
     contact.isActiveChat = [[dic objectForKey:@"isActiveChat"] boolValue];
+    contact.isArchived = [[dic objectForKey:@"isArchived"] boolValue];
     contact.isEncrypted = [[dic objectForKey:@"encrypt"] boolValue];
     contact.isMuted = [[dic objectForKey:@"muted"] boolValue];
     // initial value comes from db, all other values get updated by our kMonalLastInteractionUpdatedNotice handler
