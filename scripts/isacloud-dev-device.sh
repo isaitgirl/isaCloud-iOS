@@ -44,6 +44,13 @@ if [[ -f "$GIPHY_KEY_FILE" ]]; then
     GIPHY_API_KEY="$(tr -d '[:space:]' < "$GIPHY_KEY_FILE")"
 fi
 
+# chave da busca de GIF (Klipy), guardada fora do repositório; sem ela a opção Klipy não aparece
+KLIPY_KEY_FILE="$REPO_ROOT/isaCloud/local/klipy-api-key.txt"
+KLIPY_API_KEY=""
+if [[ -f "$KLIPY_KEY_FILE" ]]; then
+    KLIPY_API_KEY="$(tr -d '[:space:]' < "$KLIPY_KEY_FILE")"
+fi
+
 cd "$REPO_ROOT/Monal"
 xcodebuild -quiet \
     -workspace Monal.xcworkspace \
@@ -58,6 +65,7 @@ xcodebuild -quiet \
     ISACLOUD_OPEN_SCHEME="isacloudOpenDev" \
     ISACLOUD_ENTITLEMENTS_DIR="../isaCloud/dev-entitlements/" \
     GIPHY_API_KEY="$GIPHY_API_KEY" \
+    KLIPY_API_KEY="$KLIPY_API_KEY" \
     DEVELOPMENT_TEAM="$TEAM_ID" \
     CODE_SIGN_STYLE=Automatic \
     CODE_SIGN_IDENTITY="Apple Development" \

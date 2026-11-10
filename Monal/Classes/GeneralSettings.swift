@@ -137,7 +137,11 @@ class GeneralSettingsDefaultsDB: ObservableObject {
     //isaCloud: "480" (videos converted to 480p H.264 + AAC before the upload) or "original" (the video is sent as it is)
     @defaultsDB("videoCompressionMode")
     var videoCompressionMode: String
-    
+
+    //isaCloud: "giphy" or "klipy", the GIF search provider (also switched from the GIF picker; see GiphySearch.swift)
+    @defaultsDB("gifProvider")
+    var gifProvider: String
+
     @defaultsDB("hardlinkFiletransfersIntoDocuments")
     var hardlinkFiletransfersIntoDocuments: Bool
     
@@ -758,6 +762,20 @@ struct AttachmentSettings: View {
                     .font(.footnote)
             }
 #endif
+
+            //isaCloud: the GIF section only shows when the build has more than one GIF provider key
+            if GifKeys.fromBundle(Bundle.main.infoDictionary).available.count >= 2 {
+                Section(header: Text("GIFs")) {
+                    Picker(selection: $generalSettingsDefaultsDB.gifProvider, label: Text("GIF provider")) {
+                        ForEach(GifKeys.fromBundle(Bundle.main.infoDictionary).available) { provider in
+                            Text(provider.displayName).tag(provider.rawValue)
+                        }
+                    }
+                    Text("You can also switch it in the GIF search.")
+                        .foregroundColor(.secondary)
+                        .font(.footnote)
+                }
+            }
         }
     }
 }

@@ -2,6 +2,12 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## Em andamento (ainda não enviado)
+
+### Adicionado
+- **KLIPY como segundo provedor de GIF.** O GIPHY continua o padrão; o KLIPY aparece como opção quando o build tem a chave. Troca pelo menu da própria busca de GIFs ou em Anexos → GIFs (preferência `gifProvider`: `giphy` ou `klipy`, migrada em `MLXMPPManager` com padrão `giphy`). A chave vem de `isaCloud/local/klipy-api-key.txt` pelos scripts `archive-testflight.sh` e `isacloud-dev-device.sh`, que passam `KLIPY_API_KEY` ao build (`KlipyAPIKey` no `Monal-Info.plist`). Sem chave, a opção não aparece. Anúncios do KLIPY desligados no Partner Panel. Análise em `docs/analise-gif-klipy.md`. Branch `feature/gif-klipy`.
+- **Cache da busca de GIF.** As duas chaves têm limite de 100 chamadas por hora. Cache HTTP próprio (`GifNetwork`, 100 MB em `Caches/gif-http-cache`) que segue os cabeçalhos dos servidores (API do KLIPY 6 h, prévias 1 a 7 dias), e o "em alta" de cada provedor salvo em `Caches/gif-trending` (página de 50, 6 h no KLIPY e 1 h no GIPHY, embaralhado a cada abertura). Logs com o prefixo `GIF cache:` para avaliar no `.dev`. A rolagem para em 3 páginas (`GifSearch.maxPages`). Validado no `.dev` em 10/11/2026: o KLIPY fez 6 chamadas em cerca de 16 aberturas e o GIPHY 1 em 6.
+
 ## 0.0.1 (build 101) — 10/11/2026
 
 Enviado ao TestFlight às 09:29. Hotfix do build 100 (ExyteChat sem mudança, `3eb0aa1`).

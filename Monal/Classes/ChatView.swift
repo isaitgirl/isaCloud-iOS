@@ -1757,7 +1757,7 @@ struct ChatView: View {
             })
         }
         .sheet(isPresented: $showGifPicker) {
-            GifPickerView(apiKey: GiphySearch.apiKey(from: Bundle.main.infoDictionary), onPick: { url in
+            GifPickerView(keys: GifKeys.fromBundle(Bundle.main.infoDictionary), onPick: { url in
                 inputModel.addAttachment(ChatInputAttachment(kind: .animatedGif, url: url))
             })
         }

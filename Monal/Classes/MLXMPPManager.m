@@ -226,6 +226,13 @@ static void isaCloudPingOrReconnect(xmpp* account, BOOL networkCameBack, BOOL le
         [[HelperTools defaultsDB] synchronize];
     }
 
+    //isaCloud: "gifProvider" must exist before the Anexos screen reads it (defaultsDB throws on a missing key, see C18)
+    if([[HelperTools defaultsDB] objectForKey:@"gifProvider"] == nil)
+    {
+        [[HelperTools defaultsDB] setObject:@"giphy" forKey:@"gifProvider"];
+        [[HelperTools defaultsDB] synchronize];
+    }
+
     [self upgradeBoolUserSettingsIfUnset:@"uploadImagesOriginal" toDefault:NO];
     
     [self upgradeBoolUserSettingsIfUnset:@"hardlinkFiletransfersIntoDocuments" toDefault:YES];
