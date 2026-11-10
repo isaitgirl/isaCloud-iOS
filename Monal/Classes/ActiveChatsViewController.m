@@ -234,6 +234,7 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
     BOOL _loginAlreadyAutodisplayed;
     NSDictionary<NSNumber*, NSString*>* _accountJids;      //isaCloud: account id -> jid, only while more than one account is enabled (shown under the names)
     NSString* _accountAvatarSignature;      //isaCloud: what the profile button shows now, to not set the same image again
+    BOOL _isaCloudAccountAvatarPending;     //isaCloud: C20, the avatar update was skipped while the app was frozen, done again on the unfreeze
     NSMutableArray* _blockQueue;
     ChatListFilterBar* _chatListFilterBar;      //isaCloud: chips under the search bar
     dispatch_semaphore_t _blockQueueSemaphore;
@@ -436,6 +437,17 @@ static NSMutableSet<NSNumber*>* _hiddenChatListAccountIDs;      //isaCloud: only
 
 #pragma mark view lifecycle
 
+//isaCloud: C20, called on kMonalUnfrozen (any thread): redoes the account avatar update that was skipped while the app was frozen
+-(void) isaCloudUpdateAccountAvatarAfterUnfreeze
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if(!self->_isaCloudAccountAvatarPending)
+            return;
+        self->_isaCloudAccountAvatarPending = NO;
+        [self updateAccountAvatar];
+    });
+}
+
 //isaCloud: the avatars of the enabled accounts on the profile button: one round avatar, or two overlapped ones (the first account of the list in front)
 //and a "+N" badge when there are more; a default icon while there is none
 -(void) updateAccountAvatar
@@ -446,6 +458,13 @@ static NSMutableSet<NSNumber*>* _hiddenChatListAccountIDs;      //isaCloud: only
         dispatch_async(dispatch_get_main_queue(), ^{
             [self updateAccountAvatar];
         });
+        return;
+    }
+    //isaCloud: C20, while the app is frozen the database must not be read here (the suspension would hold its lock):
+    //the update is done again on kMonalUnfrozen
+    if([HelperTools isaCloudSuspendedFast])
+    {
+        _isaCloudAccountAvatarPending = YES;
         return;
     }
     //same order as the account list of the settings, so the account in front does not change from one launch to the next
@@ -634,7 +653,9 @@ static NSMutableSet<NSNumber*>* _hiddenChatListAccountIDs;      //isaCloud: only
     [nc addObserver:self selector:@selector(messageSent:) name:kMLMessageSentToContact object:nil];
     [nc addObserver:self selector:@selector(handleDeviceRotation) name:UIDeviceOrientationDidChangeNotification object:nil];
     [nc addObserver:self selector:@selector(showWarningsIfNeeded) name:kMonalFinishedCatchup object:nil];
-    
+    //isaCloud: C20, the avatar update skipped while the app was frozen is done now (removed with the other observers in dealloc)
+    [nc addObserver:self selector:@selector(isaCloudUpdateAccountAvatarAfterUnfreeze) name:kMonalUnfrozen object:nil];
+
     [_chatListTable registerNib:[UINib nibWithNibName:@"MLContactCell" bundle:[NSBundle mainBundle]] forCellReuseIdentifier:@"ContactCell"];
     
     self.splitViewController.preferredDisplayMode = UISplitViewControllerDisplayModeOneBesideSecondary;

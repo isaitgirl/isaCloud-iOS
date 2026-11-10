@@ -1,4 +1,4 @@
-# Estado atual e handoff (09/11/2026, build 100)
+# Estado atual e handoff (10/11/2026, build 101)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,14 +7,18 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 100** (mensagem "Build 100 ..."), tag `build-100`; `git log --oneline -3` |
-| TestFlight | **100** (09/11/2026, 17:15; antes 99 em 09/11 às 12:51, tag `build-99`) |
-| `.dev` no iPhone | **100**, igual ao TestFlight (09/11/2026; **sem push**, então a extensão de notificação não roda nele) |
+| Commit | o do **build 101** (hotfix do C20, PR da branch `fix/c20-registro-sem-simbolos`), tag `build-101`; `git log --oneline -3` |
+| TestFlight | **101** (10/11/2026, 09:29; antes 100 em 09/11 às 17:15, tag `build-100`) |
+| `.dev` no iPhone | **101**, igual ao TestFlight (10/11/2026; **sem push**, então a extensão de notificação não roda nele) |
 | Simuladores | iPhone XR (iOS 18.6) com o código do build 100 (09/11/2026) e isaCloud iOS27 com o do build 94 (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261105-1036-linha-lido-2/` e `-1037-linha-lido-2/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
 | ExyteChat | `3eb0aa1` na `isaCloud` (tamanho do arquivo nas mídias e nos áudios, PR 22; antes `7d3292b`: miniatura opcional dentro da citação, `Message.quotePreview`, PR 21; antes `e168ed8`: visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
+
+## O que entrou no build 101 (sobre o 100)
+
+- **Hotfix do C20:** o registro do build 100 symbolicava a pilha dentro de transações do banco e matou o app em segundo plano (`0xdead10cc`, 10/11 08:56, iPhone14,7). Agora grava só endereços de retorno e as bases do `monalxmpp` e do app (symbolicar com `atos -l`). `MLFiletransfer storeState` e `updateAccountAvatar` não tocam no banco com o app congelado e se refazem no `kMonalUnfrozen`. **A validar em produção:** sem novos `0xdead10cc` em segundo plano; linhas `isaCloud C20:` nos logs mostram outras fontes.
 
 ## O que entrou no build 100 (sobre o 99)
 

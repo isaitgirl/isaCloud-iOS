@@ -50,6 +50,8 @@ static NSMutableSet* _currentlyTransfering;
 static dispatch_queue_t _storeStateQueue;
 static NSDictionary* _pendingStoreState;            //newest state snapshot waiting to be persisted, protected by _stateSyncObject
 static BOOL _storeStateScheduled;                   //a persist block is queued and will pick up _pendingStoreState, protected by _stateSyncObject
+//isaCloud: C20, set when a snapshot was kept because the app was frozen, cleared when it is stored after the unfreeze, protected by _stateSyncObject
+static BOOL _isaCloudStoreStateAfterUnfreeze = NO;
 
 @implementation MLFiletransfer
 
@@ -69,6 +71,8 @@ static BOOL _storeStateScheduled;                   //a persist block is queued 
     _currentlyTransfering = [NSMutableSet new];
     _expectedDownloadSizes = [NSMutableDictionary new];
     _storeStateQueue = dispatch_queue_create("im.monal.filetransfer.storeState", dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL, QOS_CLASS_UTILITY, 0));
+    //isaCloud: C20, store the state kept while the app was frozen
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(isaCloudStoreStateAfterUnfreeze) name:kMonalUnfrozen object:nil];
 }
 
 +(void) loadState
@@ -112,9 +116,36 @@ static BOOL _storeStateScheduled;                   //a persist block is queued 
             _pendingStoreState = nil;
             _storeStateScheduled = NO;
         }
+        //isaCloud: C20, while the app is frozen the database must not be written (the suspension would hold its lock):
+        //keep the newest snapshot and store it after the unfreeze instead
+        if([HelperTools isaCloudSuspendedFast])
+        {
+            @synchronized(_stateSyncObject) {
+                //a newer snapshot may already be waiting: it is newer than this one
+                if(_pendingStoreState == nil)
+                    _pendingStoreState = state;
+                _isaCloudStoreStateAfterUnfreeze = YES;
+            }
+            //the unfreeze notification may have come before the flag was set: then nobody else would store it
+            if(![HelperTools isaCloudSuspendedFast])
+                [self storeState];
+            return;
+        }
         //DDLogVerbose(@"Storing MLFileTransfer state: %@", state);
         [[DataLayer sharedInstance] setFiletransferState:state];
     });
+}
+
+//isaCloud: C20, called on kMonalUnfrozen: stores the state that was kept while the app was frozen
++(void) isaCloudStoreStateAfterUnfreeze
+{
+    BOOL storeAgain = NO;
+    @synchronized(_stateSyncObject) {
+        storeAgain = _isaCloudStoreStateAfterUnfreeze;
+        _isaCloudStoreStateAfterUnfreeze = NO;
+    }
+    if(storeAgain)
+        [self storeState];
 }
 
 +(BOOL) isIdle

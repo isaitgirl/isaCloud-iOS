@@ -24,6 +24,8 @@
 #include <objc/runtime.h> 
 #include <objc/message.h>
 #include <objc/objc-exception.h>
+#include <mach-o/dyld.h>
+#include <string.h>
 #import <zlib.h>
 #import <sys/qos.h>
 #import <BackgroundTasks/BackgroundTasks.h>
@@ -2764,7 +2766,8 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
             [HelperTools flushLogsWithTimeout:0.100];
             dispatch_suspend([DDLog loggingQueue]);
             _suspensionHandling_isSuspended = YES;
-            //isaCloud: C20, start a new record of database accesses for this suspension
+            //isaCloud: C20, start a new record of database accesses for this suspension (the load addresses are computed here, outside of any transaction)
+            [HelperTools isaCloudImageLoadAddresses];
             atomic_store(&_isaCloudDbAccessRecords, 0);
             atomic_store(&_isaCloudSuspendedFast, true);
 
@@ -2811,9 +2814,41 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     return atomic_load(&_isaCloudSuspendedFast);
 }
 
+//isaCloud: C20, load addresses of the monalxmpp and the main executable images, computed once, so that the return
+//addresses recorded below can be symbolicated later with "atos -l <load address>" (the slide differs on each launch)
+static NSString* _isaCloudImageLoadAddresses = nil;
+
++(NSString*) isaCloudImageLoadAddresses
+{
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        uintptr_t monalBase = 0;
+        uintptr_t appBase = 0;
+        uint32_t count = _dyld_image_count();
+        for(uint32_t i = 0; i < count; i++)
+        {
+            const char* name = _dyld_get_image_name(i);
+            if(name == NULL)
+                continue;
+            //index 0 is the main executable of the process (the app or the app extension)
+            if(i == 0)
+                appBase = (uintptr_t)_dyld_get_image_header(i);
+            const char* lastComponent = strrchr(name, '/');
+            lastComponent = lastComponent != NULL ? lastComponent + 1 : name;
+            if(strcmp(lastComponent, "monalxmpp") == 0)
+                monalBase = (uintptr_t)_dyld_get_image_header(i);
+        }
+        _isaCloudImageLoadAddresses = [NSString stringWithFormat:@"base monalxmpp=0x%llx app=0x%llx", (unsigned long long)monalBase, (unsigned long long)appBase];
+    });
+    return _isaCloudImageLoadAddresses;
+}
+
 //isaCloud: C20, called by MLSQLite for every statement while the app is frozen. The logging queue is suspended here,
 //so this must never call DDLog (a synchronous log already caused C04). Writes one line to a small file in the app group
-//(at most 30 lines per suspension and 64 KB per file), which is written to the normal log on the next resumption or start
+//(at most 30 lines per suspension and 64 KB per file), which is written to the normal log on the next resumption or start.
+//It only records raw return addresses and never symbolicates them: [NSThread callStackSymbols] (dladdr) inside a database
+//transaction made the transaction last so long that iOS suspended the app holding the lock (0xdead10cc, build 100).
+//The addresses are symbolicated offline with the load addresses written at the end of each line ("base ...").
 +(void) isaCloudRecordDbAccessAfterFreeze:(NSString*) query
 {
     if(atomic_fetch_add(&_isaCloudDbAccessRecords, 1) >= 30)
@@ -2823,20 +2858,31 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     if(sql.length > 80)
         sql = [sql substringToIndex:80];
 
-    NSArray* frames = [NSThread callStackSymbols];
-    NSArray* topFrames = [frames subarrayWithRange:NSMakeRange(0, MIN((NSUInteger)12, frames.count))];
-    NSString* stack = [[topFrames componentsJoinedByString:@" | "] stringByReplacingOccurrencesOfString:@"\n" withString:@" "];
+    NSArray<NSNumber*>* frames = [NSThread callStackReturnAddresses];
+    NSMutableString* stack = [NSMutableString new];
+    for(NSUInteger i = 0; i < MIN((NSUInteger)12, frames.count); i++)
+    {
+        if(i > 0)
+            [stack appendString:@" "];
+        [stack appendFormat:@"0x%llx", frames[i].unsignedLongLongValue];
+    }
 
     const char* queueLabel = dispatch_queue_get_label(DISPATCH_CURRENT_QUEUE_LABEL);
-    NSISO8601DateFormatter* dateFormatter = [NSISO8601DateFormatter new];
-    dateFormatter.formatOptions = NSISO8601DateFormatWithInternetDateTime | NSISO8601DateFormatWithFractionalSeconds;
+    //one formatter for all lines, created the first time only (never inside a database transaction)
+    static NSISO8601DateFormatter* dateFormatter = nil;
+    static dispatch_once_t dateFormatterOnceToken;
+    dispatch_once(&dateFormatterOnceToken, ^{
+        dateFormatter = [NSISO8601DateFormatter new];
+        dateFormatter.formatOptions = NSISO8601DateFormatWithInternetDateTime | NSISO8601DateFormatWithFractionalSeconds;
+    });
 
-    NSString* line = [NSString stringWithFormat:@"%@ %@ queue=%s sql=%@ stack=%@",
+    NSString* line = [NSString stringWithFormat:@"%@ %@ queue=%s sql=%@ stack=%@ %@",
         [dateFormatter stringFromDate:[NSDate date]],
         [self isAppExtension] ? @"appex" : @"app",
         queueLabel != NULL ? queueLabel : "none",
         sql,
-        stack
+        stack,
+        [self isaCloudImageLoadAddresses]
     ];
 
     //isaCloud: no DDLog here, only the file below and os_log (which does not depend on the suspended queue)

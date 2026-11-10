@@ -2,6 +2,13 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 101) — 10/11/2026
+
+Enviado ao TestFlight às 09:29. Hotfix do build 100 (ExyteChat sem mudança, `3eb0aa1`).
+
+### Corrigido
+- **App morto em segundo plano pelo próprio registro do C20 (`0xdead10cc`).** O registro de acesso ao banco com o app congelado montava a pilha com `callStackSymbols`, que symbolica (lento) e rodava dentro de transações do banco; o iOS suspendia o app com a trava na mão (crash de 10/11 08:56, iPhone14,7). Agora grava só os endereços de retorno e os endereços de carga do `monalxmpp` e do app, para symbolicar depois com `atos`. As duas fontes vistas no crash deixam de tocar no banco com o app congelado: `+[MLFiletransfer storeState]` (download em segundo plano terminando) grava o estado ao descongelar, e `updateAccountAvatar` da lista de conversas se atualiza ao descongelar. Branch `fix/c20-registro-sem-simbolos`. Detalhes em `docs/analises-crashes.md` (C20).
+
 ## 0.0.1 (build 100) — 09/11/2026
 
 Enviado ao TestFlight às 17:15. PRs 56, 57, 58, 59 e 60 do app (ExyteChat sem mudança, `3eb0aa1`).
