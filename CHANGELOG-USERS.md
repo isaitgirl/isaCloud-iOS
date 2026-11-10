@@ -2,6 +2,12 @@
 
 O que mudou em cada versão, em poucas palavras. A lista técnica completa está no [CHANGELOG.md](CHANGELOG.md).
 
+## Em andamento (ainda não enviado)
+
+### Novidades
+- 🔍 Agora dá para escolher entre GIPHY e KLIPY na busca de GIFs.
+- ⚡ A busca de GIFs abre mais rápido e guarda os GIFs em alta por um tempo.
+
 ## Build 101 · 10/11/2026
 
 ### Correções

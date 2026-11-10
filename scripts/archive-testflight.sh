@@ -21,6 +21,7 @@ DERIVED_DATA="/tmp/ddarch"
 ARCHIVE="$REPO_ROOT/build/isaCloud-AppStore.xcarchive"
 EXPORT_OPTIONS="$REPO_ROOT/scripts/exportOptions/isaCloud_AppStore_Upload_ExportOptions.plist"
 GIPHY_KEY_FILE="$REPO_ROOT/isaCloud/local/giphy-api-key.txt"
+KLIPY_KEY_FILE="$REPO_ROOT/isaCloud/local/klipy-api-key.txt"
 UPLOAD=0
 [[ "$1" == "--upload" ]] && UPLOAD=1
 
@@ -41,6 +42,13 @@ else
     echo "warning: $GIPHY_KEY_FILE not found, the GIF search will be off in this build" >&2
 fi
 
+KLIPY_API_KEY=""
+if [[ -f "$KLIPY_KEY_FILE" ]]; then
+    KLIPY_API_KEY="$(tr -d '[:space:]' < "$KLIPY_KEY_FILE")"
+else
+    echo "warning: $KLIPY_KEY_FILE not found, the KLIPY option will be off in this build" >&2
+fi
+
 # 2. fresh derived data and archive
 rm -rf "$DERIVED_DATA" "$ARCHIVE"
 cd "$REPO_ROOT/Monal"
@@ -55,7 +63,8 @@ xcodebuild archive \
     DEVELOPMENT_TEAM="$TEAM_ID" \
     ISACLOUD_BUNDLE_ID="$BUNDLE_ID" \
     ISACLOUD_ENTITLEMENTS_DIR= \
-    GIPHY_API_KEY="$GIPHY_API_KEY"
+    GIPHY_API_KEY="$GIPHY_API_KEY" \
+    KLIPY_API_KEY="$KLIPY_API_KEY"
 
 # 3. check the archive before uploading anything
 APP=$(ls -d "$ARCHIVE"/Products/Applications/*.app)

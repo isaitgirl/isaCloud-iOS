@@ -92,6 +92,12 @@
 "Could not search GIFs" = "Não foi possível buscar GIFs";
 "Try again in a moment." = "Tente de novo em instantes.";
 "No GIFs found" = "Nenhum GIF encontrado";
+"Powered by KLIPY" = "Powered by KLIPY";
+"Search KLIPY" = "Buscar no KLIPY";
+"GIF provider" = "Provedor de GIF";
+"The GIF search key is not set in this build." = "A chave da busca de GIF não está configurada neste build.";
+"You can also switch it in the GIF search." = "Também dá para trocar na própria busca de GIFs.";
+"GIFs" = "GIFs";
 "Type a word and press search." = "Digite uma palavra e toque em buscar.";
 "Location" = "Localização";
 "Send this location" = "Enviar esta localização";

@@ -152,6 +152,8 @@
 	</array>
 	<key>GiphyAPIKey</key>
 	<string>$(GIPHY_API_KEY)</string>
+	<key>KlipyAPIKey</key>
+	<string>$(KLIPY_API_KEY)</string>
 	<key>IsaCloudOpenScheme</key>
 	<string>$(ISACLOUD_OPEN_SCHEME:default=isacloudOpen)</string>
 	<key>UIApplicationSceneManifest</key>

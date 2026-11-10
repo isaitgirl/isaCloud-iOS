@@ -2,8 +2,9 @@
 //  GifPickerView.swift
 //  Monal
 //
-//  isaCloud: GIFs of the chat input. The picker searches Giphy (or shows the trending ones), and the chat shows a
-//  sent GIF animated. Both use FLAnimatedImage, the same library as the older chat cells.
+//  isaCloud: GIFs of the chat input. The picker searches GIPHY or KLIPY (or shows the trending ones of the chosen provider;
+//  a menu in the bar switches between them), and the chat shows a sent GIF animated. Both use FLAnimatedImage, the same
+//  library as the older chat cells.
 //
 
 import ExyteChat
@@ -449,16 +450,21 @@ struct GifReactionsFooter: View {
 
 struct GifPickerView: View {
     @Environment(\.dismiss) private var dismiss
-    let apiKey: String?
+    /// isaCloud: the keys from the build; the menu offers the providers that have one
+    let keys: GifKeys
     var onPick: (URL) -> Void
 
     @State private var query: String = ""
     @State private var gifs: [GiphyGif] = []
     @State private var state: LoadState = .loading
     @State private var downloading = false
-    /// the next offset to ask Giphy for (the trending starts at a random one, so each opening shows other GIFs)
-    @State private var offset = 0
-    /// true while the last page came full (24 GIFs), so there may be more
+    /// the provider searched now; nil when the build has no key at all
+    @State private var provider: GifProvider?
+    /// the page of the GIFs on screen (the first page is 0); loadMore asks the next one
+    @State private var pageIndex = 0
+    /// isaCloud: how many GIFs a page has on screen: 50 for the trending ones, 24 for a search (see GifSearch)
+    @State private var currentPageSize = GifSearch.pageSize
+    /// true while the last page says there may be more
     @State private var hasMore = false
     /// true while a page after the first one is loading, so the same page is not asked twice
     @State private var loadingMore = false
@@ -475,14 +481,20 @@ struct GifPickerView: View {
     }
 
     private let columns = [GridItem(.adaptive(minimum: 110), spacing: 6)]
-    private let pageSize = 24
+
+    init(keys: GifKeys, onPick: @escaping (URL) -> Void) {
+        self.keys = keys
+        self.onPick = onPick
+        // isaCloud: the provider chosen last time (read as a plain string, not with @defaultsDB), or the one the build can use
+        _provider = State(initialValue: keys.resolved(stored: HelperTools.defaultsDB().string(forKey: GifProvider.defaultsKey)))
+    }
 
     var body: some View {
         NavigationStack {
             content
                 .navigationTitle(Text("GIF"))
                 .navigationBarTitleDisplayMode(.inline)
-                .searchable(text: $query, prompt: Text("Search GIFs"))
+                .searchable(text: $query, prompt: searchPrompt)
                 .onSubmit(of: .search) { runSearch() }
                 .onChange(of: query) { _, newValue in
                     if newValue.isEmpty {
@@ -490,12 +502,17 @@ struct GifPickerView: View {
                     }
                 }
                 .toolbar {
+                    if keys.available.count > 1 {
+                        ToolbarItem(placement: .topBarLeading) {
+                            providerMenu
+                        }
+                    }
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Cancel") { dismiss() }
                     }
                 }
                 .safeAreaInset(edge: .bottom) {
-                    Text("Powered by GIPHY")
+                    poweredBy
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                         .padding(.vertical, 6)
@@ -512,13 +529,59 @@ struct GifPickerView: View {
                     loadTrending()
                 }
         }
+        .onAppear {
+            GifNetworkStats.shared.reset()
+        }
+        .onDisappear {
+            logStats()
+        }
+    }
+
+    /// isaCloud: the menu on the left of the bar to switch between the providers that have a key
+    private var providerMenu: some View {
+        Menu {
+            Picker(selection: Binding(get: { provider ?? GifProvider.defaultProvider }, set: { choose($0) })) {
+                ForEach(keys.available) { option in
+                    Text(verbatim: option.displayName).tag(option)
+                }
+            } label: {
+                Text("GIF provider")
+            }
+        } label: {
+            // text and chevron side by side: a Label in the navigation bar would show only the icon
+            HStack(spacing: 3) {
+                Text(verbatim: provider?.displayName ?? "")
+                Image(systemName: "chevron.down")
+                    .font(.caption2.weight(.bold))
+            }
+            .font(.subheadline.weight(.semibold))
+        }
+        .accessibilityLabel(Text("GIF provider"))
+    }
+
+    /// the attribution each provider asks for
+    @ViewBuilder
+    private var poweredBy: some View {
+        if provider == .klipy {
+            Text("Powered by KLIPY")
+        } else {
+            Text("Powered by GIPHY")
+        }
+    }
+
+    /// KLIPY asks for its name in the search field; GIPHY keeps the text it always had
+    private var searchPrompt: Text {
+        if provider == .klipy {
+            return Text("Search KLIPY")
+        }
+        return Text("Search GIFs")
     }
 
     @ViewBuilder
     private var content: some View {
         switch state {
         case .missingKey:
-            ContentUnavailableView("GIF search is not available", systemImage: "photo.on.rectangle", description: Text("The GIPHY key is not set in this build."))
+            ContentUnavailableView("GIF search is not available", systemImage: "photo.on.rectangle", description: Text("The GIF search key is not set in this build."))
         case .failed:
             ContentUnavailableView("Could not search GIFs", systemImage: "wifi.exclamationmark", description: Text("Try again in a moment."))
         case .loading:
@@ -552,14 +615,46 @@ struct GifPickerView: View {
         }
     }
 
-    /// the GIFs most used at the moment, shown until the user searches; each opening starts at another random offset
+    /// isaCloud: saves the provider the user picked and searches again with it (the search term, or the trending ones)
+    private func choose(_ newValue: GifProvider) {
+        guard newValue != provider else {
+            return
+        }
+        provider = newValue
+        HelperTools.defaultsDB().set(newValue.rawValue, forKey: GifProvider.defaultsKey)
+        if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            loadTrending()
+        } else {
+            runSearch()
+        }
+    }
+
+    /// the GIFs most used at the moment, shown until the user searches. A fresh saved first page is shown without a request;
+    /// otherwise the first page is asked and saved (see GifTrendingCache)
     private func loadTrending() {
-        guard let apiKey else {
+        guard let provider, let apiKey = keys.key(for: provider) else {
             state = .missingKey
             return
         }
         currentQuery = nil
-        loadFirstPage(query: nil, apiKey: apiKey, startOffset: Int.random(in: 0..<100))
+        if let entry = GifTrendingCache.shared.load(provider: provider) {
+            showSaved(entry, provider: provider)
+            return
+        }
+        loadFirstPage(query: nil, provider: provider, apiKey: apiKey, pageSize: GifSearch.trendingPageSize)
+    }
+
+    /// shows a saved trending list at once, shuffled like a fresh one; the next pages continue from it
+    private func showSaved(_ entry: GifTrendingCache.Entry, provider: GifProvider) {
+        generation += 1
+        state = .loaded
+        loadingMore = false
+        pageIndex = 0
+        currentPageSize = GifSearch.trendingPageSize
+        gifs = entry.gifs.shuffled()
+        hasMore = entry.hasMore
+        let ageMinutes = max(0, Int(Date().timeIntervalSince(entry.fetchedAt) / 60))
+        DDLogInfo("GIF cache: trending \(provider.rawValue) from saved list, age \(ageMinutes) min, \(entry.gifs.count) GIFs")
     }
 
     private func runSearch() {
@@ -568,31 +663,36 @@ struct GifPickerView: View {
             loadTrending()
             return
         }
-        guard let apiKey else {
+        guard let provider, let apiKey = keys.key(for: provider) else {
             state = .missingKey
             return
         }
         currentQuery = text
-        loadFirstPage(query: text, apiKey: apiKey, startOffset: 0)
+        loadFirstPage(query: text, provider: provider, apiKey: apiKey, pageSize: GifSearch.pageSize)
     }
 
-    /// the first page replaces the grid; a failure here shows the error, as before
-    private func loadFirstPage(query: String?, apiKey: String, startOffset: Int) {
+    /// the first page replaces the grid; a failure here shows the error, as before. A trending first page is saved for later openings.
+    private func loadFirstPage(query: String?, provider: GifProvider, apiKey: String, pageSize: Int) {
         generation += 1
         let current = generation
         state = .loading
         loadingMore = false
         hasMore = false
-        offset = startOffset
+        pageIndex = 0
+        currentPageSize = pageSize
         Task {
             do {
-                let page = try await fetchPage(query: query, apiKey: apiKey, offset: startOffset)
+                let page = try await GifSearch.fetch(provider: provider, query: query, apiKey: apiKey, pageIndex: 0, pageSize: pageSize)
                 guard current == generation else {
                     return
                 }
-                gifs = page
-                hasMore = page.count == pageSize
-                offset = startOffset + pageSize
+                // an empty answer is not kept: it would show "No GIFs found" until the saved list expires
+                if query == nil && !page.gifs.isEmpty {
+                    GifTrendingCache.shared.save(page, provider: provider)
+                }
+                logPage(query: query, provider: provider, pageIndex: 0, page: page)
+                gifs = query == nil ? page.gifs.shuffled() : page.gifs
+                hasMore = page.hasMore
                 state = .loaded
             } catch {
                 guard current == generation else {
@@ -606,24 +706,28 @@ struct GifPickerView: View {
     /// the page after the last one shown, for the same trending or search. A failure keeps the GIFs on screen: nothing changes
     /// here, and the next time the end of the grid shows, it asks again.
     private func loadMore() {
-        guard hasMore, !loadingMore, state == .loaded, let apiKey else {
+        // isaCloud: at most GifSearch.maxPages pages (150 trending or 72 searched GIFs): fast scrolling spent one API call per page
+        // and both keys allow 100 calls per hour for everyone
+        guard hasMore, !loadingMore, state == .loaded, pageIndex + 1 < GifSearch.maxPages,
+              let provider, let apiKey = keys.key(for: provider) else {
             return
         }
         loadingMore = true
         let current = generation
         let query = currentQuery
-        let start = offset
+        let next = pageIndex + 1
         Task {
             do {
-                let page = try await fetchPage(query: query, apiKey: apiKey, offset: start)
+                let page = try await GifSearch.fetch(provider: provider, query: query, apiKey: apiKey, pageIndex: next, pageSize: currentPageSize)
                 guard current == generation else {
                     return
                 }
+                logPage(query: query, provider: provider, pageIndex: next, page: page)
                 // a GIF already on screen is not repeated
                 let known = Set(gifs.map { $0.id })
-                gifs += page.filter { !known.contains($0.id) }
-                hasMore = page.count == pageSize
-                offset = start + pageSize
+                gifs += page.gifs.filter { !known.contains($0.id) }
+                hasMore = page.hasMore
+                pageIndex = next
             } catch {
                 // the grid keeps what it has
             }
@@ -633,11 +737,20 @@ struct GifPickerView: View {
         }
     }
 
-    private func fetchPage(query: String?, apiKey: String, offset: Int) async throws -> [GiphyGif] {
-        if let query {
-            return try await GiphySearch.search(query: query, apiKey: apiKey, offset: offset)
-        }
-        return try await GiphySearch.trending(apiKey: apiKey, offset: offset)
+    /// one line per page for the log: trending or search, where the page came from, how many GIFs, the rate limit left.
+    /// The search term is never logged, only its length.
+    private func logPage(query: String?, provider: GifProvider, pageIndex: Int, page: GifPage) {
+        let kind = query == nil ? "trending" : "search"
+        let queryPart = query.map { ", query of \($0.count) chars" } ?? ""
+        let source = page.fromCache ? "HTTP cache" : "network"
+        let remaining = page.rateLimitRemaining.map { String($0) } ?? "unknown"
+        DDLogInfo("GIF cache: \(kind) \(provider.rawValue) page \(pageIndex)\(queryPart) from \(source), \(page.gifs.count) GIFs, rate limit remaining \(remaining)")
+    }
+
+    /// how the requests of this opening were answered, for the API and for the previews (logged when the picker closes)
+    private func logStats() {
+        let stats = GifNetworkStats.shared.snapshot()
+        DDLogInfo("GIF cache: picker closed, API \(stats.apiFromCache) from HTTP cache / \(stats.apiFromNetwork) from network, previews \(stats.previewsFromCache) from cache / \(stats.previewsFromNetwork) from network")
     }
 
     private func pick(_ gif: GiphyGif) {
