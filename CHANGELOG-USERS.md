@@ -2,6 +2,11 @@
 
 O que mudou em cada versão, em poucas palavras. A lista técnica completa está no [CHANGELOG.md](CHANGELOG.md).
 
+## Build 101 · 10/11/2026
+
+### Correções
+- 🛠️ O app não fecha mais sozinho em segundo plano por causa do diagnóstico que entrou na versão anterior.
+
 ## Build 100 · 09/11/2026
 
 ### Novidades
