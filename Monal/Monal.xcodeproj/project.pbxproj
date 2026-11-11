@@ -330,6 +330,8 @@
 		E8CF9CC726249640001A1952 /* MLSettingsAboutViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = E8CF9CC026249640001A1952 /* MLSettingsAboutViewController.m */; };
 		E8DED06225388BE8003167FF /* MLSearchViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = E8DED06125388BE8003167FF /* MLSearchViewController.m */; };
 		F9C277F46F5157194744C491 /* Pods_shareSheet.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8F1488206B764014DD7EC92A /* Pods_shareSheet.framework */; };
+		A1C0FFEE0000000000000501 /* IsaCloudChangelog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000502 /* IsaCloudChangelog.swift */; };
+		A1C0FFEE0000000000000503 /* isaCloud-changelog.json in Resources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000504 /* isaCloud-changelog.json */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -943,6 +945,8 @@
 		FCADB10208409DD462AC921F /* Pods-Monal.beta.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Monal.beta.xcconfig"; path = "Target Support Files/Pods-Monal/Pods-Monal.beta.xcconfig"; sourceTree = "<group>"; };
 		6A63573C5DEC2FD016BAD2F8 /* MetricsCollector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MetricsCollector.h; sourceTree = "<group>"; };
 		947BC57D16853EFDFD2A04AF /* MetricsCollector.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MetricsCollector.m; sourceTree = "<group>"; };
+		A1C0FFEE0000000000000502 /* IsaCloudChangelog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IsaCloudChangelog.swift; sourceTree = "<group>"; };
+		A1C0FFEE0000000000000504 /* isaCloud-changelog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "isaCloud-changelog.json"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1289,6 +1293,7 @@
 				A1C0FFEE0000000000000C02 /* RecentReactions.swift */,
 				A1C0FFEE0000000000000E01 /* Stickers.swift */,
 				A1C0FFEE0000000000000401 /* IsaCloudColorMath.swift */,
+				A1C0FFEE0000000000000502 /* IsaCloudChangelog.swift */,
 				A1C0FFEE00000000000000A1 /* PublicChannelsView.swift */,
 				3D27D957290B0BC80014748B /* ContactRequestsMenu.swift */,
 				846DF27B2937FAA600AAB9C0 /* ChatPlaceholder.swift */,
@@ -1536,6 +1541,7 @@
 				842790842A32D16C005C18CC /* CallSounds */,
 				26B0CA8A21AE410E0080B133 /* AlertSounds */,
 				26158AF31FFA8A6A00E53BDC /* opensource.html */,
+				A1C0FFEE0000000000000504 /* isaCloud-changelog.json */,
 				26470F511835C4080069E3E0 /* Media.xcassets */,
 				2601D9CA0FBF25EF004DB939 /* sworim.sqlite */,
 			);
@@ -2091,6 +2097,7 @@
 				26470F521835C4080069E3E0 /* Media.xcassets in Resources */,
 				26B2A4BB1B73061400272E63 /* Images.xcassets in Resources */,
 				26E8462824EABAED00ECE419 /* Main.storyboard in Resources */,
+				A1C0FFEE0000000000000503 /* isaCloud-changelog.json in Resources */,
 				26158AF41FFA8A6A00E53BDC /* opensource.html in Resources */,
 				C1E4654824EE517000CA5AAF /* Localizable.strings in Resources */,
 				262E51981AD8CB7200788351 /* MLTextInputCell.xib in Resources */,
@@ -2422,6 +2429,7 @@
 				26158AF21FFA6E4500E53BDC /* MLWebViewController.m in Sources */,
 				C1943A4C25309A9D0036172F /* MLReloadCell.m in Sources */,
 				262E51971AD8CB7200788351 /* MLTextInputCell.m in Sources */,
+				A1C0FFEE0000000000000501 /* IsaCloudChangelog.swift in Sources */,
 				20ED55852BADDA5C0005783E /* GeneralSettings.swift in Sources */,
 				84E55E7D2964424E003E191A /* ActiveChatsViewController.m in Sources */,
 				C1E8A7F72B8E47C300760220 /* EditGroupSubject.swift in Sources */,

@@ -52,6 +52,7 @@ enum SettingsAboutRows {
 #ifdef DEBUG
     LogRow,
 #endif
+    IsaCloudNewsRow,        //isaCloud: "Novidades do isaCloud" (every release, see IsaCloudChangelogAll)
     VersionRow,
     SettingsAboutRowsCntORLogRow,
     SettingsAboutRowsWithLogCnt
@@ -308,6 +309,10 @@ enum DummySettingsRows {
                     [cell initTapCell:NSLocalizedString(@"About", @"")];
                     break;
                 }
+                case IsaCloudNewsRow: {
+                    [cell initTapCell:NSLocalizedString(@"isaCloud news", @"")];
+                    break;
+                }
                 case VersionRow: {
                     [cell initCell:NSLocalizedString(@"Version", @"") withLabel:[HelperTools appBuildVersionInfoFor:MLVersionTypeIQ]];
                     break;
@@ -457,6 +462,12 @@ enum DummySettingsRows {
                 case AboutRow:
                     [self performSegueWithIdentifier:@"showAbout" sender:self];
                     break;
+                case IsaCloudNewsRow: {
+                    //isaCloud: pushed like the import screen, with every release of the changelog
+                    UIViewController* newsViewController = [[SwiftuiInterface new] makeViewWithName:@"IsaCloudChangelogAll"];
+                    [self.navigationController pushViewController:newsViewController animated:YES];
+                    break;
+                }
 #ifdef DEBUG
                 case LogRow:
 #endif

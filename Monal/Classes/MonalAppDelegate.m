@@ -225,6 +225,9 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
 
 -(BOOL) application:(UIApplication*) application didFinishLaunchingWithOptions:(NSDictionary*) launchOptions
 {
+    //isaCloud: sets the batch of "Novidades do isaCloud" (the news of the chats list) for this launch, once per launch
+    [IsaCloudChangelog recordLaunch];
+
     //this will use the cached values in defaultsDB, if possible
     [[MLXMPPManager sharedInstance] setPushToken:nil];
     [MetricsCollector launchStage:@"xmpp_manager"];

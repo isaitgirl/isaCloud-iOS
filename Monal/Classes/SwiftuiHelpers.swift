@@ -1145,7 +1145,13 @@ class SwiftuiInterface : NSObject {
                 host = UIHostingController(rootView:AnyView(createOnboardingView(delegate:delegate)))
             case "OneClickRegistration":
                host = UIHostingController(rootView:AnyView(AddTopLevelNavigation(withDelegate:delegate, to:OneClickRegistration(delegate:delegate))))
-            
+            //isaCloud: "Novidades do isaCloud": the news of the chats list item (batch), and every release (Settings → About, pushed)
+            case "IsaCloudChangelog":
+                //isaCloud: like a chat: on the iPhone the back arrow is the one of the list navigation (AddTopLevelNavigation added a second one)
+                host = UIHostingController(rootView:AnyView(UIKitWorkaround(IsaCloudChangelogView(showAll:false))))
+            case "IsaCloudChangelogAll":
+                host = UIHostingController(rootView:AnyView(IsaCloudChangelogView(showAll:true)))
+
             default:
                 unreachable()
         }

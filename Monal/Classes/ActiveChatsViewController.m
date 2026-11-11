@@ -227,6 +227,167 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
 
 @end
 
+//isaCloud: the "isaCloud news" item on top of the chats list (the table header). It looks like a chat row: the app icon, the title
+//with the "New" badge, the date, the preview and an archive button on the row. Its height is set by the list (72 pt, or 86 pt).
+@interface ChatListNewsView : UIView <UIGestureRecognizerDelegate>
+@property (nonatomic, copy) void (^onOpen)(void);
+@property (nonatomic, copy) void (^onArchive)(void);
+-(void) updateWithUnread:(BOOL) unread preview:(NSString*) preview date:(NSString* _Nullable) date;
+@end
+
+@implementation ChatListNewsView
+{
+    UIImageView* _icon;
+    UILabel* _title;
+    UILabel* _newBadge;
+    UILabel* _date;
+    UILabel* _preview;
+    UIButton* _archive;
+    UIView* _separator;
+}
+
+-(instancetype) initWithFrame:(CGRect) frame
+{
+    self = [super initWithFrame:frame];
+    if(self)
+    {
+        self.backgroundColor = [UIColor clearColor];
+
+        _icon = [UIImageView new];
+        //the 3D balloon of isaCloud (isaCloud/branding/logo-isacloud-im-balao-3d-1024.png), without the background of the app icon
+        _icon.image = [UIImage imageNamed:@"IsaCloudNewsIcon"];
+        _icon.contentMode = UIViewContentModeScaleAspectFit;
+        [self addSubview:_icon];
+
+        _title = [UILabel new];
+        _title.text = NSLocalizedString(@"isaCloud news", @"");
+        _title.font = [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold];
+        _title.textColor = [UIColor labelColor];
+        [self addSubview:_title];
+
+        //the "New" badge: pink, white text, like the unread marks of the app
+        _newBadge = [UILabel new];
+        _newBadge.text = NSLocalizedString(@"New", @"");
+        _newBadge.font = [UIFont boldSystemFontOfSize:11];
+        _newBadge.textColor = [UIColor whiteColor];
+        _newBadge.backgroundColor = [UIColor colorNamed:@"isaCloudPink"];
+        _newBadge.textAlignment = NSTextAlignmentCenter;
+        _newBadge.layer.cornerRadius = 8;
+        _newBadge.clipsToBounds = YES;
+        [self addSubview:_newBadge];
+
+        //the date of the newest release, right aligned like the time of a chat row
+        _date = [UILabel new];
+        _date.font = [UIFont systemFontOfSize:13 weight:UIFontWeightLight];
+        _date.textColor = [UIColor colorWithDynamicProvider:^UIColor*(UITraitCollection* traits) {
+            return [UIColor colorWithWhite:traits.userInterfaceStyle == UIUserInterfaceStyleDark ? 0.6 : 0.33 alpha:1.0];
+        }];
+        _date.textAlignment = NSTextAlignmentRight;
+        [self addSubview:_date];
+
+        _preview = [UILabel new];
+        _preview.font = [UIFont systemFontOfSize:16];
+        //the same light gray as the last message preview of a chat row
+        _preview.textColor = [UIColor lightGrayColor];
+        _preview.lineBreakMode = NSLineBreakByTruncatingTail;
+        [self addSubview:_preview];
+
+        _archive = [UIButton buttonWithType:UIButtonTypeCustom];
+        [_archive setImage:[UIImage systemImageNamed:@"archivebox" withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:18 weight:UIImageSymbolWeightRegular]] forState:UIControlStateNormal];
+        _archive.tintColor = [UIColor colorNamed:@"isaCloudPink"];
+        _archive.accessibilityLabel = NSLocalizedString(@"Archive news", @"");
+        [_archive addTarget:self action:@selector(archiveTapped) forControlEvents:UIControlEventTouchUpInside];
+        [self addSubview:_archive];
+
+        _separator = [UIView new];
+        _separator.backgroundColor = [UIColor separatorColor];
+        [self addSubview:_separator];
+
+        //a tap on the row (not on the archive button) opens the news; the highlight is brief, as on a chat row
+        UITapGestureRecognizer* tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(rowTapped)];
+        tap.delegate = self;
+        [self addGestureRecognizer:tap];
+    }
+    return self;
+}
+
+//isaCloud: the badge only while there are unread news, the date only when there is one
+-(void) updateWithUnread:(BOOL) unread preview:(NSString*) preview date:(NSString* _Nullable) date
+{
+    _newBadge.hidden = !unread;
+    _preview.text = preview;
+    _date.text = date;
+    _date.hidden = date == nil;
+    [self setNeedsLayout];
+}
+
+-(void) layoutSubviews
+{
+    [super layoutSubviews];
+    CGFloat width = self.bounds.size.width;
+    CGFloat height = self.bounds.size.height;
+    //where the name of a chat row starts (the avatar is 48 pt at x 8)
+    CGFloat textX = 71;
+    CGFloat rightMargin = 16;
+    //the two text lines (title, preview) are centered in the row
+    CGFloat titleTop = (height - 41) / 2;
+    CGFloat previewTop = titleTop + 22;
+
+    _icon.frame = CGRectMake(8, (height - 48) / 2, 48, 48);
+    _separator.frame = CGRectMake(textX, height - 1.0 / self.traitCollection.displayScale, width - textX, 1.0 / self.traitCollection.displayScale);
+
+    CGFloat dateLeft = width - rightMargin;
+    if(!_date.hidden)
+    {
+        CGSize dateSize = [_date sizeThatFits:CGSizeMake(width, 20)];
+        dateLeft = width - rightMargin - dateSize.width;
+        _date.frame = CGRectMake(dateLeft, titleTop + 2, dateSize.width, 16);
+    }
+
+    //the title keeps clear of the date and the badge
+    CGFloat badgeWidth = 0;
+    if(!_newBadge.hidden)
+        badgeWidth = [_newBadge sizeThatFits:CGSizeMake(width, 16)].width + 10 + 6;
+    CGSize titleSize = [_title sizeThatFits:CGSizeMake(width, 20)];
+    CGFloat titleWidth = MIN(titleSize.width, MAX(0, dateLeft - 8 - textX - badgeWidth));
+    _title.frame = CGRectMake(textX, titleTop, titleWidth, 20);
+    if(!_newBadge.hidden)
+    {
+        CGFloat badgeW = [_newBadge sizeThatFits:CGSizeMake(width, 16)].width + 10;
+        _newBadge.frame = CGRectMake(textX + titleWidth + 6, titleTop + 2, badgeW, 16);
+    }
+
+    //the archive button sits on the preview line, at the right
+    _archive.frame = CGRectMake(width - 8 - 32, previewTop + 9.5 - 16, 32, 32);
+    _preview.frame = CGRectMake(textX, previewTop, MAX(0, _archive.frame.origin.x - 8 - textX), 19);
+}
+
+//the row highlights for a moment when it is tapped
+-(void) rowTapped
+{
+    self.backgroundColor = [UIColor systemGray5Color];
+    __weak typeof(self) weakSelf = self;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.25 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        weakSelf.backgroundColor = [UIColor clearColor];
+    });
+    if(self.onOpen != nil)
+        self.onOpen();
+}
+
+-(void) archiveTapped
+{
+    if(self.onArchive != nil)
+        self.onArchive();
+}
+
+//the archive button takes its own taps: the row does not open the news for them
+-(BOOL) gestureRecognizer:(UIGestureRecognizer*) gestureRecognizer shouldReceiveTouch:(UITouch*) touch
+{
+    return !(_archive != nil && [touch.view isDescendantOfView:_archive]);
+}
+
+@end
+
 @interface ActiveChatsViewController() <UISearchResultsUpdating, UISearchControllerDelegate> {
     int _startedOrientation;
     double _portraitTop;
@@ -237,6 +398,7 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
     BOOL _isaCloudAccountAvatarPending;     //isaCloud: C20, the avatar update was skipped while the app was frozen, done again on the unfreeze
     NSMutableArray* _blockQueue;
     ChatListFilterBar* _chatListFilterBar;      //isaCloud: chips under the search bar
+    ChatListNewsView* _chatListNewsView;        //isaCloud: "isaCloud news" on top of the list (the table header), made when first needed
     dispatch_semaphore_t _blockQueueSemaphore;
 }
 @property (atomic, strong) NSMutableArray* unpinnedContacts;
@@ -484,6 +646,8 @@ static NSMutableSet<NSNumber*>* _hiddenChatListAccountIDs;      //isaCloud: only
     }
     //the chat list names the account under each chat while there is more than one
     _accountJids = accountJids.count > 1 ? [accountJids copy] : nil;
+    //isaCloud: the news item is as high as a chat row, and a chat row is 86 pt with the account jids
+    [self isaCloudUpdateNewsHeader];
     //setting the image again makes UIKit rebuild the bar button items: only when something changed
     [signature appendFormat:@"%d", (int)self.traitCollection.userInterfaceStyle];
     if([signature isEqualToString:_accountAvatarSignature] && self.settingsButton.image != nil)
@@ -666,6 +830,8 @@ static NSMutableSet<NSNumber*>* _hiddenChatListAccountIDs;      //isaCloud: only
     [nc addObserver:self selector:@selector(isaCloudUpdateAccountAvatarAfterUnfreeze) name:kIsaCloudFreezeEndedWithoutSuspension object:nil];
     //isaCloud: a pending group or channel invite came, was accepted or declined: the badge of the contacts button follows it
     [nc addObserver:self selector:@selector(isaCloudPendingInvitesUpdated) name:kMonalIsaCloudPendingInvitesUpdated object:nil];
+    //isaCloud: the news were read, archived or unarchived (the item follows it)
+    [nc addObserver:self selector:@selector(isaCloudUpdateNewsHeader) name:[IsaCloudChangelog changedNotification] object:nil];
 
     [_chatListTable registerNib:[UINib nibWithNibName:@"MLContactCell" bundle:[NSBundle mainBundle]] forCellReuseIdentifier:@"ContactCell"];
     
@@ -697,6 +863,8 @@ static NSMutableSet<NSNumber*>* _hiddenChatListAccountIDs;      //isaCloud: only
     //has to be done here to not always prepend intro screens onto our view queue
     //once a fullscreen view is dismissed (or the app is switched to foreground)
     [self segueToIntroScreensIfNeeded];
+
+    [self isaCloudUpdateNewsHeader];
 }
 
 -(void) dealloc
@@ -711,6 +879,79 @@ static NSMutableSet<NSNumber*>* _hiddenChatListAccountIDs;      //isaCloud: only
         [self imageForEmptyDataSet:nil];
         [self.chatListTable setNeedsDisplay];
     });
+}
+
+#pragma mark - isaCloud: novidades na lista
+
+//isaCloud: the "isaCloud news" item is the table header of the chats list. It shows while the news are not archived, no filter is on
+//(the list is incomplete then) and the search is not on. A table header does not size itself: the frame is set here, with the width
+//of the table and the height of a chat row (72 pt, or 86 pt while the account jids are shown, see heightForRowAtIndexPath).
+//Called from viewDidLoad, viewWillAppear, viewDidLayoutSubviews (width), updateAccountAvatar (account jids), chatListFilterChanged,
+//refreshDisplay (hidden accounts come with kMonalRefresh), the search delegate methods and the changed notification of the news.
+-(void) isaCloudUpdateNewsHeader
+{
+    if(![NSThread isMainThread])
+    {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self isaCloudUpdateNewsHeader];
+        });
+        return;
+    }
+    BOOL searching = self.navigationItem.searchController.isActive;
+    BOOL show = [IsaCloudChangelog isVisible] && ![self chatListFiltersActive] && !searching;
+    UIView* current = self.chatListTable.tableHeaderView;
+    if(!show)
+    {
+        if(current != nil)
+        {
+            self.chatListTable.tableHeaderView = nil;
+            //the empty state is back when the list is empty
+            [self.chatListTable reloadEmptyDataSet];
+        }
+        return;
+    }
+    if(_chatListNewsView == nil)
+    {
+        _chatListNewsView = [[ChatListNewsView alloc] initWithFrame:CGRectZero];
+        __weak typeof(self) weakSelf = self;
+        _chatListNewsView.onOpen = ^{
+            [weakSelf isaCloudOpenNews];
+        };
+        _chatListNewsView.onArchive = ^{
+            [weakSelf isaCloudAskArchiveNews];
+        };
+    }
+    [_chatListNewsView updateWithUnread:[IsaCloudChangelog isUnread] preview:[IsaCloudChangelog previewText] date:[IsaCloudChangelog latestDate]];
+
+    CGFloat width = self.chatListTable.bounds.size.width;
+    CGFloat height = _accountJids != nil ? 86.0f : 72.0f;
+    BOOL changed = current != _chatListNewsView || _chatListNewsView.frame.size.width != width || _chatListNewsView.frame.size.height != height;
+    if(!changed)
+        return;
+    //the same view again is not laid out by UIKit: it is removed first when only its size changed
+    if(current == _chatListNewsView)
+        self.chatListTable.tableHeaderView = nil;
+    _chatListNewsView.frame = CGRectMake(0, 0, width, height);
+    self.chatListTable.tableHeaderView = _chatListNewsView;
+    [self.chatListTable reloadEmptyDataSet];
+}
+
+//isaCloud: the row opens the news screen (it marks them as read there)
+-(void) isaCloudOpenNews
+{
+    UIViewController* newsViewController = [[SwiftuiInterface new] makeViewWithName:@"IsaCloudChangelog"];
+    [self showDetailViewController:newsViewController sender:self];
+}
+
+//isaCloud: the archive button asks first; the news come back with the next update
+-(void) isaCloudAskArchiveNews
+{
+    UIAlertController* alert = [UIAlertController alertControllerWithTitle:NSLocalizedString(@"Archive news?", @"") message:NSLocalizedString(@"You can reopen them in Settings → About → isaCloud news.", @"") preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"Archive", @"") style:UIAlertActionStyleDefault handler:^(UIAlertAction* action __unused) {
+        [IsaCloudChangelog archive];
+    }]];
+    [alert addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"Cancel", @"") style:UIAlertActionStyleCancel handler:^(UIAlertAction* action __unused) {}]];
+    [self presentViewController:alert animated:YES completion:nil];
 }
 
 #pragma mark - isaCloud: filtros da lista
@@ -801,11 +1042,15 @@ static NSMutableSet<NSNumber*>* _hiddenChatListAccountIDs;      //isaCloud: only
     self.pinnedContacts = [NSMutableArray new];
     self.unpinnedContacts = [NSMutableArray new];
     [self.chatListTable reloadData];
+    //isaCloud: a filter on hides the news item, a filter off shows it again
+    [self isaCloudUpdateNewsHeader];
     [self refreshDisplay];
 }
 
 -(void) refreshDisplay
 {
+    //isaCloud: the news item follows the hidden accounts and the filters (refresh comes with both)
+    [self isaCloudUpdateNewsHeader];
     void (^resizeSections)(UITableView*, size_t, int) = ^void(UITableView* table, size_t section, int diff){
         if(diff > 0)
         {
@@ -1092,6 +1337,15 @@ static NSMutableSet<NSNumber*>* _hiddenChatListAccountIDs;      //isaCloud: only
     [super viewWillAppear:animated];
     
     [self presentSplitPlaceholder];
+    //isaCloud: the news can be archived or read in another screen since the last time
+    [self isaCloudUpdateNewsHeader];
+}
+
+//isaCloud: the table header keeps the width of the list (rotation, split view): set again when it changed
+-(void) viewDidLayoutSubviews
+{
+    [super viewDidLayoutSubviews];
+    [self isaCloudUpdateNewsHeader];
 }
 
 -(void) viewWillDisappear:(BOOL) animated
@@ -1483,8 +1737,16 @@ static NSMutableSet<NSNumber*>* _hiddenChatListAccountIDs;      //isaCloud: only
 //isaCloud: the search is gone: now a chat chosen in it can be opened
 -(void) didDismissSearchController:(UISearchController*) searchController
 {
+    //isaCloud: the news item comes back with the list
+    [self isaCloudUpdateNewsHeader];
     if(self.openAfterSearchDismissed != nil)
         self.openAfterSearchDismissed();
+}
+
+//isaCloud: the search is on: the news item goes away while the results are shown
+-(void) didPresentSearchController:(UISearchController*) searchController
+{
+    [self isaCloudUpdateNewsHeader];
 }
 
 -(void) updateSearchResultsForSearchController:(UISearchController*) searchController
@@ -1925,6 +2187,9 @@ static NSMutableSet<NSNumber*>* _hiddenChatListAccountIDs;      //isaCloud: only
 
 -(BOOL) emptyDataSetShouldDisplay:(UIScrollView*) scrollView
 {
+    //isaCloud: with the news item on top, the item is the first thing of the list: the empty state would cover it
+    if(_chatListNewsView != nil && self.chatListTable.tableHeaderView == _chatListNewsView)
+        return NO;
     BOOL toreturn = (self.unpinnedContacts.count == 0 && self.pinnedContacts.count == 0) ? YES : NO;
     if(toreturn)
     {

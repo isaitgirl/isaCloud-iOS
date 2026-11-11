@@ -35,6 +35,13 @@ fi
 BUILD_NUMBER=$(echo "$VERSIONS" | sed 's/.*= //')
 echo "Archiving build $BUILD_NUMBER ($(echo "$VERSIONS" | awk '{print $1}') places)"
 
+# 1b. "Novidades do isaCloud" (the news shown in the chats list) come from CHANGELOG-USERS.md: the JSON goes into the app bundle
+#     (Monal/isaCloud-changelog.json, committed). A failure here stops the archive.
+if ! "$REPO_ROOT/scripts/isacloud-generate-changelog-json.py"; then
+    echo "error: could not generate Monal/isaCloud-changelog.json from CHANGELOG-USERS.md" >&2
+    exit 1
+fi
+
 GIPHY_API_KEY=""
 if [[ -f "$GIPHY_KEY_FILE" ]]; then
     GIPHY_API_KEY="$(tr -d '[:space:]' < "$GIPHY_KEY_FILE")"
