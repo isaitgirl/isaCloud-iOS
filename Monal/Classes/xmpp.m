@@ -5327,7 +5327,20 @@ static NSRegularExpression* fastTokenRemovalRegex;
 
 -(void) leaveMuc:(NSString* _Nonnull) room
 {
+    //isaCloud: a room kept in the list (not in favorites, not joined) has a bookmark with autojoin=false, which updateBookmarks never retracts:
+    //nothing to leave, only remove it from the list and retract its bookmark explicitly
+    if(![self.mucProcessor checkIfStillBookmarked:room])
+    {
+        [self.mucProcessor removeKeptMuc:room];
+        return;
+    }
     [self.mucProcessor leave:room withBookmarksUpdate:YES keepBuddylistEntry:NO];
+}
+
+//isaCloud: leave the room but keep it in the buddylist and the bookmarks (autojoin=false)
+-(void) leaveMucKeepingBookmark:(NSString* _Nonnull) room
+{
+    [self.mucProcessor leaveKeepingBookmark:room];
 }
 
 -(AnyPromise*) checkJidType:(NSString*) jid

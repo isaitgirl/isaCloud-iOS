@@ -112,6 +112,8 @@ FOUNDATION_EXPORT MLContactSubscriptionAsk const kAskSubscribe NS_SWIFT_NAME(sub
 -(void) togglePinnedChat:(BOOL) pinned;
 -(BOOL) toggleBlocked:(BOOL) block;
 -(void) removeFromRoster;
+//isaCloud: leaves the group or channel but keeps it in the buddylist and in the bookmarks (autojoin=false)
+-(void) leaveMucKeepingInList;
 -(void) addToRoster;
 -(void) clearHistory;
 -(void) markReachedMamArchiveTop;

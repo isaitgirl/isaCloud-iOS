@@ -1079,6 +1079,30 @@ $$
     }
 }
 
+//isaCloud: this handler will simply retry the leaveMucKeepingInList: call
+$$class_handler(handleLeaveMucKeepingInList, $$ID(MLContact*, contact))
+    [[MLXMPPManager sharedInstance] leaveMucKeepingInList:contact];
+$$
+
+//isaCloud: leaves a group or channel but keeps its buddylist entry and bookmark (autojoin=false), unlike removeContact:
+-(void) leaveMucKeepingInList:(MLContact*) contact
+{
+    xmpp* account = contact.account;
+    if(account && contact.isMuc)
+    {
+        //queue leave for execution once bound (e.g. on catchup done)
+        if(account.accountState < kStateInitStarted)
+        {
+            [account addReconnectionHandler:$newHandler(self, handleLeaveMucKeepingInList, $ID(contact))];
+            return;
+        }
+        
+        //the buddylist entry is kept: leaveKeepingBookmark: notifies the UI
+        [account leaveMucKeepingBookmark:contact.contactJid];
+        [contact removeShareInteractions];
+    }
+}
+
 -(void) addContact:(MLContact*) contact
 {
     [self addContact:contact withPreauthToken:nil];

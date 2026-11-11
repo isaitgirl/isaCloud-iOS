@@ -275,6 +275,12 @@ $$class_handler(bookmarks2Handler, $$ID(xmpp*, account), $$ID(NSString*, jid), $
                 //try to join muc, but don't perform a bookmarks update (this muc came in through a bookmark already)
                 [account.mucProcessor sendDiscoQueryFor:room withJoin:YES andBookmarksUpdate:NO andMucName:name];
             }
+            //isaCloud: a room kept in the list without participating (autojoin=false, e.g. left with "keep in list" on another device): list it without joining
+            else if(![ownFavorites containsObject:room] && ![autojoin boolValue] && ![[DataLayer sharedInstance] isBuddyMuc:room forAccount:account.accountID])
+            {
+                DDLogInfo(@"Adding muc '%@' on account %@ to the list without joining it, it is kept with autojoin=false in bookmarks...", room, account.accountID);
+                [account.mucProcessor sendDiscoQueryFor:room withJoin:NO andBookmarksUpdate:NO andMucName:name];
+            }
             //check if it is a known entry...
             else if([ownFavorites containsObject:room])
             {
@@ -554,6 +560,12 @@ $$class_handler(handleBookmarks2FetchResult, $$ID(xmpp*, account), $$BOOL(succes
             autojoin = @NO;     //default value specified in xep
         if(![autojoin boolValue])
             continue;           //don't remove mucs that already have autojoin=false
+        //isaCloud: a room left with "keep in list" is being republished with autojoin=false: don't retract it
+        if([account.mucProcessor isKeepBookmarkPendingForMuc:room])
+        {
+            DDLogInfo(@"Not removing muc '%@' from bookmarks, it is being kept in the list with autojoin=false", room);
+            continue;
+        }
         DDLogInfo(@"Removing muc '%@' on account %@ from bookmarks...", room, account.accountID);
         [account.pubsub retractItemWithId:room onNode:@"urn:xmpp:bookmarks:1" andHandler:$newHandler(self, bookmarks2Retracted, $ID(room))];
     }
@@ -608,6 +620,66 @@ $$class_handler(nickBookmarkPublished, $$ID(xmpp*, account), $$ID(NSString*, roo
         return;
     }
     DDLogDebug(@"Published the new nick of muc '%@' in its bookmark", room);
+$$
+
+//isaCloud: result of fetching the ONE bookmark item of a room that is left but kept in the list
+$$class_handler(keepBookmarkFetched, $$ID(xmpp*, account), $$ID(NSString*, room), $$BOOL(success), $_ID(XMPPIQ*, errorIq), $_ID(NSString*, errorReason), $_ID((NSDictionary<NSString*, MLXMLNode*>*), data))
+    NSString* bookmarkedRoom = [room lowercaseString];
+    MLXMLNode* item = nil;
+    if(success)
+    {
+        for(NSString* itemId in data)
+            if([[itemId lowercaseString] isEqualToString:bookmarkedRoom])
+                item = data[itemId];
+    }
+    else if(![errorIq check:@"error/{urn:xmpp:stanzas}item-not-found"] && ![errorIq check:@"error/{urn:ietf:params:xml:ns:xmpp-stanzas}item-not-found"])
+    {
+        DDLogWarn(@"Could not fetch the bookmark of muc '%@' to keep it in the list!", room);
+        [account.mucProcessor finishKeepBookmarkForMuc:room];
+        [self handleErrorWithDescription:[NSString stringWithFormat:NSLocalizedString(@"Failed to save bookmark for Group/Channel: %@", @""), room] andAccount:account andErrorIq:errorIq andErrorReason:errorReason andIsSevere:NO];
+        return;
+    }
+    
+    if(item == nil || ![item check:@"{urn:xmpp:bookmarks:1}conference"])
+    {
+        //no bookmark for this room yet: create it with autojoin=false
+        DDLogInfo(@"No bookmark item for muc '%@' yet, creating it with autojoin=false...", room);
+        MLContact* contact = [MLContact createContactFromJid:room andAccountID:account.accountID];
+        MLXMLNode* conference = [[MLXMLNode alloc] initWithElement:@"conference" andNamespace:@"urn:xmpp:bookmarks:1" withAttributes:@{
+            @"autojoin": @"false",
+        } andChildren:@[] andData:nil];
+        if(contact.nickName != nil && ![contact.nickName isEqualToString:@""])
+            conference.attributes[@"name"] = contact.nickName;
+        item = [[MLXMLNode alloc] initWithElement:@"item" withAttributes:@{@"id": bookmarkedRoom} andChildren:@[conference] andData:nil];
+        [account.mucProcessor setOwnNickOfMuc:room inBookmarkItem:item];
+    }
+    else
+    {
+        //keep the bookmark, only stop autojoining it
+        ((MLXMLNode*)[item findFirst:@"{urn:xmpp:bookmarks:1}conference"]).attributes[@"autojoin"] = @"false";
+    }
+    
+    NSString* max_items = @"255";       //fallback for servers not supporting "max"
+    if(account.connectionProperties.supportsPubSubMax)
+        max_items = @"max";
+    DDLogInfo(@"Publishing the bookmark of muc '%@' with autojoin=false...", room);
+    [account.pubsub publishItem:item onNode:@"urn:xmpp:bookmarks:1" withConfigOptions:@{
+        @"pubsub#persist_items": @"true",
+        @"pubsub#access_model": @"whitelist",
+        @"pubsub#max_items": max_items,
+    } andHandler:$newHandler(self, keepBookmarkPublished, $ID(room))];
+$$
+
+//isaCloud: result of publishing the bookmark of a kept room with autojoin=false
+$$class_handler(keepBookmarkPublished, $$ID(xmpp*, account), $$ID(NSString*, room), $$BOOL(success), $_ID(XMPPIQ*, errorIq), $_ID(NSString*, errorReason))
+    [account.mucProcessor finishKeepBookmarkForMuc:room];
+    if(!success)
+    {
+        DDLogWarn(@"Could not publish the bookmark of muc '%@' with autojoin=false!", room);
+        [self handleErrorWithDescription:[NSString stringWithFormat:NSLocalizedString(@"Failed to save bookmark for Group/Channel: %@", @""), room] andAccount:account andErrorIq:errorIq andErrorReason:errorReason andIsSevere:NO];
+        return;
+    }
+    DDLogDebug(@"Published the bookmark of muc '%@' with autojoin=false, kept in the list", room);
 $$
 
 $$class_handler(bookmarks2Published, $$ID(xmpp*, account), $$ID(NSString*, room), $$BOOL(success), $_ID(XMPPIQ*, errorIq), $_ID(NSString*, errorReason))

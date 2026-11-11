@@ -61,6 +61,11 @@ NS_ASSUME_NONNULL_BEGIN
 -(void) removeContact:(MLContact*) contact;
 
 /**
+ Leave a group or channel but keep it in the buddylist and in the bookmarks (autojoin=false)
+ */
+-(void) leaveMucKeepingInList:(MLContact*) contact;
+
+/**
  Add a contact from an account
  */
 -(void) addContact:(MLContact*) contact;

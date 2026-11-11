@@ -41,6 +41,7 @@
     NSMutableSet* _firstJoin;
     NSMutableDictionary* _changingName;
     NSMutableSet* _nickBookmarkPending;     //isaCloud: rooms whose new nick is not in the remote bookmark yet (memory only)
+    NSMutableSet* _keepBookmarkPending;     //isaCloud: rooms left with "keep in list" whose bookmark is not republished with autojoin=false yet (memory only)
     NSMutableDictionary* _changingNick;     //isaCloud: room --> @{nick, oldNick, token} of a nick change waiting for the answer of the service (memory only, never saved)
     NSMutableDictionary* _remoteAvatarQueryJids;    //isaCloud: avatar owner --> jid to ask the vcard of (room/nick for channel participants), memory only
     NSMutableSet* _roomAvatarAsked;                 //isaCloud: rooms whose avatar we asked for without any hash, memory only (once per run)
@@ -103,6 +104,7 @@ static NSString* const kIsaCloudGuideRoom = @"guiaxmpp@conference.isacloud.cc";
     _changingName = [NSMutableDictionary new];
     _changingNick = [NSMutableDictionary new];
     _nickBookmarkPending = [NSMutableSet new];
+    _keepBookmarkPending = [NSMutableSet new];
     _uiHandler = [NSMutableDictionary new];
     _lastPing = [NSDate date];
     _noUpdateBookmarks = [NSMutableSet new];
@@ -192,6 +194,7 @@ static NSString* const kIsaCloudGuideRoom = @"guiaxmpp@conference.isacloud.cc";
             _changingName = [NSMutableDictionary new];
             _changingNick = [NSMutableDictionary new];
             _nickBookmarkPending = [NSMutableSet new];
+            _keepBookmarkPending = [NSMutableSet new];
             
             //make sure all idle timers get invalidated properly
             NSDictionary* joiningCopy = [_joining copy];
@@ -1988,6 +1991,46 @@ $$
     @synchronized(_stateLockObject) {
         [_nickBookmarkPending removeObject:[room lowercaseString]];
     }
+}
+
+//isaCloud: leave a room, keep its buddylist entry and republish its bookmark with autojoin=false
+-(void) leaveKeepingBookmark:(NSString*) room
+{
+    room = [room lowercaseString];
+    @synchronized(_stateLockObject) {
+        [_keepBookmarkPending addObject:room];
+    }
+    DDLogInfo(@"Leaving muc '%@' on account %@ but keeping it in the list...", room, _account);
+    //isaCloud: leave: does nothing without a nick, but the room must still leave our favorites
+    if([[DataLayer sharedInstance] ownNickNameforMuc:room forAccount:_account.accountID] == nil)
+        [self deleteMuc:room withBookmarksUpdate:NO keepBuddylistEntry:YES];
+    else
+        [self leave:room withBookmarksUpdate:NO keepBuddylistEntry:YES];
+    DDLogInfo(@"Fetching the bookmark item of muc %@ to keep it in the list...", room);
+    [_account.pubsub fetchNode:@"urn:xmpp:bookmarks:1" from:_account.connectionProperties.identity.jid withItemsList:@[room] andHandler:$newHandler(MLPubSubProcessor, keepBookmarkFetched, $ID(room))];
+}
+
+-(BOOL) isKeepBookmarkPendingForMuc:(NSString*) room
+{
+    @synchronized(_stateLockObject) {
+        return [_keepBookmarkPending containsObject:[room lowercaseString]];
+    }
+}
+
+-(void) finishKeepBookmarkForMuc:(NSString*) room
+{
+    @synchronized(_stateLockObject) {
+        [_keepBookmarkPending removeObject:[room lowercaseString]];
+    }
+}
+
+//isaCloud: removes a room kept in the list (not joined) from the buddylist and retracts its bookmark item from pep
+-(void) removeKeptMuc:(NSString*) room
+{
+    room = [room lowercaseString];
+    [self deleteMuc:room withBookmarksUpdate:NO keepBuddylistEntry:NO];
+    DDLogInfo(@"Retracting bookmark of muc %@ on account %@...", room, _account);
+    [_account.pubsub retractItemWithId:room onNode:@"urn:xmpp:bookmarks:1" andHandler:$newHandler(MLPubSubProcessor, bookmarks2Retracted, $ID(room))];
 }
 
 -(void) setOwnNickOfMuc:(NSString*) room inBookmarkItem:(MLXMLNode*) item

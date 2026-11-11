@@ -15,7 +15,7 @@ struct ContactEntry<AdditionalContent: View>: View {
     @StateObject var contact: ObservableKVOWrapper<MLContact>
     //isaCloud: the jid of the account this contact belongs to, shown under the contact's own jid (nil: not shown)
     private var accountJid: String? = nil
-    //isaCloud: a small "Archived" label under the jid, only shown in the contacts lists (see showingArchivedLabel)
+    //isaCloud: a label on the right of the row (participation state of groups and channels, "Archived"), only shown in the contacts lists (see showingArchivedLabel)
     private var showsArchivedLabel = false
     
     init(contact:MLContact, selfnotesPrefix: Bool = true, fallback: String? = nil) where AdditionalContent == EmptyView {
@@ -69,9 +69,12 @@ struct ContactEntry<AdditionalContent: View>: View {
                     additionalContent()
                     //isaCloud: the address of a private group is a random string, meaningless to people: it is only shown in the group's details
                     if !(contact.isMuc && contact.mucType == kMucTypeGroup) {
+                        //isaCloud: in the contacts lists the address stays on one line, cut in the middle, next to the state labels
                         Text(contact.contactJid as String)
                             .foregroundColor(Color(UIColor.secondaryLabel))
                             .font(.footnote)
+                            .lineLimit(showsArchivedLabel ? 1 : nil)
+                            .truncationMode(.middle)
                     }
                     if let accountJid = accountJid {
                         HStack(spacing: 3) {
@@ -81,16 +84,50 @@ struct ContactEntry<AdditionalContent: View>: View {
                         .foregroundColor(Color(UIColor.secondaryLabel))
                         .font(.caption)
                     }
-                    if showsArchivedLabel && isArchivedEntry {
-                        //isaCloud: icon (box with an arrow down) and the accent color make the label stand out; below the account, aligned with it
-                        //(an HStack like the account row: a Label inside a List gets a wide icon column)
-                        //(baseline alignment: this symbol's arrow sticks out above the tray, so centering pushed the tray down and the text looked too high)
-                        HStack(alignment: .firstTextBaseline, spacing: 3) {
-                            Image(systemName: "tray.and.arrow.down.fill")
-                            Text("Archived")
+                }
+                //isaCloud: the state labels sit on the right of the row, in the contacts lists only
+                if showsArchivedLabel && hasListLabel {
+                    Spacer(minLength: 8)
+                    VStack(alignment: .trailing, spacing: 2) {
+                        if isMucEntry && mucTypeOfEntry == kMucTypeChannel {
+                            if isParticipating {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "checkmark")
+                                    Text("Participant")
+                                }
+                                .font(.caption.weight(.semibold))
+                                .lineLimit(1)
+                                .foregroundColor(.accentColor)
+                            } else {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "person.badge.plus")
+                                    Text("Join")
+                                }
+                                .font(.caption.weight(.semibold))
+                                .lineLimit(1)
+                                .foregroundColor(Color(UIColor.secondaryLabel))
+                            }
                         }
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(.accentColor)
+                        if isMucEntry && mucTypeOfEntry == kMucTypeGroup && !isParticipating {
+                            HStack(spacing: 3) {
+                                Image(systemName: "xmark.circle.fill")
+                                Text("Not participating")
+                            }
+                            .font(.caption.weight(.semibold))
+                            .lineLimit(1)
+                            .foregroundColor(Color(UIColor.secondaryLabel))
+                        }
+                        if isArchivedEntry {
+                            //isaCloud: icon (box with an arrow down) makes the label stand out; grey like the other state labels
+                            //(baseline alignment: this symbol's arrow sticks out above the tray, so centering pushed the tray down and the text looked too high)
+                            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                                Image(systemName: "tray.and.arrow.down.fill")
+                                Text("Archived")
+                            }
+                            .font(.caption.weight(.semibold))
+                            .lineLimit(1)
+                            .foregroundColor(Color(UIColor.secondaryLabel))
+                        }
                     }
                 }
             }
@@ -104,7 +141,7 @@ struct ContactEntry<AdditionalContent: View>: View {
         return copy
     }
     
-    //isaCloud: the contacts lists mark archived groups and channels (and contacts) with "Archived"
+    //isaCloud: the contacts lists show the participation state of groups and channels, and mark archived groups, channels and contacts with "Archived"
     func showingArchivedLabel() -> Self {
         var copy = self
         copy.showsArchivedLabel = true
@@ -115,6 +152,26 @@ struct ContactEntry<AdditionalContent: View>: View {
     private var isArchivedEntry: Bool {
         let archived: Bool = contact.isArchived
         return archived
+    }
+
+    private var isMucEntry: Bool {
+        let muc: Bool = contact.isMuc
+        return muc
+    }
+
+    //isaCloud: true when we participate in the group or channel (it is in our favorites)
+    private var isParticipating: Bool {
+        let participating: Bool = contact.isInRoster
+        return participating
+    }
+
+    private var mucTypeOfEntry: String? {
+        contact.obj.mucType
+    }
+
+    //isaCloud: whether the row has any state label (channels always do: participant or join)
+    private var hasListLabel: Bool {
+        (isMucEntry && mucTypeOfEntry == kMucTypeChannel) || (isMucEntry && mucTypeOfEntry == kMucTypeGroup && !isParticipating) || isArchivedEntry
     }
 }
 
