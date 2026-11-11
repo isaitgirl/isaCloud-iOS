@@ -210,8 +210,9 @@ struct ContactsView: View {
         return contactList.filter { matchesFilter($0) && (searchText.isEmpty || searchMatchesContact(contact: $0, search: searchText)) }
     }
 
-    private static func sortingCriteria(_ contact: MLContact) -> (String, String) {
-        return (contact.contactDisplayName.lowercased(), contact.contactJid.lowercased())
+    //isaCloud: the account breaks the tie of the same contact or room in several accounts (the contacts come from a Set, without order)
+    private static func sortingCriteria(_ contact: MLContact) -> (String, String, Int) {
+        return (contact.contactDisplayName.lowercased(), contact.contactJid.lowercased(), contact.accountID.intValue)
     }
 
     private func searchMatchesContact(contact: MLContact, search: String) -> Bool {
