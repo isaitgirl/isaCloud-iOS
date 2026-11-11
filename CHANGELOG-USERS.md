@@ -2,6 +2,15 @@
 
 O que mudou em cada versão, em poucas palavras. A lista técnica completa está no [CHANGELOG.md](CHANGELOG.md).
 
+## Próximo build
+
+### Novidades
+- 📨 Convites para grupos e canais agora esperam a sua resposta em Contatos: você escolhe entrar, recusar ou bloquear.
+- 🙈 Nova opção em Privacidade para mostrar ou não convites de quem não está nos seus contatos.
+
+### Correções
+- 🛠️ Convidar alguém para um canal não fecha mais o app.
+
 ## Build 104 · 11/11/2026
 
 ### Novidades

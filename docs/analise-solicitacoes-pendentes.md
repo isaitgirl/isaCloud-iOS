@@ -1,6 +1,6 @@
 # Análise pré-implementação: convites de grupos e canais como solicitações pendentes
 
-Status: **analisado em 11/11/2026, nada implementado** (roadmap 168). Fontes: o código desta árvore (isaCloud/Monal) e o isaCloud Android (`~/projects/java/isaCloudMessenger`, branch `custom`), em especial `docs/decisoes-convites-pendentes.md`, `PendingInviteManager` e `PendingInviteStore`. Nada foi testado nos servidores.
+Status: **implementado em 11/11/2026 e testado no `.dev`** (roadmap 168, branch `feature/convites-pendentes`). Mudou depois da análise: "já está na sala" olha só os favoritos (`muc_favorites`), porque o `_joined` do Monal não é limpo ao sair; "Ingressar" abre a conversa só depois de a sala entrar na buddylist; a senha do convite fica guardada mas não é usada (o Monal não entra em sala com senha). Fontes: o código desta árvore (isaCloud/Monal) e o isaCloud Android (`~/projects/java/isaCloudMessenger`, branch `custom`), em especial `docs/decisoes-convites-pendentes.md`, `PendingInviteManager` e `PendingInviteStore`. Nada foi testado nos servidores.
 
 ## 1. O que o Android passou a fazer
 

@@ -1319,6 +1319,24 @@
             [db executeNonQuery:@"ALTER TABLE buddylist ADD COLUMN archived_pending INTEGER NOT NULL DEFAULT 0;"];
     }];
 
+    //isaCloud: group and channel invites are not joined right away anymore, they wait as pending requests (see MLMucProcessor, isaCloud part).
+    //One row per account and room, with no foreign key to Monal tables: the Monal ladder is not touched. room is kept in lowercase (bare JID).
+    //mediated tells a decline has to be sent to the room; room_name and is_channel are filled later by a disco#info (NULL until then).
+    //Harmless to run again: CREATE TABLE IF NOT EXISTS.
+    [self updateISACloudDB:db toVersion:8 withBlock:^{
+        [db executeNonQuery:@"CREATE TABLE IF NOT EXISTS isacloud_pending_invites ( \
+            account_id INTEGER NOT NULL, \
+            room TEXT NOT NULL COLLATE NOCASE, \
+            invited_by TEXT NOT NULL, \
+            password TEXT, \
+            received_at INTEGER NOT NULL, \
+            mediated INTEGER NOT NULL DEFAULT 0, \
+            room_name TEXT, \
+            is_channel INTEGER, \
+            PRIMARY KEY(account_id, room) \
+        );"];
+    }];
+
     //...and at every start it indexes what the hooks of the DataLayer did not see (messages written by an older build, for example)
     [MLMessageSearch catchUpIndexInDatabase:db];
 }

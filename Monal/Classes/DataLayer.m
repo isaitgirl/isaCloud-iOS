@@ -541,6 +541,7 @@ static NSDateFormatter* dbFormatter;
 
         // delete account and all entries with the same account_id (CASCADE DELETE)
         [MLMessageSearch removeFromIndexMessagesWhere:@"account_id=?" arguments:@[accountID] inDatabase:self.db];      //isaCloud: search index
+        [self.db executeNonQuery:@"DELETE FROM isacloud_pending_invites WHERE account_id=?;" andArguments:@[accountID]];     //isaCloud: pending invites of the account (no foreign key, so not by the cascade)
         BOOL accountDeleted = [self.db executeNonQuery:@"DELETE FROM account WHERE account_id=?;" andArguments:@[accountID]];
 
         // disable secure delete again
@@ -2662,6 +2663,88 @@ static NSNumber* isacloudNowMillis(void)
     [self.db voidWriteTransaction:^{
         [self.db executeNonQuery:@"UPDATE buddylist SET archived=0, archived_updated=?, archived_pending=1 WHERE account_id=? AND buddy_name=?;" andArguments:@[isacloudNowMillis(), accountID, buddy]];
         [self.db executeNonQuery:@"INSERT INTO activechats (buddy_name, account_id, lastMessageTime) VALUES(?, ?, current_timestamp) ON CONFLICT(buddy_name, account_id) DO NOTHING;" andArguments:@[buddy, accountID]];
+    }];
+}
+
+
+#pragma mark isaCloud: pending group and channel invites (table isacloud_pending_invites, migration 8 of +migrateISACloudDB:)
+
+//isaCloud: every pending invite of the enabled accounts, newest first. Each dictionary has the columns of the table as keys.
+-(NSArray<NSDictionary*>*) isaCloudPendingInvites
+{
+    return [self.db idReadTransaction:^{
+        NSString* query = @"SELECT isacloud_pending_invites.* FROM isacloud_pending_invites, account WHERE isacloud_pending_invites.account_id = account.account_id AND account.enabled ORDER BY isacloud_pending_invites.received_at DESC;";
+        return [self.db executeReader:query];
+    }];
+}
+
+//isaCloud: the pending invite of one room for one account (nil if there is none)
+-(NSDictionary* _Nullable) isaCloudPendingInviteForRoom:(NSString*) room andAccount:(NSNumber*) accountID
+{
+    if(!room || accountID == nil)
+        return nil;
+    return [self.db idReadTransaction:^{
+        NSArray* rows = [self.db executeReader:@"SELECT * FROM isacloud_pending_invites WHERE account_id=? AND room=?;" andArguments:@[accountID, room.lowercaseString]];
+        return (id)(rows.count > 0 ? rows.firstObject : nil);
+    }];
+}
+
+//isaCloud: how many pending invites one account has (its own count, enabled or not)
+-(NSUInteger) isaCloudPendingInviteCountForAccount:(NSNumber*) accountID
+{
+    if(accountID == nil)
+        return 0;
+    NSNumber* count = [self.db idReadTransaction:^{
+        return (id)[self.db executeScalar:@"SELECT COUNT(*) FROM isacloud_pending_invites WHERE account_id=?;" andArguments:@[accountID]];
+    }];
+    return count.unsignedIntegerValue;
+}
+
+//isaCloud: how many pending invites the enabled accounts have (the badge of the contacts button)
+-(NSUInteger) isaCloudPendingInviteCount
+{
+    NSNumber* count = [self.db idReadTransaction:^{
+        NSString* query = @"SELECT COUNT(*) FROM isacloud_pending_invites, account WHERE isacloud_pending_invites.account_id = account.account_id AND account.enabled;";
+        return (id)[self.db executeScalar:query];
+    }];
+    return count.unsignedIntegerValue;
+}
+
+//isaCloud: one pending invite per account and room. A new invite updates who invited, the password and mediated, and received_at never goes back in time.
+//room_name and is_channel are kept (they come from a disco#info, see isaCloudSetPendingInviteRoomName:forRoom:andAccount:)
+-(void) isaCloudSavePendingInviteForRoom:(NSString*) room account:(NSNumber*) accountID invitedBy:(NSString*) invitedBy password:(NSString* _Nullable) password receivedAt:(NSNumber*) receivedAtMillis mediated:(BOOL) mediated
+{
+    if(!room || accountID == nil || !invitedBy || !receivedAtMillis)
+        return;
+    [self.db voidWriteTransaction:^{
+        [self.db executeNonQuery:@"INSERT INTO isacloud_pending_invites (account_id, room, invited_by, password, received_at, mediated) VALUES(?, ?, ?, ?, ?, ?) \
+            ON CONFLICT(account_id, room) DO UPDATE SET invited_by=excluded.invited_by, password=excluded.password, mediated=excluded.mediated, \
+            received_at=MAX(isacloud_pending_invites.received_at, excluded.received_at);"
+            andArguments:@[accountID, room.lowercaseString, invitedBy, password ? (id)password : (id)[NSNull null], receivedAtMillis, [NSNumber numberWithBool:mediated]]];
+    }];
+}
+
+//isaCloud: removes the pending invite of one room; YES if there was one
+-(BOOL) isaCloudDeletePendingInviteForRoom:(NSString*) room andAccount:(NSNumber*) accountID
+{
+    if(!room || accountID == nil)
+        return NO;
+    return [self.db boolWriteTransaction:^{
+        NSNumber* count = (NSNumber*)[self.db executeScalar:@"SELECT COUNT(*) FROM isacloud_pending_invites WHERE account_id=? AND room=?;" andArguments:@[accountID, room.lowercaseString]];
+        if(count.intValue == 0)
+            return NO;
+        return [self.db executeNonQuery:@"DELETE FROM isacloud_pending_invites WHERE account_id=? AND room=?;" andArguments:@[accountID, room.lowercaseString]];
+    }];
+}
+
+//isaCloud: stores the name and the kind (isChannel: 1 channel, 0 group, nil unknown) of a pending room, once disco#info answered
+-(void) isaCloudSetPendingInviteRoomName:(NSString* _Nullable) name isChannel:(NSNumber* _Nullable) isChannel forRoom:(NSString*) room andAccount:(NSNumber*) accountID
+{
+    if(!room || accountID == nil)
+        return;
+    [self.db voidWriteTransaction:^{
+        [self.db executeNonQuery:@"UPDATE isacloud_pending_invites SET room_name=?, is_channel=? WHERE account_id=? AND room=?;"
+            andArguments:@[name ? (id)name : (id)[NSNull null], isChannel ? (id)isChannel : (id)[NSNull null], accountID, room.lowercaseString]];
     }];
 }
 

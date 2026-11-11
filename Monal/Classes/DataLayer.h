@@ -317,6 +317,20 @@ extern NSString* const kMessageTypeFiletransfer;
 -(void) archiveBuddy:(NSString*) buddy forAccount:(NSNumber*) accountID;
 -(void) unarchiveBuddy:(NSString*) buddy forAccount:(NSNumber*) accountID;
 
+#pragma mark isaCloud: pending group and channel invites
+//isaCloud: invites to groups and channels wait here until the user accepts or declines them (table isacloud_pending_invites, migration 8 of +migrateISACloudDB:).
+//Every room is stored in lowercase (bare jid). The methods that change the table post kMonalIsaCloudPendingInvitesUpdated (see MLMucProcessor).
+//all the pending invites of the enabled accounts, newest first; the dictionaries have the columns of the table as keys
+-(NSArray<NSDictionary*>*) isaCloudPendingInvites;
+-(NSDictionary* _Nullable) isaCloudPendingInviteForRoom:(NSString*) room andAccount:(NSNumber*) accountID;
+-(NSUInteger) isaCloudPendingInviteCountForAccount:(NSNumber*) accountID;
+//the pending invites of the enabled accounts (the badge of the contacts button)
+-(NSUInteger) isaCloudPendingInviteCount;
+-(void) isaCloudSavePendingInviteForRoom:(NSString*) room account:(NSNumber*) accountID invitedBy:(NSString*) invitedBy password:(NSString* _Nullable) password receivedAt:(NSNumber*) receivedAtMillis mediated:(BOOL) mediated;
+//YES if there was a pending invite for the room
+-(BOOL) isaCloudDeletePendingInviteForRoom:(NSString*) room andAccount:(NSNumber*) accountID;
+-(void) isaCloudSetPendingInviteRoomName:(NSString* _Nullable) name isChannel:(NSNumber* _Nullable) isChannel forRoom:(NSString*) room andAccount:(NSNumber*) accountID;
+
 
 
 #pragma mark count unread

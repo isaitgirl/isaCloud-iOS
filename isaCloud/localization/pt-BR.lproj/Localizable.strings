@@ -312,3 +312,10 @@
 "Participant" = "Participante";
 "Join" = "Ingressar";
 "Not participating" = "Não participando";
+
+/* isaCloud: convites de grupos e canais como solicitações pendentes (ContactsView.swift, MLXMPPManager.m, GeneralSettings.swift) */
+"Show group and channel invites from strangers" = "Mostrar convites de desconhecidos";
+"Invites from people who are not in your contacts appear in the pending requests. Off: they are discarded." = "Convites de grupos e canais de quem não está nos seus contatos aparecem nas solicitações pendentes. Desligado: são descartados.";
+"Group and channel invites (%lld)" = "Convites de grupos e canais (%lld)";
+"Invited by %@" = "Convite de %@";
+"Account is not connected" = "A conta não está conectada";

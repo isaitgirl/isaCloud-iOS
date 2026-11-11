@@ -184,6 +184,10 @@ static void isaCloudPingOrReconnect(xmpp* account, BOOL networkCameBack, BOOL le
     [self upgradeBoolUserSettingsIfUnset:@"allowNonRosterContacts" toDefault:YES];
     [self upgradeBoolUserSettingsIfUnset:@"allowCallsFromNonRosterContacts" toDefault:YES];
     
+    //isaCloud: group and channel invites from people who are not in the contacts are discarded unless this is on (off by default). The key is read by
+    //the settings screen and by MLMucProcessor, so it needs a value before any of them runs (defaultsDB without a value crashes, C18)
+    [self upgradeBoolUserSettingsIfUnset:@"isacloudShowInvitesFromStrangers" toDefault:NO];
+    
     //mac catalyst will not show a soft-keyboard when setting focus, ios will
     //--> only automatically set focus on macos and make this configurable
 #if TARGET_OS_MACCATALYST
