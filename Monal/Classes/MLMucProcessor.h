@@ -62,6 +62,12 @@ NS_ASSUME_NONNULL_BEGIN
 -(void) publishNickBookmarkForMuc:(NSString*) room;
 -(BOOL) isNickBookmarkPendingForMuc:(NSString*) room;
 -(void) finishNickBookmarkForMuc:(NSString*) room;
+//isaCloud: leave a room but keep it in the list: its bookmark is republished with autojoin=false (memory only, one room at a time)
+-(void) leaveKeepingBookmark:(NSString*) room;
+-(BOOL) isKeepBookmarkPendingForMuc:(NSString*) room;
+-(void) finishKeepBookmarkForMuc:(NSString*) room;
+//isaCloud: removes a room kept in the list (not joined) from the buddylist and retracts its bookmark item from pep
+-(void) removeKeptMuc:(NSString*) room;
 //sets <nick/> of a bookmark item to the nick we have in the database for this room
 -(void) setOwnNickOfMuc:(NSString*) room inBookmarkItem:(MLXMLNode*) item;
 //isaCloud: trimmed nick if it can be used in a room (not empty, no '/' or '@', no control characters, at most 100 characters), nil otherwise
@@ -72,6 +78,8 @@ NS_ASSUME_NONNULL_BEGIN
 -(void) pingAllMucs;
 -(void) ping:(NSString*) roomJid;
 -(BOOL) checkIfStillBookmarked:(NSString*) room;
+//isaCloud: used by the pubsub processor to list a room without joining it
+-(void) sendDiscoQueryFor:(NSString*) roomJid withJoin:(BOOL) join andBookmarksUpdate:(BOOL) updateBookmarks andMucName:(NSString* _Nullable) mucName;
 -(NSSet*) getRoomFeaturesForMuc:(NSString*) room;
 
 @end

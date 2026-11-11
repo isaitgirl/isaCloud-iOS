@@ -24,6 +24,7 @@ struct ContactDetails: View {
     @State private var showingBlockContactConfirmation = false
     @State private var showingCannotBlockAlert = false
     @State private var showingRemoveContactConfirmation = false
+    @State private var showingRemoveFromListConfirmation = false    //isaCloud: a group or channel we do not participate in, removed from the list
     @State private var showingAddContactConfirmation = false
     @State private var showingClearHistoryConfirmation = false
     @State private var showingResetOmemoSessionConfirmation = false
@@ -79,6 +80,18 @@ struct ContactDetails: View {
     private var isArchivedContact: Bool {
         let archived: Bool = contact.isArchived
         return archived
+    }
+
+    //isaCloud: removes the contact (or group/channel) from the list and leaves it, then dismisses this view
+    private func removeFromListAndDismiss() {
+        contact.obj.removeFromRoster()      //this will dismiss the chatview via kMonalContactRemoved notification
+        //NOTE: since we can get opened from objc through active chats,
+        //NOTE: we still need to support our SheetDismisserProtocol
+        if let delegate = self.delegate {
+            delegate.dismiss()
+        } else {
+            self.presentationMode.wrappedValue.dismiss()
+        }
     }
 
     private func isaCloudMucPersonCount() -> Int {
@@ -715,7 +728,30 @@ struct ContactDetails: View {
                                 }
                             }
                             .actionSheet(isPresented: $showingRemoveContactConfirmation) {
-                                ActionSheet(
+                                if contact.isMuc {
+                                    //isaCloud: a group or channel can be kept in the list (left, can be joined again) or removed from the list
+                                    return ActionSheet(
+                                        title: Text(contact.mucType == kMucTypeGroup ? NSLocalizedString("Leave Group", comment: "") : NSLocalizedString("Leave Channel", comment: "")),
+                                        message: Text(contact.mucType == kMucTypeGroup ? NSLocalizedString("You will stop participating. Do you want to remove this group from your list?", comment: "") : NSLocalizedString("You will stop participating. Do you want to remove this channel from your list?", comment: "")),
+                                        buttons: [
+                                            .destructive(
+                                                Text("Remove from list"),
+                                                action: {
+                                                    removeFromListAndDismiss()
+                                                }
+                                            ),
+                                            .default(
+                                                Text("Keep in list"),
+                                                action: {
+                                                    //isaCloud: the view stays open, the button changes to "Join Group" / "Join Channel"
+                                                    contact.obj.leaveMucKeepingInList()
+                                                }
+                                            ),
+                                            .cancel()
+                                        ]
+                                    )
+                                }
+                                return ActionSheet(
                                     title: Text(contact.isMuc ? NSLocalizedString("Leave this conversation", comment: "") : String(format: NSLocalizedString("Remove %@ from contacts?", comment: ""), contact.contactJid)),
                                         message: Text(contact.isMuc ? NSLocalizedString("You will no longer receive messages from this conversation", comment: "") : NSLocalizedString("They will no longer see when you are online. They may not be able to send you encrypted messages.", comment: "")),
                                     buttons: [
@@ -723,14 +759,7 @@ struct ContactDetails: View {
                                         .destructive(
                                             Text("Yes"),
                                             action: {
-                                                contact.obj.removeFromRoster()      //this will dismiss the chatview via kMonalContactRemoved notification
-                                                //NOTE: since we can get opened from objc through active chats,
-                                                //NOTE: we still need to support our SheetDismisserProtocol
-                                                if let delegate = self.delegate {
-                                                    delegate.dismiss()
-                                                } else {
-                                                    self.presentationMode.wrappedValue.dismiss()
-                                                }
+                                                removeFromListAndDismiss()
                                             }
                                         )
                                     ]
@@ -764,6 +793,30 @@ struct ContactDetails: View {
                                         ),
                                     ]
                                 )
+                            }
+                            //isaCloud: a group or channel we do not participate in can also be removed from the list
+                            if contact.isMuc {
+                                Button(action: {
+                                    showingRemoveFromListConfirmation = true
+                                }) {
+                                    Text("Remove from list")
+                                        .foregroundColor(.red)
+                                }
+                                .actionSheet(isPresented: $showingRemoveFromListConfirmation) {
+                                    ActionSheet(
+                                        title: Text("Remove from list"),
+                                        message: Text(NSLocalizedString("This conversation will be removed from your list.", comment: "")),
+                                        buttons: [
+                                            .destructive(
+                                                Text("Yes"),
+                                                action: {
+                                                    removeFromListAndDismiss()
+                                                }
+                                            ),
+                                            .cancel()
+                                        ]
+                                    )
+                                }
                             }
                         }
                     }

@@ -300,3 +300,15 @@
 "No conversations in the visible accounts" = "Nenhuma conversa nas contas visíveis";
 "Hide this account's chats" = "Ocultar as conversas desta conta";
 "Show this account's chats" = "Mostrar as conversas desta conta";
+
+/* isaCloud: sair do grupo/canal mantendo na lista e estado de participação na lista de contatos (ContactDetails.swift, ContactEntry.swift), textos do Android */
+"Leave Channel" = "Sair do canal";
+"Leave Group" = "Sair do grupo";
+"You will stop participating. Do you want to remove this channel from your list?" = "Você deixará de participar. Deseja remover este canal da sua lista?";
+"You will stop participating. Do you want to remove this group from your list?" = "Você deixará de participar. Deseja remover este grupo da sua lista?";
+"Remove from list" = "Remover da lista";
+"Keep in list" = "Manter na lista";
+"This conversation will be removed from your list." = "Esta conversa será removida da sua lista.";
+"Participant" = "Participante";
+"Join" = "Ingressar";
+"Not participating" = "Não participando";

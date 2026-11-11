@@ -783,6 +783,12 @@ static NSMutableDictionary* _singletonCache;
     [self removeShareInteractions];
 }
 
+//isaCloud: leaves the group or channel but keeps it in the buddylist and in the bookmarks (autojoin=false)
+-(void) leaveMucKeepingInList
+{
+    [[MLXMPPManager sharedInstance] leaveMucKeepingInList:self];
+}
+
 -(void) addToRoster
 {
     [[MLXMPPManager sharedInstance] addContact:self];

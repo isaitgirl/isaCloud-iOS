@@ -185,6 +185,8 @@ typedef void (^monal_iq_handler_t)(XMPPIQ* _Nullable);
  it is arbitrary and it may not match any other hame.
  */
 -(void) leaveMuc:(NSString* _Nonnull) room;
+//isaCloud: leave the room but keep it in the buddylist, its bookmark is republished with autojoin=false
+-(void) leaveMucKeepingBookmark:(NSString* _Nonnull) room;
 
 /*
  notifies the server client is in foreground
