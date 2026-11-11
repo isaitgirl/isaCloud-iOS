@@ -70,3 +70,16 @@ O cache é de cada aparelho. Ele corta as repetições de cada pessoa, mas o lim
 - **Cache HTTP:** a mesma busca no KLIPY veio do cache na segunda vez, então as buscas também ficam guardadas por ele. A página 1 do "em alta" veio do cache ao rolar de novo. As prévias foram de 0 para 21 de 21 vindas do cache nas aberturas seguintes.
 - **Consumo:** o KLIPY fez 6 chamadas em cerca de 16 aberturas, uma busca e uma rolagem longa. O GIPHY fez 1 chamada em 6 aberturas. A rolagem longa motivou o limite de 3 páginas.
 - **Leitura do log:** quando a resposta vem do cache HTTP, o `rate limit remaining` mostra o valor guardado, não o atual. Os contadores de prévias contam carregamentos, não GIFs diferentes, porque a grade recarrega as células que voltam à tela.
+
+## Versão do GIF enviado (11/11/2026)
+
+O GIF enviado era sempre a maior versão: a `original` do GIPHY chega a ~10 MB, e o `hd` do KLIPY a ~20 MB (medido em 10/11).
+
+**Regra nova:** vai a **primeira versão de até 2 MB**, na ordem abaixo, pelo tamanho que a própria API informa. Se nenhuma couber, vai a menor. Uma versão sem tamanho informado é pulada; se nenhuma informar, vale a primeira, como antes.
+
+| Provedor | Ordem das versões | Na prática |
+|---|---|---|
+| GIPHY | `original`, `downsized_large`, `downsized_medium`, `downsized`, `fixed_width` | quase sempre `downsized`, que o GIPHY já garante abaixo de 2 MB (234 a 344 px) |
+| KLIPY | `hd`, `md`, `sm`, `xs` | `md` quando ela é leve; nos GIFs pesados, `sm` (220 px) |
+
+Continua indo `.gif`, porque MP4 e WebP viram vídeo ou imagem parada em outros clientes. As prévias da grade não mudam. As listas de "em alta" salvas antes da mudança apontavam para as versões grandes, então o arquivo da lista salva passou a ser `<provedor>-v2.json`.
