@@ -176,7 +176,8 @@ struct ContactsView: View {
     }
     
     private static func shouldDisplayContact(_ contact: MLContact) -> Bool {
-        return contact.isSubscribedTo || contact.hasOutgoingContactRequest || contact.isSubscribedFrom
+        //isaCloud: a group or channel left with "keep in list" is no longer "subscribed" (not in muc_favorites), but stays in the list
+        return contact.isMuc || contact.isSubscribedTo || contact.hasOutgoingContactRequest || contact.isSubscribedFrom
     }
 
     private var contactList: [MLContact] {
