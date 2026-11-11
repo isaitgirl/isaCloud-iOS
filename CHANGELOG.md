@@ -2,15 +2,22 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
-## Em andamento (ainda não enviado)
+## 0.0.1 (build 103) — 11/11/2026
 
-### Adicionado
-- **KLIPY como segundo provedor de GIF.** O GIPHY continua o padrão; o KLIPY aparece como opção quando o build tem a chave. Troca pelo menu da própria busca de GIFs ou em Anexos → GIFs (preferência `gifProvider`: `giphy` ou `klipy`, migrada em `MLXMPPManager` com padrão `giphy`). A chave vem de `isaCloud/local/klipy-api-key.txt` pelos scripts `archive-testflight.sh` e `isacloud-dev-device.sh`, que passam `KLIPY_API_KEY` ao build (`KlipyAPIKey` no `Monal-Info.plist`). Sem chave, a opção não aparece. Anúncios do KLIPY desligados no Partner Panel. Análise em `docs/analise-gif-klipy.md`. Branch `feature/gif-klipy`.
-- **Cache da busca de GIF.** As duas chaves têm limite de 100 chamadas por hora. Cache HTTP próprio (`GifNetwork`, 100 MB em `Caches/gif-http-cache`) que segue os cabeçalhos dos servidores (API do KLIPY 6 h, prévias 1 a 7 dias), e o "em alta" de cada provedor salvo em `Caches/gif-trending` (página de 50, 6 h no KLIPY e 1 h no GIPHY, embaralhado a cada abertura). Logs com o prefixo `GIF cache:` para avaliar no `.dev`. A rolagem para em 3 páginas (`GifSearch.maxPages`). Validado no `.dev` em 10/11/2026: o KLIPY fez 6 chamadas em cerca de 16 aberturas e o GIPHY 1 em 6.
+Enviado ao TestFlight às 10:20. PR 64 do app (ExyteChat sem mudança, `3eb0aa1`).
+
+### Mudado
+- **GIF enviado na maior versão de até 2 MB.** Antes ia sempre a maior (GIPHY `original`, até ~10 MB; KLIPY `hd`, até ~20 MB). Agora vale a primeira versão de até 2 MB pelo tamanho que a API informa (GIPHY: `original`, `downsized_large`, `downsized_medium`, `downsized`, `fixed_width`; KLIPY: `hd`, `md`, `sm`, `xs`); se nenhuma couber, vai a menor. Continua `.gif`. As listas de "em alta" salvas antes são ignoradas (arquivo `<provedor>-v2.json`).
 
 ## 0.0.1 (build 102) — 11/11/2026
 
 Enviado ao TestFlight às 09:24. Hotfix do build 101 (ExyteChat sem mudança, `3eb0aa1`).
+
+(O KLIPY e o cache da busca de GIF, PR 62, já estavam neste build; só a seção do changelog ficou para trás.)
+
+### Adicionado
+- **KLIPY como segundo provedor de GIF.** O GIPHY continua o padrão; o KLIPY aparece como opção quando o build tem a chave. Troca pelo menu da própria busca de GIFs ou em Anexos → GIFs (preferência `gifProvider`: `giphy` ou `klipy`, migrada em `MLXMPPManager` com padrão `giphy`). A chave vem de `isaCloud/local/klipy-api-key.txt` pelos scripts `archive-testflight.sh` e `isacloud-dev-device.sh`, que passam `KLIPY_API_KEY` ao build (`KlipyAPIKey` no `Monal-Info.plist`). Sem chave, a opção não aparece. Anúncios do KLIPY desligados no Partner Panel. Análise em `docs/analise-gif-klipy.md`. Branch `feature/gif-klipy`.
+- **Cache da busca de GIF.** As duas chaves têm limite de 100 chamadas por hora. Cache HTTP próprio (`GifNetwork`, 100 MB em `Caches/gif-http-cache`) que segue os cabeçalhos dos servidores (API do KLIPY 6 h, prévias 1 a 7 dias), e o "em alta" de cada provedor salvo em `Caches/gif-trending` (página de 50, 6 h no KLIPY e 1 h no GIPHY, embaralhado a cada abertura). Logs com o prefixo `GIF cache:` para avaliar no `.dev`. A rolagem para em 3 páginas (`GifSearch.maxPages`). Validado no `.dev` em 10/11/2026: o KLIPY fez 6 chamadas em cerca de 16 aberturas e o GIPHY 1 em 6.
 
 ### Corrigido
 - **App morto em segundo plano ao perder o sinal (C21, `0xdead10cc`).** Sem rede, a escrita do último ack ficava esperando para sempre o `nw_connection_send`; `-[MLStream close]` não cancelava a conexão e `cleanupSendQueue` esperava a escrita sem prazo, então o `disconnectAll` da tarefa de segundo plano nunca terminava e o app era suspenso com a trava de processo (crashes de 08/11, iPhone12,8, e 10/11, iPhone13,3, no elevador). Agora `-[MLOutputStream close]` cancela a conexão à força quando há escrita pendente, e a espera da escrita tem prazo de 15 s (depois disso cancela a conexão e segue). Branch `fix/c21-escrita-sem-prazo`. Detalhes em `docs/analises-crashes.md` (C21).

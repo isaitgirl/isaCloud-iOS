@@ -1,4 +1,4 @@
-# Estado atual e handoff (11/11/2026, build 102)
+# Estado atual e handoff (11/11/2026, build 103)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,16 +7,23 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 102** (hotfix do C21, PR da branch `fix/c21-escrita-sem-prazo`), tag `build-102`; `git log --oneline -3` |
-| TestFlight | **102** (11/11/2026, 09:24; antes 101 em 10/11 às 09:29, tag `build-101`) |
-| `.dev` no iPhone | **102**, igual ao TestFlight (11/11/2026; **sem push**, então a extensão de notificação não roda nele) |
+| Commit | o do **build 103** (GIF enviado na maior versão de até 2 MB, PR 64 da branch `feature/gif-menor-versao`), tag `build-103`; `git log --oneline -3` |
+| TestFlight | **103** (11/11/2026, 10:20; antes 102 no mesmo dia às 09:24, tag `build-102`) |
+| `.dev` no iPhone | **103**, igual ao TestFlight (11/11/2026; **sem push**, então a extensão de notificação não roda nele) |
 | Simuladores | iPhone XR (iOS 18.6) com o código do build 100 (09/11/2026) e isaCloud iOS27 com o do build 94 (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261105-1036-linha-lido-2/` e `-1037-linha-lido-2/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
 | ExyteChat | `3eb0aa1` na `isaCloud` (tamanho do arquivo nas mídias e nos áudios, PR 22; antes `7d3292b`: miniatura opcional dentro da citação, `Message.quotePreview`, PR 21; antes `e168ed8`: visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 
+## O que entrou no build 103 (sobre o 102)
+
+- **GIF enviado na maior versão de até 2 MB** (roadmap 167, PR 64): antes ia sempre a maior (GIPHY `original` até ~10 MB, KLIPY `hd` até ~20 MB). A regra e as medidas estão em `docs/analise-gif-klipy.md`. As listas de "em alta" salvas passaram a `<provedor>-v2.json`. Testado no `.dev`; os testes de unidade novos não rodaram.
+- **Docs novos, sem código:** resposta de verdade (XEP-0461) em `docs/analise-reply-xep0461.md`, `docs/contrato-reply-xep0461.md` (a regra do fio para iOS e Android) e `docs/decisoes-reply-real-android.md`; relatório de crash pelo XMPP para `reports@isacloud.im` em `docs/analise-relatorio-de-crash.md` (decidido, não implementado).
+
 ## O que entrou no build 102 (sobre o 101)
+
+- **KLIPY e cache da busca de GIF** (PR 62, roadmap 166) já estavam neste build; ver `docs/analise-gif-klipy.md` e o guia do Android em `docs/analise-giphy-provider-android.md`.
 
 - **C21:** sem sinal (elevador/garagem), a escrita do último ack esperava sem prazo e travava o `disconnectAll` da tarefa de segundo plano; o app era suspenso com a trava de processo (`0xdead10cc`). `-[MLOutputStream close]` cancela a conexão à força com escrita pendente, e a escrita tem prazo de 15 s. **A validar:** no `.dev`, modo avião e segundo plano logo depois; em produção, nenhum `0xdead10cc` com `disconnectAll` na pilha.
 - **Registro do C20 mais cedo:** liga no `kMonalWillBeFreezed` e desliga em todo `signalResumption` (notificação `kIsaCloudFreezeEndedWithoutSuspension` quando não houve suspensão).

@@ -2,13 +2,16 @@
 
 O que mudou em cada versão, em poucas palavras. A lista técnica completa está no [CHANGELOG.md](CHANGELOG.md).
 
-## Em andamento (ainda não enviado)
+## Build 103 · 11/11/2026
+
+### Novidades
+- 🪶 GIFs enviados ficam bem mais leves (até 2 MB).
+
+## Build 102 · 11/11/2026
 
 ### Novidades
 - 🔍 Agora dá para escolher entre GIPHY e KLIPY na busca de GIFs.
 - ⚡ A busca de GIFs abre mais rápido e guarda os GIFs em alta por um tempo.
-
-## Build 102 · 11/11/2026
 
 ### Correções
 - 📶 O app não fecha mais sozinho quando perde o sinal (elevador, garagem) logo depois de ir para segundo plano.
