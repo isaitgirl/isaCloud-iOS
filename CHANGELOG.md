@@ -4,7 +4,7 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## 0.0.1 (build 104) — 11/11/2026
 
-Ainda não enviado ao TestFlight. PR 65 do app (ExyteChat sem mudança, `3eb0aa1`).
+Enviado ao TestFlight às 15:20. PR 65 do app (ExyteChat sem mudança, `3eb0aa1`).
 
 ### Adicionado
 - **Sair do grupo/canal mantendo na lista.** Sair nos detalhes pergunta, como no Android: "Remover da lista", "Manter na lista" ou "Cancelar". "Manter na lista" sai da sala (`leave:withBookmarksUpdate:NO keepBuddylistEntry:YES`), mantém a linha na buddylist e republica o bookmark com `autojoin="false"` (`-[MLMucProcessor leaveKeepingBookmark:]`, `keepBookmarkFetched`/`keepBookmarkPublished` em `MLPubSubProcessor`; `_keepBookmarkPending` impede que um `updateBookmarks` simultâneo retraia o item). Uma sala mantida na lista mostra "Ingressar" e "Remover da lista" nos detalhes; remover retrai o bookmark explicitamente (`removeKeptMuc:`), já que o `updateBookmarks` nunca retrai itens com `autojoin=false`. Um bookmark com `autojoin=false` desconhecido (outro aparelho, reinstalação) entra na lista sem join (disco com `withJoin:NO`). Branch `feature/sair-mantendo-na-lista`.

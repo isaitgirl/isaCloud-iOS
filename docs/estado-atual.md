@@ -7,9 +7,9 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 104** (sair do grupo/canal mantendo na lista, PR 65 da branch `feature/sair-mantendo-na-lista`), **ainda sem tag** (`build-104` entra depois do upload); `git log --oneline -3` |
-| TestFlight | **103** (11/11/2026, 10:20; antes 102 no mesmo dia às 09:24, tag `build-102`) |
-| `.dev` no iPhone | código do **build 104** (PR 65), instalado ainda com o número 103 (11/11/2026; **sem push**, então a extensão de notificação não roda nele) |
+| Commit | o do **build 104** (sair do grupo/canal mantendo na lista, PR 65 da branch `feature/sair-mantendo-na-lista`), tag `build-104`; `git log --oneline -3` |
+| TestFlight | **104** (11/11/2026, 15:20; antes 103 no mesmo dia às 10:20, tag `build-103`) |
+| `.dev` no iPhone | **104**, igual ao TestFlight (11/11/2026; **sem push**, então a extensão de notificação não roda nele) |
 | Simuladores | iPhone XR (iOS 18.6) com o código do build 100 (09/11/2026) e isaCloud iOS27 com o do build 94 (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261105-1036-linha-lido-2/` e `-1037-linha-lido-2/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
 | ExyteChat | `3eb0aa1` na `isaCloud` (tamanho do arquivo nas mídias e nos áudios, PR 22; antes `7d3292b`: miniatura opcional dentro da citação, `Message.quotePreview`, PR 21; antes `e168ed8`: visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
