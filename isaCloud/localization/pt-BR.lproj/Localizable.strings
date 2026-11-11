@@ -319,3 +319,18 @@
 "Group and channel invites (%lld)" = "Convites de grupos e canais (%lld)";
 "Invited by %@" = "Convite de %@";
 "Account is not connected" = "A conta não está conectada";
+
+/* isaCloud: novidades */
+"isaCloud news" = "Novidades do isaCloud";
+"See what changed in build %@" = "Veja o que mudou no build %@";
+"See what changed in builds %@" = "Veja o que mudou nos builds %@";
+"See what changed in builds %@ to %@" = "Veja o que mudou nos builds %@ a %@";
+"New" = "Novo";
+"Archive news" = "Arquivar novidades";
+"Archive news?" = "Arquivar novidades?";
+"You can reopen them in Settings → About → isaCloud news." = "Você pode reabrir em Configurações → Sobre → Novidades do isaCloud.";
+"Archive" = "Arquivar";
+"Show in chats list" = "Mostrar na lista de conversas";
+"See all news" = "Ver todas as novidades";
+"No news for now." = "Nenhuma novidade por enquanto.";
+"Build %@" = "Build %@";

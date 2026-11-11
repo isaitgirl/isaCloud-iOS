@@ -28,6 +28,12 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DERIVED_DATA="${DERIVED_DATA:-$REPO_ROOT/build/dev-device}"
 BUNDLE_ID="br.com.isacloud.messenger.dev"
 
+# "Novidades do isaCloud" (the news shown in the chats list) come from CHANGELOG-USERS.md: the JSON goes into the app bundle
+if ! "$REPO_ROOT/scripts/isacloud-generate-changelog-json.py"; then
+    echo "error: could not generate Monal/isaCloud-changelog.json from CHANGELOG-USERS.md" >&2
+    exit 1
+fi
+
 if [[ -z "$DEVICE_UDID" ]]; then
     DEVICE_UDID=$(xcrun devicectl list devices 2>/dev/null | awk '/physical/ && /connected/ { for(i=1;i<=NF;i++) if($i ~ /^[0-9A-F]{8}-[0-9A-F]{16}$/) { print $i; exit } }')
     if [[ -z "$DEVICE_UDID" ]]; then
