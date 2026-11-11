@@ -2,6 +2,16 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## Próximo build (ainda sem número)
+
+Branch `feature/convites-pendentes`, testado no `.dev` em 11/11/2026.
+
+### Adicionado
+- **Convites de grupos e canais como solicitações pendentes** (roadmap 168, como no Android). O convite não faz mais o app entrar sozinho na sala: vira uma pendência com "Ingressar", "Recusar" e "Recusar e Bloquear", numa seção de Contatos depois dos pedidos de contato, e entra no selo do botão de contatos. Tabela própria `isacloud_pending_invites` no passo 8 da escada do isaCloud (escada do Monal intacta). Regras do recebimento (`-[MLMucProcessor isaCloudHandleInviteToRoom:...]`, roda também na NSE): ignora convites com mais de 30 dias, de bloqueados, da própria conta e de salas que estão nos favoritos; convite de quem não é contato só aparece com a opção nova **"Mostrar convites de desconhecidos"** (Privacidade, desligada por padrão); convite mediado com JID de ocupante conta como desconhecido; até 50 pendências por conta. Nome e tipo da sala vêm de um `disco#info` ao mostrar a linha. Recusar um convite mediado manda `<decline>` para a sala. Análise em `docs/analise-solicitacoes-pendentes.md`.
+
+### Corrigido
+- **C22: convidar alguém para um canal (ou adicionar membro a um grupo) derrubava o app no iOS 27.** `promisifyMucAction` (código do Monal) rodava numa fila de fundo um bloco isolado à thread principal; agora roda na fila principal. Detalhes em `docs/analises-crashes.md`.
+
 ## 0.0.1 (build 104) — 11/11/2026
 
 Enviado ao TestFlight às 15:20. PR 65 do app (ExyteChat sem mudança, `3eb0aa1`).

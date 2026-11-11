@@ -136,6 +136,159 @@ struct ContactRequestRow: View {
     }
 }
 
+//isaCloud: one pending invite to a group or channel (see MLMucProcessor, isaCloud part): the room, who invited and what to do with it.
+//Nothing joins the room before the user accepts. The row is read from the pending invites of the DataLayer (a dictionary with the columns as keys).
+struct PendingInviteRow: View {
+    let invite: NSDictionary
+    //closes the contacts sheet on the chat of the room, once it is joined (the same as the rooms joined from the public channels list)
+    let onJoined: (MLContact) -> ()
+    @State private var shouldShowNotConnectedAlert: Bool = false
+    @State private var askedRoomInfo: Bool = false
+
+    private var room: String { invite["room"] as? String ?? "" }
+    private var invitedBy: String { invite["invited_by"] as? String ?? "" }
+    private var accountID: NSNumber { invite["account_id"] as? NSNumber ?? NSNumber(value: 0) }
+    private var roomName: String? {
+        guard let name = invite["room_name"] as? String, !name.isEmpty else { return nil }
+        return name
+    }
+    private var isChannel: Bool { (invite["is_channel"] as? NSNumber)?.boolValue ?? false }
+    private var localPart: String { room.components(separatedBy: "@").first ?? room }
+
+    //an occupant jid (room/nick) of the room itself: the room hid who invited, so only the nick is known
+    private var inviterIsOccupant: Bool { HelperTools.splitJid(invitedBy)["user"] == room }
+    private var inviterText: String {
+        if inviterIsOccupant {
+            return HelperTools.splitJid(invitedBy)["resource"] ?? invitedBy
+        }
+        return invitedBy
+    }
+
+    //the connected account of this invite (nil while it is disconnected: the invite stays and the user is told)
+    private var account: xmpp? {
+        return (MLXMPPManager.sharedInstance().connectedXMPP as! [xmpp]).first { $0.accountID.intValue == accountID.intValue }
+    }
+
+    private func accept() {
+        guard let account = account else {
+            shouldShowNotConnectedAlert = true
+            return
+        }
+        account.mucProcessor.isaCloudAcceptInvite(toRoom: room)
+        //the chat opens only once the room is in the buddylist as a muc: before that the contact would be taken for a 1:1 chat
+        PendingInviteRow.waitForJoin(room: room, account: account, attempt: 0, onJoined: onJoined)
+    }
+
+    //isaCloud: same wait as PublicChannelsView: up to 20 s, then it gives up quietly (the room still joins and shows up in the lists)
+    private static func waitForJoin(room: String, account: xmpp, attempt: Int, onJoined: @escaping (MLContact) -> ()) {
+        if DataLayer.sharedInstance().isBuddyMuc(room, forAccount: account.accountID) {
+            DataLayer.sharedInstance().addActiveBuddies(room, forAccount: account.accountID)
+            onJoined(MLContact.createContact(fromJid: room, andAccountID: account.accountID))
+            return
+        }
+        guard attempt < 80 else {
+            return
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            waitForJoin(room: room, account: account, attempt: attempt + 1, onJoined: onJoined)
+        }
+    }
+
+    private func decline() {
+        guard let account = account else {
+            shouldShowNotConnectedAlert = true
+            return
+        }
+        account.mucProcessor.isaCloudDeclineInvite(toRoom: room)
+    }
+
+    private func declineAndBlock() {
+        guard let account = account else {
+            shouldShowNotConnectedAlert = true
+            return
+        }
+        //the person who invited is blocked: only possible when the room told us who it was (see inviterIsOccupant)
+        let inviter = HelperTools.splitJid(invitedBy)["user"] ?? invitedBy
+        MLXMPPManager.sharedInstance().block(true, contact: MLContact.createContact(fromJid: inviter, andAccountID: accountID))
+        account.mucProcessor.isaCloudDeclineInvite(toRoom: room)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: isChannel ? "number" : "person.3.fill")
+                    .font(.title2)
+                    .foregroundStyle(Color("isaCloudPink"))
+                    .frame(width: 36)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(roomName ?? localPart)
+                        .font(.body)
+                        .fontWeight(.semibold)
+                    Text(room)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Text("Invited by \(inviterText)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    if DataLayer.sharedInstance().enabledAccountCnts().intValue > 1, let jid = account?.connectionProperties.identity.jid {
+                        Text("Account: \(jid)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            HStack(spacing: 8) {
+                Button {
+                    accept()
+                } label: {
+                    Text("Join").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color("isaCloudPink"))
+
+                Button {
+                    decline()
+                } label: {
+                    Text("Decline").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .tint(Color("isaCloudPink"))
+
+                Menu {
+                    //an invite from an occupant jid cannot be blocked: we do not know the person behind it
+                    if !inviterIsOccupant {
+                        Button(role: .destructive) {
+                            declineAndBlock()
+                        } label: {
+                            Label("Decline and Block", systemImage: "person.crop.circle.badge.xmark")
+                        }
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .font(.title2)
+                        .frame(width: 36, height: 32)
+                }
+                .tint(Color("isaCloudPink"))
+                .accessibilityLabel("More options")
+            }
+        }
+        .padding(.vertical, 4)
+        .onAppear {
+            //the name and the kind of the room come from its disco#info, asked once while they are unknown: is_channel is set by every answer,
+            //even one without a name, so a room without a name is not asked again and again (each answer reloads the list)
+            if invite["is_channel"] as? NSNumber == nil && !askedRoomInfo, let account = account {
+                askedRoomInfo = true
+                account.mucProcessor.isaCloudQueryInfo(ofPendingRoom: room)
+            }
+        }
+        .alert("Account is not connected", isPresented: $shouldShowNotConnectedAlert) {
+            Button("OK") {}
+        }
+    }
+}
+
 //isaCloud: filter of the segmented control under the search bar
 enum ContactsFilter: Int, CaseIterable, Identifiable {
     case all, contacts, groups, channels
@@ -206,6 +359,11 @@ struct ContactsView: View {
         return !contacts.requests.isEmpty && searchText.isEmpty && (filter == .all || filter == .contacts)
     }
 
+    //isaCloud: pending group and channel invites are shown for "all", "groups" and "channels", and not while searching
+    private var showInvites: Bool {
+        return !contacts.invites.isEmpty && searchText.isEmpty && (filter == .all || filter == .groups || filter == .channels)
+    }
+
     private var searchResults: [MLContact] {
         return contactList.filter { matchesFilter($0) && (searchText.isEmpty || searchMatchesContact(contact: $0, search: searchText)) }
     }
@@ -261,6 +419,16 @@ struct ContactsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            //isaCloud: the pending invites come right after the contact requests
+            if showInvites {
+                Section {
+                    ForEach(contacts.invites, id: \.self) { invite in
+                        PendingInviteRow(invite: invite, onJoined: dismissWithContact)
+                    }
+                } header: {
+                    Text("Group and channel invites (\(contacts.invites.count))")
+                }
+            }
             ForEach(searchResults, id: \.self) { contact in
                 ContactViewEntry(contact: contact, selectedContactForContactDetails: $selectedContactForContactDetails, dismissWithContact: dismissWithContact)
             }
@@ -292,12 +460,12 @@ struct ContactsView: View {
         .textInputAutocapitalization(.never)
         .keyboardType(.emailAddress)
         .overlay {
-            if contactList.isEmpty && contacts.requests.isEmpty {
+            if contactList.isEmpty && contacts.requests.isEmpty && contacts.invites.isEmpty {
                 ZStack {
                     Color.contacts
                     ContentUnavailableShimView("You need friends for this ride", image: colorScheme == .dark ? .friendsDark : .friends, description: Text("Add new contacts with the + button above. Your friends will pop up here when they can talk"))
                 }
-            } else if searchResults.isEmpty && !showRequests {
+            } else if searchResults.isEmpty && !showRequests && !showInvites {
                 ZStack {
                     Color.contacts
                     ContentUnavailableShimView.search(text:searchText)
@@ -482,6 +650,7 @@ class Contacts: ObservableObject {
     @Published var contacts: Set<MLContact>
     @Published var requestCount: Int
     @Published var requests: [MLContact]       //isaCloud: the pending contact requests, shown at the top of the list
+    @Published var invites: [NSDictionary]     //isaCloud: the pending group and channel invites (DataLayer, table isacloud_pending_invites), shown after the requests
     private var subscriptions: Set<AnyCancellable> = Set()
 
     init() {
@@ -489,6 +658,7 @@ class Contacts: ObservableObject {
         let requests = DataLayer.sharedInstance().allContactRequests() as! [MLContact]
         self.requests = requests
         self.requestCount = requests.count
+        self.invites = DataLayer.sharedInstance().isaCloudPendingInvites() as [NSDictionary]
         subscriptions = [
             NotificationCenter.default.publisher(for: NSNotification.Name(kMonalContactRefresh))
                 .receive(on: DispatchQueue.main)
@@ -496,6 +666,9 @@ class Contacts: ObservableObject {
             NotificationCenter.default.publisher(for: NSNotification.Name(kMonalContactRemoved))
                 .receive(on: DispatchQueue.main)
                 .sink() { _ in self.refreshContacts() },
+            NotificationCenter.default.publisher(for: NSNotification.Name(kMonalIsaCloudPendingInvitesUpdated))
+                .receive(on: DispatchQueue.main)
+                .sink() { _ in self.refreshInvites() },
         ]
     }
     
@@ -504,5 +677,10 @@ class Contacts: ObservableObject {
         let requests = DataLayer.sharedInstance().allContactRequests() as! [MLContact]
         self.requests = requests
         self.requestCount = requests.count
+        refreshInvites()
+    }
+    
+    private func refreshInvites() {
+        self.invites = DataLayer.sharedInstance().isaCloudPendingInvites() as [NSDictionary]
     }
 }

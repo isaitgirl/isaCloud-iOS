@@ -109,6 +109,10 @@ class GeneralSettingsDefaultsDB: ObservableObject {
     @defaultsDB("allowCallsFromNonRosterContacts")
     var allowCallsFromNonRosterContacts: Bool
     
+    //isaCloud: invites to groups and channels from people who are not in the contacts (off: they are discarded, see MLMucProcessor)
+    @defaultsDB("isacloudShowInvitesFromStrangers")
+    var isacloudShowInvitesFromStrangers: Bool
+    
     @defaultsDB("AutodownloadFiletransfers")
     var autodownloadFiletransfers : Bool
     
@@ -584,6 +588,11 @@ struct PrivacySettingsSubview: View {
                     Text("Accept incoming calls from strangers")
                     Text("Allow contacts not in your contact list to call you.")
                 }.disabled(!generalSettingsDefaultsDB.allowNonRosterContacts)
+                //isaCloud: group and channel invites from strangers wait as pending requests when this is on
+                SettingsToggle(isOn: $generalSettingsDefaultsDB.isacloudShowInvitesFromStrangers) {
+                    Text("Show group and channel invites from strangers")
+                    Text("Invites from people who are not in your contacts appear in the pending requests. Off: they are discarded.")
+                }
             }
         }
         if onboardingPart == -1 || onboardingPart == 2 {

@@ -529,6 +529,14 @@ static NSMutableSet<NSNumber*>* _hiddenChatListAccountIDs;      //isaCloud: only
         [self.spinner stopAnimating];
 }
 
+//isaCloud: the badge of the contacts button counts the pending invites too
+-(void) isaCloudPendingInvitesUpdated
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self configureComposeButton];
+    });
+}
+
 -(void) configureComposeButton
 {
     //don't replace an existing customView: this makes UIKit rebuild all bar button items
@@ -549,8 +557,8 @@ static NSMutableSet<NSNumber*>* _hiddenChatListAccountIDs;      //isaCloud: only
     if(@available(iOS 26.0, *))
         symbolSize = 25;
     UIImage* image = [[UIImage systemImageNamed:@"person.2.fill" withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:symbolSize weight:UIImageSymbolWeightRegular]] imageWithTintColor:UIColor.tintColor];
-    //isaCloud: the badge shows how many contact requests are waiting
-    NSUInteger contactRequestCount = [[DataLayer sharedInstance] allContactRequests].count;
+    //isaCloud: the badge shows how many contact requests and pending group or channel invites are waiting
+    NSUInteger contactRequestCount = [[DataLayer sharedInstance] allContactRequests].count + [[DataLayer sharedInstance] isaCloudPendingInviteCount];
     ((UIImageView*)self.composeButton.customView).image = [HelperTools imageWithNotificationCount:(NSInteger)contactRequestCount forImage:image];
     
     if(contactRequestCount > 0)
@@ -656,6 +664,8 @@ static NSMutableSet<NSNumber*>* _hiddenChatListAccountIDs;      //isaCloud: only
     //isaCloud: C20, the avatar update skipped while the app was frozen is done now (removed with the other observers in dealloc)
     [nc addObserver:self selector:@selector(isaCloudUpdateAccountAvatarAfterUnfreeze) name:kMonalUnfrozen object:nil];
     [nc addObserver:self selector:@selector(isaCloudUpdateAccountAvatarAfterUnfreeze) name:kIsaCloudFreezeEndedWithoutSuspension object:nil];
+    //isaCloud: a pending group or channel invite came, was accepted or declined: the badge of the contacts button follows it
+    [nc addObserver:self selector:@selector(isaCloudPendingInvitesUpdated) name:kMonalIsaCloudPendingInvitesUpdated object:nil];
 
     [_chatListTable registerNib:[UINib nibWithNibName:@"MLContactCell" bundle:[NSBundle mainBundle]] forCellReuseIdentifier:@"ContactCell"];
     

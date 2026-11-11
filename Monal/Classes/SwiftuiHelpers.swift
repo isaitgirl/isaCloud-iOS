@@ -109,7 +109,10 @@ func mucPersonCountLabel(isGroup: Bool, count: Int) -> String {
 
 func promisifyMucAction(account: xmpp, mucJid: String, action: @escaping () throws -> Void) -> Promise<monal_void_block_t?> {
     return Promise<monal_void_block_t?> { seal in
-        DispatchQueue.global(qos: .background).async {
+        //isaCloud: C22, the action closures are written inside SwiftUI view bodies, so they are isolated to the main actor; on iOS 27 running one
+        //on a background queue traps in the runtime isolation check (crash inviting someone from the channel participants list, 11/11/2026).
+        //The actions only send stanzas (ObjC, thread safe), so they run on the main queue now.
+        DispatchQueue.main.async {
             account.mucProcessor.addUIHandler({_data in let data = _data as! NSDictionary
                 let success : Bool = data["success"] as! Bool;
                 if !success {

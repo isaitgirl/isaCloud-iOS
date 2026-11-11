@@ -49,6 +49,14 @@ NS_ASSUME_NONNULL_BEGIN
 -(AnyPromise*) setAffiliation:(NSString*) affiliation ofUser:(NSString*) jid inMuc:(NSString*) roomJid;
 -(void) inviteUser:(NSString*) jid inMuc:(NSString*) roomJid;
 
+//isaCloud: pending invites to groups and channels (see the isaCloud part of processMessage:withIsFromMucMam:). Each one posts kMonalIsaCloudPendingInvitesUpdated.
+//accept: removes the pending invite, unarchives the room and joins it (the password of the invite is not used yet)
+-(void) isaCloudAcceptInviteToRoom:(NSString*) room;
+//decline: removes the pending invite and, if it was mediated, sends the decline to the room
+-(void) isaCloudDeclineInviteToRoom:(NSString*) room;
+//fetches name and kind (channel or group) of a pending room with disco#info and stores them
+-(void) isaCloudQueryInfoOfPendingRoom:(NSString*) room;
+
 //isaCloud: nick of this account in ONE group or channel (XEP-0045 7.6), independent of the display name of the account.
 //The result goes to the ui handler of the room (see addUIHandler:forMuc:): success, or an error with the reason of the service.
 //Joined room: the nick is saved only after the service confirmed it. Not joined: saved and used by the next join.

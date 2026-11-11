@@ -53,6 +53,8 @@
     //these won't be persisted because it is only for the ui
     NSMutableDictionary* _uiHandler;
 }
+//isaCloud: stores an invite to a group or channel as a pending request (see the implementation)
+-(void) isaCloudHandleInviteToRoom:(NSString*) room invitedBy:(NSString*) invitedBy password:(NSString* _Nullable) password mediated:(BOOL) mediated message:(XMPPMessage*) messageNode;
 @end
 
 @implementation MLMucProcessor
@@ -581,15 +583,9 @@ static NSString* const kIsaCloudGuideRoom = @"guiaxmpp@conference.isacloud.cc";
             DDLogError(@"mediated inivite does not include a MUC jid, ignoring invite");
             return YES;
         }
-        MLContact* inviteFrom = [MLContact createContactFromJid:inviterJid andAccountID:_account.accountID];
-        DDLogInfo(@"Got mediated muc invite from %@ for %@...", inviteFrom, messageNode.fromUser);
-        if(/*![[HelperTools defaultsDB] boolForKey: @"allowNonRosterContacts"] &&*/ !inviteFrom.isSubscribedFrom)
-        {
-            DDLogWarn(@"Ignoring invite from %@, this jid isn't at least marked as susbscribedFrom in our roster...", inviteFrom);
-            return YES;     //don't process this further
-        }
-        DDLogInfo(@"--> joining %@...", messageNode.fromUser);
-        [self sendDiscoQueryFor:messageNode.fromUser withJoin:YES andBookmarksUpdate:YES];
+        DDLogInfo(@"Got mediated muc invite from %@ for %@...", inviterJid, messageNode.fromUser);
+        //isaCloud: no join anymore, the invite waits as a pending request (rules in isaCloudHandleInviteToRoom:...)
+        [self isaCloudHandleInviteToRoom:messageNode.fromUser invitedBy:[messageNode findFirst:@"{http://jabber.org/protocol/muc#user}x/invite@from"] password:[messageNode findFirst:@"{http://jabber.org/protocol/muc#user}x/password#"] mediated:YES message:messageNode];
         return YES;     //stop processing in MLMessageProcessor
     }
         
@@ -600,20 +596,147 @@ static NSString* const kIsaCloudGuideRoom = @"guiaxmpp@conference.isacloud.cc";
         if(![messageNode.toUser isEqualToString:_account.connectionProperties.identity.jid])
             return YES;     //stop processing in MLMessageProcessor and ignore this invite
         
-        MLContact* inviteFrom = [MLContact createContactFromJid:messageNode.fromUser andAccountID:_account.accountID];
-        DDLogInfo(@"Got direct muc invite from %@ for %@ --> joining...", inviteFrom, [messageNode findFirst:@"{jabber:x:conference}x@jid"]);
-        if(/*![[HelperTools defaultsDB] boolForKey: @"allowNonRosterContacts"] &&*/ !inviteFrom.isSubscribedFrom)
-        {
-            DDLogWarn(@"Ignoring invite from %@, this jid isn't at least marked as susbscribedFrom in our roster...", inviteFrom);
-            return YES;     //don't process this further
-        }
-        DDLogInfo(@"--> joinging %@...", [messageNode findFirst:@"{jabber:x:conference}x@jid"]);
-        [self sendDiscoQueryFor:[messageNode findFirst:@"{jabber:x:conference}x@jid"] withJoin:YES andBookmarksUpdate:YES];
+        DDLogInfo(@"Got direct muc invite from %@ for %@...", messageNode.fromUser, [messageNode findFirst:@"{jabber:x:conference}x@jid"]);
+        //isaCloud: no join anymore, the invite waits as a pending request (rules in isaCloudHandleInviteToRoom:...)
+        [self isaCloudHandleInviteToRoom:[messageNode findFirst:@"{jabber:x:conference}x@jid"] invitedBy:messageNode.fromUser password:[messageNode findFirst:@"{jabber:x:conference}x@password"] mediated:NO message:messageNode];
         return YES;     //stop processing in MLMessageProcessor
     }
     
     //continue processing in MLMessageProcessor
     return NO;
+}
+
+//isaCloud: an invite to a group or channel is not joined anymore: it is stored as a pending request (table isacloud_pending_invites, see DataLayer)
+//and the user accepts or declines it later. The rules are checked in this order, every discard is logged. This code also runs in the
+//notification extension (NSE), so it must not use UIKit.
+//room: the group or channel; invitedBy: who invited, as it came (a jid, or the occupant jid room@conference/nick when the room hides who invited)
+-(void) isaCloudHandleInviteToRoom:(NSString*) room invitedBy:(NSString*) invitedBy password:(NSString* _Nullable) password mediated:(BOOL) mediated message:(XMPPMessage*) messageNode
+{
+    room = [room lowercaseString];
+    if(room == nil || invitedBy == nil)
+    {
+        DDLogInfo(@"isaCloud: ignoring invite without room or inviter");
+        return;
+    }
+    
+    //1. age: the time the invite was sent (delay or MAM), not the time we see it
+    NSDate* stamp = [messageNode findFirst:@"{urn:xmpp:delay}delay@stamp|datetime"];
+    if(stamp == nil)
+        stamp = [NSDate date];
+    if([stamp timeIntervalSinceNow] < -30 * 24 * 3600)
+    {
+        DDLogInfo(@"isaCloud: ignoring invite to %@ from %@: older than 30 days", room, invitedBy);
+        return;
+    }
+    
+    //2. who invited: an occupant jid of the room (sala@conference/nick) means we cannot tell who it was, so it counts as an unknown inviter
+    NSString* bareInviter = [[HelperTools splitJid:invitedBy][@"user"] lowercaseString];
+    if(bareInviter == nil)
+        bareInviter = [invitedBy lowercaseString];
+    BOOL isOccupantJid = [bareInviter isEqualToString:room];
+    
+    //3. our own invites (carbon copies or MAM results of an invite we sent)
+    if([bareInviter isEqualToString:[_account.connectionProperties.identity.jid lowercaseString]])
+    {
+        DDLogInfo(@"isaCloud: ignoring invite to %@: it was sent by our own account", room);
+        return;
+    }
+    
+    //4. and 5. blocked inviters are ignored; an inviter that is not in our contacts counts as a stranger
+    BOOL known = NO;
+    if(!isOccupantJid)
+    {
+        MLContact* inviteFrom = [MLContact createContactFromJid:bareInviter andAccountID:_account.accountID];
+        if(inviteFrom.isBlocked)
+        {
+            DDLogInfo(@"isaCloud: ignoring invite to %@ from blocked %@", room, bareInviter);
+            return;
+        }
+        known = inviteFrom.isSubscribedFrom || inviteFrom.isSubscribedTo || inviteFrom.isInRoster;
+    }
+    if(!known && ![[HelperTools defaultsDB] boolForKey:@"isacloudShowInvitesFromStrangers"])
+    {
+        DDLogInfo(@"isaCloud: ignoring invite to %@ from %@: the inviter is not a contact and invites from strangers are off", room, invitedBy);
+        return;
+    }
+    
+    //6. already in the room: no pending request, and an old one for it goes away
+    //"in the room" means in our favorites (muc_favorites): leaving removes it from there, with or without keeping it in the list, so a room we
+    //left still takes invites. Not isJoined: _joined only grows during a stream and is not cleared by a leave (seen on 11/11/2026: an invite
+    //to a room left with "keep in list" five minutes before was dropped as "already in it")
+    if([self checkIfStillBookmarked:room])
+    {
+        DDLogInfo(@"isaCloud: ignoring invite to %@: we are already in it", room);
+        if([[DataLayer sharedInstance] isaCloudDeletePendingInviteForRoom:room andAccount:_account.accountID])
+            [[MLNotificationQueue currentQueue] postNotificationName:kMonalIsaCloudPendingInvitesUpdated object:_account userInfo:nil];
+        return;
+    }
+    
+    //7. limit of pending invites per account, updating one that is already pending is always allowed
+    if([[DataLayer sharedInstance] isaCloudPendingInviteForRoom:room andAccount:_account.accountID] == nil && [[DataLayer sharedInstance] isaCloudPendingInviteCountForAccount:_account.accountID] >= 50)
+    {
+        DDLogWarn(@"isaCloud: ignoring invite to %@: 50 pending invites already", room);
+        return;
+    }
+    
+    //8. store it (one per room: a newer invite replaces who invited and the password) and tell the ui
+    NSNumber* receivedAt = [NSNumber numberWithLongLong:(long long)([stamp timeIntervalSince1970] * 1000)];
+    [[DataLayer sharedInstance] isaCloudSavePendingInviteForRoom:room account:_account.accountID invitedBy:invitedBy password:password receivedAt:receivedAt mediated:mediated];
+    DDLogInfo(@"isaCloud: pending invite to %@ from %@ saved (mediated: %@)", room, invitedBy, mediated ? @"yes" : @"no");
+    [[MLNotificationQueue currentQueue] postNotificationName:kMonalIsaCloudPendingInvitesUpdated object:_account userInfo:nil];
+}
+
+//isaCloud: the user accepts a pending invite: the pending request goes away, the room comes back from the archive if it was there, and we join it
+-(void) isaCloudAcceptInviteToRoom:(NSString*) room
+{
+    room = [room lowercaseString];
+    //isaCloud TODO password: the invite's password is kept in the pending invite, but Monal has no join with a password yet
+    [[DataLayer sharedInstance] isaCloudDeletePendingInviteForRoom:room andAccount:_account.accountID];
+    if([[DataLayer sharedInstance] isArchivedBuddy:room forAccount:_account.accountID])
+        [[DataLayer sharedInstance] unarchiveBuddy:room forAccount:_account.accountID];
+    [[MLNotificationQueue currentQueue] postNotificationName:kMonalIsaCloudPendingInvitesUpdated object:_account userInfo:nil];
+    [self join:room];
+}
+
+//isaCloud: the user declines a pending invite: it goes away, and a mediated invite gets a decline back to the room (XEP-0045 7.8.2)
+-(void) isaCloudDeclineInviteToRoom:(NSString*) room
+{
+    room = [room lowercaseString];
+    NSDictionary* invite = [[DataLayer sharedInstance] isaCloudPendingInviteForRoom:room andAccount:_account.accountID];
+    if(invite == nil)
+        return;
+    [[DataLayer sharedInstance] isaCloudDeletePendingInviteForRoom:room andAccount:_account.accountID];
+    if([invite[@"mediated"] boolValue])
+    {
+        DDLogInfo(@"isaCloud: declining mediated invite to %@ from %@", room, invite[@"invited_by"]);
+        XMPPMessage* decline = [[XMPPMessage alloc] initWithType:kMessageNormalType to:room];
+        [decline addChildNode:[[MLXMLNode alloc] initWithElement:@"x" andNamespace:@"http://jabber.org/protocol/muc#user" withAttributes:@{} andChildren:@[
+            [[MLXMLNode alloc] initWithElement:@"decline" withAttributes:@{@"to": invite[@"invited_by"]} andChildren:@[] andData:nil]
+        ] andData:nil]];
+        [_account send:decline];
+    }
+    else
+        DDLogInfo(@"isaCloud: declining direct invite to %@ (nothing to send back)", room);
+    [[MLNotificationQueue currentQueue] postNotificationName:kMonalIsaCloudPendingInvitesUpdated object:_account userInfo:nil];
+}
+
+//isaCloud: name and kind of a pending room (disco#info): a room without membersonly is a channel, otherwise a group. Errors change nothing.
+-(void) isaCloudQueryInfoOfPendingRoom:(NSString*) room
+{
+    room = [room lowercaseString];
+    XMPPIQ* discoInfo = [[XMPPIQ alloc] initWithType:kiqGetType to:room];
+    [discoInfo setDiscoInfoNode];
+    [_account sendIq:discoInfo withResponseHandler:^(XMPPIQ* response) {
+        NSString* name = [response findFirst:@"{http://jabber.org/protocol/disco#info}query/identity@name"];
+        if(name.length == 0)
+            name = nil;
+        NSSet* features = [NSSet setWithArray:[response find:@"{http://jabber.org/protocol/disco#info}query/feature@var"]];
+        NSNumber* isChannel = [NSNumber numberWithBool:![features containsObject:@"muc_membersonly"]];
+        [[DataLayer sharedInstance] isaCloudSetPendingInviteRoomName:name isChannel:isChannel forRoom:room andAccount:self->_account.accountID];
+        [[MLNotificationQueue currentQueue] postNotificationName:kMonalIsaCloudPendingInvitesUpdated object:self->_account userInfo:nil];
+    } andErrorHandler:^(XMPPIQ* error) {
+        DDLogWarn(@"isaCloud: disco#info of pending invite room %@ failed", room);
+    }];
 }
 
 -(void) handleMembersListUpdate:(NSArray<NSDictionary*>*) items forMuc:(NSString*) mucJid;
