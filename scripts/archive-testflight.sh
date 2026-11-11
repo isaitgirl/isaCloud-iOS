@@ -77,6 +77,11 @@ fi
 "$REPO_ROOT/scripts/isacloud-check-fts5.sh" "$APP"
 echo "Archive checked: build $ARCHIVED_NUMBER, $ARCHIVED_BUNDLE, FTS5 present."
 
+# keep the dSYMs of every build (the archive in build/ is overwritten by the next one): needed to symbolicate
+# the raw addresses of the "isaCloud C20:" log lines with atos
+DSYM_DIR="$HOME/Library/Developer/Xcode/Archives/isacloud-dsyms/build-$ARCHIVED_NUMBER"
+mkdir -p "$DSYM_DIR" && cp -Rc "$ARCHIVE"/dSYMs/* "$DSYM_DIR"/ && echo "dSYMs kept in $DSYM_DIR"
+
 # 4. upload
 if [[ $UPLOAD == 1 ]]; then
     xcodebuild -exportArchive \

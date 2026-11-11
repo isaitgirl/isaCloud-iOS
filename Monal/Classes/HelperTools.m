@@ -2757,6 +2757,27 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     }
 }
 
+//isaCloud: C21, starts the recording of database accesses made while the app is frozen. Called from prepareForFreeze (kMonalWillBeFreezed)
+//and again from signalSuspension: if it is already on, the records of this freeze are kept (the counter is not reset)
++(void) isaCloudArmDbAccessRecording
+{
+    if(atomic_load(&_isaCloudSuspendedFast))
+        return;
+    //the load addresses are computed here, outside of any transaction
+    [HelperTools isaCloudImageLoadAddresses];
+    atomic_store(&_isaCloudDbAccessRecords, 0);
+    atomic_store(&_isaCloudSuspendedFast, true);
+}
+
+//isaCloud: C21, stops the recording and writes the records to the normal log. Called on resumption, and on foreground/wakeup
+//even when the app was never suspended (the flag must not stay on: it defers the download state and the avatar). Call only
+//when the logging queue is running or the caller accepts that the lines are queued until it is
++(void) isaCloudDisarmDbAccessRecording
+{
+    atomic_store(&_isaCloudSuspendedFast, false);
+    [HelperTools isaCloudDumpDbAfterFreezeRecords];
+}
+
 +(void) signalSuspension
 {
     @synchronized(_suspensionHandling_lock) {
@@ -2766,10 +2787,8 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
             [HelperTools flushLogsWithTimeout:0.100];
             dispatch_suspend([DDLog loggingQueue]);
             _suspensionHandling_isSuspended = YES;
-            //isaCloud: C20, start a new record of database accesses for this suspension (the load addresses are computed here, outside of any transaction)
-            [HelperTools isaCloudImageLoadAddresses];
-            atomic_store(&_isaCloudDbAccessRecords, 0);
-            atomic_store(&_isaCloudSuspendedFast, true);
+            //isaCloud: C20, start a new record of database accesses for this suspension
+            [HelperTools isaCloudArmDbAccessRecording];
 
             DDLogVerbose(@"Posting kMonalFrozen notification now...");
             [[NSNotificationCenter defaultCenter] postNotificationName:kMonalFrozen object:nil];
@@ -2785,12 +2804,19 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
             DDLogVerbose(@"Resuming logger queue...");
             dispatch_resume([DDLog loggingQueue]);
             _suspensionHandling_isSuspended = NO;
-            atomic_store(&_isaCloudSuspendedFast, false);
-            //isaCloud: C20, the logger works again: write the database accesses recorded while it was frozen
-            [HelperTools isaCloudDumpDbAfterFreezeRecords];
+            //isaCloud: C20, the logger works again: write the database accesses recorded while it was frozen (C21: see disarm)
+            [HelperTools isaCloudDisarmDbAccessRecording];
 
             DDLogVerbose(@"Posting kMonalUnfrozen notification now...");
             [[NSNotificationCenter defaultCenter] postNotificationName:kMonalUnfrozen object:nil];
+        }
+        else if(atomic_load(&_isaCloudSuspendedFast))
+        {
+            //isaCloud: C21, the freeze was announced (prepareForFreeze armed the recording) but the app was never suspended:
+            //stop the recording and let the deferred work (download state, account avatar) run now
+            [HelperTools isaCloudDisarmDbAccessRecording];
+            DDLogVerbose(@"Posting kIsaCloudFreezeEndedWithoutSuspension notification now...");
+            [[NSNotificationCenter defaultCenter] postNotificationName:kIsaCloudFreezeEndedWithoutSuspension object:nil];
         }
     }
 }

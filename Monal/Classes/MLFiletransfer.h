@@ -25,6 +25,8 @@ NS_ASSUME_NONNULL_BEGIN
 +(MLHandler*) prepareUIImageUpload:(UIImage*) image;
 //isaCloud: logs an attachment that is sent without reduction (reason, size and pixels), for the photo tests
 +(void) logFileNotReduced:(NSURL*) fileUrl;
+//isaCloud: C20, stores the state kept while the app was frozen (called on kMonalUnfrozen and when the app comes back from a freeze)
++(void) isaCloudStoreStateAfterUnfreeze;
 +(void) uploadFile:(NSURL*) fileUrl onAccount:(xmpp*) account withEncryption:(BOOL) encrypted andCompletion:(void (^)(NSString* _Nullable url, NSString* _Nullable mimeType, NSNumber* _Nullable size, NSError* _Nullable error)) completion;
 +(void) uploadUIImage:(UIImage*) image onAccount:(xmpp*) account withEncryption:(BOOL) encrypted andCompletion:(void (^)(NSString* _Nullable url, NSString* _Nullable mimeType, NSNumber* _Nullable size, NSError* _Nullable error)) completion;
 +(void) hardlinkFileForMessage:(MLMessage*) msg;

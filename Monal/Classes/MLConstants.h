@@ -153,6 +153,8 @@ static inline NSString* _Nonnull LocalizationNotNeeded(NSString* _Nonnull s)
 #define kMonalWillBeFreezed @"kMonalWillBeFreezed"
 #define kMonalFrozen @"kMonalFrozen"
 #define kMonalUnfrozen @"kMonalUnfrozen"
+//isaCloud: C21, the app announced a freeze (kMonalWillBeFreezed) but came back without being suspended (no kMonalUnfrozen then)
+#define kIsaCloudFreezeEndedWithoutSuspension @"kIsaCloudFreezeEndedWithoutSuspension"
 #define kMonalFiletransferEventsFinished @"kMonalFiletransferEventsFinished"
 #define kMonalNewMessageNotice @"kMonalNewMessageNotice"
 #define kMonalUpdatedMessageNotice @"kMonalUpdatedMessageNotice"
