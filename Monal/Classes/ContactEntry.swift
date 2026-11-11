@@ -15,7 +15,7 @@ struct ContactEntry<AdditionalContent: View>: View {
     @StateObject var contact: ObservableKVOWrapper<MLContact>
     //isaCloud: the jid of the account this contact belongs to, shown under the contact's own jid (nil: not shown)
     private var accountJid: String? = nil
-    //isaCloud: state labels (participation state of groups and channels, "Archived") on a line of their own, on the right, only shown in the contacts lists (see showingArchivedLabel)
+    //isaCloud: state labels (participation state of groups and channels, "Archived") on lines of their own, on the right, only shown in the contacts lists (see showingArchivedLabel)
     private var showsArchivedLabel = false
     
     init(contact:MLContact, selfnotesPrefix: Bool = true, fallback: String? = nil) where AdditionalContent == EmptyView {
@@ -86,25 +86,22 @@ struct ContactEntry<AdditionalContent: View>: View {
                         .foregroundColor(Color(UIColor.secondaryLabel))
                         .font(.caption)
                     }
-                    //isaCloud: the state labels get a line of their own, on the right (contacts lists only)
+                    //isaCloud: the state labels get lines of their own, on the right next to the info button (contacts lists only)
+                    //(a full width frame and not a Spacer: a Spacer at the edge of this VStack took away the gap between the avatar and the texts)
                     if showsArchivedLabel && hasListLabel {
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Spacer(minLength: 0)
+                        VStack(alignment: .trailing, spacing: 2) {
                             stateLabels
                         }
+                        .frame(maxWidth: .infinity, alignment: .trailing)
                     }
                 }
             }
         }
     }
     
-    //isaCloud: "Archived" and the participation state of groups and channels, side by side, never cut (the participation state is always the rightmost)
+    //isaCloud: the participation state of groups and channels, with "Archived" on the line below, never cut
     @ViewBuilder
     private var stateLabels: some View {
-        if isArchivedEntry {
-            //icon (box with an arrow down) makes the label stand out; grey like the other state labels
-            stateLabel(icon: "tray.and.arrow.down.fill", text: "Archived", color: Color(UIColor.secondaryLabel))
-        }
         if isMucEntry && mucTypeOfEntry == kMucTypeChannel {
             if isParticipating {
                 stateLabel(icon: "checkmark", text: "Participant", color: .accentColor)
@@ -114,6 +111,10 @@ struct ContactEntry<AdditionalContent: View>: View {
         }
         if isMucEntry && mucTypeOfEntry == kMucTypeGroup && !isParticipating {
             stateLabel(icon: "xmark.circle.fill", text: "Not participating", color: Color(UIColor.secondaryLabel))
+        }
+        if isArchivedEntry {
+            //icon (box with an arrow down) makes the label stand out; grey like the other state labels
+            stateLabel(icon: "tray.and.arrow.down.fill", text: "Archived", color: Color(UIColor.secondaryLabel))
         }
     }
     
