@@ -968,3 +968,11 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - **Contexto:** sem sinal, `-[MLOutputStream write:maxLength:]` esperava sem prazo o completion do `nw_connection_send`, e `-[MLStream close]` só cancelava a conexão depois de enviar a mensagem final, que ficava atrás da escrita travada. O prazo de 2 s do build 85 no disconnect não bastava porque `cleanupSendQueue` espera a mesma operação sem prazo.
 - **Decisão:** `-[MLOutputStream close]` chama `nw_connection_force_cancel` quando há escrita pendente; a espera da escrita tem prazo de 15 s e, passado o prazo, cancela a conexão à força e espera o completion (que vem com erro). Não mexemos no `cleanupSendQueue` do Monal: destravar a escrita resolve a espera dele.
 - **Merge com o Monal:** trechos `//isaCloud: C21` em `MLStream.m`. Vale propor ao Monal upstream (o `close` com escrita pendente trava em qualquer fork).
+
+## Novidades do isaCloud no topo da lista (11/11/2026, build 105, roadmap 170)
+
+- **Ideia do isaCloud Messenger (Android)**, releases 2.21.0-64 a 66 (`ChangelogStore`, `ChangelogAdapter` num `ConcatAdapter`). O iOS segue as mesmas regras de lote: instalação nova mostra só o build atual; atualização mostra todos os builds pulados; arquivar vale até o próximo build.
+- **Item no `tableHeaderView`, não numa seção nova:** as seções `pinnedChats`/`unpinnedChats` do Monal são deduzidas em vários pontos ("se não é fixada, é não fixada"); uma seção a mais aumentaria os conflitos nos merges do Monal. Sem deslizar para arquivar: botão na linha com alerta de confirmação (o iOS não tem Snackbar com desfazer).
+- **Versão = número do build** (`CFBundleVersion`), comparado como inteiro.
+- **Fonte única:** `CHANGELOG-USERS.md` → `Monal/isaCloud-changelog.json` no archive e no `.dev`; "Próximo build" vira o `CURRENT_PROJECT_VERSION`, então a rotina de build não muda de ordem.
+- **Estado em `UserDefaults.standard`**, fora do `defaultsDB` (chave sem valor no `@defaultsDB` crasha, C18). Para reabrir no `.dev`, não adianta trocar o `.plist` no aparelho (o `cfprefsd` guarda a cópia em memória).

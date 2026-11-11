@@ -1,4 +1,4 @@
-# Estado atual e handoff (11/11/2026, build 104)
+# Estado atual e handoff (11/11/2026, build 105)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,14 +7,19 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 104** (sair do grupo/canal mantendo na lista, PR 65 da branch `feature/sair-mantendo-na-lista`), tag `build-104`; `git log --oneline -3` |
-| TestFlight | **104** (11/11/2026, 15:20; antes 103 no mesmo dia às 10:20, tag `build-103`) |
-| `.dev` no iPhone | **104**, igual ao TestFlight (11/11/2026; **sem push**, então a extensão de notificação não roda nele) |
+| Commit | o do **build 105** (convites pendentes, PR 66, e Novidades do isaCloud, PR 67), tag `build-105`; `git log --oneline -3` |
+| TestFlight | **105** (11/11/2026, envio em andamento; antes 104 no mesmo dia às 15:20, tag `build-104`) |
+| `.dev` no iPhone | **105**, igual ao TestFlight (11/11/2026; **sem push**, então a extensão de notificação não roda nele) |
 | Simuladores | iPhone XR (iOS 18.6) com o código do build 100 (09/11/2026) e isaCloud iOS27 com o do build 94 (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261105-1036-linha-lido-2/` e `-1037-linha-lido-2/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
 | ExyteChat | `3eb0aa1` na `isaCloud` (tamanho do arquivo nas mídias e nos áudios, PR 22; antes `7d3292b`: miniatura opcional dentro da citação, `Message.quotePreview`, PR 21; antes `e168ed8`: visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
+
+## O que entrou no build 105 (sobre o 104)
+
+- **Convites de grupos e canais como solicitações pendentes** (PR 66, roadmap 168): o convite vira pendência em Contatos (Ingressar, Recusar, Recusar e Bloquear) e entra no selo do botão de contatos; opção "Mostrar convites de desconhecidos" em Privacidade, desligada por padrão. Testado no `.dev`. Junto, o **C22** (convidar para canal derrubava o app no iOS 27).
+- **Novidades do isaCloud no topo da lista** (PR 67, roadmap 170): item no `tableHeaderView` com o que mudou desde a última abertura, tela em SwiftUI e linha em Configurações → Sobre. O JSON vem do `CHANGELOG-USERS.md` no archive. Aprovado no `.dev`. **A validar:** a primeira atualização real (104 → 105) mostra o item com o build 105 e o selo "Novo"; numa atualização com builds pulados, a prévia lista todos. Ver `docs/analise-novidades-na-lista.md`.
 
 ## O que entrou no build 104 (sobre o 103)
 
