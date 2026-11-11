@@ -353,6 +353,160 @@ struct GifTrendingCacheTests {
             #expect(cache.load(provider: .giphy, now: start) == nil)
         }
     }
+
+    @Test("a list saved under the old file name, with the big variants, is not loaded")
+    func oldFileName() throws {
+        try withCache { cache in
+            try FileManager.default.createDirectory(at: cache.directory, withIntermediateDirectories: true)
+            let entry = GifTrendingCache.Entry(provider: "giphy", fetchedAt: start, hasMore: true, gifs: page("a1").gifs)
+            try JSONEncoder().encode(entry).write(to: cache.directory.appendingPathComponent("giphy.json"))
+            #expect(cache.load(provider: .giphy, now: start) == nil)
+        }
+    }
+}
+
+struct GifVariantPolicyTests {
+
+    private let limit = GifVariantPolicy.maxSendBytes
+
+    private func url(_ name: String) -> URL {
+        return URL(string: "https://media.example.com/\(name).gif")!
+    }
+
+    @Test("the first variant that fits wins, in the order given")
+    func firstFitting() {
+        let picked = GifVariantPolicy.pick([(url: url("big"), size: 10_000_000),
+                                            (url: url("mid"), size: 1_500_000),
+                                            (url: url("small"), size: 300_000)], maxBytes: limit)
+        #expect(picked == url("mid"))
+    }
+
+    @Test("a variant of exactly the limit fits")
+    func exactLimit() {
+        #expect(GifVariantPolicy.pick([(url: url("a"), size: limit)], maxBytes: limit) == url("a"))
+    }
+
+    @Test("when none fits, the smallest known one is sent")
+    func noneFits() {
+        let picked = GifVariantPolicy.pick([(url: url("a"), size: 10_000_000),
+                                            (url: url("b"), size: 4_410_000),
+                                            (url: url("c"), size: 7_800_000)], maxBytes: limit)
+        #expect(picked == url("b"))
+    }
+
+    @Test("without any known size, the first one is sent")
+    func noSizes() {
+        #expect(GifVariantPolicy.pick([(url: url("a"), size: nil), (url: url("b"), size: nil)], maxBytes: limit) == url("a"))
+    }
+
+    @Test("a size of 0 or less counts as unknown")
+    func unknownSizes() {
+        #expect(GifVariantPolicy.pick([(url: url("a"), size: 0), (url: url("b"), size: 1_000_000)], maxBytes: limit) == url("b"))
+        #expect(GifVariantPolicy.pick([(url: url("a"), size: 0), (url: url("b"), size: nil)], maxBytes: limit) == url("a"))
+        #expect(GifVariantPolicy.pick([(url: url("a"), size: -5), (url: url("b"), size: 5_000_000), (url: url("c"), size: 3_000_000)], maxBytes: limit) == url("c"))
+    }
+
+    @Test("no candidates gives no URL")
+    func empty() {
+        #expect(GifVariantPolicy.pick([], maxBytes: limit) == nil)
+    }
+}
+
+struct GiphySentVariantTests {
+
+    private func parse(_ items: String) throws -> [GiphyGif] {
+        return try GiphySearch.parse(Data("{\"data\": [\(items)]}".utf8))
+    }
+
+    @Test("the sent GIF is the biggest Giphy variant up to 2 MB, the sizes being strings")
+    func biggestUnderLimit() throws {
+        let gifs = try parse("""
+        {"id": "s1", "images": {
+           "fixed_width_small_still": {"url": "https://media.giphy.com/s1/still.gif"},
+           "original": {"url": "https://media.giphy.com/s1/original.gif", "size": "10370000"},
+           "downsized_large": {"url": "https://media.giphy.com/s1/downsized_large.gif", "size": "7800000"},
+           "downsized_medium": {"url": "https://media.giphy.com/s1/downsized_medium.gif", "size": "4410000"},
+           "downsized": {"url": "https://media.giphy.com/s1/downsized.gif", "size": "1770000"},
+           "fixed_width": {"url": "https://media.giphy.com/s1/fixed_width.gif", "size": "2740000"}}}
+        """)
+        #expect(gifs.first?.originalURL == URL(string: "https://media.giphy.com/s1/downsized.gif"))
+    }
+
+    @Test("when every Giphy variant is above 2 MB, the smallest one is sent")
+    func allTooBig() throws {
+        let gifs = try parse("""
+        {"id": "s2", "images": {
+           "fixed_width_small_still": {"url": "https://media.giphy.com/s2/still.gif"},
+           "original": {"url": "https://media.giphy.com/s2/original.gif", "size": "10370000"},
+           "downsized_large": {"url": "https://media.giphy.com/s2/downsized_large.gif", "size": "7800000"},
+           "downsized_medium": {"url": "https://media.giphy.com/s2/downsized_medium.gif", "size": "4410000"},
+           "downsized": {"url": "https://media.giphy.com/s2/downsized.gif", "size": "3000000"},
+           "fixed_width": {"url": "https://media.giphy.com/s2/fixed_width.gif", "size": "2740000"}}}
+        """)
+        #expect(gifs.first?.originalURL == URL(string: "https://media.giphy.com/s2/fixed_width.gif"))
+    }
+
+    @Test("an item with only fixed_width is still parsed, and its sizes may be numbers")
+    func onlyFixedWidth() throws {
+        let only = try parse("""
+        {"id": "s3", "images": {
+           "fixed_width_small": {"url": "https://media.giphy.com/s3/200w.gif"},
+           "fixed_width": {"url": "https://media.giphy.com/s3/fixed_width.gif", "size": 1900000}}}
+        """)
+        #expect(only.first?.originalURL == URL(string: "https://media.giphy.com/s3/fixed_width.gif"))
+
+        let numbers = try parse("""
+        {"id": "s4", "images": {
+           "fixed_width_small": {"url": "https://media.giphy.com/s4/200w.gif"},
+           "original": {"url": "https://media.giphy.com/s4/original.gif", "size": 9000000},
+           "downsized_large": {"url": "https://media.giphy.com/s4/downsized_large.gif", "size": 1900000}}}
+        """)
+        #expect(numbers.first?.originalURL == URL(string: "https://media.giphy.com/s4/downsized_large.gif"))
+    }
+
+    @Test("an item without any of the five variants is skipped")
+    func noVariant() throws {
+        let gifs = try parse("""
+        {"id": "s5", "images": {
+           "fixed_width_small": {"url": "https://media.giphy.com/s5/200w.gif"},
+           "fixed_height": {"url": "https://media.giphy.com/s5/fixed_height.gif", "size": "1000000"}}}
+        """)
+        #expect(gifs.isEmpty)
+    }
+}
+
+struct KlipySentVariantTests {
+
+    private let sample = """
+    {"result": true, "data": {"data": [
+      {"id": 1, "type": "gif", "file": {
+         "hd": {"gif": {"url": "https://static.klipy.com/1/hd.gif", "size": 20210000}},
+         "md": {"gif": {"url": "https://static.klipy.com/1/md.gif", "size": 14440000}},
+         "sm": {"gif": {"url": "https://static.klipy.com/1/sm.gif", "size": 1180000}},
+         "xs": {"gif": {"url": "https://static.klipy.com/1/xs.gif", "size": 270000}}}},
+      {"id": 2, "type": "gif", "file": {
+         "hd": {"gif": {"url": "https://static.klipy.com/2/hd.gif", "size": 20210000}},
+         "md": {"gif": {"url": "https://static.klipy.com/2/md.gif", "size": 1500000}},
+         "sm": {"gif": {"url": "https://static.klipy.com/2/sm.gif", "size": 1180000}},
+         "xs": {"gif": {"url": "https://static.klipy.com/2/xs.gif", "size": 270000}}}}
+    ], "has_next": false}}
+    """
+
+    @Test("the sent KLIPY GIF is the small file when the HD and medium ones are above 2 MB; the preview stays the extra small one")
+    func smallWhenBigOnesAreTooBig() throws {
+        let page = try KlipySearch.parse(Data(sample.utf8))
+        let first = try #require(page.gifs.first)
+        #expect(first.originalURL == URL(string: "https://static.klipy.com/1/sm.gif"))
+        #expect(first.previewURL == URL(string: "https://static.klipy.com/1/xs.gif"))
+    }
+
+    @Test("the sent KLIPY GIF is the medium file when it is the biggest one up to 2 MB")
+    func mediumUnderLimit() throws {
+        let page = try KlipySearch.parse(Data(sample.utf8))
+        let second = try #require(page.gifs.last)
+        #expect(second.originalURL == URL(string: "https://static.klipy.com/2/md.gif"))
+        #expect(second.previewURL == URL(string: "https://static.klipy.com/2/xs.gif"))
+    }
 }
 
 struct GiphyGifCodableTests {

@@ -3,7 +3,8 @@
 //  Monal
 //
 //  isaCloud: GIF search for the chat input (GIPHY and KLIPY APIs). The keys come from the build (GiphyAPIKey and KlipyAPIKey in
-//  Info.plist), kept out of the repository; the GIF is sent as its original animated file, so the animation is kept.
+//  Info.plist), kept out of the repository; the GIF is sent as its biggest animated file up to 2 MB (GifVariantPolicy), so the
+//  animation is kept.
 //
 
 import Foundation
@@ -193,6 +194,41 @@ enum GiphySearchError: Error, Equatable {
     case badResponse
 }
 
+/// isaCloud: which variant of a GIF is sent. Giphy's original reaches ~10 MB and KLIPY's HD ~20 MB, too big for the chat, so the
+/// biggest variant up to maxSendBytes is sent. The previews do not change.
+enum GifVariantPolicy {
+    static let maxSendBytes = 2 * 1024 * 1024
+
+    /// candidates are ordered from the best to the smallest. The first one whose size is known and fits wins; when none fits, the
+    /// one with the smallest known size; when no size is known, the first one. A size of 0 or less counts as unknown.
+    static func pick(_ candidates: [(url: URL, size: Int?)], maxBytes: Int) -> URL? {
+        let known = candidates.compactMap { (candidate: (url: URL, size: Int?)) -> (url: URL, size: Int)? in
+            guard let size = candidate.size, size > 0 else {
+                return nil
+            }
+            return (url: candidate.url, size: size)
+        }
+        if let fitting = known.first(where: { $0.size <= maxBytes }) {
+            return fitting.url
+        }
+        if let smallest = known.min(by: { $0.size < $1.size }) {
+            return smallest.url
+        }
+        return candidates.first?.url
+    }
+
+    /// the byte count the API sends as a string (Giphy) or a number (KLIPY); nil when missing or not a number
+    static func byteCount(_ value: Any?) -> Int? {
+        if let text = value as? String {
+            return Int(text)
+        }
+        if let number = value as? NSNumber {
+            return number.intValue
+        }
+        return nil
+    }
+}
+
 enum GiphySearch {
     static let endpoint = URL(string: "https://api.giphy.com/v1/gifs/search")!
 
@@ -244,12 +280,23 @@ enum GiphySearch {
             guard let id = item["id"] as? String,
                   let images = item["images"] as? [String: Any],
                   let previewURL = previewURL(in: images),
-                  let original = images["original"] as? [String: Any],
-                  let originalURL = (original["url"] as? String).flatMap(URL.init(string:)) else {
+                  let originalURL = sentURL(in: images) else {
                 return nil
             }
             return GiphyGif(id: id, previewURL: previewURL, originalURL: originalURL)
         }
+    }
+
+    /// isaCloud: the GIF that is sent, the biggest variant up to GifVariantPolicy.maxSendBytes; Giphy sends the sizes as strings
+    private static func sentURL(in images: [String: Any]) -> URL? {
+        let candidates = ["original", "downsized_large", "downsized_medium", "downsized", "fixed_width"].compactMap { (name: String) -> (url: URL, size: Int?)? in
+            guard let image = images[name] as? [String: Any],
+                  let url = (image["url"] as? String).flatMap(URL.init(string:)) else {
+                return nil
+            }
+            return (url: url, size: GifVariantPolicy.byteCount(image["size"]))
+        }
+        return GifVariantPolicy.pick(candidates, maxBytes: GifVariantPolicy.maxSendBytes)
     }
 
     /// the small animated version, or the still one when Giphy does not send the animated one
@@ -363,10 +410,33 @@ enum KlipySearch {
         }
         guard let id, let file = item["file"] as? [String: Any],
               let previewURL = gifURL(file, size: "xs") ?? gifURL(file, size: "sm"),
-              let originalURL = gifURL(file, size: "hd") ?? gifURL(file, size: "md") else {
+              let originalURL = sentURL(file) else {
             return nil
         }
         return GiphyGif(id: "klipy-\(id)", previewURL: previewURL, originalURL: originalURL)
+    }
+
+    /// isaCloud: the GIF that is sent, the biggest of hd, md, sm and xs up to GifVariantPolicy.maxSendBytes. As before, an item
+    /// without an hd or md file is skipped.
+    private static func sentURL(_ file: [String: Any]) -> URL? {
+        guard gifURL(file, size: "hd") != nil || gifURL(file, size: "md") != nil else {
+            return nil
+        }
+        let candidates = ["hd", "md", "sm", "xs"].compactMap { (size: String) -> (url: URL, size: Int?)? in
+            guard let url = gifURL(file, size: size) else {
+                return nil
+            }
+            return (url: url, size: gifBytes(file, size: size))
+        }
+        return GifVariantPolicy.pick(candidates, maxBytes: GifVariantPolicy.maxSendBytes)
+    }
+
+    /// the size in bytes of the GIF file of one size, when KLIPY sends it
+    private static func gifBytes(_ file: [String: Any], size: String) -> Int? {
+        guard let sizes = file[size] as? [String: Any], let formats = sizes["gif"] as? [String: Any] else {
+            return nil
+        }
+        return GifVariantPolicy.byteCount(formats["size"])
     }
 
     /// the GIF file of one size (xs, sm, md or hd), or nil when KLIPY does not send it
@@ -456,7 +526,8 @@ struct GifTrendingCache {
     }
 
     private func fileURL(for provider: GifProvider) -> URL {
-        return directory.appendingPathComponent("\(provider.rawValue).json")
+        // isaCloud: "-v2" because lists saved before the 2 MB rule point to the big variants; the old files are not read
+        return directory.appendingPathComponent("\(provider.rawValue)-v2.json")
     }
 
     /// keeps the page as the saved list of its provider; a failure to write is ignored, the list is only a cache
