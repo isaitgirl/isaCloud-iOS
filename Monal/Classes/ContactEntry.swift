@@ -15,7 +15,7 @@ struct ContactEntry<AdditionalContent: View>: View {
     @StateObject var contact: ObservableKVOWrapper<MLContact>
     //isaCloud: the jid of the account this contact belongs to, shown under the contact's own jid (nil: not shown)
     private var accountJid: String? = nil
-    //isaCloud: state labels (participation state of groups and channels, "Archived") on lines of their own, on the right, only shown in the contacts lists (see showingArchivedLabel)
+    //isaCloud: a label on the right of the row (participation state of groups and channels, "Archived"), only shown in the contacts lists (see showingArchivedLabel)
     private var showsArchivedLabel = false
     
     init(contact:MLContact, selfnotesPrefix: Bool = true, fallback: String? = nil) where AdditionalContent == EmptyView {
@@ -69,7 +69,7 @@ struct ContactEntry<AdditionalContent: View>: View {
                     additionalContent()
                     //isaCloud: the address of a private group is a random string, meaningless to people: it is only shown in the group's details
                     if !(contact.isMuc && contact.mucType == kMucTypeGroup) {
-                        //isaCloud: in the contacts lists the address gets one full line and is cut in the middle instead of wrapping
+                        //isaCloud: in the contacts lists the address stays on one line, cut in the middle, next to the state labels
                         Text(contact.contactJid as String)
                             .foregroundColor(Color(UIColor.secondaryLabel))
                             .font(.footnote)
@@ -80,54 +80,58 @@ struct ContactEntry<AdditionalContent: View>: View {
                         HStack(spacing: 3) {
                             Image(systemName: "person.crop.circle")
                             Text(accountJid)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
                         }
                         .foregroundColor(Color(UIColor.secondaryLabel))
                         .font(.caption)
                     }
-                    //isaCloud: the state labels get lines of their own, on the right next to the info button (contacts lists only)
-                    //(a full width frame and not a Spacer: a Spacer at the edge of this VStack took away the gap between the avatar and the texts)
-                    if showsArchivedLabel && hasListLabel {
-                        VStack(alignment: .trailing, spacing: 2) {
-                            stateLabels
+                }
+                //isaCloud: the state labels sit on the right of the row, in the contacts lists only
+                if showsArchivedLabel && hasListLabel {
+                    Spacer(minLength: 8)
+                    VStack(alignment: .trailing, spacing: 2) {
+                        if isMucEntry && mucTypeOfEntry == kMucTypeChannel {
+                            if isParticipating {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "checkmark")
+                                    Text("Participant")
+                                }
+                                .font(.caption.weight(.semibold))
+                                .lineLimit(1)
+                                .foregroundColor(.accentColor)
+                            } else {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "person.badge.plus")
+                                    Text("Join")
+                                }
+                                .font(.caption.weight(.semibold))
+                                .lineLimit(1)
+                                .foregroundColor(Color(UIColor.secondaryLabel))
+                            }
                         }
-                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        if isMucEntry && mucTypeOfEntry == kMucTypeGroup && !isParticipating {
+                            HStack(spacing: 3) {
+                                Image(systemName: "xmark.circle.fill")
+                                Text("Not participating")
+                            }
+                            .font(.caption.weight(.semibold))
+                            .lineLimit(1)
+                            .foregroundColor(Color(UIColor.secondaryLabel))
+                        }
+                        if isArchivedEntry {
+                            //isaCloud: icon (box with an arrow down) makes the label stand out; grey like the other state labels
+                            //(baseline alignment: this symbol's arrow sticks out above the tray, so centering pushed the tray down and the text looked too high)
+                            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                                Image(systemName: "tray.and.arrow.down.fill")
+                                Text("Archived")
+                            }
+                            .font(.caption.weight(.semibold))
+                            .lineLimit(1)
+                            .foregroundColor(Color(UIColor.secondaryLabel))
+                        }
                     }
                 }
             }
         }
-    }
-    
-    //isaCloud: the participation state of groups and channels, with "Archived" on the line below, never cut
-    @ViewBuilder
-    private var stateLabels: some View {
-        if isMucEntry && mucTypeOfEntry == kMucTypeChannel {
-            if isParticipating {
-                stateLabel(icon: "checkmark", text: "Participant", color: .accentColor)
-            } else {
-                stateLabel(icon: "person.badge.plus", text: "Join", color: Color(UIColor.secondaryLabel))
-            }
-        }
-        if isMucEntry && mucTypeOfEntry == kMucTypeGroup && !isParticipating {
-            stateLabel(icon: "xmark.circle.fill", text: "Not participating", color: Color(UIColor.secondaryLabel))
-        }
-        if isArchivedEntry {
-            //icon (box with an arrow down) makes the label stand out; grey like the other state labels
-            stateLabel(icon: "tray.and.arrow.down.fill", text: "Archived", color: Color(UIColor.secondaryLabel))
-        }
-    }
-    
-    //(baseline alignment: the archive symbol's arrow sticks out above the tray, so centering pushed the tray down and the text looked too high)
-    private func stateLabel(icon: String, text: LocalizedStringKey, color: Color) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 3) {
-            Image(systemName: icon)
-            Text(text)
-        }
-        .font(.caption.weight(.semibold))
-        .lineLimit(1)
-        .fixedSize()
-        .foregroundColor(color)
     }
     
     //isaCloud: with more than one account enabled, the contacts list tells which account each contact belongs to
