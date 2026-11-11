@@ -963,3 +963,8 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - **Decisão:** o registro guarda só endereços de retorno e as bases do `monalxmpp` e do app (symbolicar depois com `atos`); as duas fontes esperam `kMonalUnfrozen` em vez de tocar no banco. Outras fontes só são adiadas quando aparecerem nas linhas `isaCloud C20:`.
 - **Regra:** nada caro no caminho do SQL. Instrumentação em ponto quente tem de custar o mesmo que o acesso que ela observa.
 - **Merge com o Monal:** os trechos `//isaCloud: C20` ficam em `HelperTools.m`, `MLSQLite.m`, `MLFiletransfer.m`, `MLXMPPManager.m` e `ActiveChatsViewController.m` (este último é só do isaCloud).
+
+## Escrita sem rede não segura a desconexão (11/11/2026, C21, build 102)
+- **Contexto:** sem sinal, `-[MLOutputStream write:maxLength:]` esperava sem prazo o completion do `nw_connection_send`, e `-[MLStream close]` só cancelava a conexão depois de enviar a mensagem final, que ficava atrás da escrita travada. O prazo de 2 s do build 85 no disconnect não bastava porque `cleanupSendQueue` espera a mesma operação sem prazo.
+- **Decisão:** `-[MLOutputStream close]` chama `nw_connection_force_cancel` quando há escrita pendente; a espera da escrita tem prazo de 15 s e, passado o prazo, cancela a conexão à força e espera o completion (que vem com erro). Não mexemos no `cleanupSendQueue` do Monal: destravar a escrita resolve a espera dele.
+- **Merge com o Monal:** trechos `//isaCloud: C21` em `MLStream.m`. Vale propor ao Monal upstream (o `close` com escrita pendente trava em qualquer fork).

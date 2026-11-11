@@ -1121,6 +1121,8 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
 
 -(void) prepareForFreeze:(NSNotification*) notification
 {
+    //isaCloud: C21, start recording the database accesses now: a crash can happen before signalSuspension runs (see HelperTools)
+    [HelperTools isaCloudArmDbAccessRecording];
     for(xmpp* account in [MLXMPPManager sharedInstance].connectedXMPP)
         [account freeze];
     [MLProcessLock unlock];
@@ -1131,7 +1133,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
 {
     //resume logging and other core tasks
     [HelperTools signalResumption];
-    
+
     DDLogInfo(@"Entering FG");
     [MLProcessLock lock];
     

@@ -269,6 +269,22 @@
 
 @end
 
+//isaCloud: C21, called with the condition locked: waits for the write completion, but if it does not come within 15 s (the network
+//stopped and nw_connection_send() never completes) the connection is force-cancelled, which completes all pending sends with an error
+//and so the completion (which also decrements _writing and signals the condition) runs. The caller returns after the completion
+static void isaCloudWaitForWriteCompletion(NSCondition* condition, MLSharedStreamState* shared_state)
+{
+    if([condition waitUntilDate:[NSDate dateWithTimeIntervalSinceNow:15.0]])
+        return;
+    nw_connection_t connection;
+    @synchronized(shared_state) {
+        connection = shared_state.connection;
+    }
+    DDLogWarn(@"isaCloud C21: no write completion after 15 seconds, force-cancelling connection...");
+    nw_connection_force_cancel(connection);
+    [condition wait];
+}
+
 @implementation MLOutputStream
 
 -(instancetype) initWithSharedState:(MLSharedStreamState*) shared
@@ -366,7 +382,8 @@
             }
         });
         //wait for write complete signal
-        [condition wait];
+        //isaCloud: C21, with a 15 s safety net (see isaCloudWaitForWriteCompletion)
+        isaCloudWaitForWriteCompletion(condition, self.shared_state);
         [condition unlock];
         DDLogDebug(@"Returning from write in COLD path: %zu", (unsigned long)len);
         return len;     //return instead of else to leave @synchronized block early
@@ -374,10 +391,32 @@
     DDLogVerbose(@"Calling nw_connection_send() in hot path...");
     nw_connection_send(self.shared_state.connection, data, NW_CONNECTION_DEFAULT_MESSAGE_CONTEXT, NO, write_completion);
     //wait for write complete signal
-    [condition wait];
+    //isaCloud: C21, with a 15 s safety net (see isaCloudWaitForWriteCompletion)
+    isaCloudWaitForWriteCompletion(condition, self.shared_state);
     [condition unlock];
     DDLogVerbose(@"Returning from write in hot path: %zu", (unsigned long)len);
     return len;
+}
+
+//isaCloud: C21, closing while a write waits for its completion would hang the close (the final message is queued behind that
+//send, which never completes without network): force-cancel the connection then, so the pending write returns
+-(void) close
+{
+    //queues the final message and marks the stream as closed
+    [super close];
+    BOOL writing = NO;
+    @synchronized(self) {
+        writing = _writing > 0;
+    }
+    if(writing)
+    {
+        nw_connection_t connection;
+        @synchronized(self.shared_state) {
+            connection = self.shared_state.connection;
+        }
+        DDLogWarn(@"isaCloud C21: closing stream with a write in progress, force-cancelling connection...");
+        nw_connection_force_cancel(connection);
+    }
 }
 
 -(BOOL) hasSpaceAvailable

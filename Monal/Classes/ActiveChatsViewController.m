@@ -655,6 +655,7 @@ static NSMutableSet<NSNumber*>* _hiddenChatListAccountIDs;      //isaCloud: only
     [nc addObserver:self selector:@selector(showWarningsIfNeeded) name:kMonalFinishedCatchup object:nil];
     //isaCloud: C20, the avatar update skipped while the app was frozen is done now (removed with the other observers in dealloc)
     [nc addObserver:self selector:@selector(isaCloudUpdateAccountAvatarAfterUnfreeze) name:kMonalUnfrozen object:nil];
+    [nc addObserver:self selector:@selector(isaCloudUpdateAccountAvatarAfterUnfreeze) name:kIsaCloudFreezeEndedWithoutSuspension object:nil];
 
     [_chatListTable registerNib:[UINib nibWithNibName:@"MLContactCell" bundle:[NSBundle mainBundle]] forCellReuseIdentifier:@"ContactCell"];
     

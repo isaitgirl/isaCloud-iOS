@@ -95,6 +95,9 @@ NSDictionary* _Nullable dictionaryComprehension(NSDictionary* _Nullable dict, id
 +(BOOL) isaCloudSuspendedFast;
 +(void) isaCloudRecordDbAccessAfterFreeze:(NSString*) query;
 +(void) isaCloudDumpDbAfterFreezeRecords;
+//isaCloud: C21, turns the recording on before the suspension starts (kMonalWillBeFreezed) and off on resumption (see HelperTools.m)
++(void) isaCloudArmDbAccessRecording;
++(void) isaCloudDisarmDbAccessRecording;
 +(void) __attribute__((noreturn)) MLAssertWithText:(NSString*) text andUserData:(id _Nullable) additionalData andFile:(const char* const) file andLine:(int) line andFunc:(const char* const) func;
 +(void) __attribute__((noreturn)) handleRustPanicWithText:(NSString*) text andBacktrace:(NSString*) backtrace;
 +(void) __attribute__((noreturn)) throwExceptionWithName:(NSString*) name reason:(NSString*) reason userInfo:(NSDictionary* _Nullable) userInfo;

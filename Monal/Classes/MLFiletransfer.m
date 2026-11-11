@@ -73,6 +73,7 @@ static BOOL _isaCloudStoreStateAfterUnfreeze = NO;
     _storeStateQueue = dispatch_queue_create("im.monal.filetransfer.storeState", dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL, QOS_CLASS_UTILITY, 0));
     //isaCloud: C20, store the state kept while the app was frozen
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(isaCloudStoreStateAfterUnfreeze) name:kMonalUnfrozen object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(isaCloudStoreStateAfterUnfreeze) name:kIsaCloudFreezeEndedWithoutSuspension object:nil];
 }
 
 +(void) loadState
