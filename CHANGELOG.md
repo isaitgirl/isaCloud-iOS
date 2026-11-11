@@ -2,6 +2,18 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 104) — 11/11/2026
+
+Ainda não enviado ao TestFlight. PR 65 do app (ExyteChat sem mudança, `3eb0aa1`).
+
+### Adicionado
+- **Sair do grupo/canal mantendo na lista.** Sair nos detalhes pergunta, como no Android: "Remover da lista", "Manter na lista" ou "Cancelar". "Manter na lista" sai da sala (`leave:withBookmarksUpdate:NO keepBuddylistEntry:YES`), mantém a linha na buddylist e republica o bookmark com `autojoin="false"` (`-[MLMucProcessor leaveKeepingBookmark:]`, `keepBookmarkFetched`/`keepBookmarkPublished` em `MLPubSubProcessor`; `_keepBookmarkPending` impede que um `updateBookmarks` simultâneo retraia o item). Uma sala mantida na lista mostra "Ingressar" e "Remover da lista" nos detalhes; remover retrai o bookmark explicitamente (`removeKeptMuc:`), já que o `updateBookmarks` nunca retrai itens com `autojoin=false`. Um bookmark com `autojoin=false` desconhecido (outro aparelho, reinstalação) entra na lista sem join (disco com `withJoin:NO`). Branch `feature/sair-mantendo-na-lista`.
+- **Estado de participação na lista de contatos.** Selos à direita, com os textos e as cores do Android: canal "Participante" (rosa) ou "Ingressar" (cinza), grupo de que a pessoa saiu "Não participando" (cinza); "Arquivado" passa a cinza. O endereço do canal fica em uma linha, cortado no meio.
+
+### Corrigido
+- **Contatos:** grupos e canais aparecem mesmo sem participar (o filtro de assinatura escondia salas fora de `muc_favorites`).
+- **Contatos:** a ordem do mesmo contato ou sala em várias contas é estável; a conta desempata (antes alternava a cada atualização, porque a lista vem de um `Set`).
+
 ## 0.0.1 (build 103) — 11/11/2026
 
 Enviado ao TestFlight às 10:20. PR 64 do app (ExyteChat sem mudança, `3eb0aa1`).

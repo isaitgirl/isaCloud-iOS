@@ -2,6 +2,15 @@
 
 O que mudou em cada versão, em poucas palavras. A lista técnica completa está no [CHANGELOG.md](CHANGELOG.md).
 
+## Build 104 · 11/11/2026
+
+### Novidades
+- 🚪 Ao sair de um grupo ou canal, dá para escolher entre remover da lista ou manter na lista para voltar depois.
+- 🏷️ Em Contatos, grupos e canais mostram se você participa, e "Arquivado" aparece em cinza.
+
+### Correções
+- 🔀 O mesmo canal em mais de uma conta não troca mais de lugar na lista.
+
 ## Build 103 · 11/11/2026
 
 ### Novidades
