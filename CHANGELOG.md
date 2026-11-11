@@ -4,7 +4,7 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## 0.0.1 (build 105) — 11/11/2026
 
-Ainda não enviado ao TestFlight. PRs 66 e 67 do app (ExyteChat sem mudança, `3eb0aa1`).
+Enviado ao TestFlight às 20:14. PRs 66 e 67 do app (ExyteChat sem mudança, `3eb0aa1`).
 
 ### Adicionado
 - **Novidades do isaCloud no topo da lista de conversas** (roadmap 170, como no Android). Depois de uma atualização, um item no `tableHeaderView` da lista mostra o que mudou nos builds desde a última abertura (instalação nova: só o build atual), com o balão 3D, selo "Novo", data, prévia e botão de arquivar com alerta de confirmação; some com filtro, conta oculta ou busca. Arquivar vale até o próximo build. A tela (SwiftUI) marca como lido, tem "Mostrar na lista de conversas" quando arquivado e link para o `CHANGELOG-USERS.md`; Configurações → Sobre → Novidades do isaCloud mostra todos os builds. O texto vem de `Monal/isaCloud-changelog.json`, gerado do `CHANGELOG-USERS.md` por `scripts/isacloud-generate-changelog-json.py` no `archive-testflight.sh` e no `isacloud-dev-device.sh` ("Próximo build" vira o `CURRENT_PROJECT_VERSION`). Estado em `UserDefaults.standard` (`IsaCloudChangelog.swift`). PR 67; análise em `docs/analise-novidades-na-lista.md`.

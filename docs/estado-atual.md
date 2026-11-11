@@ -8,7 +8,7 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 | | |
 |---|---|
 | Commit | o do **build 105** (convites pendentes, PR 66, e Novidades do isaCloud, PR 67), tag `build-105`; `git log --oneline -3` |
-| TestFlight | **105** (11/11/2026, envio em andamento; antes 104 no mesmo dia às 15:20, tag `build-104`) |
+| TestFlight | **105** (11/11/2026, 20:14; antes 104 no mesmo dia às 15:20, tag `build-104`) |
 | `.dev` no iPhone | **105**, igual ao TestFlight (11/11/2026; **sem push**, então a extensão de notificação não roda nele) |
 | Simuladores | iPhone XR (iOS 18.6) com o código do build 100 (09/11/2026) e isaCloud iOS27 com o do build 94 (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261105-1036-linha-lido-2/` e `-1037-linha-lido-2/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
 | ExyteChat | `3eb0aa1` na `isaCloud` (tamanho do arquivo nas mídias e nos áudios, PR 22; antes `7d3292b`: miniatura opcional dentro da citação, `Message.quotePreview`, PR 21; antes `e168ed8`: visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
