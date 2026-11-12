@@ -1,6 +1,25 @@
 {
   "releases": [
     {
+      "build": 108,
+      "date": "12/11/2026",
+      "sections": [
+        {
+          "title": "Novidades",
+          "items": [
+            "💭 Agora dá para ver quando alguém está te respondendo: três bolinhas animadas aparecem na conversa enquanto a outra pessoa digita.",
+            "😊 Figurinhas a um toque: com a caixa de texto vazia, é só tocar no ícone rosa à direita, desenhado especialmente para o isaCloud."
+          ]
+        },
+        {
+          "title": "Melhorias",
+          "items": [
+            "☁️ Logo novo, mais fofinho e gordinho, ao abrir o app e nas telas de adicionar e de criar conta, que ficaram mais curtas e diretas."
+          ]
+        }
+      ]
+    },
+    {
       "build": 107,
       "date": "12/11/2026",
       "sections": [

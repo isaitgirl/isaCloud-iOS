@@ -2,14 +2,14 @@
 
 O que mudou em cada versão, em poucas palavras. A lista técnica completa está no [CHANGELOG.md](CHANGELOG.md).
 
-## Próximo build
+## Build 108 · 12/11/2026
 
 ### Novidades
-- 💭 Nas conversas, três bolinhas animadas mostram quando a outra pessoa está digitando.
-- 😊 Com a caixa de texto vazia, o ícone rosa de figurinha à direita abre as figurinhas na hora.
+- 💭 Agora dá para ver quando alguém está te respondendo: três bolinhas animadas aparecem na conversa enquanto a outra pessoa digita.
+- 😊 Figurinhas a um toque: com a caixa de texto vazia, é só tocar no ícone rosa à direita, desenhado especialmente para o isaCloud.
 
 ### Melhorias
-- 💬 O logo novo, mais gordinho, aparece ao abrir o app e nas telas de adicionar e de criar conta, que ficaram mais enxutas.
+- ☁️ Logo novo, mais fofinho e gordinho, ao abrir o app e nas telas de adicionar e de criar conta, que ficaram mais curtas e diretas.
 
 ## Build 107 · 12/11/2026
 

@@ -988,3 +988,11 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - **Descartar a notificação não é Recusar.** `MonalAppDelegate` tratava `UNNotificationDismissActionIdentifier` junto do DENY, chamando `removeContact:` (apagava o item do roster). Agora descartar só registra no log; Recusar (notificação, `ContactRequestsMenu`, Contatos) chama `-[MLXMPPManager rejectContactRequest:]` → `-[xmpp rejectSubscriptionOf:]` (`unsubscribed` e apaga o pedido, sem tirar do roster).
 - **Selo "Aguardando aceite"** (`ContactEntry.swift`): `hasOutgoingContactRequest && !isSubscribedTo`, em vez de esconder o contato; assim fica claro que dá para mandar o pedido de novo.
 - RFC 6121 §3.4: o servidor guarda pré-aprovação e responde `subscribed` sozinho; para repetir testes, limpar o roster nos servidores (Prosody `roster remove`, ejabberd `delete_rosteritem`).
+
+## Bolinhas de "digitando", logo novo e atalho de figurinhas (12/11/2026, build 108, PRs 70-72)
+
+- **Bolinhas de "digitando" sem mexer no fork do ExyteChat.** O balão fica num `betweenListAndInputViewBuilder` de altura zero, por cima da lista, e a lista ganha 40 pt de `contentInsets` só enquanto ele aparece. A rolagem junto usa `ScrollToParams(offset:)` instantâneo: a rolagem suave pediria mudança no fork, e não fez falta no teste. Só conversa 1:1; grupos e canais continuam só com o texto do cabeçalho.
+- **Splash com assets em @1x/@2x/@3x e perfil sRGB.** Um PNG de 1024 px só em @3x não aparecia no splash do iPhone XR.
+- **Atalho de figurinhas no lugar do X.** O botão de limpar e o atalho dividem o mesmo canto da caixa e nunca aparecem juntos, então nada pula na tela. A linha da caixa alinha pelo centro com o campo vazio e pela base com texto (o X fica na última linha de um texto longo). Some ao editar mensagem e com anexos na fila, porque a figurinha sai na hora e os anexos ficariam parados. O item do clipe continua.
+- **Ícone de figurinha próprio.** O SF Symbols não tem figurinha; desenhamos um quadrado arredondado com sorriso e o canto dobrado (`Images.xcassets/StickerIcon`, SVG em modo template, com vetor preservado), para pegar a cor e funcionar no modo escuro. É desenho nosso, só com a ideia comum de "adesivo descolando", sem copiar o ícone de outro app. Usado no atalho (26 pt) e no item do clipe.
+
