@@ -138,7 +138,7 @@ struct ChatInputBar: View {
             Button {
                 onPickSticker()
             } label: {
-                Label("Stickers", systemImage: "face.smiling")
+                Label("Stickers", image: "StickerIcon")
             }
             Button {
                 onShareLocation()
@@ -158,18 +158,27 @@ struct ChatInputBar: View {
     }
 
     private var inputField: some View {
-        HStack(alignment: .bottom, spacing: 0) {
+        //isaCloud: centered while the field is empty (one line, the sticker shortcut sits in the middle); at the bottom with text,
+        //so the X stays on the last line of a long message
+        HStack(alignment: model.text.isEmpty ? .center : .bottom, spacing: 0) {
             //isaCloud: a UITextView (ChatTextInput): up to 6 lines, then it scrolls to the cursor. TextField(axis: .vertical) left the cursor
             //out of view past its line limit.
             ChatTextInput(text: textBinding, placeholder: NSLocalizedString("Type a message...", comment: "placeholder of the chat input"), maxLines: 6)
                 .padding(.vertical, 10)
                 .padding(.leading, 12)
+            //isaCloud: with text, the X clears it; with an empty field, the sticker shortcut takes its place (never both)
             if !model.text.isEmpty {
                 clearTextButton
                     .padding(.trailing, 8)
                     .padding(.bottom, 8)
+                    .transition(.opacity)
+            } else if model.edit == nil && model.attachments.isEmpty {
+                stickerShortcutButton
+                    .padding(.trailing, 4)
+                    .transition(.opacity)
             }
         }
+        .animation(.easeInOut(duration: 0.15), value: model.text.isEmpty)
         .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 20))
     }
 
@@ -329,6 +338,23 @@ struct ChatInputBar: View {
         }
         .accessibilityLabel("Clear text")
         .accessibilityIdentifier("clearTextButton")
+    }
+
+    /// isaCloud: shown in the empty field, at the place of the clear button: a shortcut to the sticker sheet (the same action as the Stickers item of the paperclip menu)
+    private var stickerShortcutButton: some View {
+        Button {
+            onPickSticker()
+        } label: {
+            //isaCloud: our own drawing (Images.xcassets/StickerIcon, a template SVG): SF Symbols has no sticker
+            Image("StickerIcon")
+                .resizable()
+                .frame(width: 26, height: 26)
+                .foregroundStyle(Color("isaCloudPink"))
+                .frame(width: 32, height: 32)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel("Stickers")
+        .accessibilityIdentifier("stickerShortcutButton")
     }
 
     private var editBanner: some View {
