@@ -1,4 +1,4 @@
-# Estado atual e handoff (12/11/2026, build 106)
+# Estado atual e handoff (12/11/2026, build 107)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,14 +7,18 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 106** (pedidos de contato repetidos, PR 68), tag `build-106`; `git log --oneline -3` |
-| TestFlight | **106** (12/11/2026, 11:51; antes 105 em 11/11 às 20:14, tag `build-105`) |
-| `.dev` no iPhone | **106**, igual ao TestFlight (12/11/2026; **sem push**, então a extensão de notificação não roda nele) |
+| Commit | o do **build 107** (contatos abrindo sem animação, PR 69), tag `build-107`; `git log --oneline -3` |
+| TestFlight | **107** (12/11/2026, 12:14; antes 106 no mesmo dia às 11:51, tag `build-106`) |
+| `.dev` no iPhone | **107**, igual ao TestFlight (12/11/2026; **sem push**, então a extensão de notificação não roda nele) |
 | Simuladores | iPhone XR (iOS 18.6) com o código do build 100 (09/11/2026) e isaCloud iOS27 com o do build 94 (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261105-1036-linha-lido-2/` e `-1037-linha-lido-2/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
 | ExyteChat | `3eb0aa1` na `isaCloud` (tamanho do arquivo nas mídias e nos áudios, PR 22; antes `7d3292b`: miniatura opcional dentro da citação, `Message.quotePreview`, PR 21; antes `e168ed8`: visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
+
+## O que entrou no build 107 (sobre o 106)
+
+- **Lista de contatos abre sem animação** (PR 69, roadmap 171): `showContacts` apresenta com `animated:NO`; fechar continua animado. Aprovado no `.dev`.
 
 ## O que entrou no build 106 (sobre o 105)
 

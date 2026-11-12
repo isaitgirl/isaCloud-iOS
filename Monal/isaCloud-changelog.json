@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "build": 107,
+      "date": "12/11/2026",
+      "sections": [
+        {
+          "title": "Melhorias",
+          "items": [
+            "⚡ A lista de contatos abre na hora, sem esperar a animação."
+          ]
+        }
+      ]
+    },
+    {
       "build": 106,
       "date": "12/11/2026",
       "sections": [

@@ -5,6 +5,11 @@ Registro do **porquê** das escolhas feitas no fork: decisões de produto, de c�
 - O que está feito, em andamento ou pendente, com datas e resultados de teste, fica no `ROADMAP.md` (toda decisão daqui tem uma linha lá). O histórico de cada build fica no `CHANGELOG.md`.
 - Dados sensíveis ficam em `isaCloud/local/NOTAS-LOCAIS.md`, nunca aqui.
 
+## Lista de contatos sem animação ao abrir (12/11/2026)
+
+- **O que era:** ao tocar no botão de contatos, a lista abria com a animação padrão do iOS (o popover vira folha no iPhone e, no iOS 26+, cresce a partir do botão). Não havia timer nem fade nosso; o único atraso proposital em `ContactsView.swift` é o de 0,25 s do menu "+", para o popover do menu sumir antes de abrir a próxima tela.
+- **Decisão:** a Isadora testou `animated:NO` no `.dev` e preferiu assim. Só a abertura mudou (`-[ActiveChatsViewController showContacts]`, arquivo do Monal, uma linha com comentário `//isaCloud:`); o fechamento continua animado. No merge com o Monal, conferir que a linha continua `animated:NO`.
+
 ## Rodapé da tela de abertura (04/11/2026)
 
 - **Texto:** "  Copyright © 2026 isaCloud. Todos os direitos reservados." no `Monal/Monal-iOS/Launch Screen.storyboard` (só o atributo `text` do label `obG-Y5-kRd` mudou, uma linha, para o merge com o Monal ficar simples).
