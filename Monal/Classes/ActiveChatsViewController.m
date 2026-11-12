@@ -2218,7 +2218,8 @@ static NSMutableSet<NSNumber*>* _hiddenChatListAccountIDs;      //isaCloud: only
         };
 
         UIViewController* contactsView = [[SwiftuiInterface new] makeContactsViewWithDismisser: callback onButton: self.composeButton];
-        [self presentViewController:contactsView animated:YES completion:^{resolve(nil);}];
+        //isaCloud: the contact list opens right away, without the system animation (closing is still animated)
+        [self presentViewController:contactsView animated:NO completion:^{resolve(nil);}];
     }));
 }
 

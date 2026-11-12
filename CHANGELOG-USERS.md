@@ -2,6 +2,11 @@
 
 O que mudou em cada versão, em poucas palavras. A lista técnica completa está no [CHANGELOG.md](CHANGELOG.md).
 
+## Próximo build
+
+### Melhorias
+- ⚡ A lista de contatos abre na hora, sem esperar a animação.
+
 ## Build 106 · 12/11/2026
 
 ### Novidades

@@ -2,6 +2,11 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## Próximo build (ainda não enviado)
+
+### Mudado
+- **Contatos abrem sem animação.** O botão de contatos da tela inicial apresenta a lista com `animated:NO` (`-[ActiveChatsViewController showContacts]`), sem a folha crescendo a partir do botão; fechar continua animado. Testado no `.dev` em 12/11/2026. Branch `feature/contatos-sem-animacao`.
+
 ## 0.0.1 (build 106) — 12/11/2026
 
 Enviado ao TestFlight às 11:51. PR 68 do app (ExyteChat sem mudança, `3eb0aa1`).
