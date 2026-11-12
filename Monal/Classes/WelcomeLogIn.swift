@@ -38,7 +38,8 @@ struct WelcomeLogIn: View {
 #if IS_ALPHA
     let appLogoId = ImageResource.alphaAppLogo
 #else
-    let appLogoId = ImageResource.appLogo
+    //isaCloud: same "chubby" logo as the launch screen and the app icon
+    let appLogoId = ImageResource.splashLogo
 #endif
     
     private var credentialsEnteredAlert: Bool {
@@ -164,14 +165,15 @@ struct WelcomeLogIn: View {
                     VStack(alignment: .leading) {
                         if !advancedMode {
                             VStack {
-                                HStack () {
+                                HStack(alignment: .top) {
                                     Image(appLogoId)
                                         .resizable()
+                                        .scaledToFit()
                                         .frame(width: CGFloat(120), height: CGFloat(120), alignment: .center)
                                         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                                         .padding()
 
-                                    Text("Log in to your existing account or register a new account. If required you will find more advanced options in Monal settings.")
+                                    Text("Log in to your existing account or register a new account.")
                                         .padding()
                                         .padding(.leading, -16.0)
                                 }
@@ -335,7 +337,8 @@ struct WelcomeLogIn: View {
         .dismissKeyboardOnTapOrScroll()     //isaCloud
         .interactiveDismissDisabled(overlay.enabled)
         .addLoadingOverlay(overlay)
-        .navigationTitle(advancedMode ? Text("Add Account (advanced)") : Text("Welcome"))
+        //isaCloud: "Add an account" instead of "Welcome"
+        .navigationTitle(advancedMode ? Text("Add Account (advanced)") : Text("Add an account"))
         .navigationBarTitleDisplayMode(advancedMode ? .inline : .large)
         .onDisappear {
             UITableView.appearance().tableHeaderView = nil      //why that??

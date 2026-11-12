@@ -302,10 +302,19 @@ struct RegisterAccount: View {
             GeometryReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading) {
-                        VStack(alignment: .leading) {
-                            Text("Like email, you can register your account on many sites and talk to anyone. You can use this page to register an account with a selected or provided XMPP server. You also have to choose a username and a password.")
+                        //isaCloud: logo next to the text, like the "add account" screen (WelcomeLogIn)
+                        HStack(alignment: .top) {
+                            Image(.splashLogo)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: CGFloat(120), height: CGFloat(120), alignment: .center)
                                 .padding()
+
+                            Text("You can use this screen to register an account with an XMPP server selected or provided by you.")
+                                .padding()
+                                .padding(.leading, -16.0)
                         }
+                        .frame(maxWidth: .infinity)
                         .background(Color(UIColor.systemBackground))
 
                         Form {
@@ -467,7 +476,7 @@ struct RegisterAccount: View {
         }
         .dismissKeyboardOnTapOrScroll()     //isaCloud
         .addLoadingOverlay(overlay)
-        .navigationBarTitle(Text("Register"), displayMode:.large)
+        .navigationBarTitle(Text("Register"), displayMode:.inline)      //isaCloud: inline, so the screen starts at the top like WelcomeLogIn
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kXMPPError)).receive(on: RunLoop.main)) { notification in
             DDLogDebug("Got xmpp error")
             if(self.errorObserverEnabled == false) {

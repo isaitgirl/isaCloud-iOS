@@ -28,7 +28,7 @@
                             <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" alignment="center" spacing="16" translatesAutoresizingMaskIntoConstraints="NO" id="LogoStack">
                                 <rect key="frame" x="117.5" y="306" width="140" height="200"/>
                                 <subviews>
-                                    <imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="AppLogo" translatesAutoresizingMaskIntoConstraints="NO" id="LogoImage">
+                                    <imageView opaque="NO" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="SplashLogo" translatesAutoresizingMaskIntoConstraints="NO" id="LogoImage">
                                         <rect key="frame" x="0.0" y="0.0" width="140" height="140"/>
                                         <constraints>
                                             <constraint firstAttribute="width" constant="140" id="LogoImageWidth"/>
@@ -60,7 +60,7 @@
         </scene>
     </scenes>
     <resources>
-        <image name="AppLogo" width="1024" height="1024"/>
+        <image name="SplashLogo" width="140" height="132"/>
         <namedColor name="isaCloudPink">
             <color red="1" green="0" blue="0.43529411764705884" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>

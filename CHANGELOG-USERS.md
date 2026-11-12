@@ -2,6 +2,11 @@
 
 O que mudou em cada versão, em poucas palavras. A lista técnica completa está no [CHANGELOG.md](CHANGELOG.md).
 
+## Próximo build
+
+### Melhorias
+- 💬 O logo novo, mais gordinho, aparece ao abrir o app e nas telas de adicionar e de criar conta, que ficaram mais enxutas.
+
 ## Build 107 · 12/11/2026
 
 ### Melhorias

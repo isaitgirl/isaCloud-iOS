@@ -2,6 +2,11 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## Próximo build (ainda não enviado)
+
+### Mudado
+- **Logo novo no splash e nas telas de conta.** O splash (`Launch Screen.storyboard`) usa o logo "gordinho" do ícone (`docs/logo-isacloud-im-liquidglass-1024.png`, fundo transparente) num asset próprio, `SplashLogo`, em @1x/@2x/@3x de 140 pt com perfil sRGB: o PNG de 1024 px só em @3x não aparecia no splash do iPhone XR. "Adicionar uma conta" (`WelcomeLogIn`, antes "Boas vindas") e "Registrar" (`RegisterAccount`, que ganhou o logo ao lado do texto) usam o mesmo logo, com o texto alinhado ao topo e frases mais curtas; o título de "Registrar" ficou pequeno na barra, para a tela começar no topo como a de adicionar conta. O `AppLogo` antigo continua no topo das Configurações. Testado no `.dev` em 12/11/2026. Branch `feature/splash-logo-gordinho`.
+
 ## 0.0.1 (build 107) — 12/11/2026
 
 Enviado ao TestFlight às 12:14. PR 69 do app (ExyteChat sem mudança, `3eb0aa1`).
