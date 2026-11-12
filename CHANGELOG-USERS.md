@@ -4,6 +4,9 @@ O que mudou em cada versão, em poucas palavras. A lista técnica completa está
 
 ## Próximo build
 
+### Novidades
+- 💭 Nas conversas, três bolinhas animadas mostram quando a outra pessoa está digitando.
+
 ### Melhorias
 - 💬 O logo novo, mais gordinho, aparece ao abrir o app e nas telas de adicionar e de criar conta, que ficaram mais enxutas.
 

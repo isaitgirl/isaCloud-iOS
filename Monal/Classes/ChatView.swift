@@ -258,6 +258,9 @@ struct ChatView: View {
     //isaCloud: the first unread message when the chat opened: the "Read up to here" line is drawn above it. A reference, not a value:
     //the list of ExyteChat keeps the messageBuilder of its first render, and that closure must still see the id set later in onAppear
     @State private var readMarker = ReadMarker()
+    //isaCloud: the latest scroll offset of the list (see onContentOffsetChange). A reference, not a value: it changes on every frame of a
+    //scroll, and a @State would redraw the whole chat each time
+    @State private var listOffset = ListOffset()
     //isaCloud: the "Loading…" capsule over the list, shown only when the jump takes a moment (see startJumpSafetyTimers())
     @State private var showJumpHint = false
     /// a chat is only opened at a message if it takes at most this many messages to get there from the newest ones
@@ -1386,6 +1389,30 @@ struct ChatView: View {
         }
     }
 
+    //isaCloud: a 1:1 contact that is typing shows the typing bubble over the bottom of the list (see betweenListAndInputViewBuilder in body)
+    private var showsTypingBubble: Bool {
+        let typing = contact.isTyping as Bool
+        return !contact.isMuc && typing
+    }
+
+    //isaCloud: room left under the newest message while the typing bubble shows, so the bubble never covers it (bubble + its padding + a gap)
+    private static let typingBubbleRoom: CGFloat = 40
+
+    //isaCloud: the room under the list comes and goes with the typing bubble; the list does not move by itself when its inset changes,
+    //so when the newest message was in view it scrolls with the room (the list is upside down: offset -room shows the room, 0 hides it).
+    //Scrolled up into the history, the list stays where it is
+    private func scrollWithTypingRoom(_ shows: Bool) {
+        let wasAtNewest = listOffset.value <= 1
+        guard wasAtNewest, !isSettlingJump else {
+            return
+        }
+        //the list only scrolls when the parameters change: clear them first, so the same offset as last time still scrolls
+        jumpScrollParams = nil
+        DispatchQueue.main.async {
+            jumpScrollParams = ScrollToParams(offset: shows ? -ChatView.typingBubbleRoom : 0)
+        }
+    }
+
     var body: some View {
         ExyteChatView(messages: messages, chatType: .conversation, replyMode: .quote, didSendMessage: { draft in
             if !draft.medias.isEmpty || draft.recording != nil || !draft.files.isEmpty {
@@ -1678,6 +1705,27 @@ struct ChatView: View {
         }
         .linkPreviewsEnabled(chatViewDefaultsDB.showURLPreview)
         .listHidden(isSettlingJump)      //isaCloud: the list fades out while a jump settles; the input bar and the "Loading…" hint stay (see JumpHint)
+        //isaCloud: a zero-height strip between the list and the input bar; the typing bubble hangs above it, over the bottom of the list, so the list never changes height.
+        //Attached here, among the ExyteChat modifiers that return ChatView (.chatTheme returns some View, so it comes after)
+        .betweenListAndInputViewBuilder {
+            Color.clear
+                .frame(maxWidth: .infinity)
+                .frame(height: 0)
+                .overlay(alignment: .bottomLeading) {
+                    if showsTypingBubble {
+                        TypingBubble()
+                            .padding(.leading, 12)
+                            .padding(.bottom, 6)
+                            .transition(.opacity)
+                    }
+                }
+                .animation(.easeInOut(duration: 0.2), value: showsTypingBubble)
+                .allowsHitTesting(false)
+        }
+        .contentInsets(bottom: showsTypingBubble ? ChatView.typingBubbleRoom : 0)      //isaCloud: room for the typing bubble, see scrollWithTypingRoom()
+        .onContentOffsetChange { offset in
+            listOffset.value = offset
+        }
         .checkFileSizeClosure { file in
             MLFiletransfer.checkMimeTypeAndSize(forHistoryID: Int(file.id)! as NSNumber)
         }
@@ -2179,6 +2227,9 @@ struct ChatView: View {
                     userInfo: ["contact": self.contact.obj]
                 )
             }
+        }
+        .onChange(of: showsTypingBubble) { _, shows in
+            scrollWithTypingRoom(shows)
         }
         .onChange(of: inputModel.text) { oldValue, newValue in
             // Don't send a typing notification if the only change is deletion of characters from the end.
@@ -2762,7 +2813,56 @@ class ChatViewUser: ExyteChat.User {
 }
 
 
-//isaCloud: the solid eye inside the circle of the "last seen" icon: an almond with a small hole for the pupil (even-odd fill), drawn in the box of the circle
+/// isaCloud: the typing bubble of a 1:1 chat: three dots that rise and fade in turn inside a capsule, drawn over the list above the input bar.
+/// With Reduce Motion on, the dots stay still at the same opacity.
+private struct TypingBubble: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @ScaledMetric private var dotSize: CGFloat = 6
+
+    var body: some View {
+        Group {
+            if reduceMotion {
+                dotRow(time: nil)
+            } else {
+                TimelineView(.animation) { context in
+                    dotRow(time: context.date.timeIntervalSinceReferenceDate)
+                }
+            }
+        }
+        .padding(.horizontal, dotSize * 1.6)
+        .padding(.vertical, dotSize * 1.3)
+        .background(Color(uiColor: .secondarySystemBackground), in: Capsule())
+        .overlay(Capsule().strokeBorder(Color(uiColor: .separator), lineWidth: 0.5))
+        .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Typing..."))
+    }
+
+    private func dotRow(time: Double?) -> some View {
+        HStack(spacing: dotSize * 0.6) {
+            ForEach(0..<3, id: \.self) { i in
+                dot(i, time: time)
+            }
+        }
+    }
+
+    /// time nil: Reduce Motion, the dot is still
+    private func dot(_ i: Int, time: Double?) -> some View {
+        let wave: Double
+        if let t = time {
+            // each dot is a little behind the one before it
+            wave = (sin(t * 2.4 - Double(i) * 0.5) + 1) / 2
+        } else {
+            wave = 0
+        }
+        return Circle()
+            .fill(Color(uiColor: .secondaryLabel))
+            .frame(width: dotSize, height: dotSize)
+            .opacity(time == nil ? 0.6 : 0.35 + 0.65 * wave)
+            .offset(y: -dotSize * 0.35 * wave)
+    }
+}
+
 /// isaCloud: a capsule floating over the top of the chat while a jump to a message settles. Same look as the "Sending..." hint of the input bar
 /// (see SendingHint in ChatInputBar.swift), with its own copy so that the input bar stays as it is.
 private struct JumpHint: View {
@@ -2783,6 +2883,7 @@ private struct JumpHint: View {
     }
 }
 
+//isaCloud: the solid eye inside the circle of the "last seen" icon: an almond with a small hole for the pupil (even-odd fill), drawn in the box of the circle
 private struct SolidEyeShape: Shape {
     func path(in rect: CGRect) -> Path {
         let w = rect.width
@@ -2803,6 +2904,12 @@ private struct SolidEyeShape: Shape {
 /// isaCloud: where the "Read up to here" line goes (see ChatView.readMarker)
 final class ReadMarker {
     var historyId: NSNumber?
+}
+
+/// isaCloud: the latest scroll offset of the chat list, kept by reference so that scrolling does not redraw the chat (see ChatView.listOffset).
+/// The list is upside down: 0 or less means the newest message is in view
+final class ListOffset {
+    var value: CGFloat = 0
 }
 
 /// isaCloud: a light gray line with "Read up to here", drawn above the first unread message a group or channel opened at
