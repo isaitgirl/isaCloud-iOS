@@ -8,9 +8,11 @@ O que mudou em cada versão, em poucas palavras. A lista técnica completa está
 - 🎉 Depois de atualizar, o topo das conversas mostra as Novidades do isaCloud com o que mudou. Dá para arquivar e reabrir em Configurações → Sobre → Novidades do isaCloud.
 - 📨 Convites para grupos e canais agora esperam a sua resposta em Contatos: você escolhe entrar, recusar ou bloquear.
 - 🙈 Nova opção em Privacidade para mostrar ou não convites de quem não está nos seus contatos.
+- ⏳ Em Contatos, quem ainda não aceitou o seu pedido aparece com "Aguardando aceite".
 
 ### Correções
 - 🛠️ Convidar alguém para um canal não fecha mais o app.
+- 🤝 Aceitar alguém não gera mais pedido de contato repetido, e limpar a notificação não recusa mais o pedido.
 
 ## Build 104 · 11/11/2026
 

@@ -954,10 +954,16 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
             [[MLXMPPManager sharedInstance] addContact:fromContact];
             [self openChatOfContact:fromContact];
         }
-        else if([response.actionIdentifier isEqualToString:@"DENY_SUBSCRIPTION_ACTION"] || [response.actionIdentifier isEqualToString:UNNotificationDismissActionIdentifier])
+        else if([response.actionIdentifier isEqualToString:@"DENY_SUBSCRIPTION_ACTION"])
         {
             DDLogInfo(@"DENY_SUBSCRIPTION_ACTION triggered...");
-            [[MLXMPPManager sharedInstance] removeContact:fromContact];
+            //isaCloud: only refuses the request (see rejectContactRequest:), the contact is not removed from our roster if we added them
+            [[MLXMPPManager sharedInstance] rejectContactRequest:fromContact];
+        }
+        else if([response.actionIdentifier isEqualToString:UNNotificationDismissActionIdentifier])
+        {
+            //isaCloud: dismissing the notification does nothing: the request stays in the contacts list until the user answers it there
+            DDLogInfo(@"Subscription notification dismissed, request kept in the contacts list");
         }
         else if([response.actionIdentifier isEqualToString:@"BLOCK_SUBSCRIPTION_ACTION"])
         {

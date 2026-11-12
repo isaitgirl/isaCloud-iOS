@@ -102,7 +102,8 @@ struct ContactRequestRow: View {
                 .tint(Color("isaCloudPink"))
 
                 Button {
-                    MLXMPPManager.sharedInstance().remove(contact)
+                    //isaCloud: only refuses the request, a contact we already added stays in the list
+                    MLXMPPManager.sharedInstance().rejectContactRequest(contact)
                 } label: {
                     Text("Decline").frame(maxWidth: .infinity)
                 }

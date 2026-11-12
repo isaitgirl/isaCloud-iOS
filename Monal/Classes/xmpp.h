@@ -166,6 +166,9 @@ typedef void (^monal_iq_handler_t)(XMPPIQ* _Nullable);
  */
 -(void) removeFromRoster:(MLContact*) contact;
 
+//isaCloud: refuses only the contact's request of us (sends "unsubscribed" and deletes the request), the contact stays in our roster
+-(void) rejectSubscriptionOf:(MLContact*) contact;
+
 /**
  adds a new contact to the roster
  */

@@ -60,6 +60,9 @@ NS_ASSUME_NONNULL_BEGIN
  */
 -(void) removeContact:(MLContact*) contact;
 
+//isaCloud: decline a contact request: if we already added or asked the contact, only their request is refused and they stay in the roster
+-(void) rejectContactRequest:(MLContact*) contact;
+
 /**
  Leave a group or channel but keep it in the buddylist and in the bookmarks (autojoin=false)
  */
