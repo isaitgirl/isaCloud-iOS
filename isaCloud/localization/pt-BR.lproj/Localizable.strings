@@ -337,3 +337,8 @@
 "See all news" = "Ver todas as novidades";
 "No news for now." = "Nenhuma novidade por enquanto.";
 "Build %@" = "Build %@";
+
+/* isaCloud: texto curto da tela de registrar conta */
+"You can use this screen to register an account with an XMPP server selected or provided by you." = "Você pode usar essa tela para registrar uma conta num servidor XMPP selecionado ou informado por você.";
+"Log in to your existing account or register a new account." = "Entre na sua conta existente ou registre uma nova conta.";
+"Add an account" = "Adicionar uma conta";
