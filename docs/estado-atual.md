@@ -1,4 +1,4 @@
-# Estado atual e handoff (11/11/2026, build 105)
+# Estado atual e handoff (12/11/2026, build 106)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,14 +7,18 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 105** (convites pendentes, PR 66, e Novidades do isaCloud, PR 67), tag `build-105`; `git log --oneline -3` |
-| TestFlight | **105** (11/11/2026, 20:14; antes 104 no mesmo dia às 15:20, tag `build-104`) |
-| `.dev` no iPhone | **105**, igual ao TestFlight (11/11/2026; **sem push**, então a extensão de notificação não roda nele) |
+| Commit | o do **build 106** (pedidos de contato repetidos, PR 68), tag `build-106`; `git log --oneline -3` |
+| TestFlight | **106** (12/11/2026, 11:51; antes 105 em 11/11 às 20:14, tag `build-105`) |
+| `.dev` no iPhone | **106**, igual ao TestFlight (12/11/2026; **sem push**, então a extensão de notificação não roda nele) |
 | Simuladores | iPhone XR (iOS 18.6) com o código do build 100 (09/11/2026) e isaCloud iOS27 com o do build 94 (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261105-1036-linha-lido-2/` e `-1037-linha-lido-2/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
 | ExyteChat | `3eb0aa1` na `isaCloud` (tamanho do arquivo nas mídias e nos áudios, PR 22; antes `7d3292b`: miniatura opcional dentro da citação, `Message.quotePreview`, PR 21; antes `e168ed8`: visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
+
+## O que entrou no build 106 (sobre o 105)
+
+- **Pedidos de contato repetidos** (PR 68): o pedido de volta de quem aceitou (`subscribe` com `subscription=to` ou `ask=subscribe`) é aceito sozinho em `xmpp.m`, sem notificação; descartar a notificação não recusa mais (antes apagava o contato do roster); Recusar usa `-[MLXMPPManager rejectContactRequest:]`. Selo "Aguardando aceite" em Contatos. Testado no `.dev`. **A validar em produção:** adicionar alguém entre `.dev` e produção e ver que não aparece pedido de volta. Lembrar que o servidor guarda pré-aprovação (`approved='true'`) e reentrega pedidos pendentes a cada login; limpar o roster no servidor antes de repetir o teste.
 
 ## O que entrou no build 105 (sobre o 104)
 

@@ -976,3 +976,10 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - **Versão = número do build** (`CFBundleVersion`), comparado como inteiro.
 - **Fonte única:** `CHANGELOG-USERS.md` → `Monal/isaCloud-changelog.json` no archive e no `.dev`; "Próximo build" vira o `CURRENT_PROJECT_VERSION`, então a rotina de build não muda de ordem.
 - **Estado em `UserDefaults.standard`**, fora do `defaultsDB` (chave sem valor no `@defaultsDB` crasha, C18). Para reabrir no `.dev`, não adianta trocar o `.plist` no aparelho (o `cfprefsd` guarda a cópia em memória).
+
+## Pedidos de contato: aceite automático do pedido de volta e descartar não recusa (12/11/2026, build 106, PR 68)
+
+- **Código do Monal mudado:** o ramo `subscribe` de `xmpp.m` (presença). O Monal tinha o aceite automático de quem já assinamos, mas o primeiro `if` também pegava `subscription=to` e ele nunca rodava. Agora: `from`/`both` ignora; `to` ou `ask=subscribe` responde só `subscribed` e apaga o pedido; o resto vira pedido. No próximo merge do Monal, conferir se o upstream mexeu nesse ramo.
+- **Descartar a notificação não é Recusar.** `MonalAppDelegate` tratava `UNNotificationDismissActionIdentifier` junto do DENY, chamando `removeContact:` (apagava o item do roster). Agora descartar só registra no log; Recusar (notificação, `ContactRequestsMenu`, Contatos) chama `-[MLXMPPManager rejectContactRequest:]` → `-[xmpp rejectSubscriptionOf:]` (`unsubscribed` e apaga o pedido, sem tirar do roster).
+- **Selo "Aguardando aceite"** (`ContactEntry.swift`): `hasOutgoingContactRequest && !isSubscribedTo`, em vez de esconder o contato; assim fica claro que dá para mandar o pedido de novo.
+- RFC 6121 §3.4: o servidor guarda pré-aprovação e responde `subscribed` sozinho; para repetir testes, limpar o roster nos servidores (Prosody `roster remove`, ejabberd `delete_rosteritem`).

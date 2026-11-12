@@ -1,6 +1,24 @@
 {
   "releases": [
     {
+      "build": 106,
+      "date": "12/11/2026",
+      "sections": [
+        {
+          "title": "Novidades",
+          "items": [
+            "⏳ Em Contatos, quem ainda não aceitou o seu pedido aparece com \"Aguardando aceite\"."
+          ]
+        },
+        {
+          "title": "Correções",
+          "items": [
+            "🤝 Aceitar alguém não gera mais pedido de contato repetido, e limpar a notificação não recusa mais o pedido."
+          ]
+        }
+      ]
+    },
+    {
       "build": 105,
       "date": "11/11/2026",
       "sections": [
