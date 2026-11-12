@@ -1055,6 +1055,43 @@ $$
 $$class_handler(handleRemoveContact, $$ID(MLContact*, contact))
     [[MLXMPPManager sharedInstance] removeContact:contact];
 $$
+
+//isaCloud: this handler will simply retry the rejectContactRequest: call
+$$class_handler(handleRejectContactRequest, $$ID(MLContact*, contact))
+    [[MLXMPPManager sharedInstance] rejectContactRequest:contact];
+$$
+
+//isaCloud: declines a contact request. If we already added or asked this contact, only their request of us is refused (they stay in the roster).
+//Otherwise the contact is removed completely, like before.
+-(void) rejectContactRequest:(MLContact*) contact
+{
+    xmpp* account = contact.account;
+    if(account)
+    {
+        //queue reject for execution once bound (e.g. on catchup done)
+        if(account.accountState < kStateInitStarted)
+        {
+            [account addReconnectionHandler:$newHandler(self, handleRejectContactRequest, $ID(contact))];
+            return;
+        }
+
+        //we never added or asked this contact: there is nothing of ours to keep, so remove it completely
+        if(!contact.isSubscribedTo && ![contact.ask isEqualToString:kAskSubscribe])
+        {
+            [self removeContact:contact];
+            return;
+        }
+
+        //we added or asked this contact: refuse only their request, the contact stays in our roster
+        [account rejectSubscriptionOf:contact];
+
+        //notify the UI
+        [[MLNotificationQueue currentQueue] postNotificationName:kMonalContactRefresh object:account userInfo:@{
+            @"contact": contact
+        }];
+    }
+}
+
 -(void) removeContact:(MLContact*) contact
 {
     xmpp* account = contact.account;

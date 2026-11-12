@@ -293,6 +293,9 @@
 "Unarchive" = "Desarquivar";
 "Notifications disabled while archived" = "Notificações desativadas enquanto arquivado";
 
+/* isaCloud: contato que ainda não aceitou nosso pedido de contato (selo na lista de contatos; ContactEntry.swift) */
+"Waiting for acceptance" = "Aguardando aceite";
+
 /* isaCloud: aviso de OMEMO no chat quando um aparelho já conhecido muda a chave (MLOMEMO.m, do merge do Monal/develop de 11/2026); texto escolhido pela Isadora sem a palavra "ataque" */
 "OMEMO: Detected new identity key for already known device of %@ having id %@. New identity ignored because this likely is an attack!" = "OMEMO: Um aparelho de %@ (id %@) mudou a chave de segurança. Por precaução, o isaCloud manteve a chave anterior. Se a pessoa reinstalou o app, peça para ela verificar as chaves com você.";
 

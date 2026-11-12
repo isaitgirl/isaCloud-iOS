@@ -40,8 +40,8 @@ struct ContactRequestsMenuEntry: View {
                 .buttonStyle(BorderlessButtonStyle())
                 
                 Button {
-                    // deny request
-                    MLXMPPManager.sharedInstance().remove(contact)
+                    // deny request (isaCloud: only refuses the request, see rejectContactRequest:)
+                    MLXMPPManager.sharedInstance().rejectContactRequest(contact)
                 } label: {
                     Image(systemName: "person.crop.circle.badge.minus")
                         .foregroundStyle(Color.yellow)

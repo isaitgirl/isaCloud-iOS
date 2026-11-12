@@ -2086,10 +2086,27 @@ static NSRegularExpression* fastTokenRemovalRegex;
                     // check if we need a contact request
                     NSDictionary* contactSub = [[DataLayer sharedInstance] getSubscriptionForContact:contact.contactJid andAccount:contact.accountID];
                     DDLogVerbose(@"Got subscription request for contact %@ having subscription status: %@", presenceNode.fromUser, contactSub);
-                    if(!contactSub || !([[contactSub objectForKey:@"subscription"] isEqualToString:kSubFrom] || [[contactSub objectForKey:@"subscription"] isEqualToString:kSubBoth]))
+                    NSString* subscription = [contactSub objectForKey:@"subscription"];
+                    NSString* ask = [contactSub objectForKey:@"ask"];
+                    //isaCloud: bug fix. The old first condition also caught subscription==to (we already added them), so that case
+                    //never reached the auto-accept branch and their "subscribe" came back as a new contact request (with notification).
+                    //Now, if we already added them or asked them, we accept their request silently (only "subscribed", no new "subscribe", no notification).
+                    if(contactSub && ([subscription isEqualToString:kSubFrom] || [subscription isEqualToString:kSubBoth]))
+                    {
+                        //they are already subscribed to us: nothing to decide
+                        DDLogInfo(@"Ignoring subscribe request of %@, they are already subscribed to us", presenceNode.fromUser);
+                    }
+                    else if(contactSub && ([subscription isEqualToString:kSubTo] || [ask isEqualToString:kAskSubscribe]))
+                    {
+                        //we already added them (or asked them): accept their request without a new request, notification or "subscribe" back
+                        DDLogInfo(@"Auto-accepting subscribe request of %@, we already added or asked them", presenceNode.fromUser);
+                        [[DataLayer sharedInstance] deleteContactRequest:contact];
+                        XMPPPresence* acceptPresence = [XMPPPresence new];
+                        [acceptPresence subscribedContact:contact];
+                        [self send:acceptPresence];
+                    }
+                    else
                         [[DataLayer sharedInstance] addContactRequest:contact];
-                    else if(contactSub && [[contactSub objectForKey:@"subscription"] isEqualToString:kSubTo])
-                        [self addToRoster:contact withPreauthToken:nil];
                     
                     //wait 1 sec for nickname and profile image to be processed, then send out kMonalContactRefresh notification
                     createTimer(1.0, (^{
@@ -5404,13 +5421,26 @@ static NSRegularExpression* fastTokenRemovalRegex;
 -(void) removeFromRoster:(MLContact*) contact
 {
     DDLogVerbose(@"Removing jid from roster: %@", contact);
-    
+
     //delete contact request if it exists
     [[DataLayer sharedInstance] deleteContactRequest:contact];
-    
+
     XMPPIQ* iq = [[XMPPIQ alloc] initWithType:kiqSetType];
     [iq setRemoveFromRoster:contact];
     [self send:iq];
+}
+
+//isaCloud: refuses only the contact's request of us, the contact stays in our roster
+-(void) rejectSubscriptionOf:(MLContact*) contact
+{
+    DDLogVerbose(@"Rejecting subscription request of contact: %@", contact);
+
+    //delete contact request if it exists
+    [[DataLayer sharedInstance] deleteContactRequest:contact];
+
+    XMPPPresence* rejectPresence = [XMPPPresence new];
+    [rejectPresence unsubscribedContact:contact];
+    [self send:rejectPresence];
 }
 
 -(void) addToRoster:(MLContact*) contact withPreauthToken:(NSString* _Nullable) preauthToken

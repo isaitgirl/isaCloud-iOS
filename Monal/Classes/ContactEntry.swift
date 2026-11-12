@@ -117,6 +117,16 @@ struct ContactEntry<AdditionalContent: View>: View {
                             .lineLimit(1)
                             .foregroundColor(Color(UIColor.secondaryLabel))
                         }
+                        if isWaitingForAcceptance {
+                            //isaCloud: we asked this contact to add us and they have not accepted yet (grey, like the other state labels)
+                            HStack(spacing: 3) {
+                                Image(systemName: "clock")
+                                Text("Waiting for acceptance")
+                            }
+                            .font(.caption.weight(.semibold))
+                            .lineLimit(1)
+                            .foregroundColor(Color(UIColor.secondaryLabel))
+                        }
                         if isArchivedEntry {
                             //isaCloud: icon (box with an arrow down) makes the label stand out; grey like the other state labels
                             //(baseline alignment: this symbol's arrow sticks out above the tray, so centering pushed the tray down and the text looked too high)
@@ -169,9 +179,16 @@ struct ContactEntry<AdditionalContent: View>: View {
         contact.obj.mucType
     }
 
+    //isaCloud: a 1:1 contact we asked to subscribe (not yet accepted, and we are not subscribed to them); not for groups, channels or ourselves
+    private var isWaitingForAcceptance: Bool {
+        let waiting: Bool = contact.hasOutgoingContactRequest
+        let subscribedTo: Bool = contact.isSubscribedTo
+        return waiting && !subscribedTo
+    }
+
     //isaCloud: whether the row has any state label (channels always do: participant or join)
     private var hasListLabel: Bool {
-        (isMucEntry && mucTypeOfEntry == kMucTypeChannel) || (isMucEntry && mucTypeOfEntry == kMucTypeGroup && !isParticipating) || isArchivedEntry
+        (isMucEntry && mucTypeOfEntry == kMucTypeChannel) || (isMucEntry && mucTypeOfEntry == kMucTypeGroup && !isParticipating) || isWaitingForAcceptance || isArchivedEntry
     }
 }
 
