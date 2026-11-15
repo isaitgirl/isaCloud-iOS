@@ -2,6 +2,11 @@
 
 O que mudou em cada versão, em poucas palavras. A lista técnica completa está no [CHANGELOG.md](CHANGELOG.md).
 
+## Build 110 · 15/11/2026
+
+### Melhorias
+- 🔐 Conversas criptografadas se recuperam mais rápido quando uma sessão fica fora de sincronia.
+
 ## Build 109 · 15/11/2026
 
 ### Melhorias

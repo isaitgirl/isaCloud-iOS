@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "build": 110,
+      "date": "15/11/2026",
+      "sections": [
+        {
+          "title": "Melhorias",
+          "items": [
+            "🔐 Conversas criptografadas se recuperam mais rápido quando uma sessão fica fora de sincronia."
+          ]
+        }
+      ]
+    },
+    {
       "build": 109,
       "date": "15/11/2026",
       "sections": [
