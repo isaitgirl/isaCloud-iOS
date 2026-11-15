@@ -996,3 +996,9 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - **Atalho de figurinhas no lugar do X.** O botão de limpar e o atalho dividem o mesmo canto da caixa e nunca aparecem juntos, então nada pula na tela. A linha da caixa alinha pelo centro com o campo vazio e pela base com texto (o X fica na última linha de um texto longo). Some ao editar mensagem e com anexos na fila, porque a figurinha sai na hora e os anexos ficariam parados. O item do clipe continua.
 - **Ícone de figurinha próprio.** O SF Symbols não tem figurinha; desenhamos um quadrado arredondado com sorriso e o canto dobrado (`Images.xcassets/StickerIcon`, SVG em modo template, com vetor preservado), para pegar a cor e funcionar no modo escuro. É desenho nosso, só com a ideia comum de "adesivo descolando", sem copiar o ícone de outro app. Usado no atalho (26 pt) e no item do clipe.
 
+## Salvamento do estado durante o catch-up (15/11/2026, build 109)
+
+- **Medição antes:** catch-up de 493 stanzas levou 80 s, e 67 s foram `persistState`: o estado da conta (118 a 220 KB, cerca de 60 ms por gravação) era serializado depois de cada stanza.
+- **Decisão:** durante o catch-up (`!_catchupDone` com `inCatchup` não vazio), o estado é salvo no máximo uma vez por segundo (`isaCloudPersistStateThrottled`). Uma gravação adiada não se perde: um timer salva o último estado pedido quando o intervalo acaba.
+- **Sem adiar:** fora do catch-up, com o app congelado (`isaCloudSuspendedFast`), e nos caminhos de desconexão (`disconnectWithStreamError:`, `closeSocket`, via `isaCloudPersistStateNow`), que também cancela o adiamento pendente. Ao terminar o catch-up, `handleFinishedCatchup` já zera `_catchupDone` antes de salvar, então o último salvamento sai direto.
+- **Por que não limitar de outra forma:** serializar só no fim do catch-up mudaria o que o smacks guarda se o app morrer no meio; o intervalo de 1 s mantém o estado no máximo 1 s atrás.

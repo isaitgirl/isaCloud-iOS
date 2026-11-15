@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "build": 109,
+      "date": "15/11/2026",
+      "sections": [
+        {
+          "title": "Melhorias",
+          "items": [
+            "⚡ A conexão com os canais fica mais rápida ao abrir o app."
+          ]
+        }
+      ]
+    },
+    {
       "build": 108,
       "date": "12/11/2026",
       "sections": [

@@ -10,6 +10,7 @@
 #import <sqlite3.h>
 #import <monalxmpp/MLSQLite.h>
 #import <monalxmpp/HelperTools.h>
+#import <os/lock.h>
 
 //use a dedicated scheme for thread local storage dict entries
 #define kSQLiteEndTransactionTriggers       @"im.monal:MLSQLite.m|kSQLiteEndTransactionTriggers"
@@ -24,6 +25,9 @@
 {
     NSString* _dbFile;
     sqlite3* _database;
+    //isaCloud: C20 test (.dev only): the connection is closed when the app freezes and reopened on the next use
+    os_unfair_lock _isaCloudConnLock;
+    int _isaCloudUses;      //statements and transactions running on this connection (never closed while > 0)
 }
 -(void) beginWriteTransaction;
 -(void) endWriteTransaction;
@@ -32,6 +36,9 @@
 static NSMutableDictionary* currentTransactions;
 static NSOperationQueue* walCheckpointingQueue;
 static NSMutableArray* dbFilesList;
+//isaCloud: C20 test, every instance ever created (weak), to close the idle connections when the app freezes
+static NSHashTable* _isaCloudAllInstances;
+static os_unfair_lock _isaCloudAllInstancesLock = OS_UNFAIR_LOCK_INIT;
 
 static int wal_hook(void* arg, sqlite3* database, const char* dbname, int numberOfPages)
 {
@@ -54,8 +61,6 @@ static int wal_hook(void* arg, sqlite3* database, const char* dbname, int number
     }];
     return SQLITE_OK;
 }
-
-#import <os/lock.h>
 
 //isaCloud: lock wait statistics (see consumeLockStatistics in the header)
 static os_unfair_lock _isaCloudLockStatsLock = OS_UNFAIR_LOCK_INIT;
@@ -82,6 +87,7 @@ static NSString* _isaCloudLockMaxHolders = nil;     //who was holding the write 
 
     currentTransactions = [NSMutableDictionary new];
     dbFilesList = [NSMutableArray new];
+    _isaCloudAllInstances = [NSHashTable weakObjectsHashTable];
     
     //make sure we run in multithreaded mode (this makes SQLITE_OPEN_NOMUTEX unnecessary, but better do this twice)
     if(sqlite3_config(SQLITE_CONFIG_MULTITHREAD) == SQLITE_OK)
@@ -132,6 +138,11 @@ static NSString* _isaCloudLockMaxHolders = nil;     //who was holding the write 
 -(id) initWithFile:(NSString*) dbFile
 {
     _dbFile = dbFile;
+    _isaCloudConnLock = OS_UNFAIR_LOCK_INIT;
+    _isaCloudUses = 0;
+    os_unfair_lock_lock(&_isaCloudAllInstancesLock);
+    [_isaCloudAllInstances addObject:self];
+    os_unfair_lock_unlock(&_isaCloudAllInstancesLock);
     DDLogVerbose(@"db path %@", _dbFile);
     
     //mark all files to stay unlocked even if device gets locked again
@@ -165,12 +176,14 @@ static NSString* _isaCloudLockMaxHolders = nil;     //who was holding the write 
                 DDLogError(@"Transaction leak in NSThreadWillExitNotification: trying to close sqlite3 connection while transaction still open");
                 @throw [NSException exceptionWithName:@"SQLite3Exception" reason:@"Transaction leak in NSThreadWillExitNotification: trying to close sqlite3 connection while transaction still open" userInfo:threadData];
             }
+            os_unfair_lock_lock(&self->_isaCloudConnLock);
             if(self->_database)
             {
                 DDLogInfo(@"Closing database in NSThreadWillExitNotification: %@", self->_dbFile);
                 sqlite3_close(self->_database);
                 self->_database = NULL;
             }
+            os_unfair_lock_unlock(&self->_isaCloudConnLock);
         }
     }];
 
@@ -218,12 +231,14 @@ static NSString* _isaCloudLockMaxHolders = nil;     //who was holding the write 
             DDLogError(@"Transaction leak in dealloc: trying to close sqlite3 connection while transaction still open");
             @throw [NSException exceptionWithName:@"SQLite3Exception" reason:@"Transaction leak in dealloc: trying to close sqlite3 connection while transaction still open" userInfo:threadData];
         }
+        os_unfair_lock_lock(&self->_isaCloudConnLock);
         if(self->_database)
         {
             DDLogInfo(@"Closing database in dealloc: %@", _dbFile);
             sqlite3_close(self->_database);
             self->_database = NULL;
         }
+        os_unfair_lock_unlock(&self->_isaCloudConnLock);
     }
 }
 
@@ -250,6 +265,87 @@ static NSString* _isaCloudLockMaxHolders = nil;     //who was holding the write 
         };
     }
     return retval;
+}
+
+#pragma mark - isaCloud: C20 test, connections closed while frozen
+
+//marks one more use of the connection (a statement or a transaction) and reopens it if the freeze closed it
+-(void) isaCloudEnter
+{
+    os_unfair_lock_lock(&_isaCloudConnLock);
+    if(self->_database == NULL)
+    {
+        //only raw sqlite calls here: the normal api would come back to this method
+        int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX;
+        if(sqlite3_open_v2([_dbFile UTF8String], &(self->_database), flags, nil) != SQLITE_OK)
+        {
+            os_unfair_lock_unlock(&_isaCloudConnLock);
+            DDLogError(@"isaCloud C20 test: could not reopen database: %@", _dbFile);
+            @throw [NSException exceptionWithName:@"SQLite3Exception" reason:@"sqlite3_open_v2() failed while reopening" userInfo:nil];
+        }
+        sqlite3_busy_timeout(self->_database, 1000);
+        //journal_mode=WAL is stored in the file, the other settings belong to the connection
+        sqlite3_exec(self->_database, "PRAGMA secure_delete=FAST; PRAGMA synchronous=NORMAL; PRAGMA foreign_keys=on; PRAGMA trusted_schema=off; PRAGMA recursive_triggers=on;", NULL, NULL, NULL);
+        @synchronized(dbFilesList) {
+            NSUInteger index = [dbFilesList indexOfObject:_dbFile];
+            if(index != NSNotFound)
+                sqlite3_wal_hook(self->_database, wal_hook, (__bridge void*)dbFilesList[index]);
+        }
+        os_unfair_lock_unlock(&_isaCloudConnLock);
+        DDLogVerbose(@"isaCloud C20 test: reopened database %@ on thread %@ (frozen=%@)", [_dbFile lastPathComponent], [NSThread currentThread].name.length ? [NSThread currentThread].name : @([NSThread isMainThread]), bool2str([HelperTools isaCloudSuspendedFast]));
+        os_unfair_lock_lock(&_isaCloudConnLock);
+    }
+    _isaCloudUses++;
+    os_unfair_lock_unlock(&_isaCloudConnLock);
+}
+
+-(void) isaCloudLeave
+{
+    BOOL closedNow = NO;
+    os_unfair_lock_lock(&_isaCloudConnLock);
+    _isaCloudUses--;
+    //while frozen, a connection opened again (UI reads, timers) must not stay open until the next freeze: close it as soon
+    //as nothing runs on it (a statement not finalized makes sqlite3_close fail, and then it just stays open)
+    if(_isaCloudUses == 0 && self->_database != NULL && [HelperTools isaCloudSuspendedFast])
+    {
+        if(sqlite3_close(self->_database) == SQLITE_OK)
+        {
+            self->_database = NULL;
+            closedNow = YES;
+        }
+    }
+    os_unfair_lock_unlock(&_isaCloudConnLock);
+    if(closedNow)
+        DDLogVerbose(@"isaCloud C20 test: closed database %@ again after use while frozen", [_dbFile lastPathComponent]);
+}
+
+//closes every connection that is not running a statement or a transaction, so the frozen app keeps no SQLite lock
+//(WAL keeps a shared lock on the -shm file while a connection is open); the next use on the owning thread reopens it
++(void) isaCloudCloseIdleConnections
+{
+    os_unfair_lock_lock(&_isaCloudAllInstancesLock);
+    NSArray* instances = [_isaCloudAllInstances allObjects];
+    os_unfair_lock_unlock(&_isaCloudAllInstancesLock);
+    NSUInteger closed = 0;
+    NSMutableArray* busy = [NSMutableArray new];
+    for(MLSQLite* db in instances)
+    {
+        os_unfair_lock_lock(&db->_isaCloudConnLock);
+        if(db->_database != NULL)
+        {
+            if(db->_isaCloudUses > 0)
+                [busy addObject:[NSString stringWithFormat:@"%@(uses=%d)", [db->_dbFile lastPathComponent], db->_isaCloudUses]];
+            else if(sqlite3_close(db->_database) == SQLITE_OK)
+            {
+                db->_database = NULL;
+                closed++;
+            }
+            else
+                [busy addObject:[NSString stringWithFormat:@"%@(close failed)", [db->_dbFile lastPathComponent]]];
+        }
+        os_unfair_lock_unlock(&db->_isaCloudConnLock);
+    }
+    DDLogInfo(@"isaCloud C20 test: closed %lu idle database connection(s) of %lu, still open: %@", (unsigned long)closed, (unsigned long)instances.count, busy);
 }
 
 #pragma mark - private sql api
@@ -444,6 +540,8 @@ static NSString* _isaCloudLockMaxHolders = nil;     //who was holding the write 
     //NOTE: we are not checking the thread instance here in this private api, but in the public api proxy methods
     
     BOOL toReturn;
+    [self isaCloudEnter];
+    @try {
     sqlite3_stmt* statement = [self prepareQuery:query withArgs:args];
     if(statement != NULL)
     {
@@ -473,12 +571,17 @@ static NSString* _isaCloudLockMaxHolders = nil;     //who was holding the write 
             [self throwErrorForQuery:query andArguments:args];
         toReturn = NO;
     }
+    } @finally {
+        [self isaCloudLeave];
+    }
     return toReturn;
 }
 
 -(id) internalExecuteScalar:(NSString*) query andArguments:(NSArray*) args
 {
     id __block toReturn;
+    [self isaCloudEnter];
+    @try {
     sqlite3_stmt* statement = [self prepareQuery:query withArgs:args];
     if(statement != NULL)
     {
@@ -496,6 +599,9 @@ static NSString* _isaCloudLockMaxHolders = nil;     //who was holding the write 
     {
         //if noting else
         [self throwErrorForQuery:query andArguments:args];
+    }
+    } @finally {
+        [self isaCloudLeave];
     }
     return toReturn;
 }
@@ -595,6 +701,7 @@ static NSString* _isaCloudLockMaxHolders = nil;     //who was holding the write 
     threadData[kSQLiteTransactionsRunning][_dbFile] = [NSNumber numberWithInt:([threadData[kSQLiteTransactionsRunning][_dbFile] intValue] + 1)];
     if([threadData[kSQLiteTransactionsRunning][_dbFile] intValue] > 1)
         return;			//begin only outermost transaction
+    [self isaCloudEnter];     //isaCloud: C20 test, the connection stays open until the outermost transaction ends
     BOOL retval;
     uint64_t failedAttempts = 0;
     CFAbsoluteTime waitStart = CFAbsoluteTimeGetCurrent();
@@ -635,7 +742,11 @@ static NSString* _isaCloudLockMaxHolders = nil;     //who was holding the write 
     if([threadData[kSQLiteTransactionsRunning][_dbFile] intValue] == 1)      //last transaction
     {
         [self callQueuedEndTransactionTriggers];
-        [self executeNonQuery:@"COMMIT;" andArguments:@[] withException:YES];        //commit only outermost transaction
+        @try {
+            [self executeNonQuery:@"COMMIT;" andArguments:@[] withException:YES];        //commit only outermost transaction
+        } @finally {
+            [self isaCloudLeave];
+        }
         @synchronized(currentTransactions) {
             [currentTransactions removeObjectForKey:[self getThreadID]];
         }
@@ -739,6 +850,7 @@ static NSString* _isaCloudShortStack(NSArray* symbols)
     threadData[kSQLiteTransactionsRunning][_dbFile] = [NSNumber numberWithInt:([threadData[kSQLiteTransactionsRunning][_dbFile] intValue] + 1)];
     if([threadData[kSQLiteTransactionsRunning][_dbFile] intValue] > 1)
         return;			//begin only outermost transaction
+    [self isaCloudEnter];     //isaCloud: C20 test, the connection stays open until the outermost transaction ends
     BOOL retval;
     uint64_t failedAttempts = 0;
     CFAbsoluteTime waitStart = CFAbsoluteTimeGetCurrent();
@@ -779,7 +891,11 @@ static NSString* _isaCloudShortStack(NSArray* symbols)
     if([threadData[kSQLiteTransactionsRunning][_dbFile] intValue] == 1)
     {
         [self callQueuedEndTransactionTriggers];
-        [self executeNonQuery:@"COMMIT;" andArguments:@[] withException:YES];        //commit only outermost transaction
+        @try {
+            [self executeNonQuery:@"COMMIT;" andArguments:@[] withException:YES];        //commit only outermost transaction
+        } @finally {
+            [self isaCloudLeave];
+        }
         threadData[kSQLiteStartedReadStransaction][_dbFile] = @NO;
         @synchronized(currentTransactions) {
             [currentTransactions removeObjectForKey:[self getThreadID]];
@@ -814,6 +930,8 @@ static NSString* _isaCloudShortStack(NSArray* symbols)
     [self testTransactionsForQuery:query andArguments:args];
     
     NSMutableArray* __block toReturn = [NSMutableArray new];
+    [self isaCloudEnter];
+    @try {
     sqlite3_stmt* statement = [self prepareQuery:query withArgs:args];
     if(statement != NULL)
     {
@@ -834,6 +952,9 @@ static NSString* _isaCloudShortStack(NSArray* symbols)
         //if noting else
         [self throwErrorForQuery:query andArguments:args];
     }
+    } @finally {
+        [self isaCloudLeave];
+    }
     return toReturn;
 }
 
@@ -849,6 +970,8 @@ static NSString* _isaCloudShortStack(NSArray* symbols)
     [self testTransactionsForQuery:query andArguments:args];
 
     NSMutableArray* toReturn = [NSMutableArray new];
+    [self isaCloudEnter];
+    @try {
     sqlite3_stmt* statement = [self prepareQuery:query withArgs:args];
     if(statement != NULL)
     {
@@ -878,6 +1001,9 @@ static NSString* _isaCloudShortStack(NSArray* symbols)
         DDLogVerbose(@"reader nil with sql not ok: %@", query);
         [self throwErrorForQuery:query andArguments:args];
     }
+    } @finally {
+        [self isaCloudLeave];
+    }
     return toReturn;
 }
 
@@ -899,6 +1025,7 @@ static NSString* _isaCloudShortStack(NSArray* symbols)
 {
     [self testThreadInstanceForQuery:@"lastInsertId" andArguments:nil];
     [self testTransactionsForQuery:@"lastInsertId" andArguments:nil];
+    //isaCloud: C20 test, only valid inside the write transaction that did the insert (the connection stays open there)
     return [NSNumber numberWithLongLong:(long long)sqlite3_last_insert_rowid(self->_database)];
 }
 
@@ -932,7 +1059,12 @@ static NSString* _isaCloudShortStack(NSArray* symbols)
             index = dbFilesList.count - 1;
         }
         //this makes sure to run the checkpointing in a background thread to not block the main thread or any other important thread
-        sqlite3_wal_hook(self->_database, wal_hook, (__bridge_retained void*)dbFilesList[index]);
+        //isaCloud: C20 fix: the frozen app may have closed the connection (_database NULL) while the pragmas above ran;
+        //isaCloudEnter installs the hook again when it reopens the connection, so skip it here instead of passing NULL
+        os_unfair_lock_lock(&self->_isaCloudConnLock);
+        if(self->_database != NULL)
+            sqlite3_wal_hook(self->_database, wal_hook, (__bridge_retained void*)dbFilesList[index]);
+        os_unfair_lock_unlock(&self->_isaCloudConnLock);
     }
 }
 

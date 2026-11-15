@@ -2,6 +2,11 @@
 
 O que mudou em cada versão, em poucas palavras. A lista técnica completa está no [CHANGELOG.md](CHANGELOG.md).
 
+## Build 109 · 15/11/2026
+
+### Melhorias
+- ⚡ A conexão com os canais fica mais rápida ao abrir o app.
+
 ## Build 108 · 12/11/2026
 
 ### Novidades
