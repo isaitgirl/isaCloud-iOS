@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "build": 111,
+      "date": "15/11/2026",
+      "sections": [
+        {
+          "title": "Correções",
+          "items": [
+            "🔐 Mensagens de grupos criptografados deixam de se perder quando um contato troca ou reaparece com um aparelho."
+          ]
+        }
+      ]
+    },
+    {
       "build": 110,
       "date": "15/11/2026",
       "sections": [

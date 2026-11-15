@@ -2,6 +2,13 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 111) — 15/11/2026
+
+Ainda não enviado ao TestFlight: branch `fix/omemo-aparelho-removido`, a ser mesclada na `isaCloud`.
+
+### Corrigido
+- **Mensagens de aparelho OMEMO removido da lista não são mais descartadas.** Um aparelho conhecido, marcado como removido da lista de dispositivos do contato, mas ainda em uso, passa a ser aceito quando é só ToFU e a mensagem é PreKeyMessage para o nosso aparelho (com `allowMixedTrustInGroups`). Ao aceitar, o app limpa a marca e pede a lista de novo. Os demais casos mostram "foi removido da lista de dispositivos" em vez de "você não confiou" (`MLOMEMO.m`, `decryptOmemoEnvelope:`). Análise em `docs/analise-omemo-aparelho-removido.md`; decisão em `docs/decisoes.md`.
+
 ## 0.0.1 (build 110) — 15/11/2026
 
 Enviado ao TestFlight às 15:36. Branch `fix/omemo-reparo-antecipado`, mesclada na `isaCloud` (`999af8f36`). `.dev` no iPhone com este build.

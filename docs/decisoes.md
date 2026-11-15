@@ -1014,3 +1014,12 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
   - Ignorar `Code=3` como já processado: já era assim no Monal (`Deduplicated ... message via omemo`), nada a mudar.
 - **Ressalva:** o desencontro de sessão começa do lado do contato; o limite só impede que o app gere reparos em laço. Efeito real só se prova com troca entre dois aparelhos.
 - **Como desfazer:** remover o bloco `isaCloud: rate limit` e a propriedade `sessionRepairAttempts`.
+
+## Mensagens de aparelho OMEMO removido da lista são aceitas (15/11/2026, build 111)
+
+- **Sintoma:** mensagens genuínas de um contato eram descartadas com "você não confiou no dispositivo", embora a usuária nunca tivesse recusado o aparelho. O aparelho estava marcado como removido da lista (`removedFromDeviceList`) e continuava em uso. Análise em [analise-omemo-aparelho-removido.md](analise-omemo-aparelho-removido.md).
+- **Decisão:** no receber, um aparelho conhecido e marcado como removido da lista é aceito quando é só ToFU, não tem confiança explícita, o contato não tem decisão explícita, `allowMixedTrustInGroups` está ligado e a mensagem é PreKeyMessage para o nosso aparelho. Aceitar limpa a marca e pede a lista de novo. Os demais casos ganham texto próprio ("foi removido da lista de dispositivos") em vez de "não confiou".
+- **Por que não só a lista:** a lista marca sessões para ENVIAR. O Android (Conversations) não a consulta ao receber e decifra de qualquer aparelho conhecido (`AxolotlService.java`, linhas 459-485 e 2204-2260).
+- **Ressalva e possível passo seguinte:** o risco de decifrar um aparelho que o contato removeu de propósito é baixo, mas existe. A Isadora avaliou seguir o Android por completo (sem exigir PreKeyMessage nem a opção de grupos), porque usuárias estão perdendo mensagens genuínas. Não feito ainda.
+- **Mensagens já descartadas** não são recuperadas automaticamente.
+- **Como desfazer:** remover os ramos com `deviceIsRemovedFromList` em `decryptOmemoEnvelope:` (`Monal/Classes/MLOMEMO.m`) e as variáveis novas.

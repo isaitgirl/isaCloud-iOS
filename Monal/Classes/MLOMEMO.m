@@ -1440,15 +1440,42 @@ $$
         BOOL deviceIsUnknown = [self.monalSignalStore getIdentityForAddress:unknownDeviceAddress] == nil;
         BOOL deviceIsPreKeyForUs = [[envelope findFirst:@"header/key<rid=%u>@prekey|bool", self.monalSignalStore.deviceid] boolValue];
         BOOL senderHasExplicitTrust = [MLContact createContactFromJid:senderJid andAccountID:self.account.accountID].hasExplicitOmemoTrustActivated;
+        //isaCloud: a known device that was removed from the sender's device list (removedFromDeviceList set) is still in use
+        //if it sends a PreKeyMessage for our device. The device list only marks sessions as inactive/active for SENDING;
+        //the Android app (Conversations fork) does not consult the list when receiving and decrypts from any known device.
+        //Here we accept such a device only when it is ToFU-only (never set as untrusted or trusted by the user), the sender has
+        //no explicit trust decisions, mixed trust in groups is allowed and the message is a PreKeyMessage for our device.
+        //Accepting it clears the removed mark and asks for the device list again, so the real list becomes the source of truth.
+        //Risk: a device the contact removed on purpose could be accepted; this is mitigated by the conditions above.
+        BOOL deviceIsRemovedFromList = [self.monalSignalStore getRemovedFromDevicelistTime:unknownDeviceAddress] != nil;
+        NSData* knownDeviceIdentity = [self.monalSignalStore getIdentityForAddress:unknownDeviceAddress];
+        int knownDeviceInternalTrust = knownDeviceIdentity != nil ? [self.monalSignalStore getInternalTrustLevel:unknownDeviceAddress identityKey:knownDeviceIdentity] : -1;
+        BOOL deviceIsTofuOnly = knownDeviceInternalTrust == MLOmemoInternalToFU;
+        BOOL deviceIsExplicitlyUntrusted = knownDeviceInternalTrust == MLOmemoInternalNotTrusted;
         if(deviceIsUnknown && [[HelperTools defaultsDB] boolForKey:@"allowMixedTrustInGroups"] && !senderHasExplicitTrust && deviceIsPreKeyForUs)
         {
             DDLogInfo(@"Accepting prekey message from unknown device %@ of '%@' (possibly in muc: %@) via ToFU...", sid, senderJid, mucJid);
             //continue with decryption, the identity of this device gets stored as ToFU while decrypting
         }
+        else if(deviceIsRemovedFromList && deviceIsTofuOnly && [[HelperTools defaultsDB] boolForKey:@"allowMixedTrustInGroups"] && !senderHasExplicitTrust && deviceIsPreKeyForUs)
+        {
+            //isaCloud: reactivate the device (clears removedFromDeviceList) and refresh the sender's device list (the real source of truth)
+            //to undo: remove this branch and the "removed from their device list" text below
+            DDLogInfo(@"isaCloud: accepting prekey message from device %@ of '%@' that was removed from the device list (still in use), reactivating...", sid, senderJid);
+            [self.monalSignalStore removeDeviceDeletedMark:unknownDeviceAddress];
+            [self queryOMEMODevices:senderJid withSubscribe:NO];
+            //continue with decryption as above
+        }
         else if(deviceIsUnknown)
         {
             DDLogWarn(@"Received message from '%@' (possibly in muc: %@) unknown device %@: ignoring!", senderJid, mucJid, sid);
             return !returnErrorString ? nil : [NSString stringWithFormat:NSLocalizedString(@"Could not decrypt because the sender's device %u is not known yet.", @""), sid.unsignedIntValue];
+        }
+        else if(deviceIsRemovedFromList && !deviceIsExplicitlyUntrusted)
+        {
+            //isaCloud: the device is known but was removed from the device list; the user never distrusted it, so don't say "didn't trust"
+            DDLogWarn(@"Received message from '%@' (possibly in muc: %@) device %@, removed from device list: ignoring!", senderJid, mucJid, sid);
+            return !returnErrorString ? nil : [NSString stringWithFormat:NSLocalizedString(@"Could not decrypt because the sender's device %u was removed from their device list.", @""), sid.unsignedIntValue];
         }
         else
         {
