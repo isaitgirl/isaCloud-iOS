@@ -2,6 +2,11 @@
 
 O que mudou em cada versão, em poucas palavras. A lista técnica completa está no [CHANGELOG.md](CHANGELOG.md).
 
+## Build 111 · 15/11/2026
+
+### Correções
+- 🔐 Mensagens de grupos criptografados deixam de se perder quando um contato troca ou reaparece com um aparelho.
+
 ## Build 110 · 15/11/2026
 
 ### Melhorias
