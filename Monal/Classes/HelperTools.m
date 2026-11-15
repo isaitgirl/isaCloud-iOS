@@ -53,6 +53,7 @@
 #import <monalxmpp/MLMessage.h>
 #import <monalxmpp/MLFileTransfer.h>
 #import <monalxmpp/DataLayer.h>
+#import <monalxmpp/MLSQLite.h>
 #import <monalxmpp/OmemoState.h>
 #import <monalxmpp/MLUDPLogger.h>
 #import <monalxmpp/MLStreamRedirect.h>
@@ -2783,6 +2784,8 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     @synchronized(_suspensionHandling_lock) {
         if(!_suspensionHandling_isSuspended)
         {
+            //isaCloud: C20 test (.dev only), the frozen app must not keep SQLite locks (WAL -shm) while the extension writes
+            [MLSQLite isaCloudCloseIdleConnections];
             DDLogVerbose(@"Suspending logger queue...");
             [HelperTools flushLogsWithTimeout:0.100];
             dispatch_suspend([DDLog loggingQueue]);

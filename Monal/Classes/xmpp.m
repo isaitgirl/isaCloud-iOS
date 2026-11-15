@@ -112,6 +112,11 @@ static NSRegularExpression* fastTokenRemovalRegex;
     BOOL _SRVDiscoveryDone;
     BOOL _startTLSComplete;
     BOOL _catchupDone;
+    //isaCloud: throttled state saves during catchup (see isaCloudPersistStateThrottled)
+    NSObject* _isaCloudPersistLock;
+    CFAbsoluteTime _isaCloudLastPersist;
+    BOOL _isaCloudPersistPending;
+    BOOL _isaCloudPersistTimerScheduled;
     double _reconnectBackoffTime;
     BOOL _reconnectInProgress;
     BOOL _disconnectInProgres;
@@ -256,6 +261,10 @@ static NSRegularExpression* fastTokenRemovalRegex;
     self.mucProcessor = [[MLMucProcessor alloc] initWithAccount:self];
     
     _stateLockObject = [NSObject new];
+    _isaCloudPersistLock = [NSObject new];
+    _isaCloudLastPersist = 0;
+    _isaCloudPersistPending = NO;
+    _isaCloudPersistTimerScheduled = NO;
     [self initSM3];
     self.isDoingFullReconnect = YES;
     
@@ -1057,6 +1066,7 @@ static NSRegularExpression* fastTokenRemovalRegex;
 {
     DDLogInfo(@"disconnect called...");
     [self->_connectTiming finishWithOutcome:streamError ? @"error" : @"disconnected"];     //isaCloud: medição
+    [self isaCloudPersistStateNow];     //isaCloud: the connection goes down, save the state now (not deferred)
     //commonly used by shortcut outside of receive queue and called from inside the receive queue, too
     monal_void_block_t doExplicitLogout = ^{
         @synchronized(self->_stateLockObject) {
@@ -1329,6 +1339,7 @@ static NSRegularExpression* fastTokenRemovalRegex;
 -(void) closeSocket
 {
     [self->_connectTiming finishWithOutcome:@"disconnected"];     //isaCloud: medição (no-op se a tentativa já terminou)
+    [self isaCloudPersistStateNow];     //isaCloud: the socket goes down, save the state now (not deferred)
     [self dispatchOnReceiveQueue: ^{
         DDLogInfo(@"removing streams from runLoop and aborting parser");
 
@@ -4355,13 +4366,88 @@ static NSRegularExpression* fastTokenRemovalRegex;
         {
             callLocationMethod([DataLayer sharedInstance] addEndTransactionTrigger:^{
                 DDLogInfo(@"Inside transaction end trigger: now calling realPersistState, saved %d calls in this transaction...", [threadData[kDebugPersistStateTriggers] intValue] - 1);
-                [self realPersistState];
+                [self isaCloudPersistStateThrottled];
                 threadData[kPersistStateTriggersAdded] = @0;
                 threadData[kDebugPersistStateTriggers] = @0;
             });
             threadData[kPersistStateTriggersAdded] = @1;
         }
     }];
+}
+
+//isaCloud: during the MAM catchup persistState runs after every stanza, and serializing the whole state
+//(100-200 KB) each time dominated the catchup time. While catching up, save at most once per second and
+//schedule one deferred save for the rest. Outside catchup, while frozen, and on the forced saves below
+//(disconnect, close socket, catchup finished) the state is saved right away.
+-(void) isaCloudPersistStateThrottled
+{
+    CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
+    BOOL saveNow = NO;
+    NSTimeInterval delay = 0;
+    BOOL catchingUp = !self->_catchupDone && self.inCatchup.count > 0;
+    if(!catchingUp || [HelperTools isaCloudSuspendedFast])
+    {
+        @synchronized(self->_isaCloudPersistLock) {
+            self->_isaCloudPersistPending = NO;
+            self->_isaCloudLastPersist = now;
+        }
+        saveNow = YES;
+    }
+    else
+    {
+        @synchronized(self->_isaCloudPersistLock) {
+            if(now - self->_isaCloudLastPersist >= 1.0)
+            {
+                self->_isaCloudPersistPending = NO;
+                self->_isaCloudLastPersist = now;
+                saveNow = YES;
+            }
+            else
+            {
+                self->_isaCloudPersistPending = YES;
+                if(!self->_isaCloudPersistTimerScheduled)
+                {
+                    self->_isaCloudPersistTimerScheduled = YES;
+                    delay = 1.0 - (now - self->_isaCloudLastPersist);
+                }
+            }
+        }
+        if(delay > 0)
+        {
+            //the deferred save must not be lost: the timer saves if a save was requested meanwhile
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delay * NSEC_PER_SEC)), dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+                [self isaCloudFlushPendingPersist];
+            });
+        }
+    }
+    if(saveNow)
+        [self realPersistState];
+}
+
+-(void) isaCloudFlushPendingPersist
+{
+    BOOL save = NO;
+    @synchronized(self->_isaCloudPersistLock) {
+        self->_isaCloudPersistTimerScheduled = NO;
+        if(self->_isaCloudPersistPending)
+        {
+            self->_isaCloudPersistPending = NO;
+            self->_isaCloudLastPersist = CFAbsoluteTimeGetCurrent();
+            save = YES;
+        }
+    }
+    if(save)
+        [self realPersistState];
+}
+
+//saves right away, also cancels a deferred save (used when the connection goes down)
+-(void) isaCloudPersistStateNow
+{
+    @synchronized(self->_isaCloudPersistLock) {
+        self->_isaCloudPersistPending = NO;
+        self->_isaCloudLastPersist = CFAbsoluteTimeGetCurrent();
+    }
+    [self realPersistState];
 }
 
 -(void) realPersistState

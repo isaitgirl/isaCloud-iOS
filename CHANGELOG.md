@@ -2,6 +2,17 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 109) — 15/11/2026
+
+Ainda não enviado ao TestFlight: aguarda o commit e a decisão sobre o teste do C20 (que vai junto no build, ver abaixo).
+
+### Corrigido
+- **Crash no `.dev` com o teste do C20 (C23).** `-[MLSQLite enableWAL]` instalava o hook de WAL com a conexão já fechada pelo congelamento; agora instala só com a conexão aberta, sob `_isaCloudConnLock` (`MLSQLite.m`). Branch `fix/catchup-persist-c20`.
+
+### Mudado
+- **Catch-up MAM mais rápido.** Durante o catch-up, o estado da conta é salvo no máximo uma vez por segundo, com um salvamento adiado para o fim do intervalo (`isaCloudPersistStateThrottled` em `xmpp.m`), em vez de depois de cada stanza. O fim do catch-up, a desconexão (`disconnectWithStreamError:`, `closeSocket`) e o app congelado salvam sem adiar. Medição antes da correção: catch-up de 493 stanzas levou 80 s, e 67 s foram `persistState` (118 a 220 KB por gravação, cerca de 60 ms cada).
+- **Teste do C20 entra neste build.** `+[MLSQLite isaCloudCloseIdleConnections]` fecha as conexões SQLite ociosas ao congelar e reabre no próximo uso (branch `teste/c20-fechar-conexoes`, trazido para esta branch sem commit próprio). Não tem chave de compilação: vai para o TestFlight junto. Logs `isaCloud C20 test:` de reabertura viraram `DDLogVerbose`; o `closed N idle database connection(s)` continua em `DDLogInfo`.
+
 ## 0.0.1 (build 108) — 12/11/2026
 
 Enviado ao TestFlight às 15:05. PRs 70, 71 e 72 do app (ExyteChat sem mudança, `3eb0aa1`). Três mudanças de cara nova, todas testadas no `.dev` em 12/11/2026.
