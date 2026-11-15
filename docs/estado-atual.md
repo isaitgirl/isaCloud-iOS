@@ -1,4 +1,4 @@
-# Estado atual e handoff (15/11/2026, build 109)
+# Estado atual e handoff (15/11/2026, build 110)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,14 +7,18 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 109** (catch-up com salvamento limitado a 1 por segundo; correção do crash do C20 em `enableWAL`; C20 em teste junto), tag `build-109`; `git log --oneline -3` |
-| TestFlight | **109** (15/11/2026, 15:12; antes 108 em 12/11, tag `build-108`) |
-| `.dev` no iPhone | **109**, igual ao TestFlight (15/11/2026; **sem push**) |
+| Commit | o do **build 110** (limite de 5 minutos para reparo de sessão OMEMO fora de sincronia, branch `fix/omemo-reparo-antecipado` mesclada na `isaCloud`), tag `build-110`; `git log --oneline -3`. Antes: build 109 (catch-up com salvamento limitado; correção do C20 em `enableWAL`) |
+| TestFlight | **110** (15/11/2026, 15:36; antes 109 em 15/11 às 15:12, tag `build-109`) |
+| `.dev` no iPhone | **110**, igual ao TestFlight (15/11/2026; **sem push**) |
 | Simuladores | iPhone XR (iOS 18.6) com o código do build 100 (09/11/2026) e isaCloud iOS27 com o do build 94 (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261105-1036-linha-lido-2/` e `-1037-linha-lido-2/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
 | ExyteChat | `3eb0aa1` na `isaCloud` (tamanho do arquivo nas mídias e nos áudios, PR 22; antes `7d3292b`: miniatura opcional dentro da citação, `Message.quotePreview`, PR 21; antes `e168ed8`: visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
+
+## O que entrou no build 110 (sobre o 109)
+
+- Reparo de sessão OMEMO com limite: no máximo uma tentativa a cada 5 minutos por (jid, rid) em `MLOMEMO.m`. O reparo antecipado (antes do fim do catch-up) ficou de fora por falta de critério seguro. Análise em `docs/analise-omemo-invalid-message.md`; decisão em `docs/decisoes.md`. Validar com dois aparelhos.
 
 ## O que entrou no build 108 (sobre o 107)
 
