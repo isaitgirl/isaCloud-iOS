@@ -2,6 +2,13 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 110) — 15/11/2026
+
+Ainda não enviado ao TestFlight: será enviado ao TestFlight nesta rodada (ver hora abaixo, quando fechado).
+
+### Mudado
+- **Reparo de sessão OMEMO com limite.** Quando uma mensagem OMEMO falha por sessão fora de sincronia, o app tenta reparar a sessão no máximo uma vez a cada 5 minutos por aparelho do contato (`sessionRepairAttempts` em `MLOMEMO.m`). Evita KeyTransportElements em laço. O reparo antecipado (antes do fim do catch-up) ficou de fora por falta de critério seguro; ver `docs/decisoes.md`. Branch `fix/omemo-reparo-antecipado`. Análise em `docs/analise-omemo-invalid-message.md`.
+
 ## 0.0.1 (build 109) — 15/11/2026
 
 Ainda não enviado ao TestFlight: aguarda o commit e a decisão sobre o teste do C20 (que vai junto no build, ver abaixo).

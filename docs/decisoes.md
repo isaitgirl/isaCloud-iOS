@@ -1002,3 +1002,15 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - **Decisão:** durante o catch-up (`!_catchupDone` com `inCatchup` não vazio), o estado é salvo no máximo uma vez por segundo (`isaCloudPersistStateThrottled`). Uma gravação adiada não se perde: um timer salva o último estado pedido quando o intervalo acaba.
 - **Sem adiar:** fora do catch-up, com o app congelado (`isaCloudSuspendedFast`), e nos caminhos de desconexão (`disconnectWithStreamError:`, `closeSocket`, via `isaCloudPersistStateNow`), que também cancela o adiamento pendente. Ao terminar o catch-up, `handleFinishedCatchup` já zera `_catchupDone` antes de salvar, então o último salvamento sai direto.
 - **Por que não limitar de outra forma:** serializar só no fim do catch-up mudaria o que o smacks guarda se o app morrer no meio; o intervalo de 1 s mantém o estado no máximo 1 s atrás.
+
+## Reparo de sessão OMEMO com limite de 5 minutos (15/11/2026, build 110)
+
+- **Sintoma:** mensagens de um contato falhavam com `Invalid Message` por cerca de 8 minutos. O reparo estava na fila até o fim do catch-up inteiro. Análise em [analise-omemo-invalid-message.md](analise-omemo-invalid-message.md).
+- **Decisão:** cada par (jid, rid) tem no máximo uma tentativa de reparo a cada 5 minutos (`sessionRepairAttempts` em `MLOMEMO.m`, em memória, com `@synchronized(self)`). Reparos enfileirados durante o catch-up continuam sendo replayados por `repairQueuedSessions`, sem o limite.
+- **Por que não só a fila do Monal:** a fila espera o catch-up da conta inteira, e isso pode levar minutos. Mas um disparo antecipado precisa de um critério seguro para separar mensagem nova de reentrega do histórico.
+- **Alternativas descartadas:**
+  - Disparar o reparo na hora, sem nenhum critério: reentregas do histórico geram KeyTransportElements desnecessários.
+  - Disparar por jid "quando o histórico dele terminou": não existe esse marco no código; `catchupDone` é da conta inteira. Criar um marco mudaria o fluxo de devicelist e de bundle, mais do que este conserto pede.
+  - Ignorar `Code=3` como já processado: já era assim no Monal (`Deduplicated ... message via omemo`), nada a mudar.
+- **Ressalva:** o desencontro de sessão começa do lado do contato; o limite só impede que o app gere reparos em laço. Efeito real só se prova com troca entre dois aparelhos.
+- **Como desfazer:** remover o bloco `isaCloud: rate limit` e a propriedade `sessionRepairAttempts`.

@@ -41,6 +41,8 @@ static NSDictionary* trustLevels2Text = nil;
 @property (nonatomic, strong) NSMutableSet<NSNumber*>* ownDeviceList;
 //isaCloud: jid -> "access" / "notFound" / "other" (last failed devicelist fetch, in memory only)
 @property (nonatomic, strong) NSMutableDictionary<NSString*, NSString*>* devicelistFetchErrors;
+//isaCloud: "jid/rid" -> date of the last session repair attempt (in memory only, used to rate limit repairs)
+@property (nonatomic, strong) NSMutableDictionary<NSString*, NSDate*>* sessionRepairAttempts;
 @end
 
 @implementation MLOMEMO
@@ -1001,6 +1003,27 @@ $$
         return;
     }
     
+    //isaCloud: rate limit: at most one repair attempt per (jid, rid) every 5 minutes, so that a session that keeps
+    //failing can never produce a loop of bundle fetches and KeyTransportElements (each repair sends a message to the contact).
+    //Notes: (a) a desynchronized session state on the contact's side is not fixable here, we only rebuild our side;
+    //(b) the first failing message still gets the error, only the following ones can benefit from a repair;
+    //(c) the repairs queued during catchup are replayed by repairQueuedSessions and are NOT limited by this check;
+    //(d) only a real message exchange between two devices can prove the repair works, the simulator only proves it compiles;
+    //(e) to undo: remove this block, which restores the original Monal behaviour (repair on every failing message after catchup).
+    NSString* repairKey = [NSString stringWithFormat:@"%@/%@", jid, rid];
+    NSDate* now = [NSDate date];
+    @synchronized(self) {
+        if(self.sessionRepairAttempts == nil)
+            self.sessionRepairAttempts = [[NSMutableDictionary<NSString*, NSDate*> alloc] init];
+        NSDate* lastAttempt = self.sessionRepairAttempts[repairKey];
+        if(lastAttempt != nil && [now timeIntervalSinceDate:lastAttempt] < 5 * 60)
+        {
+            DDLogInfo(@"Not repairing session with deviceid %@ on jid %@ again, last attempt was less than 5 minutes ago", rid, jid);
+            return;
+        }
+        self.sessionRepairAttempts[repairKey] = now;
+    }
+
     //this will query the bundle and send a key transport element to rebuild the session afterwards
     DDLogDebug(@"Trying to repair session with deviceid %@ on jid %@...", rid, jid);
     [self queryOMEMOBundleFrom:jid andDevice:rid];
