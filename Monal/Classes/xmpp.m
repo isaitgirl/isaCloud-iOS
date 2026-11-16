@@ -5696,9 +5696,9 @@ static NSRegularExpression* fastTokenRemovalRegex;
         DDLogInfo(@"Registration: Calling requestRegForm from submitRegToken handler");
         [self requestRegForm];
     } andErrorHandler:^(XMPPIQ* error) {
-        //dispatch completion handler outside of the receiveQueue
+        //dispatch completion handler outside of the receiveQueue (isaCloud: on the main queue: the Swift registration screens check main actor isolation when the closure starts, C27)
         if(self->_regFormErrorCompletion)
-            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            dispatch_async(dispatch_get_main_queue(), ^{
                 self->_regFormErrorCompletion(NO, [HelperTools extractXMPPError:error withDescription:@"Could not submit registration token"]);
             });
     }];
@@ -5717,9 +5717,9 @@ static NSRegularExpression* fastTokenRemovalRegex;
             [result check:@"{jabber:iq:register}query/\\{urn:xmpp:captcha}form\\"]
         ))
         {
-            //dispatch completion handler outside of the receiveQueue
+            //dispatch completion handler outside of the receiveQueue (isaCloud: on the main queue: the Swift registration screens check main actor isolation when the closure starts, C27)
             if(self->_regFormErrorCompletion)
-                dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                dispatch_async(dispatch_get_main_queue(), ^{
                     if([result check:@"{jabber:iq:register}query/instructions"])
                         self->_regFormErrorCompletion(NO, [NSString stringWithFormat:@"Could not request registration form: %@", [result findFirst:@"{jabber:iq:register}query/instructions#"]]);
                     else
@@ -5727,9 +5727,9 @@ static NSRegularExpression* fastTokenRemovalRegex;
                 });
             return;
         }
-        //dispatch completion handler outside of the receiveQueue
+        //dispatch completion handler outside of the receiveQueue (isaCloud: on the main queue: the Swift registration screens check main actor isolation when the closure starts, C27)
         if(self->_regFormCompletion)
-            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            dispatch_async(dispatch_get_main_queue(), ^{
                 NSMutableDictionary* hiddenFormFields = nil;
                 if([result check:@"{jabber:iq:register}query/{jabber:x:data}x<type=form>/field"])
                 {
@@ -5740,9 +5740,9 @@ static NSRegularExpression* fastTokenRemovalRegex;
                 self->_regFormCompletion([result findFirst:@"{jabber:iq:register}query/{urn:xmpp:bob}data#|base64"], hiddenFormFields);
             });
     } andErrorHandler:^(XMPPIQ* error) {
-        //dispatch completion handler outside of the receiveQueue
+        //dispatch completion handler outside of the receiveQueue (isaCloud: on the main queue: the Swift registration screens check main actor isolation when the closure starts, C27)
         if(self->_regFormErrorCompletion)
-            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            dispatch_async(dispatch_get_main_queue(), ^{
                 self->_regFormErrorCompletion(NO, [HelperTools extractXMPPError:error withDescription:@"Could not request registration form"]);
             });
     }];
@@ -5754,15 +5754,15 @@ static NSRegularExpression* fastTokenRemovalRegex;
     [iq registerUser:self.regUser withPassword:self.regPass captcha:self.regCode andHiddenFields:self.regHidden];
 
     [self sendIq:iq withResponseHandler:^(XMPPIQ* result __unused) {
-        //dispatch completion handler outside of the receiveQueue
+        //dispatch completion handler outside of the receiveQueue (isaCloud: on the main queue: the Swift registration screens check main actor isolation when the closure starts, C27)
         if(self->_regFormSubmitCompletion)
-            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            dispatch_async(dispatch_get_main_queue(), ^{
                 self->_regFormSubmitCompletion(YES, nil);
             });
     } andErrorHandler:^(XMPPIQ* error) {
-        //dispatch completion handler outside of the receiveQueue
+        //dispatch completion handler outside of the receiveQueue (isaCloud: on the main queue: the Swift registration screens check main actor isolation when the closure starts, C27)
         if(self->_regFormSubmitCompletion)
-            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            dispatch_async(dispatch_get_main_queue(), ^{
                 self->_regFormSubmitCompletion(NO, [HelperTools extractXMPPError:error withDescription:@"Could not submit registration form"]);
             });
     }];

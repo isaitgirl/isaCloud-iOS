@@ -22,9 +22,6 @@ typedef BOOL (^monal_sqlite_bool_operations_t)(void);
 /// Consuming resets the counters, so every sample reports only what happened since the previous one.
 +(NSDictionary*) consumeLockStatistics;
 
-/// isaCloud: C20 test (.dev only), closes every connection not running a statement or transaction; the next use reopens it.
-+(void) isaCloudCloseIdleConnections;
-
 -(void) addEndTransactionTrigger:(monal_void_block_t) trigger withLocation:(NSString*) location;
 
 -(void) voidReadTransaction:(monal_void_block_t) operations;

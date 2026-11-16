@@ -9,6 +9,8 @@ O que mudou em cada versão, em poucas palavras. A lista técnica completa está
 
 ### Correções
 - Figurinha recebida com a conversa aberta aparece como figurinha na hora.
+- O app deixa de fechar sozinho em segundo plano em alguns iPhones.
+- Criar uma conta nova não fecha mais o app.
 
 ## Build 112 · 16/11/2026
 
