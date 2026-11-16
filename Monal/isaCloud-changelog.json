@@ -9,6 +9,14 @@
           "items": [
             "😊 Figurinhas mais compatíveis com outros apps."
           ]
+        },
+        {
+          "title": "Correções",
+          "items": [
+            "Figurinha recebida com a conversa aberta aparece como figurinha na hora.",
+            "O app deixa de fechar sozinho em segundo plano em alguns iPhones.",
+            "Criar uma conta nova não fecha mais o app."
+          ]
         }
       ]
     },

@@ -4,9 +4,11 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## 0.0.1 (build 113) — 16/11/2026
 
-Ainda não enviado ao TestFlight: figurinhas XEP-0449 (já na `isaCloud`) e a correção da figurinha ao vivo (branch `fix/figurinha-ao-vivo`).
+Enviado ao TestFlight às 19:20: figurinhas XEP-0449 e a correção da figurinha ao vivo (já na `isaCloud`), mais a reversão do teste do C20 e o conserto do C27 (branch `fix/c25-reverter-fechamento-conexoes`, ainda sem commit).
 
 ### Corrigido
+- **Fechamento das conexões do banco ao congelar removido (C25, C26).** O teste do C20 (builds 109 a 112) fechava as conexões SQLite quando o app congelava; fechar a última conexão a um banco em WAL faz o SQLite gravar o WAL inteiro e dar `fsync` segurando trava de escrita, e o iOS suspendia o app no meio, causando `0xdead10cc` (três relatórios nos builds 110 e 111). `MLSQLite.m`, `MLSQLite.h` e `HelperTools.m` voltam ao estado do build 108 (sem a correção do `enableWAL` do C23, que só existia por causa do teste); o registro de acesso ao banco depois do congelamento (build 100) continua. O `SQLite3Exception` "out of memory" do build 111 (C26) deve sumir junto. O C20 clássico segue em aberto.
+- **Criar conta não derruba mais o app (C27).** Os retornos do cadastro (`requestRegForm`, `submitRegToken`, `submitRegForm` em `xmpp.m`) eram chamados numa fila de fundo, e as telas Swift de cadastro conferem o isolamento da thread principal na entrada do bloco (SIGTRAP no iOS 26.6, build 108). Agora os 6 retornos usam a fila principal, como no C22. Vale também para o cadastro de um clique.
 - **Figurinha recebida com a conversa aberta ficava como imagem comum** (`ChatView.swift`). O ExyteChat só redesenha uma linha quando id, posição, status, reações ou `triggerRedraw` mudam, comparando os objetos da lista; o download terminar não muda nada disso, e o ramo "figurinha sem balão" só vale com a imagem baixada. Ao terminar o download de uma figurinha, a conversa troca a mensagem por um `ChatViewMessage` novo com `triggerRedraw` novo (`kMonalMessageFiletransferUpdateNotice`). Aprovado no `.dev` (16/11/2026). A primeira tentativa, mudar o `triggerRedraw` do mesmo objeto, não funciona pelo mesmo motivo.
 
 ### Mudado
