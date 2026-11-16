@@ -1,4 +1,4 @@
-# Estado atual e handoff (15/11/2026, build 111)
+# Estado atual e handoff (16/11/2026, build 112)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,9 +7,9 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 111** (aceita mensagem de aparelho OMEMO removido da lista que voltou a enviar, prekey e ToFU; texto de erro correto), tag `build-111`; ver `docs/analise-omemo-aparelho-removido.md`; `git log --oneline -3` |
-| TestFlight | **111** (15/11/2026, 20:36; antes 110 às 15:36, tag `build-110`) |
-| `.dev` no iPhone | **111**, igual ao TestFlight (15/11/2026; **sem push**) |
+| Commit | o do **build 112** (aceita mensagem de qualquer aparelho OMEMO conhecido removido da lista, como o Android; bloqueia só aparelho marcado como não confiável e remetente com confiança explícita; log do motivo de recusa), tag `build-112`; ver `docs/analise-omemo-aparelho-removido.md`; `git log --oneline -3` |
+| TestFlight | **112** (16/11/2026, 07:36; antes 111 em 15/11 às 20:36, tag `build-111`) |
+| `.dev` no iPhone | **112**, igual ao TestFlight (16/11/2026; **sem push**) |
 | Simuladores | iPhone XR (iOS 18.6) com o código do build 100 (09/11/2026) e isaCloud iOS27 com o do build 94 (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261105-1036-linha-lido-2/` e `-1037-linha-lido-2/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
 | ExyteChat | `3eb0aa1` na `isaCloud` (tamanho do arquivo nas mídias e nos áudios, PR 22; antes `7d3292b`: miniatura opcional dentro da citação, `Message.quotePreview`, PR 21; antes `e168ed8`: visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
