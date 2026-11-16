@@ -2381,6 +2381,17 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
 }
 
 //isaCloud: see the header
+-(NSString* _Nullable) mimeTypeOfOutboundFiletransferMessageId:(NSString*) messageId forAccount:(NSNumber*) accountID
+{
+    if(messageId == nil || accountID == nil)
+        return nil;
+    NSString* mimeType = [self.db idReadTransaction:^{
+        return (NSString*)[self.db executeScalar:@"SELECT fi.mime_type FROM message_history AS mh JOIN filetransfer_info AS fi ON fi.message_history_id=mh.message_history_id WHERE mh.account_id=? AND mh.messageid=? AND mh.inbound=0 LIMIT 1;" andArguments:@[accountID, messageId]];
+    }];
+    return [mimeType isKindOfClass:[NSString class]] && mimeType.length > 0 ? mimeType : nil;
+}
+
+//isaCloud: see the header
 -(NSNumber* _Nullable) historyIdOfQuotedMessageId:(NSString*) quotedId inChat:(NSString*) buddy forAccount:(NSNumber*) accountID
 {
     if(quotedId == nil || buddy == nil || accountID == nil)

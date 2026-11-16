@@ -1,6 +1,6 @@
 # Abrir grupos e canais na primeira mensagem não lida
 
-Status: **implementado e no build 87 (03/11/2026); em avaliação por alguns dias a partir de 03/11/2026.** Roadmap 136 e 137. Relacionada ao 135 (última menção) e ao 134 (arquivados).
+Status: **implementado e no build 87 (03/11/2026); aprovada em 04/11/2026; desde 16/11/2026 fica só no roadmap, sem previsão de nova avaliação.** Roadmap 136 e 137. Relacionada ao 135 (última menção) e ao 134 (arquivados).
 
 ## Objetivo
 

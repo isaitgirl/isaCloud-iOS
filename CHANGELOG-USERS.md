@@ -2,6 +2,11 @@
 
 O que mudou em cada versão, em poucas palavras. A lista técnica completa está no [CHANGELOG.md](CHANGELOG.md).
 
+## Build 113 · 16/11/2026
+
+### Melhorias
+- 😊 Figurinhas mais compatíveis com outros apps.
+
 ## Build 112 · 16/11/2026
 
 ### Correções

@@ -286,6 +286,8 @@ extern NSString* const kMessageTypeFiletransfer;
 -(void) setQuotedMessageIdForHistoryId:(NSNumber*) historyId quotedId:(NSString*) quotedId;
 //isaCloud: the id of the message quoted by our outbound message with this messageid (nil when it quotes nothing); used when sending and resending it
 -(NSString* _Nullable) quotedMessageIdForOutboundMessageId:(NSString*) messageId forAccount:(NSNumber*) accountID;
+//isaCloud: the mime type of our outbound file message with this messageid (filetransfer_info), nil if unknown; the sticker's file is found in the cache with it (XEP-0449)
+-(NSString* _Nullable) mimeTypeOfOutboundFiletransferMessageId:(NSString*) messageId forAccount:(NSNumber*) accountID;
 //isaCloud: the history id of the message in this chat whose messageid or stanzaid is `quotedId` (nil if it is not in the database)
 -(NSNumber* _Nullable) historyIdOfQuotedMessageId:(NSString*) quotedId inChat:(NSString*) buddy forAccount:(NSNumber*) accountID;
 -(NSDictionary*) messageDataForHistoryID:(NSNumber*) historyID;

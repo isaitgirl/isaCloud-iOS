@@ -2,6 +2,14 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 113) — 16/11/2026
+
+Ainda não enviado ao TestFlight: branch `feature/figurinha-xep0449`, a ser mesclada na `isaCloud`.
+
+### Mudado
+- **Figurinhas em conformidade com a XEP-0449 (roadmap 155, lado iOS).** O envio acrescenta o `<file-sharing/>` (XEP-0447, `disposition='inline'`) com `media-type`, `size`, `dimensions` e `width`/`height`, `hash` SHA-256 em base64 e `url-data` com a URL do upload. Os metadados saem do PNG em cache (`MLFiletransfer.m`, `isaCloudFileSharingNodeForUrl:`); a consulta do tipo MIME está em `DataLayer.m` (`mimeTypeOfOutboundFiletransferMessageId:`). Só fora de OMEMO (`xmpp.m`, `sendMessage:...withLMCId:`). Corpo e OOB continuam; sem marcador `fallback` por enquanto.
+- **Recebimento de figurinha sem OOB.** Mensagem com `<sticker/>` e `url-data` https em `<file-sharing/>` vira arquivo, com a URL como corpo (`MLMessageProcessor.m`). Fora de OMEMO; fonte que não é https ou de outro tipo é ignorada. Testes em `StickerFileSharingTests.swift`. Análise em `docs/analise-xep0449-conformidade.md`, seção 8.
+
 ## 0.0.1 (build 112) — 16/11/2026
 
 Ainda não enviado ao TestFlight: branch `fix/omemo-aceitar-aparelho-conhecido`, a ser mesclada na `isaCloud`.

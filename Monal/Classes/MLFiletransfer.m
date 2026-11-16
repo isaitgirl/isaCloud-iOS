@@ -21,6 +21,8 @@
 @import UniformTypeIdentifiers;
 @import UIKit.UIImage;
 @import AVFoundation;
+#import <ImageIO/ImageIO.h>
+#import <monalxmpp/MLXMLNode.h>
 
 //monal version 7.x, state counter: 001
 #define CURRENT_FILETRANSFER_DATA_VERSION @7001
@@ -1551,6 +1553,74 @@ $$
                 }];
             });
     }
+}
+
+
+//isaCloud: XEP-0449 stickers (docs/analise-xep0449-conformidade.md). The file metadata come from the file itself: its size, its pixel size and its sha-256 (base64, as XEP-0300 wants)
++(MLXMLNode* _Nullable) isaCloudFileSharingNodeForUrl:(NSString*) url mimeType:(NSString* _Nullable) mimeType
+{
+    if(url == nil || mimeType == nil || mimeType.length == 0)
+        return nil;
+    NSString* cacheFilePath = [self retrieveCacheFilePathForUrl:url andMimeType:mimeType];
+    if(cacheFilePath == nil)
+    {
+        DDLogWarn(@"No file sharing for %@: the file is not in the document cache", url);
+        return nil;
+    }
+    return [self isaCloudFileSharingNodeForFileAtPath:cacheFilePath url:url mimeType:mimeType];
+}
+
++(MLXMLNode* _Nullable) isaCloudFileSharingNodeForFileAtPath:(NSString*) path url:(NSString*) url mimeType:(NSString*) mimeType
+{
+    if(path == nil || url == nil || mimeType == nil)
+        return nil;
+    NSData* data = [NSData dataWithContentsOfFile:path];
+    if(data == nil)
+    {
+        DDLogWarn(@"No file sharing for %@: the file at %@ can't be read", url, path);
+        return nil;
+    }
+    //the pixel size is read from the image itself (PNG now, GIF later); a file that is not an image gets no file sharing
+    CGImageSourceRef source = CGImageSourceCreateWithData((__bridge CFDataRef) data, NULL);
+    if(source == NULL)
+    {
+        DDLogWarn(@"No file sharing for %@: the file is not an image", url);
+        return nil;
+    }
+    NSDictionary* properties = CFBridgingRelease(CGImageSourceCopyPropertiesAtIndex(source, 0, NULL));
+    CFRelease(source);
+    NSNumber* width = [properties objectForKey:(NSString*)kCGImagePropertyPixelWidth];
+    NSNumber* height = [properties objectForKey:(NSString*)kCGImagePropertyPixelHeight];
+    NSData* sha256 = [HelperTools sha256:data];
+    if(width == nil || height == nil || sha256 == nil)
+    {
+        DDLogWarn(@"No file sharing for %@: size or hash unknown", url);
+        return nil;
+    }
+
+    MLXMLNode* fileNode = [[MLXMLNode alloc] initWithElement:@"file" andNamespace:@"urn:xmpp:file:metadata:0" withAttributes:@{} andChildren:@[
+        [[MLXMLNode alloc] initWithElement:@"media-type" andData:mimeType],
+        [[MLXMLNode alloc] initWithElement:@"size" andData:[NSString stringWithFormat:@"%lu", (unsigned long)data.length]],
+        //XEP-0449 writes the dimensions as one element, XEP-0446/0447 as width and height: both are sent, both are read
+        [[MLXMLNode alloc] initWithElement:@"dimensions" andData:[NSString stringWithFormat:@"%@x%@", width, height]],
+        [[MLXMLNode alloc] initWithElement:@"width" andData:[width stringValue]],
+        [[MLXMLNode alloc] initWithElement:@"height" andData:[height stringValue]],
+        [[MLXMLNode alloc] initWithElement:@"hash" andNamespace:@"urn:xmpp:hashes:2" withAttributes:@{@"algo": @"sha-256"} andChildren:@[] andData:[sha256 base64EncodedStringWithOptions:0]]
+    ] andData:nil];
+    MLXMLNode* urlDataNode = [[MLXMLNode alloc] initWithElement:@"url-data" andNamespace:@"http://jabber.org/protocol/url-data" withAttributes:@{@"target": url} andChildren:@[] andData:nil];
+    MLXMLNode* sourcesNode = [[MLXMLNode alloc] initWithElement:@"sources" andNamespace:@"urn:xmpp:sfs:0" withAttributes:@{} andChildren:@[urlDataNode] andData:nil];
+    return [[MLXMLNode alloc] initWithElement:@"file-sharing" andNamespace:@"urn:xmpp:sfs:0" withAttributes:@{@"disposition": @"inline"} andChildren:@[fileNode, sourcesNode] andData:nil];
+}
+
++(NSString* _Nullable) isaCloudFileSharingUrlOfMessageNode:(MLXMLNode*) node
+{
+    //only https links are taken (XEP-0447 sources of other kinds, like jinglepub, are ignored)
+    for(NSString* url in [node find:@"{urn:xmpp:sfs:0}file-sharing/sources/{http://jabber.org/protocol/url-data}url-data@target"])
+    {
+        if([url isKindOfClass:[NSString class]] && [url.lowercaseString hasPrefix:@"https://"])
+            return url;
+    }
+    return nil;
 }
 
 @end
