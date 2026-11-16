@@ -2,6 +2,13 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 112) — 16/11/2026
+
+Ainda não enviado ao TestFlight: branch `fix/omemo-aceitar-aparelho-conhecido`, a ser mesclada na `isaCloud`.
+
+### Corrigido
+- **Aparelho conhecido removido da lista é aceito como no Android.** O build 111 só aceitava o caso PreKeyMessage + ToFU + `allowMixedTrustInGroups`, e em 16/11/2026 ainda descartou uma mensagem genuína. Agora um aparelho conhecido (identidade gravada) marcado como removido da lista é decifrado sem exigir PreKeyMessage nem a opção de grupos. Continuam bloqueados: aparelho marcado como não confiável pela usuária ("você não confiou") e remetente com confiança explícita ativada (aparelho removido não é aceito automaticamente). Aceitar limpa a marca e pede a lista de novo. Toda aceitação e recusa grava o motivo exato no log (`MLOMEMO.m`, `decryptOmemoEnvelope:`). Análise em `docs/analise-omemo-aparelho-removido.md`; decisão em `docs/decisoes.md`. Mensagens já descartadas não são recuperadas (frente à parte).
+
 ## 0.0.1 (build 111) — 15/11/2026
 
 Ainda não enviado ao TestFlight: branch `fix/omemo-aparelho-removido`, a ser mesclada na `isaCloud`.

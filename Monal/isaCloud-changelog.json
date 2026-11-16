@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "build": 112,
+      "date": "16/11/2026",
+      "sections": [
+        {
+          "title": "Correções",
+          "items": [
+            "🔐 Mensagens de contatos com aparelho antigo deixam de se perder nos grupos criptografados."
+          ]
+        }
+      ]
+    },
+    {
       "build": 111,
       "date": "15/11/2026",
       "sections": [

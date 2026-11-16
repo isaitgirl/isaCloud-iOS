@@ -1015,6 +1015,19 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - **Ressalva:** o desencontro de sessão começa do lado do contato; o limite só impede que o app gere reparos em laço. Efeito real só se prova com troca entre dois aparelhos.
 - **Como desfazer:** remover o bloco `isaCloud: rate limit` e a propriedade `sessionRepairAttempts`.
 
+## Aparelho conhecido removido da lista é aceito como no Android (16/11/2026, build 112)
+
+- **Sintoma:** o build 111 não bastou. Em 16/11/2026 o contato mandou nova mensagem num grupo e ela foi descartada com o texto "removido da lista de dispositivos". Os logs não cobrem o momento, então não se sabe qual condição falhou (provavelmente a de PreKeyMessage). Análise em [analise-omemo-aparelho-removido.md](analise-omemo-aparelho-removido.md).
+- **Decisão:** seguir o Android. No receber, um aparelho conhecido (com identidade gravada) marcado como removido da lista é aceito sem exigir PreKeyMessage, ToFU nem `allowMixedTrustInGroups`. Aceitar limpa a marca e pede a lista de novo, para que a lista real continue sendo a fonte da verdade.
+- **Bloqueios mantidos (aprovados pela Isadora):** (1) aparelho que a usuária marcou como não confiável continua bloqueado, com o texto "você não confiou"; (2) remetente com confiança explícita ativada não aceita aparelho removido automaticamente.
+- **Por que:** o risco real de decifrar nesses casos é baixo, e usuárias estão perdendo mensagens genuínas. Já o Android não tem a decisão explícita de confiança da usuária, então os dois bloqueios não são cópia literal dele: são uma escolha nossa.
+- **Alternativas descartadas:**
+  - Manter as condições do 111: não resolveu, e sem log não se sabe qual falhou.
+  - Tirar também os dois bloqueios: a decisão explícita da usuária não deve ser ignorada sem ela pedir.
+- **Logs:** cada aceite e cada recusa grava o motivo exato (PreKeyMessage, confiança interna do aparelho, confiança explícita do remetente, opção de grupos), para o próximo caso não depender de adivinhação.
+- **Pendência:** recuperar as mensagens já descartadas (reprocessar do histórico ou do MAM) é uma frente à parte.
+- **Como desfazer:** voltar ao build 111 ou remover o ramo "accept known removed device" em `decryptOmemoEnvelope:` (`Monal/Classes/MLOMEMO.m`).
+
 ## Mensagens de aparelho OMEMO removido da lista são aceitas (15/11/2026, build 111)
 
 - **Sintoma:** mensagens genuínas de um contato eram descartadas com "você não confiou no dispositivo", embora a usuária nunca tivesse recusado o aparelho. O aparelho estava marcado como removido da lista (`removedFromDeviceList`) e continuava em uso. Análise em [analise-omemo-aparelho-removido.md](analise-omemo-aparelho-removido.md).
