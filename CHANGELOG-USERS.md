@@ -7,6 +7,9 @@ O que mudou em cada versão, em poucas palavras. A lista técnica completa está
 ### Melhorias
 - 😊 Figurinhas mais compatíveis com outros apps.
 
+### Correções
+- Figurinha recebida com a conversa aberta aparece como figurinha na hora.
+
 ## Build 112 · 16/11/2026
 
 ### Correções

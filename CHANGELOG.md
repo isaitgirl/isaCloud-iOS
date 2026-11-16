@@ -4,7 +4,10 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## 0.0.1 (build 113) — 16/11/2026
 
-Ainda não enviado ao TestFlight: branch `feature/figurinha-xep0449`, a ser mesclada na `isaCloud`.
+Ainda não enviado ao TestFlight: figurinhas XEP-0449 (já na `isaCloud`) e a correção da figurinha ao vivo (branch `fix/figurinha-ao-vivo`).
+
+### Corrigido
+- **Figurinha recebida com a conversa aberta ficava como imagem comum** (`ChatView.swift`). O ExyteChat só redesenha uma linha quando id, posição, status, reações ou `triggerRedraw` mudam, comparando os objetos da lista; o download terminar não muda nada disso, e o ramo "figurinha sem balão" só vale com a imagem baixada. Ao terminar o download de uma figurinha, a conversa troca a mensagem por um `ChatViewMessage` novo com `triggerRedraw` novo (`kMonalMessageFiletransferUpdateNotice`). Aprovado no `.dev` (16/11/2026). A primeira tentativa, mudar o `triggerRedraw` do mesmo objeto, não funciona pelo mesmo motivo.
 
 ### Mudado
 - **Figurinhas em conformidade com a XEP-0449 (roadmap 155, lado iOS).** O envio acrescenta o `<file-sharing/>` (XEP-0447, `disposition='inline'`) com `media-type`, `size`, `dimensions` e `width`/`height`, `hash` SHA-256 em base64 e `url-data` com a URL do upload. Os metadados saem do PNG em cache (`MLFiletransfer.m`, `isaCloudFileSharingNodeForUrl:`); a consulta do tipo MIME está em `DataLayer.m` (`mimeTypeOfOutboundFiletransferMessageId:`). Só fora de OMEMO (`xmpp.m`, `sendMessage:...withLMCId:`). Corpo e OOB continuam; sem marcador `fallback` por enquanto.

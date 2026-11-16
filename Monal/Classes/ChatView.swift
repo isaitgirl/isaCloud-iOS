@@ -2297,6 +2297,25 @@ struct ChatView: View {
             }
             messages[index] = ChatViewMessage(updated)
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kMonalMessageFiletransferUpdateNotice)).receive(on: RunLoop.main)) { notification in
+            //isaCloud: a sticker is drawn without a bubble only once its picture is downloaded (see the messageBuilder). ExyteChat redraws a row only when
+            //its id, position, status, reactions or `triggerRedraw` differ from the row it drew before, and it compares the *objects* in the list, so
+            //changing the same object does nothing. So the sticker gets a new object with a new `triggerRedraw` when its picture arrives. Before this, a sticker
+            //received with the chat open stayed a plain image until another message changed its position in the group (log of 16/11/2026).
+            guard let updated = notification.userInfo?["message"] as? MLMessage,
+                  updated.isSticker,
+                  updated.isEqual(self.contact.obj),
+                  let index = messages.firstIndex(where: { $0.historyId == updated.messageDBId }) else {
+                return
+            }
+            let updatedInfo = ObservableKVOWrapper(updated.fileInfo)
+            guard (updatedInfo.downloadState as DownloadState.RawValue) == DownloadState.complete.rawValue else {
+                return
+            }
+            let redrawn = ChatViewMessage(updated)
+            redrawn.triggerRedraw = UUID()
+            messages[index] = redrawn
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kMonalShareOutboxUpdate)).receive(on: RunLoop.main)) { notification in
             //isaCloud: messages sent from the share sheet go through the outbox; show the sending state and the message here
             guard let shared = notification.userInfo?["contact"] as? MLContact,
