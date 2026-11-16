@@ -16,6 +16,14 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 
+## Validações e pendências (revisão de 16/11/2026)
+
+- **OK pela Isadora:** build 104 (reingressar em sala mantida, "Remover da lista", selos), build 105 (novidades com selo "Novo" na atualização 104 → 105) e build 106 (sem pedido de contato repetido entre `.dev` e produção).
+- **Arquivado:** o limite de reparo de sessão OMEMO do build 110 (substituído pela correção do build 112).
+- **Ainda em avaliação:** build 112 (aceitar mensagem de aparelho OMEMO conhecido removido da lista; testar com dois aparelhos).
+- **Primeira mensagem não lida (build 87):** só no roadmap, sem previsão de nova avaliação.
+- **Figurinhas e XEP-0449 (roadmap 155):** análise iOS e Android pronta em `docs/analise-xep0449-conformidade.md`; aguarda 3 decisões, sem código.
+
 ## O que entrou no build 110 (sobre o 109)
 
 - Reparo de sessão OMEMO com limite: no máximo uma tentativa a cada 5 minutos por (jid, rid) em `MLOMEMO.m`. O reparo antecipado (antes do fim do catch-up) ficou de fora por falta de critério seguro. Análise em `docs/analise-omemo-invalid-message.md`; decisão em `docs/decisoes.md`. Validar com dois aparelhos.

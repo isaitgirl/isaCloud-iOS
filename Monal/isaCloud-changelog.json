@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "build": 113,
+      "date": "16/11/2026",
+      "sections": [
+        {
+          "title": "Melhorias",
+          "items": [
+            "😊 Figurinhas mais compatíveis com outros apps."
+          ]
+        }
+      ]
+    },
+    {
       "build": 112,
       "date": "16/11/2026",
       "sections": [

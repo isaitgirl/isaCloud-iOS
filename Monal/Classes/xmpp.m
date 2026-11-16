@@ -31,6 +31,7 @@
 #import <monalxmpp/SCRAM.h>
 #import <monalxmpp/HT.h>
 #import <monalxmpp/MLImageManager.h>
+#import <monalxmpp/MLFileTransfer.h>      //isaCloud: <file-sharing/> of a sticker (XEP-0449), see sendMessage:... below
 
 //XMPP objects
 #import "MLBasePaser.h"
@@ -4249,7 +4250,22 @@ static NSRegularExpression* fastTokenRemovalRegex;
 
     //isaCloud: sticker marker (XEP-0449). Set for every send of a sticker, including resends, because the flag is stored with the message
     if(isUpload && messageId && [[DataLayer sharedInstance] isStickerMessageId:messageId forAccount:self.accountID])
+    {
         [messageNode addChildNode:[[MLXMLNode alloc] initWithElement:@"sticker" andNamespace:@"urn:xmpp:stickers:0"]];
+        //isaCloud: a sticker also carries its file sharing (XEP-0447/0449) with the metadata of the file, so apps following the XEP get it as a file.
+        //Not in OMEMO chats: the link and the hash would travel in clear, the file is encrypted there instead (docs/analise-xep0449-conformidade.md, point 4).
+        //The body and the OOB url stay as they are, for the clients not knowing the XEP.
+        BOOL omemoEncrypted = encrypt && (!contact.isMuc || [contact.mucType isEqualToString:kMucTypeGroup]);
+        if(!omemoEncrypted)
+        {
+            NSString* stickerMimeType = [[DataLayer sharedInstance] mimeTypeOfOutboundFiletransferMessageId:messageId forAccount:self.accountID];
+            MLXMLNode* fileSharingNode = [MLFiletransfer isaCloudFileSharingNodeForUrl:message mimeType:stickerMimeType];
+            if(fileSharingNode != nil)
+                [messageNode addChildNode:fileSharingNode];
+            else
+                DDLogWarn(@"Sticker %@ sent without file sharing: its file was not found in the cache", messageId);
+        }
+    }
 
     //isaCloud: a reply to a photo, a GIF or a sticker carries the id of the quoted message (urn:isacloud:quote:0). Only the id goes in the stanza,
     //never content, file name or key. Stored with the message, so resends carry it too. The body keeps the quote as text for the other clients.

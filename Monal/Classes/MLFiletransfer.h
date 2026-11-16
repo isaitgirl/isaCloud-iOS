@@ -9,6 +9,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @class MLMessage;
+@class MLXMLNode;
 @class xmpp;
 
 @interface MLFiletransfer : NSObject<NSURLSessionDownloadDelegate>
@@ -54,6 +55,14 @@ NS_ASSUME_NONNULL_BEGIN
 +(NSString*) serverLimitTextForBytes:(NSInteger) bytes;
 //the reason is the result: "converted", "kept_small", "kept_original_mode" or "kept_original_after_failure"; the url is never nil
 +(void) compressVideoFileIfNeeded:(NSURL*) fileUrl completion:(void (^)(NSURL* _Nullable resultUrl, NSString* _Nullable reason)) completion;
+
+//isaCloud: XEP-0449 stickers (docs/analise-xep0449-conformidade.md): the <file-sharing/> element (XEP-0447, metadata XEP-0446) of an outbound file
+//found in our cache under its upload url and mime type; nil if the cache file is missing. The url is the upload url
++(MLXMLNode* _Nullable) isaCloudFileSharingNodeForUrl:(NSString*) url mimeType:(NSString* _Nullable) mimeType NS_SWIFT_NAME(isaCloudFileSharingNode(forUrl:mimeType:));
+//isaCloud: the same element for the file at this path (size, sha-256 in base64, pixel dimensions); nil if the file can't be read as an image
++(MLXMLNode* _Nullable) isaCloudFileSharingNodeForFileAtPath:(NSString*) path url:(NSString*) url mimeType:(NSString*) mimeType NS_SWIFT_NAME(isaCloudFileSharingNode(forFileAtPath:url:mimeType:));
+//isaCloud: the https url of a message's file sharing source (<file-sharing/> with url-data, XEP-0447); nil if there is none or it is not https
++(NSString* _Nullable) isaCloudFileSharingUrlOfMessageNode:(MLXMLNode*) node NS_SWIFT_NAME(isaCloudFileSharingUrl(ofMessageNode:));
 
 @end
 

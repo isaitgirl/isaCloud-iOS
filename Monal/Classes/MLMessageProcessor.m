@@ -718,6 +718,17 @@ static NSMutableDictionary* _typingNotifications;
             else if([lowercaseBody hasPrefix:@"https://"])
                 messageType = kMessageTypeUrl;
         }
+        //isaCloud: a sticker without an OOB link (XEP-0449, sent by other apps) is a file message: its https file sharing url (XEP-0447) is the file.
+        //Only when there is no valid OOB file (that case is handled above) and never for encrypted messages (docs/analise-xep0449-conformidade.md)
+        if(!encrypted && messageType != kMessageTypeFiletransfer && [messageNode check:@"{urn:xmpp:stickers:0}sticker"])
+        {
+            NSString* sharedFileUrl = [MLFiletransfer isaCloudFileSharingUrlOfMessageNode:messageNode];
+            if(sharedFileUrl != nil)
+            {
+                body = sharedFileUrl;
+                messageType = kMessageTypeFiletransfer;
+            }
+        }
         //messages from the bare muc jid are classified as status messages
         if(possiblyUnknownContact.isMuc && [@"" isEqualToString:actualFrom])
             messageType = kMessageTypeStatus;

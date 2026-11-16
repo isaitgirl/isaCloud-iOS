@@ -118,6 +118,7 @@
 		A1C0FFEE00000000000001E3 /* ChatLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001E1 /* ChatLocation.swift */; };
 		A1C0FFEE00000000000002A3 /* QuoteFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000002A1 /* QuoteFormatting.swift */; };
 		A1C0FFEE00000000000002A5 /* QuoteFormattingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000002A4 /* QuoteFormattingTests.swift */; };
+		A1C0FFEE0000000000000F02 /* StickerFileSharingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000F01 /* StickerFileSharingTests.swift */; };
 		A1C0FFEE0000000000000403 /* IsaCloudColorMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000401 /* IsaCloudColorMath.swift */; };
 		A1C0FFEE0000000000000405 /* IsaCloudBubbleColorsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000404 /* IsaCloudBubbleColorsTests.swift */; };
 		A1C0FFEE0000000000000B03 /* MucNickTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000B02 /* MucNickTests.swift */; };
@@ -618,6 +619,7 @@
 		A1C0FFEE00000000000001F6 /* MucHatRulesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MucHatRulesTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE0000000000000205 /* MessageSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageSearchTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000002A4 /* QuoteFormattingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuoteFormattingTests.swift; sourceTree = "<group>"; };
+		A1C0FFEE0000000000000F01 /* StickerFileSharingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickerFileSharingTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE0000000000000404 /* IsaCloudBubbleColorsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IsaCloudBubbleColorsTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE0000000000000B02 /* MucNickTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MucNickTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000001E6 /* ChatLocationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatLocationTests.swift; sourceTree = "<group>"; };
@@ -1661,6 +1663,7 @@
 				A1C0FFEE0000000000000211 /* MessageForwardTests.swift */,
 				A1C0FFEE000000000000020C /* MessageSearchSnippetTests.swift */,
 				A1C0FFEE00000000000002A4 /* QuoteFormattingTests.swift */,
+				A1C0FFEE0000000000000F01 /* StickerFileSharingTests.swift */,
 				A1C0FFEE0000000000000404 /* IsaCloudBubbleColorsTests.swift */,
 				A1C0FFEE0000000000000B02 /* MucNickTests.swift */,
 				A1C0FFEE00000000000001E6 /* ChatLocationTests.swift */,
@@ -2620,6 +2623,7 @@
 				A1C0FFEE00000000000001E3 /* ChatLocation.swift in Sources */,
 				A1C0FFEE00000000000002A3 /* QuoteFormatting.swift in Sources */,
 				A1C0FFEE00000000000002A5 /* QuoteFormattingTests.swift in Sources */,
+				A1C0FFEE0000000000000F02 /* StickerFileSharingTests.swift in Sources */,
 				A1C0FFEE0000000000000403 /* IsaCloudColorMath.swift in Sources */,
 				A1C0FFEE0000000000000405 /* IsaCloudBubbleColorsTests.swift in Sources */,
 				A1C0FFEE0000000000000B03 /* MucNickTests.swift in Sources */,
