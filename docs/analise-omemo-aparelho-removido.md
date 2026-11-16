@@ -55,3 +55,37 @@ Os comentários `//isaCloud:` no código explicam o porquê e as ressalvas.
 ## Como desfazer
 
 Remover os dois ramos novos (o ramo `deviceIsRemovedFromList && deviceIsTofuOnly` e o `else if(deviceIsRemovedFromList && !deviceIsExplicitlyUntrusted)`), as três variáveis novas e a chave pt-BR nova. O texto em inglês volta a cair no "não confiou" do `else` final.
+
+## Build 112
+
+### Por que o 111 não bastou
+
+- O 111 aceitava o aparelho removido só com quatro condições juntas: ToFU, sem confiança explícita do remetente, `allowMixedTrustInGroups` ligado e PreKeyMessage para o nosso aparelho.
+- Em 16/11/2026 o contato mandou nova mensagem num grupo e o 111 ainda descartou ("removido da lista de dispositivos"). Algum dos critérios falhou, provavelmente o de PreKeyMessage, mas o log não cobre o momento, então isso não está confirmado.
+
+### O que mudou
+
+- Em `decryptOmemoEnvelope:` (`MLOMEMO.m`), o ramo de aceite passa a valer para qualquer aparelho conhecido (com identidade gravada) marcado como removido da lista. Não exige mais PreKeyMessage, ToFU nem `allowMixedTrustInGroups`. Assim como no Android (receber não consulta a lista), a mensagem é decifrada.
+- Ao aceitar: log `DDLogInfo` com o caminho usado e os valores (PreKey, confiança interna, confiança explícita do remetente, opção de grupos), `removeDeviceDeletedMark:` e `queryOMEMODevices:withSubscribe:NO` para o remetente.
+- Recusa de aparelho removido: `DDLogWarn` com o motivo exato. A recusa de aparelho não confiável também grava os valores.
+- O aparelho desconhecido (sem identidade gravada) continua com o mesmo comportamento.
+
+### Bloqueios mantidos
+
+1. Aparelho que a usuária marcou como não confiável (`MLOmemoInternalNotTrusted`) continua bloqueado, com o texto "você não confiou".
+2. Remetente com confiança explícita ativada (`hasExplicitOmemoTrustActivated`) não aceita aparelho removido automaticamente.
+
+### Como validar
+
+- Log: `isaCloud: accepting message from known device ... (path: known removed device; ...)`, seguido de decifração bem-sucedida.
+- Nova mensagem do contato, enviada depois do aceite, decifra na conversa.
+- Se ainda recusar, o log `isaCloud: refusing message ...` diz qual bloqueio pegou.
+- Mensagens já descartadas não são recuperadas por esta mudança.
+
+### Pendência
+
+- Recuperar mensagens já descartadas (reprocessar do histórico ou do MAM) é uma frente à parte.
+
+### Como desfazer
+
+- Voltar ao build 111 ou remover o ramo `accept known removed device` em `decryptOmemoEnvelope:`.

@@ -1440,28 +1440,32 @@ $$
         BOOL deviceIsUnknown = [self.monalSignalStore getIdentityForAddress:unknownDeviceAddress] == nil;
         BOOL deviceIsPreKeyForUs = [[envelope findFirst:@"header/key<rid=%u>@prekey|bool", self.monalSignalStore.deviceid] boolValue];
         BOOL senderHasExplicitTrust = [MLContact createContactFromJid:senderJid andAccountID:self.account.accountID].hasExplicitOmemoTrustActivated;
-        //isaCloud: a known device that was removed from the sender's device list (removedFromDeviceList set) is still in use
-        //if it sends a PreKeyMessage for our device. The device list only marks sessions as inactive/active for SENDING;
-        //the Android app (Conversations fork) does not consult the list when receiving and decrypts from any known device.
-        //Here we accept such a device only when it is ToFU-only (never set as untrusted or trusted by the user), the sender has
-        //no explicit trust decisions, mixed trust in groups is allowed and the message is a PreKeyMessage for our device.
-        //Accepting it clears the removed mark and asks for the device list again, so the real list becomes the source of truth.
-        //Risk: a device the contact removed on purpose could be accepted; this is mitigated by the conditions above.
+        //isaCloud: a known device (identity already stored) that was removed from the sender's device list (removedFromDeviceList set)
+        //is still in use when it sends messages. The device list only marks sessions as inactive/active for SENDING; the Android app
+        //(Conversations fork) does not consult the list, the active state or the trust level when RECEIVING and decrypts from any known
+        //device. So, like Android, a known device removed from the list is accepted here, with two blocks kept on purpose:
+        //(1) the user explicitly marked this device as not trusted (MLOmemoInternalNotTrusted): it stays blocked ("you didn't trust");
+        //(2) the sender has an explicit trust decision (hasExplicitOmemoTrustActivated): the user decided for this contact, so a removed
+        //    device is not accepted automatically.
+        //Accepting clears the removed mark and asks for the sender's device list again, so the real list stays the source of truth.
+        //Risk: a device the contact removed on purpose could be accepted. Accepted by the owner: the real risk is low and genuine messages were being lost.
+        //Messages already discarded are not recovered here (they keep the warning).
+        //To undo: go back to build 111 or 110 (or remove the branch marked "accept known removed device" below).
         BOOL deviceIsRemovedFromList = [self.monalSignalStore getRemovedFromDevicelistTime:unknownDeviceAddress] != nil;
         NSData* knownDeviceIdentity = [self.monalSignalStore getIdentityForAddress:unknownDeviceAddress];
         int knownDeviceInternalTrust = knownDeviceIdentity != nil ? [self.monalSignalStore getInternalTrustLevel:unknownDeviceAddress identityKey:knownDeviceIdentity] : -1;
-        BOOL deviceIsTofuOnly = knownDeviceInternalTrust == MLOmemoInternalToFU;
         BOOL deviceIsExplicitlyUntrusted = knownDeviceInternalTrust == MLOmemoInternalNotTrusted;
-        if(deviceIsUnknown && [[HelperTools defaultsDB] boolForKey:@"allowMixedTrustInGroups"] && !senderHasExplicitTrust && deviceIsPreKeyForUs)
+        BOOL allowMixedTrustInGroups = [[HelperTools defaultsDB] boolForKey:@"allowMixedTrustInGroups"];
+        if(deviceIsUnknown && allowMixedTrustInGroups && !senderHasExplicitTrust && deviceIsPreKeyForUs)
         {
             DDLogInfo(@"Accepting prekey message from unknown device %@ of '%@' (possibly in muc: %@) via ToFU...", sid, senderJid, mucJid);
             //continue with decryption, the identity of this device gets stored as ToFU while decrypting
         }
-        else if(deviceIsRemovedFromList && deviceIsTofuOnly && [[HelperTools defaultsDB] boolForKey:@"allowMixedTrustInGroups"] && !senderHasExplicitTrust && deviceIsPreKeyForUs)
+        else if(deviceIsRemovedFromList && !deviceIsExplicitlyUntrusted && !senderHasExplicitTrust)
         {
-            //isaCloud: reactivate the device (clears removedFromDeviceList) and refresh the sender's device list (the real source of truth)
-            //to undo: remove this branch and the "removed from their device list" text below
-            DDLogInfo(@"isaCloud: accepting prekey message from device %@ of '%@' that was removed from the device list (still in use), reactivating...", sid, senderJid);
+            //isaCloud: accept known device removed from the list (see the comment above). Works with or without a PreKeyMessage
+            //and with or without mixed trust in groups; the log says which case was used.
+            DDLogInfo(@"isaCloud: accepting message from known device %@ of '%@' (possibly in muc: %@) that was removed from the device list (path: known removed device; prekey: %@, internal trust: %d, sender explicit trust: %@, mixed trust in groups: %@), reactivating and refreshing the device list...", sid, senderJid, mucJid, bool2str(deviceIsPreKeyForUs), knownDeviceInternalTrust, bool2str(senderHasExplicitTrust), bool2str(allowMixedTrustInGroups));
             [self.monalSignalStore removeDeviceDeletedMark:unknownDeviceAddress];
             [self queryOMEMODevices:senderJid withSubscribe:NO];
             //continue with decryption as above
@@ -1473,13 +1477,15 @@ $$
         }
         else if(deviceIsRemovedFromList && !deviceIsExplicitlyUntrusted)
         {
-            //isaCloud: the device is known but was removed from the device list; the user never distrusted it, so don't say "didn't trust"
-            DDLogWarn(@"Received message from '%@' (possibly in muc: %@) device %@, removed from device list: ignoring!", senderJid, mucJid, sid);
+            //isaCloud: known device removed from the list, not distrusted by the user; the only remaining reason is the sender's explicit trust
+            //(block 2 above), so don't say "didn't trust"
+            DDLogWarn(@"isaCloud: refusing message from '%@' (possibly in muc: %@) known device %@ that was removed from the device list: blocked by the sender's explicit trust decision (prekey: %@, internal trust: %d, sender explicit trust: %@, mixed trust in groups: %@), ignoring!", senderJid, mucJid, sid, bool2str(deviceIsPreKeyForUs), knownDeviceInternalTrust, bool2str(senderHasExplicitTrust), bool2str(allowMixedTrustInGroups));
             return !returnErrorString ? nil : [NSString stringWithFormat:NSLocalizedString(@"Could not decrypt because the sender's device %u was removed from their device list.", @""), sid.unsignedIntValue];
         }
         else
         {
-            DDLogWarn(@"Received message from '%@' (possibly in muc: %@) device %@, but not trusted: ignoring!", senderJid, mucJid, sid);
+            //isaCloud: log the exact reason: the device is not in the sender's list and not removed, or the user explicitly marked it as not trusted
+            DDLogWarn(@"isaCloud: refusing message from '%@' (possibly in muc: %@) device %@: not trusted (prekey: %@, internal trust: %d, removed from list: %@, explicitly untrusted: %@, sender explicit trust: %@, mixed trust in groups: %@), ignoring!", senderJid, mucJid, sid, bool2str(deviceIsPreKeyForUs), knownDeviceInternalTrust, bool2str(deviceIsRemovedFromList), bool2str(deviceIsExplicitlyUntrusted), bool2str(senderHasExplicitTrust), bool2str(allowMixedTrustInGroups));
             return !returnErrorString ? nil : [NSString stringWithFormat:NSLocalizedString(@"Could not decrypt because you didn't trust the sender's device %u.", @""), sid.unsignedIntValue];
         }
     }
