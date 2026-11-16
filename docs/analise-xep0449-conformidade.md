@@ -106,7 +106,29 @@ Branch `feature/figurinha-xep0449`. Decisões da seção 3 seguidas: dimensões 
 - **Conferir o hash no download.** O hash do recebimento não é guardado no banco, então não há contra o que comparar no download. Para fazer, é preciso guardar o hash (coluna nova ou outra forma) e comparar em `MLFiletransfer downloadFileForHistoryID`, com `DDLogWarn` e exibição mesmo assim, como decidido. Fica para a próxima etapa.
 - **Marcador `<fallback/>`** (seção 3, ponto 3): fica para depois de testar com Conversations, Monal e Monocles.
 - **Android** (seção 5): nada feito nesta branch.
-- **Teste cruzado** (seção 6): iOS para Android e para Conversations, em chat 1:1, grupo, com e sem OMEMO, reenvio e MAM, a ser feito no `.dev`.
+- **Teste cruzado** (seção 6): feito em parte, ver "Resultado do teste no `.dev`" abaixo. Faltam Conversations, Monal e Monocles, grupo e reenvio.
 
 **Desvios conscientes**
 - Em chat criptografado, o `<file-sharing/>` não sai (ponto 4). Figurinha enviada sem criptografia numa conversa OMEMO (reenvio ou "enviar sem criptografia") sai com o `<file-sharing/>`, porque o envio em si já é em claro.
+
+## 9. Resultado do teste no `.dev` (16/11/2026)
+
+PR 73 mesclado na `isaCloud` (`47f23b5d0`). Testado no `.dev` (build 112 com a mudança) pela Isadora e conferido no log do iPhone (`Monal 2026-11-16--14-15-32-355.rawlog.gz`, 11:15 a 11:25).
+
+**Funcionou (iOS ↔ Android, sem OMEMO):** envio, recebimento e download pelo MAM depois de ficar alguns minutos offline e reconectar. Nenhum erro, nenhum aviso `sent without file sharing`.
+
+**XML que o iOS envia sem OMEMO** (visto de volta pelo servidor):
+- `<file-sharing disposition='inline'>` com `media-type` `image/png`, `size`, `dimensions` `512x512`, `width`, `height`, `<hash algo='sha-256'>` em base64 e `<sources><url-data target='https://…'/></sources>`;
+- o `<sources>` não repete `xmlns`;
+- corpo, OOB e `<sticker/>` continuam.
+
+**XML que o iOS envia com OMEMO ligado** (mensagem de 11:25:12): `<body>[This message is OMEMO encrypted]</body>`, `<encrypted>`, `<encryption name='OMEMO'/>` e `<sticker xmlns='urn:xmpp:stickers:0'/>`. **Sem** `<file-sharing>`, `<url-data>` nem OOB: a URL e o hash não vão em claro. Confirma o ponto 4 da seção 3.
+
+**O que o Android envia hoje** (visto no mesmo log): `<file-sharing>` com `media-type`, `name`, `size`, `width`/`height` e `url-data`; nas amostras vistas, **sem `<dimensions>`** e **sem hash**. O iOS aceita assim. Para o Android, falta:
+- enviar também `<dimensions>LxA</dimensions>` (seção 3, ponto 2);
+- enviar `<hash algo='sha-256'>` em base64 (seção 3, ponto 1);
+- **não** enviar `<file-sharing>` em chat OMEMO (seção 3, ponto 4); conferir que hoje isso já vale;
+- receber figurinha só com `<file-sharing>`, sem OOB (seção 5, `MessageParser`).
+
+**Ainda não testado:** Conversations, Monal e Monocles recebendo a figurinha nova (deve chegar como imagem); grupo; reenvio; o `<fallback/>`; os testes de unidade (só compilados).
+
