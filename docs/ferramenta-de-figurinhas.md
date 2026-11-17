@@ -30,6 +30,7 @@ A figurinha é **uma imagem enviada como qualquer foto**, pelo HTTP Upload (XEP-
 - **Com OMEMO:** o corpo cifrado tem o link `aesgcm://…` e o `<sticker/>` vai **fora** da criptografia. Isso revela que é uma figurinha, mas não qual, porque a imagem continua cifrada. No iOS o marcador é acrescentado depois do bloco que monta corpo/OOB ou OMEMO, então vale nos dois casos.
 - **Reconhecer pelo elemento, nunca pelo nome do arquivo:** com OMEMO, o Monal troca o nome do upload por um UUID, e o nome não chega. Reconhecer pelo formato da imagem (PNG quadrado com transparência) também erraria com fotos comuns.
 - **Tipo e tamanho:** `image/png`, **512×512 px**, fundo transparente fora da foto, tipicamente de 100 a 300 KB.
+- **Figurinha animada (a partir de 17/11/2026):** também pode ser um **GIF** (`image/gif`, extensão `.gif`, tamanho livre, em geral a menor versão do GIPHY ou do KLIPY), com o mesmo `<sticker/>`. Quem recebe reconhece o formato pelos bytes, não pelo nome. Detalhes em `docs/figurinha-de-gif-android.md`.
 - **Reenvio:** quem reenvia uma figurinha que falhou manda o marcador de novo. No iOS o marcador é decidido pelo flag guardado com a mensagem, não pela tela de envio (ver §3).
 - **Testado:** o Conversations recebe a mensagem como imagem comum (teste da Isadora no `.dev`).
 

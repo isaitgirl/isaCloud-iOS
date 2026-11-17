@@ -1,6 +1,6 @@
 # Figurinha a partir de GIF: guia para o isaCloud Android
 
-Escrito em 13/11/2026, antes da implementação no iOS. A análise do iOS está em `docs/feature-enviar-gif-figurinha.md`. Este guia complementa outros dois:
+Escrito em 13/11/2026 e atualizado em 17/11/2026, depois de a feature ficar pronta e testada no iOS (branch `feature/gif-como-figurinha`). A seção 10 reúne o que foi decidido ou descoberto na implementação. A análise do iOS está em `docs/feature-enviar-gif-figurinha.md`. Este guia complementa outros dois:
 
 - `docs/ferramenta-de-figurinhas.md`: as figurinhas em geral (protocolo, biblioteca, telas);
 - `docs/analise-giphy-provider-android.md`: o seletor de GIF (GIPHY e KLIPY).
@@ -91,3 +91,41 @@ Se o texto final mudar no iOS durante a implementação, este guia é atualizado
 7. Figurinha PNG antiga continua igual (biblioteca, envio e exibição).
 8. GIPHY e KLIPY, os dois provedores.
 9. Receber no Conversations puro e anotar se anima.
+
+## 10. O que o iOS decidiu e confirmou na implementação (17/11/2026)
+
+A Isadora testou no iPhone (`.dev`) e aprovou ("ficou tudo ótimo"). Vale para o Android seguir o mesmo:
+
+**Decisões confirmadas**
+1. **A menor versão pura ficou.** Não foi preciso passar para a versão de ~200 px. Se um dia borrar, a regra muda nas duas plataformas ao mesmo tempo.
+2. **O interruptor não é guardado.** Fica só na tela, desligado a cada abertura do seletor. Não criar preferência.
+3. **A grade da folha anima** os GIFs.
+4. **O toque envia na hora**, sem passar pela barra de anexos, e o seletor fecha sozinho.
+
+**Detalhes de comportamento que o iOS escolheu** (seguir, a menos que o Android tenha motivo)
+- **Interruptor sempre visível**, mesmo quando o build tem só um provedor (o menu GIPHY/KLIPY é que some). Fica na barra de cima, à esquerda: ícone de carinha + texto "Figurinha"; ligado, o ícone fica cheio e na cor de destaque. Para leitor de tela: "Enviar como figurinha", e o estado ligado é anunciado como selecionado.
+- **A escolha vale para o toque seguinte.** O iOS lê o interruptor no momento do toque, antes de baixar, então desligar no meio do download não muda o que está indo.
+- **Sem versão animada pequena:** se o GIF não tiver a menor versão animada (GIPHY sem `fixed_width_small` nem `fixed_width`; KLIPY sem `xs` nem `sm`), vai a **versão normal do GIF (a de até 2 MB), ainda como figurinha**. É raro. Não mostrar erro.
+- **Baixar a versão pequena:** conferir resposta 200 e que o arquivo começa com `GIF8` antes de gravar. Arquivo sem isso é erro de download.
+- **Ordem ao enviar:** (1) ler os bytes do arquivo baixado e apagar o temporário; (2) guardar na biblioteca (por hash, sem duplicar); (3) enviar a figurinha da biblioteca; (4) mostrar o aviso "Figurinha salva" cerca de 0,3 s depois (o seletor ainda está fechando; aviso pedido durante o fechamento não aparece).
+- **Se guardar falhar:** alerta "Não foi possível salvar a figurinha" com "Fechar", também com atraso (0,5 s no iOS) pelo mesmo motivo.
+- **O envio usa o arquivo da biblioteca,** não o temporário: a figurinha continua disponível se o envio falhar e for repetido.
+- **Sem compressão** e **sem renomear:** o tipo `image/gif` sai da extensão `.gif` do arquivo. Conferir que nada no caminho de upload do Android força PNG ou JPEG.
+- **Reenvio com falha** continua marcando o `<sticker/>`, como nas outras figurinhas.
+- **"Salvar figurinha" de uma recebida** grava com o formato detectado pelos bytes (no iOS, o mesmo método da biblioteca serve para os dois caminhos: GIF do seletor e figurinha recebida).
+
+**Cache da lista "em alta" (GIPHY e KLIPY)**
+- O iOS passou a guardar também a URL da figurinha em cada GIF e **mudou o nome do arquivo do cache para `<provedor>-v3.json`**, para ignorar as listas antigas (que não têm a URL). Se o Android guarda a lista "em alta" no aparelho, fazer o mesmo: invalidar o cache antigo quando o formato do item mudar, senão o interruptor ligado falha ou cai na versão grande nos GIFs que vieram do cache.
+
+**Índice da biblioteca**
+- Campo novo **`format`** por figurinha, **opcional**: ausente = PNG, `"gif"` = GIF. O índice antigo continua valendo sem migração. O arquivo é `<id>.png` ou `<id>.gif`.
+- Ao carregar, uma entrada cujo arquivo sumiu é descartada, olhando a extensão certa do formato.
+- **Atenção a versões antigas:** um aplicativo sem esta feature que ler um índice com `"format": "gif"` não encontra o `<id>.png` e descarta essas entradas na próxima gravação. Isso só importa se o índice for compartilhado entre versões (hoje não é).
+
+**Exibição**
+- Para saber se um arquivo recebido é GIF, **ler os primeiros 4 bytes (`GIF8`) e guardar a resposta por URL/arquivo** (para a grade não reabrir o arquivo a cada redesenho). Nunca pela extensão: com OMEMO o nome do arquivo vira um UUID.
+- O GIF anima em loop sem parar na conversa e na grade, sem balão, no mesmo quadrado das outras figurinhas, com o GIF inteiro dentro (*fit*).
+
+**O que o iOS ainda não tem**
+- Testes automáticos da biblioteca com GIF (índice antigo, PNG e GIF juntos, duplicata). Os testes do iOS cobrem só a escolha das URLs (GIPHY e KLIPY), o cache `v3` e a leitura do formato pelos bytes. No Android, vale escrever os da biblioteca desde o começo.
+- Teste no Conversations puro (se anima ou não): ainda não feito.

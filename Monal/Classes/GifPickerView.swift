@@ -453,11 +453,15 @@ struct GifPickerView: View {
     /// isaCloud: the keys from the build; the menu offers the providers that have one
     let keys: GifKeys
     var onPick: (URL) -> Void
+    /// isaCloud: the GIF goes out as a sticker; the file is the smallest version (see GiphySearch.downloadSticker)
+    var onPickSticker: (URL) -> Void
 
     @State private var query: String = ""
     @State private var gifs: [GiphyGif] = []
     @State private var state: LoadState = .loading
     @State private var downloading = false
+    /// isaCloud: the "Sticker" switch in the bar; it starts off each time the picker opens and is not remembered
+    @State private var asSticker = false
     /// the provider searched now; nil when the build has no key at all
     @State private var provider: GifProvider?
     /// the page of the GIFs on screen (the first page is 0); loadMore asks the next one
@@ -482,9 +486,10 @@ struct GifPickerView: View {
 
     private let columns = [GridItem(.adaptive(minimum: 110), spacing: 6)]
 
-    init(keys: GifKeys, onPick: @escaping (URL) -> Void) {
+    init(keys: GifKeys, onPick: @escaping (URL) -> Void, onPickSticker: @escaping (URL) -> Void) {
         self.keys = keys
         self.onPick = onPick
+        self.onPickSticker = onPickSticker
         // isaCloud: the provider chosen last time (read as a plain string, not with @defaultsDB), or the one the build can use
         _provider = State(initialValue: keys.resolved(stored: HelperTools.defaultsDB().string(forKey: GifProvider.defaultsKey)))
     }
@@ -502,9 +507,13 @@ struct GifPickerView: View {
                     }
                 }
                 .toolbar {
-                    if keys.available.count > 1 {
-                        ToolbarItem(placement: .topBarLeading) {
-                            providerMenu
+                    //isaCloud: the sticker switch is always there; the provider menu only when the build has more than one provider
+                    ToolbarItem(placement: .topBarLeading) {
+                        HStack(spacing: 12) {
+                            if keys.available.count > 1 {
+                                providerMenu
+                            }
+                            stickerSwitch
                         }
                     }
                     ToolbarItem(placement: .topBarTrailing) {
@@ -557,6 +566,22 @@ struct GifPickerView: View {
             .font(.subheadline.weight(.semibold))
         }
         .accessibilityLabel(Text("GIF provider"))
+    }
+
+    /// isaCloud: the switch that sends the next GIF as a sticker (lit when on), same look as the provider menu
+    private var stickerSwitch: some View {
+        Button {
+            asSticker.toggle()
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: asSticker ? "face.smiling.fill" : "face.smiling")
+                Text("Sticker")
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(asSticker ? Color.accentColor : Color.secondary)
+        }
+        .accessibilityLabel(Text("Send as sticker"))
+        .accessibilityAddTraits(asSticker ? .isSelected : [])
     }
 
     /// the attribution each provider asks for
@@ -755,11 +780,24 @@ struct GifPickerView: View {
 
     private func pick(_ gif: GiphyGif) {
         downloading = true
+        let sendAsSticker = asSticker
         Task {
             do {
-                let url = try await GiphySearch.download(gif)
-                downloading = false
-                onPick(url)
+                if sendAsSticker {
+                    //isaCloud: the smallest version of the GIF; a GIF without one (rare) goes as the full file, still a GIF
+                    let url: URL
+                    if gif.stickerURL != nil {
+                        url = try await GiphySearch.downloadSticker(gif)
+                    } else {
+                        url = try await GiphySearch.download(gif)
+                    }
+                    downloading = false
+                    onPickSticker(url)
+                } else {
+                    let url = try await GiphySearch.download(gif)
+                    downloading = false
+                    onPick(url)
+                }
                 dismiss()
             } catch {
                 downloading = false
