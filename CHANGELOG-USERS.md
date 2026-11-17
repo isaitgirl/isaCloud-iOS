@@ -2,6 +2,19 @@
 
 O que mudou em cada versão, em poucas palavras. A lista técnica completa está no [CHANGELOG.md](CHANGELOG.md).
 
+**Tom do texto (regra fixa)**
+
+O que está neste arquivo é o que aparece para o usuário na tela de **Novidades** do app. Escreva sempre de forma **simpática e "marketeira"**, como quem conta uma novidade boa para uma amiga:
+- **Um emoji no começo de cada item**, em todas as seções (Novidades, Melhorias e Correções). Correção também tem emoji.
+- Frase curta, positiva e no presente, falando do que a pessoa **ganha** ("Agora ficou mais fácil…"), não do que estava errado por dentro.
+- Nada de texto sério ou técnico: sem jargão (OMEMO, SASL, WAL, 0xdead10cc, background task, thread), sem número de crash (C20), sem "passamos a registrar…". Detalhe técnico fica no [CHANGELOG.md](CHANGELOG.md).
+- Se a correção for interna e a pessoa não percebe, escreva algo leve como "🛠️ Mais estabilidade por dentro, para o app ficar redondinho."
+
+## Build 114 · 17/11/2026
+
+### Melhorias
+- Passamos a registrar mais detalhes quando o app trava ao ir para segundo plano, para conseguirmos corrigir de vez.
+
 ## Build 113 · 16/11/2026
 
 ### Melhorias
