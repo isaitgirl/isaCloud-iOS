@@ -10,10 +10,13 @@ O que está neste arquivo é o que aparece para o usuário na tela de **Novidade
 - Nada de texto sério ou técnico: sem jargão (OMEMO, SASL, WAL, 0xdead10cc, background task, thread), sem número de crash (C20), sem "passamos a registrar…". Detalhe técnico fica no [CHANGELOG.md](CHANGELOG.md).
 - Se a correção for interna e a pessoa não percebe, escreva algo leve como "🛠️ Mais estabilidade por dentro, para o app ficar redondinho."
 
-## Em breve (próxima versão)
+## Próximo build
 
 ### Novidades
 - 🎞️ Agora dá para mandar um GIF como figurinha: é só ligar o botão "Figurinha" na tela de GIFs. Ele já fica guardado nas suas figurinhas, e animadinho!
+
+### Correções
+- 🎬 Os vídeos agora aparecem na hora que você abre, sem tela cinza.
 
 ## Build 115 · 17/11/2026
 
