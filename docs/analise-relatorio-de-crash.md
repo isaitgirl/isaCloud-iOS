@@ -1,6 +1,6 @@
 # Análise: enviar o relatório de crash sem depender do e-mail
 
-Escrita em 10/11/2026. Só análise, sem código. **Caminho escolhido pela Isadora: Compartilhar + XMPP**, e o e-mail sai. Decisões na seção 6.
+Escrita em 10/11/2026. **Caminho escolhido pela Isadora: Compartilhar + XMPP**, e o e-mail sai. Decisões na seção 6. **Atualização de 17/11/2026 (seção 8): o XMPP vem primeiro e o Compartilhar só aparece se o envio não for possível.**
 
 ## 1. Como funciona hoje
 
@@ -182,3 +182,45 @@ Repetir para o nó de chaves de cada aparelho, `eu.siacs.conversations.axolotl.b
 **Conferido em 10/11/2026:** a lista de aparelhos e as chaves de `reports@` vieram na consulta, com um aparelho publicado (`1906983637`). Quando o segundo cliente (Monocles ou Gajim) publicar o dele, conferir de novo.
 
 Se um cliente republicar com outro modelo de acesso, o nó pode voltar a fechar. Vale repetir a conferência depois de instalar um aparelho novo em `reports@`.
+
+## 8. Decisão de 17/11/2026: XMPP primeiro, Compartilhar só como plano B
+
+### 8.1. Fluxo
+
+1. Depois do crash, o aviso pergunta uma vez ("Enviar relatório?"), com **"Enviar"** e **"Agora não"**. O texto da seção 3 continua valendo; o botão "Compartilhar…" sai do aviso.
+2. Ao tocar em "Enviar", o app tenta o caminho do XMPP: upload cifrado (XEP-0363) e link `aesgcm://` por OMEMO para `reports@isacloud.im`.
+3. Se isso não for possível, o app abre a planilha de **Compartilhar** com os arquivos, sem pedir o consentimento de novo.
+
+### 8.2. Quando cai no Compartilhar
+
+| Situação | Comportamento |
+|---|---|
+| Nenhuma conta habilitada | Compartilhar na hora. |
+| Conta habilitada, mas ainda não conectou | Espera até 15 s pela conexão; se não conectar, Compartilhar. |
+| Sem aparelho OMEMO ou sem chave confiável em `reports@` (inclui o nó fechado da seção 7) | Nunca manda em claro: Compartilhar. |
+| Falha do upload (limite de tamanho, erro do servidor) | Compartilhar. |
+| Sem resposta do envio em tempo razoável | Compartilhar. |
+
+A fila `crash-outbox/` (seção 2.2) fica **mínima**: o relatório é gravado nela antes de chamar a conclusão do KSCrash, para não se perder se a pessoa fechar o app durante a espera, e sai da fila quando o envio ou o Compartilhar terminam. Quem fecha o app no meio recebe o aviso de novo na próxima abertura.
+
+### 8.3. Lista de aparelhos OMEMO de `reports@` precisa ser buscada antes de cada envio
+
+`reports@` **não é contato** da pessoa. O `devicelistHandler` do Monal (`MLOMEMO.m`, início do handler) **ignora** avisos de lista de aparelhos de quem não está na lista de contatos (`isListedLocally`). Então, se você logar `reports@` em outro aparelho, o app **não fica sabendo sozinho**: continuaria cifrando para a lista antiga, e o aparelho novo não conseguiria abrir o relatório (e um aparelho removido continuaria recebendo).
+
+Regra do envio:
+- **buscar a lista de `reports@` (`queryOMEMODevices:withSubscribe:`) antes de cada envio**, sem depender de aviso do servidor;
+- esperar a busca da lista e as chaves dos aparelhos novos terminarem antes de cifrar (`openDevicelistFetches` e `openBundleFetches`);
+- se a busca falhar, cair no Compartilhar.
+
+A confiança dos aparelhos de `reports@` é TOFU (aceita na primeira vez). Se a pessoa tiver ligado a opção de só confiar em aparelhos verificados, o relatório não sai e cai no Compartilhar. Depois de logar um aparelho novo em `reports@`, repetir a conferência da seção 7.
+
+### 8.4. Forçar um crash para testar
+
+A tela de Depuração (`CrashTestingView` em `DebugView.swift`) já tem botões que derrubam o app. Para o teste ponta a ponta, entra um botão que **derruba o app de verdade e gera o relatório** (o `.dev` e o simulador). Botão "Crash e relatório real (teste do envio por XMPP)" em Depuração → Teste de Encerramento Anormal. **No simulador o KSCrash só é instalado com o Registrador UDP ligado** (`initSystem` em `HelperTools.m`); no `.dev` (aparelho) ele já vem ligado.
+
+### 8.5. Primeiro relatório recebido (17/11/2026) e ajustes
+
+- O primeiro relatório de teste chegou a `reports@` pelo `.dev` (build 117) e abriu certo: cinco partes (informações extras, relatório da Apple, JSON, log em hexadecimal e perfil). O perfil veio vazio no `.dev` (o `default.profraw` de depuração tem uns 6 GB).
+- **Nome do arquivo (atualizado no mesmo dia):** no primeiro teste o app mandava nome aleatório (regra dos envios cifrados) e o arquivo chegou como hash (`zb2rh….gz`). Depois o app passou a mandar `ios-b<build>-<AAAAMMDD>-<HHMMSS>Z.mcrash.gz` (cópia temporária com o prefixo `keepname.`, respeitado só pelo relatório de crash em `MLFiletransfer`) e o nome chegou intacto em `reports@`. A data e a hora são **sempre em UTC**, marcadas com `Z`, porque quem envia está em fusos diferentes. `scripts/crash-report-renomear.py` ficou para os arquivos antigos com nome de hash (também dá nome em UTC) e para separar as partes (`--extrair`).
+- **Mensagem depois do envio:** troca o texto sobre o Contato por um convite a escrever no canal Guia XMPP mencionando `@reports`, se quiser contar mais sobre o ocorrido.
+

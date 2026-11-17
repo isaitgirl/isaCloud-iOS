@@ -1181,6 +1181,10 @@ static NSDateFormatter* dbFormatter;
 
 -(BOOL) saveMessageDraft:(NSString*) buddy forAccount:(NSNumber*) accountID withComment:(NSString*) comment
 {
+    //isaCloud: the "reports: " that the crash report alert puts in the Guia XMPP text box is not a draft until the person writes
+    //something more; otherwise it would stay in the chats list as "Draft: reports:" after opening and leaving the channel
+    if([[comment stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] isEqualToString:@"reports:"])
+        comment = @"";
     return [self.db boolWriteTransaction:^{
         return [self.db executeNonQuery:@"UPDATE buddylist SET messageDraft=? WHERE account_id=? AND buddy_name=?;" andArguments:@[comment, accountID, buddy]];
     }];

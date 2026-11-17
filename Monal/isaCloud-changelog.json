@@ -1,6 +1,19 @@
 {
   "releases": [
     {
+      "build": 117,
+      "date": "17/11/2026",
+      "sections": [
+        {
+          "title": "Melhorias",
+          "items": [
+            "🛟 Se o app fechar de repente, o relatório agora chega até a nossa equipe direto pelo isaCloud, criptografado e sem precisar de app de e-mail configurado no aparelho.",
+            "📤 Se não der para enviar pelo isaCloud, o app oferece para você compartilhar o relatório por onde preferir."
+          ]
+        }
+      ]
+    },
+    {
       "build": 116,
       "date": "17/11/2026",
       "sections": [

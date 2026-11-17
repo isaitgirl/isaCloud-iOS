@@ -1402,7 +1402,12 @@ $$class_handler(internalTmpFileUploadHandler, $$ID(NSString*, file), $$ID(NSStri
     if(encrypted)
     {
         sendMimeType = @"application/octet-stream";
-        userFacingFilename = [NSString stringWithFormat:@"%@.%@", [[NSUUID UUID] UUIDString], userFacingFilename.pathExtension];
+        //isaCloud: a file named "keepname.<name>" (crash reports) is sent with <name>: the content is encrypted and the name is
+        //not sensitive. All other encrypted uploads keep the random name.
+        if([userFacingFilename hasPrefix:@"keepname."] && userFacingFilename.length > [@"keepname." length])
+            userFacingFilename = [userFacingFilename substringFromIndex:[@"keepname." length]];
+        else
+            userFacingFilename = [NSString stringWithFormat:@"%@.%@", [[NSUUID UUID] UUIDString], userFacingFilename.pathExtension];
     }
     
     MLAssert(fileData != nil, @"fileData should never be nil!");
