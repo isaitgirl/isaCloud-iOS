@@ -3076,6 +3076,69 @@ static char _isaCloudHangNames[ISA_HANG_MAX_THREADS][48];
 #endif
 }
 
+//isaCloud SPIN: one line to the normal log and to a small file in the app group (Library/isacloud-spin.log, rotated at 2 MB
+//into isacloud-spin.old.log; devicectl only reads Library, Documents and tmp), so the measurements can be pulled from the device without exporting the big rawlogs
++(void) isaCloudSpin:(NSString*) format, ...
+{
+    va_list args;
+    va_start(args, format);
+    NSString* message = [[NSString alloc] initWithFormat:format arguments:args];
+    va_end(args);
+    DDLogInfo(@"isaCloud SPIN: %@", message);
+    
+    static dispatch_queue_t queue;
+    static NSDateFormatter* formatter;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        queue = dispatch_queue_create("im.isacloud.spinlog", DISPATCH_QUEUE_SERIAL);
+        formatter = [NSDateFormatter new];
+        formatter.locale = [NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];
+        formatter.dateFormat = @"yyyy-MM-dd HH:mm:ss.SSS";
+    });
+    NSDate* now = [NSDate date];
+    NSString* process = [HelperTools isAppExtension] ? @"ext" : @"app";
+    dispatch_async(queue, ^{
+        NSString* line = [NSString stringWithFormat:@"%@ %@ %@\n", [formatter stringFromDate:now], process, message];
+        NSURL* fileURL = [self getContainerURLForPathComponents:@[@"Library", @"isacloud-spin.log"]];
+        NSDictionary* attrs = [[NSFileManager defaultManager] attributesOfItemAtPath:fileURL.path error:nil];
+        if(attrs != nil && [attrs fileSize] > 2 * 1024 * 1024)
+        {
+            NSURL* oldURL = [self getContainerURLForPathComponents:@[@"Library", @"isacloud-spin.old.log"]];
+            [[NSFileManager defaultManager] removeItemAtURL:oldURL error:nil];
+            [[NSFileManager defaultManager] moveItemAtURL:fileURL toURL:oldURL error:nil];
+        }
+        FILE* file = fopen(fileURL.path.UTF8String, "a");
+        if(file != NULL)
+        {
+            fputs(line.UTF8String, file);
+            fclose(file);
+        }
+    });
+}
+
++(NSURL* _Nullable) isaCloudExportSpinLog
+{
+    NSMutableString* content = [NSMutableString new];
+    for(NSString* name in @[@"isacloud-spin.old.log", @"isacloud-spin.log"])
+    {
+        NSString* part = [NSString stringWithContentsOfURL:[self getContainerURLForPathComponents:@[@"Library", name]] encoding:NSUTF8StringEncoding error:nil];
+        if(part != nil)
+            [content appendString:part];
+    }
+    if(content.length == 0)
+        return nil;
+    NSString* bundleVersion = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"];
+    NSString* header = [NSString stringWithFormat:@"isaCloud performance measurements, build %@, %@ (iOS %@)\n", bundleVersion, [[UIDevice currentDevice] model], [[UIDevice currentDevice] systemVersion]];
+    NSURL* fileURL = [[NSURL fileURLWithPath:NSTemporaryDirectory()] URLByAppendingPathComponent:[NSString stringWithFormat:@"isacloud-measurements-%@.txt", bundleVersion]];
+    NSError* error = nil;
+    if(![[header stringByAppendingString:content] writeToURL:fileURL atomically:YES encoding:NSUTF8StringEncoding error:&error])
+    {
+        DDLogError(@"isaCloud SPIN: could not write the measurements export: %@", error);
+        return nil;
+    }
+    return fileURL;
+}
+
 //isaCloud: C30, moves the stacks recorded by the watchdog to the normal log and deletes the file
 +(void) isaCloudDumpHangRecords
 {

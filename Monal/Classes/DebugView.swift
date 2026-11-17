@@ -46,6 +46,7 @@ struct LogFilesView: View {
     @State private var showingDBImportFailedAlert = false
     @State private var showingAvatarResetDoneAlert = false
     @State private var showingMetricsExportFailedAlert = false
+    @State private var showingNoMeasurementsAlert = false
     
     func refreshSortedLogfiles() {
         if let sortedLogFileInfos = HelperTools.fileLogger?.logFileManager.sortedLogFileInfos {
@@ -102,6 +103,17 @@ struct LogFilesView: View {
                     }
                 }
                 deviceMetricsSection
+                //isaCloud: the small timing file written by HelperTools isaCloudSpin (queue backlog, saves, server answer times);
+                //it has no message content or addresses, so it can be shared instead of the big logfiles
+                Section(header: Text("Performance Measurements"), footer: Text("Times for opening the app, sending messages and uploading files. Contains no messages or contacts.")) {
+                    Button("Share Measurements") {
+                        if let url = HelperTools.isaCloudExportSpinLog() {
+                            self.fileURL = url
+                        } else {
+                            showingNoMeasurementsAlert = true
+                        }
+                    }
+                }
                 Section(header: Text("Caches")) {
                     //isaCloud: the cached avatars live outside the database; this makes the app download them again (useful after
                     //importing a database, which brings the hashes but not the images)
@@ -153,6 +165,11 @@ struct LogFilesView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text("Close and open the app to apply it. The current database (accounts, chats and messages) will be replaced, and the app will migrate the imported one on the next start.")
+        }
+        .alert("No measurements yet", isPresented: $showingNoMeasurementsAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Use the app for a while (open it, send a message or a photo) and try again.")
         }
         .alert("Metrics export failed", isPresented: $showingMetricsExportFailedAlert) {
             Button("OK", role: .cancel) {}

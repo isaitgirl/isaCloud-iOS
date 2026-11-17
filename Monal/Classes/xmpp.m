@@ -118,6 +118,19 @@ static NSRegularExpression* fastTokenRemovalRegex;
     CFAbsoluteTime _isaCloudLastPersist;
     BOOL _isaCloudPersistPending;
     BOOL _isaCloudPersistTimerScheduled;
+    //isaCloud SPIN: measures the incoming backlog, state saves and how long our own iqs/messages wait for an answer
+    NSMutableDictionary* _isaCloudSentAt;
+    NSUInteger _isaCloudSpinStanzas;
+    NSUInteger _isaCloudSpinPresences;
+    NSUInteger _isaCloudSpinSaves;
+    NSUInteger _isaCloudSpinSkipped;
+    double _isaCloudSpinTotalMs;
+    double _isaCloudSpinMaxMs;
+    CFAbsoluteTime _isaCloudSpinWindowStart;
+    CFAbsoluteTime _isaCloudBacklogStart;
+    NSUInteger _isaCloudBacklogStanzas;
+    NSUInteger _isaCloudBacklogMax;
+    BOOL _isaCloudThrottleActive;
     double _reconnectBackoffTime;
     BOOL _reconnectInProgress;
     BOOL _disconnectInProgres;
@@ -266,6 +279,10 @@ static NSRegularExpression* fastTokenRemovalRegex;
     _isaCloudLastPersist = 0;
     _isaCloudPersistPending = NO;
     _isaCloudPersistTimerScheduled = NO;
+    _isaCloudSentAt = [NSMutableDictionary new];
+    _isaCloudSpinWindowStart = 0;
+    _isaCloudBacklogStart = 0;
+    _isaCloudThrottleActive = NO;
     [self initSM3];
     self.isDoingFullReconnect = YES;
     
@@ -1589,6 +1606,7 @@ static NSRegularExpression* fastTokenRemovalRegex;
                         return;
                     }
                     NSString* loggedStanza = [NSString stringWithFormat:@"<%@%@/>", parsedStanza.element, [parsedStanza check:@"/@id"] ? [NSString stringWithFormat:@" id='%@'", [parsedStanza findFirst:@"/@id"]] : @""];
+                    CFAbsoluteTime isaCloudStanzaStart = CFAbsoluteTimeGetCurrent();
                     [MLNotificationQueue queueNotificationsInBlock:^{
                         //add whole processing of incoming stanzas to one big transaction
                         //this will make it impossible to leave inconsistent database entries on app crashes or iphone crashes/reboots
@@ -1604,6 +1622,7 @@ static NSRegularExpression* fastTokenRemovalRegex;
                         [self unfreezeSendQueue];      //this will flush all stanzas added inside the db transaction and now waiting in the send queue
                     } onQueue:@"receiveQueue"];
                     [self persistState];        //make sure to persist all state changes triggered by the events in the notification queue
+                    [self isaCloudSpinRecordStanza:parsedStanza.element tookMs:(CFAbsoluteTimeGetCurrent() - isaCloudStanzaStart) * 1000.0];
                 }]] waitUntilFinished:YES];
             //we have to wait for the stanza/nonza to be handled before parsing the next one to not introduce race conditions
             //between the response to our pipelined stream restart and the parser reset in the sasl success handler
@@ -1927,7 +1946,10 @@ static NSRegularExpression* fastTokenRemovalRegex;
                     {
                         XMPPMessage* messageNode = (XMPPMessage*)node;
                         if(messageNode.id)
+                        {
+                            [self isaCloudSpinAnswerFor:messageNode.id kind:@"server ack"];
                             [[MLNotificationQueue currentQueue] postNotificationName:kMonalSentMessageNotice object:self userInfo:@{@"message":messageNode}];
+                        }
                     }
                 }
             }
@@ -2535,6 +2557,8 @@ static NSRegularExpression* fastTokenRemovalRegex;
             else if([iqNode check:@"/<type=error>"] && _runningMamQueries[[iqNode findFirst:@"/@id"]] != nil)
                 [_runningMamQueries removeObjectForKey:[iqNode findFirst:@"/@id"]];
             
+            [self isaCloudSpinAnswerFor:[iqNode findFirst:@"/@id"] kind:[iqNode findFirst:@"/@type"]];
+            
             //process registered iq handlers
             NSMutableDictionary* iqHandler = nil;
             @synchronized(_iqHandlers) {
@@ -2603,6 +2627,7 @@ static NSRegularExpression* fastTokenRemovalRegex;
 
             //now we are initialized again (the following part is taken from earlyInitSession and initSession)
             DDLogInfo(@"Session resumed, initializing state...");
+            [HelperTools isaCloudSpin:@"%@ smacks session resumed, parseQueue=%lu", self->_logtag, (unsigned long)[self->_parseQueue operationCount]];
             _connectedTime = [NSDate date];
             _reconnectBackoffTime = 0;
             _accountState = kStateInitStarted;
@@ -4066,6 +4091,8 @@ static NSRegularExpression* fastTokenRemovalRegex;
                 persistStateNeeded = YES;
             }
         
+        [self isaCloudSpinRecordSend:stanza];
+        
         //always add stanzas (not nonzas!) to smacks queue to be resent later (if withSmacks=YES)
         if(withSmacks && [stanza isKindOfClass:[XMPPStanza class]])
         {
@@ -4400,7 +4427,16 @@ static NSRegularExpression* fastTokenRemovalRegex;
     CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
     BOOL saveNow = NO;
     NSTimeInterval delay = 0;
-    BOOL catchingUp = !self->_catchupDone && self.inCatchup.count > 0;
+    //isaCloud: a resumed smacks session replays everything the server held while we were suspended, but inCatchup stays
+    //empty (it only tracks mam catchups), so the old condition never throttled that replay: every queued presence did
+    //two full state saves (~60 ms each, 111 KB). Throttle until the catchup is done and while a backlog is queued, too.
+    NSUInteger queued = [self->_parseQueue operationCount];
+    BOOL catchingUp = !self->_catchupDone || queued > 4;
+    if(catchingUp != self->_isaCloudThrottleActive)
+    {
+        self->_isaCloudThrottleActive = catchingUp;
+        [HelperTools isaCloudSpin:@"%@ save throttle %@ (catchupDone=%@, inCatchup=%lu, parseQueue=%lu)", self->_logtag, catchingUp ? @"ON" : @"OFF", bool2str(self->_catchupDone), (unsigned long)self.inCatchup.count, (unsigned long)queued];
+    }
     if(!catchingUp || [HelperTools isaCloudSuspendedFast])
     {
         @synchronized(self->_isaCloudPersistLock) {
@@ -4436,8 +4472,116 @@ static NSRegularExpression* fastTokenRemovalRegex;
             });
         }
     }
+    @synchronized(self->_isaCloudPersistLock) {
+        if(saveNow)
+            self->_isaCloudSpinSaves++;
+        else
+            self->_isaCloudSpinSkipped++;
+    }
     if(saveNow)
         [self realPersistState];
+}
+
+//isaCloud SPIN: remember when we sent our own iqs and messages with body, to log how long the answer took
+-(void) isaCloudSpinRecordSend:(MLXMLNode*) stanza
+{
+    NSString* stanzaId = [stanza findFirst:@"/@id"];
+    if(stanzaId == nil)
+        return;
+    NSString* label = nil;
+    if([stanza isKindOfClass:[XMPPIQ class]] && ([stanza check:@"/<type=get>"] || [stanza check:@"/<type=set>"]))
+    {
+        MLXMLNode* child = [stanza.children firstObject];
+        label = [NSString stringWithFormat:@"iq %@", child ? [NSString stringWithFormat:@"{%@}%@", child.attributes[@"xmlns"], child.element] : @"(empty)"];
+    }
+    else if([stanza isKindOfClass:[XMPPMessage class]] && [stanza check:@"body"])
+        label = @"message";
+    if(label == nil)
+        return;
+    @synchronized(self->_isaCloudPersistLock) {
+        if(self->_isaCloudSentAt.count > 300)
+            [self->_isaCloudSentAt removeAllObjects];
+        self->_isaCloudSentAt[stanzaId] = @[@(CFAbsoluteTimeGetCurrent()), label, @([self->_parseQueue operationCount])];
+    }
+}
+
+-(void) isaCloudSpinAnswerFor:(NSString* _Nullable) stanzaId kind:(NSString* _Nullable) kind
+{
+    if(stanzaId == nil)
+        return;
+    NSArray* sent = nil;
+    @synchronized(self->_isaCloudPersistLock) {
+        sent = self->_isaCloudSentAt[stanzaId];
+        if(sent)
+            [self->_isaCloudSentAt removeObjectForKey:stanzaId];
+    }
+    if(sent == nil)
+        return;
+    double ms = (CFAbsoluteTimeGetCurrent() - [sent[0] doubleValue]) * 1000.0;
+    NSString* label = sent[1];
+    BOOL interesting = ms >= 300.0 || [label hasPrefix:@"message"] || [label containsString:@"urn:xmpp:http:upload"];
+    if(interesting)
+        [HelperTools isaCloudSpin:@"%@ %@ answered (%@) after %.0f ms, parseQueue at send %@ / now %lu", self->_logtag, label, kind, ms, sent[2], (unsigned long)[self->_parseQueue operationCount]];
+}
+
+//isaCloud SPIN: one summary line every 2 s while stanzas arrive, plus start/end of each backlog
+-(void) isaCloudSpinRecordStanza:(NSString*) element tookMs:(double) ms
+{
+    CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
+    NSUInteger queued = [self->_parseQueue operationCount];
+    NSString* summary = nil;
+    NSString* backlogEvent = nil;
+    @synchronized(self->_isaCloudPersistLock) {
+        if(self->_isaCloudSpinWindowStart == 0)
+            self->_isaCloudSpinWindowStart = now;
+        self->_isaCloudSpinStanzas++;
+        if([element isEqualToString:@"presence"])
+            self->_isaCloudSpinPresences++;
+        self->_isaCloudSpinTotalMs += ms;
+        if(ms > self->_isaCloudSpinMaxMs)
+            self->_isaCloudSpinMaxMs = ms;
+        
+        if(queued > 4 && self->_isaCloudBacklogStart == 0)
+        {
+            self->_isaCloudBacklogStart = now;
+            self->_isaCloudBacklogStanzas = 0;
+            self->_isaCloudBacklogMax = queued;
+            backlogEvent = [NSString stringWithFormat:@"backlog started, parseQueue=%lu", (unsigned long)queued];
+        }
+        if(self->_isaCloudBacklogStart != 0)
+        {
+            self->_isaCloudBacklogStanzas++;
+            if(queued > self->_isaCloudBacklogMax)
+                self->_isaCloudBacklogMax = queued;
+            //the parse operation running this stanza still counts, so an empty queue reads as 1
+            if(queued <= 1)
+            {
+                backlogEvent = [NSString stringWithFormat:@"backlog drained after %.1f s, %lu stanzas, max parseQueue=%lu", now - self->_isaCloudBacklogStart, (unsigned long)self->_isaCloudBacklogStanzas, (unsigned long)self->_isaCloudBacklogMax];
+                self->_isaCloudBacklogStart = 0;
+            }
+        }
+        
+        if(now - self->_isaCloudSpinWindowStart >= 2.0 || (queued <= 1 && self->_isaCloudSpinStanzas >= 20))
+        {
+            summary = [NSString stringWithFormat:@"%.1f s: %lu stanzas (%lu presence), avg %.0f ms, max %.0f ms, saves %lu, skipped %lu, parseQueue=%lu, catchupDone=%@",
+                now - self->_isaCloudSpinWindowStart,
+                (unsigned long)self->_isaCloudSpinStanzas, (unsigned long)self->_isaCloudSpinPresences,
+                self->_isaCloudSpinTotalMs / (double)self->_isaCloudSpinStanzas, self->_isaCloudSpinMaxMs,
+                (unsigned long)self->_isaCloudSpinSaves, (unsigned long)self->_isaCloudSpinSkipped,
+                (unsigned long)queued, bool2str(self->_catchupDone)];
+            self->_isaCloudSpinWindowStart = now;
+            self->_isaCloudSpinStanzas = 0;
+            self->_isaCloudSpinPresences = 0;
+            self->_isaCloudSpinTotalMs = 0;
+            self->_isaCloudSpinMaxMs = 0;
+            self->_isaCloudSpinSaves = 0;
+            self->_isaCloudSpinSkipped = 0;
+        }
+    }
+    if(backlogEvent)
+        [HelperTools isaCloudSpin:@"%@ %@", self->_logtag, backlogEvent];
+    if(summary)
+        [HelperTools isaCloudSpin:@"%@ %@", self->_logtag, summary];
 }
 
 -(void) isaCloudFlushPendingPersist
@@ -6359,6 +6503,7 @@ static NSRegularExpression* fastTokenRemovalRegex;
 {
     self->_catchupDone = YES;
     [self->_connectTiming mark:@"catchup"];     //isaCloud: medição
+    [HelperTools isaCloudSpin:@"%@ catchup done (smacks=%@), parseQueue=%lu", self->_logtag, bool2str(self.connectionProperties.supportsSM3), (unsigned long)[self->_parseQueue operationCount]];
     self.isDoingFullReconnect = !self.connectionProperties.supportsSM3;
     
     //log catchup statistics
