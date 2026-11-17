@@ -2,9 +2,9 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
-## 0.0.1 (build 117) — não enviado
+## 0.0.1 (build 117) — 17/11/2026
 
-Ainda não enviado ao TestFlight: branch `feature/relatorio-crash-xmpp`, a ser mesclada na `isaCloud`. Decisão de 17/11/2026 (`docs/analise-relatorio-de-crash.md`, seção 8): o XMPP vem primeiro e o Compartilhar só como plano B.
+Enviado ao TestFlight às 15:40: relatório de crash por XMPP para `reports@isacloud.im` (PR 80, branch `feature/relatorio-crash-xmpp`, testada no `.dev` em 17/11/2026), mais o registro do crash C31. Decisão de 17/11/2026 (`docs/analise-relatorio-de-crash.md`, seção 8): o XMPP vem primeiro e o Compartilhar só como plano B.
 
 ### Adicionado
 - **Relatório de crash por XMPP para `reports@isacloud.im`.** Depois do "Enviar" no aviso, o `.mcrash.gz` sobe pelo HTTP Upload cifrado (XEP-0363, `MLFiletransfer uploadFile:onAccount:withEncryption:YES`) e o link `aesgcm://` vai por OMEMO no mesmo caminho do anexo da conversa (`sendMessageAndAddToHistory`). Antes de cifrar, a lista de aparelhos de `reports@` é buscada de novo (`queryOMEMODevices:withSubscribe:NO`, exposto em `MLOMEMO.h`), com espera pelas listas e chaves (`openDevicelistFetches`, `openBundleFetches`). Uma linha de texto (versão, build e data do crash) vai antes do arquivo.
