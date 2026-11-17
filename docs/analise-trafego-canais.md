@@ -300,3 +300,51 @@ No `.dev`, em três aberturas depois de segundos ou minutos no fundo:
 Falta conferir uma abertura depois de horas no fundo (milhares de presenças) e no 5G.
 As medições ficam em Depuração → Logfiles → "Medições de desempenho" e em `Library/isacloud-spin.log` (puxar com `devicectl ... --domain-type appGroupDataContainer --source Library/isacloud-spin.log`).
 O limite de ~50 mensagens no catch-up dos canais e o MAM sob demanda continuam só analisados.
+
+## Como o WhatsApp lida com isso, e o MIX (17/11/2026)
+
+O WhatsApp não fica dentro dos limites do iOS por mágica: ele **não mantém conexão em segundo plano**.
+- Em segundo plano só chega push (APNs); o servidor guarda as mensagens e, ao abrir, o app conecta e puxa a fila do usuário.
+- Grupo não é sala: o cliente não entra no grupo nem recebe presença de cada participante. O servidor guarda a lista de membros e distribui a mensagem. A lista só é buscada quando a pessoa abre o grupo.
+- "Online" e "digitando" só chegam para a conversa aberta.
+- Chamadas usam PushKit com CallKit.
+
+O problema do XMPP em canais grandes é o MUC (XEP-0045), que repassa a presença de cada participante a todos.
+**MIX (XEP-0369)** foi feito para isso (lista de membros no servidor, via PEP, sem presença por participante), mas está **Experimental, na versão 0.14.6, sem revisão de conteúdo desde 01/12/2020** (conferido em xmpp.org em 17/11/2026). Só serviria em salas nossas, com clientes que falem MIX; não ajuda nos canais federados.
+
+## Proposta: `mod_muc_presence_quiet` (não implementada)
+
+Módulo Prosody no estilo do `cloud_notify_quiet` (`dry_run`, log por decisão, métrica de decisões), para reduzir a presença de sala **entregue ao usuário**. Não mexe no que os outros participantes veem do usuário (a ideia de `muc_room_default_presence_broadcast` com só moderadores foi descartada por isso).
+
+### Por que no servidor de casa do usuário
+
+- A presença de sala chega ao usuário pela rota `presence/full`. Descartar ali, **antes da fila do Stream Management**, também esvazia a fila de hibernação, e some a enxurrada ao abrir o app (1.000+ presenças em 2 s em 17/11/2026).
+- O `mod_csi_battery_saver` do isaCloud só **segura** a presença de sala enquanto o app está inativo (fila de até 256) e solta tudo ao ficar ativo; não remove nada. E remover repetidas ajuda pouco: no pico, 756 de 849 presenças eram de pessoas diferentes (~11% de repetição).
+- Só vale para contas **hospedadas no servidor do isaCloud**. A conta do xmpp.social.br da Isadora (98% das presenças dos logs de 17/11) não é afetada.
+
+### Regra
+
+Passam: presença do próprio usuário (código 110, que o app usa para saber que entrou na sala), erros e remoções (kick, ban), moderadores e admins, e quem **falou na sala** dentro de uma janela configurável (o módulo vê as mensagens do grupo passando por `message/full`). O resto é descartado: entrada e saída de quem só lê.
+
+Opções previstas: `muc_presence_quiet_window` (janela de "quem falou", por exemplo 7 dias), `muc_presence_quiet_min_rate` (só ligar para salas com muita rotatividade, por exemplo mais de 50 presenças/hora), lista de salas excluídas e `dry_run`. Salas locais pequenas e grupos (members-only, não anônimos) ficam de fora.
+
+### Efeito no app (conferido no código)
+
+- **`@` de menção:** `mentionNicks()` em `ChatView.swift` usa `getMembersAndParticipants` e filtra só quem está `online`, e quem marca `online` é a presença. Com o módulo, o `@` sugeriria só quem fala ou modera. Digitar o nick de quem não aparece continua funcionando (a menção do app é texto).
+- **Contagem ao lado do nome do canal** (`mucPersonCount`, `countMucPersons`): conta os participantes registrados no banco, então cairia de centenas para as dezenas de quem fala. Enganaria quem lê como "quantas pessoas estão no canal".
+- **Lista de participantes** do canal: ficaria só com quem fala e modera.
+- **Grupos:** sem mudança, porque ficam de fora do filtro.
+
+### Ajustes para reduzir o efeito
+
+1. Janela de "quem falou" maior (7 dias).
+2. No app, usar o total de ocupantes que a sala informa (`muc#roominfo_occupants`) na contagem, em vez de contar o que está no banco. Mudança pequena, mas no app.
+3. Ligar só para salas com muita rotatividade.
+
+### A conferir antes de implementar
+
+- Que o Monal aceita sem erro mensagem de um nick que não está na lista de participantes.
+- Que marcar "entrou na sala" depende só da presença com código 110.
+- Que o hook `presence/full` roda antes da fila de hibernação do `mod_smacks` no Prosody 13 (medir com a métrica do módulo em `dry_run`).
+
+Decisão em 17/11/2026: **só documentar**, nada foi implementado.
