@@ -1037,3 +1037,11 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - **Ressalva e possível passo seguinte:** o risco de decifrar um aparelho que o contato removeu de propósito é baixo, mas existe. A Isadora avaliou seguir o Android por completo (sem exigir PreKeyMessage nem a opção de grupos), porque usuárias estão perdendo mensagens genuínas. Não feito ainda.
 - **Mensagens já descartadas** não são recuperadas automaticamente.
 - **Como desfazer:** remover os ramos com `deviceIsRemovedFromList` em `decryptOmemoEnvelope:` (`Monal/Classes/MLOMEMO.m`) e as variáveis novas.
+
+## Vídeo cinza no visualizador do chat (17/11/2026, build 116)
+
+- **Sintoma:** no iPhone 12 Pro (iOS 27) o vídeo abria com a tela cinza (RGB 153 liso) até um toque; o áudio tocava. No iPhone 11 do Will (iOS 26.7) não acontecia.
+- **Causa:** o visualizador do chat não é o `MediaViewer.swift` do app, é o `FullscreenMediaPages` + `VideoView` do fork do ExyteChat. No iOS 27 um `AVPlayerViewController` dentro do `TabView(.page)` toca, mas a camada de vídeo não é composta. O log do player mostrava tudo certo (`isReadyForDisplay`, janela, tamanho, `rate` 1), por isso o diagnóstico demorou.
+- **Decisão:** com `fullscreenSingleAttachment` ligado (o app liga), o fork mostra o anexo sozinho, sem o `TabView` (mudança nº 24). Descartados, sem efeito: trocar o `VideoPlayer` por `AVPlayerViewController`, esperar `isReadyForDisplay` para dar o play, desligar `allowsVideoFrameAnalysis`, forçar `layoutIfNeeded`.
+- **Como reproduzir e medir:** simulador iOS 27, abrir o vídeo e amostrar pixels de `xcrun simctl io <udid> screenshot` (o screenshot do MCP "acorda" a tela e esconde o bug). Antes: todos os quadros em (153,153,153); depois: quadros variando.
+- **Como desfazer:** remover o desvio `if singleAttachment` de `mediaPagerView` no fork. Sem anexo único (opção desligada) o caminho paginado continua e teria o mesmo problema no iOS 27.

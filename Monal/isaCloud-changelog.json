@@ -1,6 +1,24 @@
 {
   "releases": [
     {
+      "build": 116,
+      "date": "17/11/2026",
+      "sections": [
+        {
+          "title": "Novidades",
+          "items": [
+            "🎞️ Agora dá para mandar um GIF como figurinha: é só ligar o botão \"Figurinha\" na tela de GIFs. Ele já fica guardado nas suas figurinhas, e animadinho!"
+          ]
+        },
+        {
+          "title": "Correções",
+          "items": [
+            "🎬 Os vídeos agora aparecem na hora que você abre, sem tela cinza."
+          ]
+        }
+      ]
+    },
+    {
       "build": 115,
       "date": "17/11/2026",
       "sections": [

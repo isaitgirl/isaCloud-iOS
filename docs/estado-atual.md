@@ -1,4 +1,4 @@
-# Estado atual e handoff (17/11/2026, build 115)
+# Estado atual e handoff (17/11/2026, build 116)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -8,10 +8,10 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 | | |
 |---|---|
 | Commit | o do **build 112** (aceita mensagem de qualquer aparelho OMEMO conhecido removido da lista, como o Android; bloqueia só aparelho marcado como não confiável e remetente com confiança explícita; log do motivo de recusa), tag `build-112`; ver `docs/analise-omemo-aparelho-removido.md`; `git log --oneline -3` |
-| TestFlight | **115** (17/11/2026, 10:44; antes 114 às 09:34): freio das gravações de estado na sessão retomada (spinner ao enviar logo depois de abrir) e medições de desempenho (`isaCloud SPIN:`, Depuração → "Medições de desempenho"); ver `docs/analise-trafego-canais.md` |
-| `.dev` no iPhone | **115**, igual ao TestFlight (17/11/2026; **sem push**) |
+| TestFlight | **116** (17/11/2026, 12:47): figurinha a partir de GIF (PR 78) e vídeo sem tela cinza no iOS 27 (PR 79 + PR 23 do fork); antes **115** (17/11/2026, 10:44; antes 114 às 09:34): freio das gravações de estado na sessão retomada (spinner ao enviar logo depois de abrir) e medições de desempenho (`isaCloud SPIN:`, Depuração → "Medições de desempenho"); ver `docs/analise-trafego-canais.md` |
+| `.dev` no iPhone | **116**, igual ao TestFlight (17/11/2026; **sem push**) |
 | Simuladores | iPhone XR (iOS 18.6) com o código do build 100 (09/11/2026) e isaCloud iOS27 com o do build 94 (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261105-1036-linha-lido-2/` e `-1037-linha-lido-2/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
-| ExyteChat | `3eb0aa1` na `isaCloud` (tamanho do arquivo nas mídias e nos áudios, PR 22; antes `7d3292b`: miniatura opcional dentro da citação, `Message.quotePreview`, PR 21; antes `e168ed8`: visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
+| ExyteChat | `80602dd` na `isaCloud` (visualizador sem `TabView` paginado com um anexo só, PR 23, mudança nº 24; antes `3eb0aa1`: tamanho do arquivo nas mídias e nos áudios, PR 22; antes `7d3292b`: miniatura opcional dentro da citação, `Message.quotePreview`, PR 21; antes `e168ed8`: visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
 Comando para conferir: `git log --oneline -3 && git status --porcelain`.
@@ -23,6 +23,12 @@ Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 - **Ainda em avaliação:** build 112 (aceitar mensagem de aparelho OMEMO conhecido removido da lista; testar com dois aparelhos).
 - **Primeira mensagem não lida (build 87):** só no roadmap, sem previsão de nova avaliação.
 - **Figurinhas e XEP-0449 (roadmap 155):** análise iOS e Android pronta em `docs/analise-xep0449-conformidade.md`; aguarda 3 decisões, sem código.
+
+## O que entrou no build 116 (sobre o 115)
+
+- **Figurinha a partir de GIF** (PR 78, roadmap 175): interruptor "Figurinha" na tela de GIFs; ligado, o toque baixa a menor versão animada, guarda na biblioteca e envia como figurinha (`isSticker`, `image/gif`). A biblioteca guarda PNG e GIF (formato pelos bytes). Análise em `docs/feature-enviar-gif-figurinha.md`; guia do Android em `docs/figurinha-de-gif-android.md`.
+- **Vídeo sem tela cinza no iOS 27** (PR 79 + PR 23 do fork, `80602dd`, roadmap 176): o visualizador do chat é o do fork do ExyteChat (`FullscreenMediaPages`/`VideoView`), não o `MediaViewer.swift`; um `AVPlayerViewController` dentro do `TabView(.page)` fica cinza no iOS 27 até um toque. Com um anexo só, o fork mostra o anexo sem o `TabView`. Decisão em `docs/decisoes.md`; mudança nº 24 em `docs/exytechat-fork.md`.
+- `CHANGELOG-USERS.md`: o título da seção em andamento tem de ser `## Próximo build` (o gerador do `.dev` e do archive não aceita outro).
 
 ## O que entrou no build 110 (sobre o 109)
 

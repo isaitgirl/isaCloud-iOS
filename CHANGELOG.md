@@ -2,9 +2,9 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
-## Em breve (próxima versão)
+## 0.0.1 (build 116) — 17/11/2026
 
-Branch `feature/gif-como-figurinha`, testada no `.dev` em 17/11/2026. Análise em `docs/feature-enviar-gif-figurinha.md`; guia para o Android em `docs/figurinha-de-gif-android.md`.
+Enviado ao TestFlight às 12:47: figurinha a partir de GIF (branch `feature/gif-como-figurinha`, testada no `.dev` em 17/11/2026) e vídeo sem tela cinza no iOS 27. Análise em `docs/feature-enviar-gif-figurinha.md`; guia para o Android em `docs/figurinha-de-gif-android.md`.
 
 ### Adicionado
 - **GIF como figurinha.** Interruptor "Figurinha" (`GifPickerView.swift`, começa desligado a cada abertura, não é guardado). Ligado, o toque no GIF baixa a **menor versão animada** (`GiphyGif.stickerURL`: GIPHY `fixed_width_small`, depois `fixed_width`, nunca a `_still`; KLIPY `xs`, depois `sm`; `GiphySearch.downloadSticker`), guarda na biblioteca e envia na hora como figurinha (`isSticker`, sem compressão, `image/gif`). Se o GIF não tiver versão pequena animada, vai a versão normal, ainda GIF.
