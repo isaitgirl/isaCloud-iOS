@@ -819,6 +819,8 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
 
     //isaCloud: C20, lines written while the logger was frozen in the last run of this process go to the normal log now
     [self isaCloudDumpDbAfterFreezeRecords];
+    //isaCloud: C30, same for the stacks recorded when the main thread hung in the background
+    [self isaCloudDumpHangRecords];
 
     //enable logging of all NSNotifications only on debug builds or if the debug menu was activated
 #ifdef DEBUG
@@ -2938,6 +2940,152 @@ static NSString* _isaCloudImageLoadAddresses = nil;
     for(NSString* line in [content componentsSeparatedByString:@"\n"])
         if(line.length > 0)
             DDLogWarn(@"isaCloud C20: %@", line);
+    [[NSFileManager defaultManager] removeItemAtURL:fileURL error:nil];
+}
+
+#pragma mark - isaCloud: C30, stacks of all threads when the main thread hangs in the background
+
+//isaCloud: C30. On 17/11/2026 the app hung for ~31 s right after it went to the background and iOS killed it for not ending its
+//background task (runningboardd: "Timed-out waiting for process to invalidate assertion"). That kill leaves no crash report, so
+//there was no stack. This watchdog runs on its own queue while the UIKit background task is active: every 10 s it asks the main
+//queue to answer; if it does not answer within 3 s, it records the stack of every thread (raw return addresses only, symbolicated
+//offline with the load addresses at the end of the line, like the C20 records) to a small file and to os_log. The file goes to the
+//normal log on the next start. Nothing here allocates or logs between thread_suspend and thread_resume.
+#define ISA_HANG_MAX_THREADS 64
+#define ISA_HANG_MAX_FRAMES 28
+static dispatch_queue_t _isaCloudHangQueue = nil;
+static atomic_int _isaCloudHangGeneration = 0;
+static atomic_int _isaCloudHangDumpsThisRun = 0;
+static uint64_t _isaCloudHangStacks[ISA_HANG_MAX_THREADS][ISA_HANG_MAX_FRAMES];
+static int _isaCloudHangCounts[ISA_HANG_MAX_THREADS];
+static char _isaCloudHangNames[ISA_HANG_MAX_THREADS][48];
+
++(void) isaCloudStartHangWatchdogWhile:(BOOL (^)(void)) stillNeeded
+{
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        _isaCloudHangQueue = dispatch_queue_create("im.isacloud.hangwatch", DISPATCH_QUEUE_SERIAL);
+    });
+    [HelperTools isaCloudImageLoadAddresses];       //computed now, never while the process is hung
+    int generation = atomic_fetch_add(&_isaCloudHangGeneration, 1) + 1;
+    [HelperTools isaCloudHangWatchdogTick:generation attempt:0 stillNeeded:stillNeeded];
+}
+
++(void) isaCloudHangWatchdogTick:(int) generation attempt:(int) attempt stillNeeded:(BOOL (^)(void)) stillNeeded
+{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 10 * NSEC_PER_SEC), _isaCloudHangQueue, ^{
+        if(generation != atomic_load(&_isaCloudHangGeneration) || !stillNeeded())
+            return;
+        dispatch_semaphore_t answered = dispatch_semaphore_create(0);
+        dispatch_async(dispatch_get_main_queue(), ^{
+            dispatch_semaphore_signal(answered);
+        });
+        if(dispatch_semaphore_wait(answered, dispatch_time(DISPATCH_TIME_NOW, 3 * NSEC_PER_SEC)) == 0)
+        {
+            if(attempt < 6)
+                [HelperTools isaCloudHangWatchdogTick:generation attempt:attempt + 1 stillNeeded:stillNeeded];
+            return;
+        }
+        if(atomic_fetch_add(&_isaCloudHangDumpsThisRun, 1) < 5)
+            [HelperTools isaCloudRecordAllThreadStacks];
+    });
+}
+
++(void) isaCloudRecordAllThreadStacks
+{
+#if defined(__arm64__)
+    thread_act_array_t threads = NULL;
+    mach_msg_type_number_t count = 0;
+    if(task_threads(mach_task_self(), &threads, &count) != KERN_SUCCESS || threads == NULL)
+        return;
+    int n = (int)MIN((mach_msg_type_number_t)ISA_HANG_MAX_THREADS, count);
+    mach_port_t me = mach_thread_self();
+    for(int i = 0; i < n; i++)
+    {
+        _isaCloudHangCounts[i] = 0;
+        _isaCloudHangNames[i][0] = 0;
+        pthread_t pthread = pthread_from_mach_thread_np(threads[i]);
+        if(pthread != NULL)
+            pthread_getname_np(pthread, _isaCloudHangNames[i], sizeof(_isaCloudHangNames[i]));
+    }
+    for(int i = 0; i < n; i++)
+    {
+        if(threads[i] == me)
+            continue;
+        if(thread_suspend(threads[i]) != KERN_SUCCESS)
+            continue;
+        arm_thread_state64_t state;
+        mach_msg_type_number_t stateCount = ARM_THREAD_STATE64_COUNT;
+        if(thread_get_state(threads[i], ARM_THREAD_STATE64, (thread_state_t)&state, &stateCount) == KERN_SUCCESS)
+        {
+            const uint64_t mask = 0x0000007FFFFFFFFFULL;      //drops pointer authentication bits
+            int f = 0;
+            _isaCloudHangStacks[i][f++] = ((uint64_t)arm_thread_state64_get_pc(state)) & mask;
+            uint64_t lr = ((uint64_t)arm_thread_state64_get_lr(state)) & mask;
+            if(lr != 0)
+                _isaCloudHangStacks[i][f++] = lr;
+            uint64_t fp = (uint64_t)arm_thread_state64_get_fp(state) & mask;
+            while(f < ISA_HANG_MAX_FRAMES && fp != 0 && (fp & 0x7) == 0)
+            {
+                uint64_t frame[2] = {0, 0};
+                vm_size_t got = 0;
+                if(vm_read_overwrite(mach_task_self(), (vm_address_t)fp, sizeof(frame), (vm_address_t)frame, &got) != KERN_SUCCESS || got != sizeof(frame))
+                    break;
+                uint64_t ret = frame[1] & mask;
+                if(ret == 0)
+                    break;
+                _isaCloudHangStacks[i][f++] = ret;
+                uint64_t next = frame[0] & mask;
+                if(next <= fp)
+                    break;
+                fp = next;
+            }
+            _isaCloudHangCounts[i] = f;
+        }
+        thread_resume(threads[i]);
+    }
+    //everything below may allocate and log: all threads run again
+    NSMutableString* text = [NSMutableString new];
+    NSISO8601DateFormatter* dateFormatter = [NSISO8601DateFormatter new];
+    dateFormatter.formatOptions = NSISO8601DateFormatWithInternetDateTime | NSISO8601DateFormatWithFractionalSeconds;
+    NSString* now = [dateFormatter stringFromDate:[NSDate date]];
+    for(int i = 0; i < n; i++)
+    {
+        if(_isaCloudHangCounts[i] == 0)
+            continue;
+        NSMutableString* stack = [NSMutableString new];
+        for(int f = 0; f < _isaCloudHangCounts[i]; f++)
+            [stack appendFormat:@"%@0x%llx", f > 0 ? @" " : @"", _isaCloudHangStacks[i][f]];
+        [text appendFormat:@"%@ %@ main-hang thread=%d name=%s stack=%@ %@\n", now, [self isAppExtension] ? @"appex" : @"app", i, _isaCloudHangNames[i], stack, [self isaCloudImageLoadAddresses]];
+    }
+    for(mach_msg_type_number_t i = 0; i < count; i++)
+        mach_port_deallocate(mach_task_self(), threads[i]);
+    mach_port_deallocate(mach_task_self(), me);
+    vm_deallocate(mach_task_self(), (vm_address_t)threads, count * sizeof(thread_t));
+
+    NSURL* fileURL = [self getContainerURLForPathComponents:@[@"isacloud-hang.log"]];
+    FILE* file = fopen(fileURL.path.UTF8String, "a");
+    if(file != NULL)
+    {
+        fseek(file, 0, SEEK_END);
+        if(ftell(file) < 256 * 1024)
+            fputs(text.UTF8String, file);
+        fclose(file);
+    }
+    os_log_error(OS_LOG_DEFAULT, "isaCloud C30: main thread did not answer for 3 s, %d threads recorded", n);
+#endif
+}
+
+//isaCloud: C30, moves the stacks recorded by the watchdog to the normal log and deletes the file
++(void) isaCloudDumpHangRecords
+{
+    NSURL* fileURL = [self getContainerURLForPathComponents:@[@"isacloud-hang.log"]];
+    NSString* content = [NSString stringWithContentsOfURL:fileURL encoding:NSUTF8StringEncoding error:nil];
+    if(content == nil)
+        return;
+    for(NSString* line in [content componentsSeparatedByString:@"\n"])
+        if(line.length > 0)
+            DDLogWarn(@"isaCloud C30: %@", line);
     [[NSFileManager defaultManager] removeItemAtURL:fileURL error:nil];
 }
 

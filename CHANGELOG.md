@@ -2,6 +2,13 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 114) — 17/11/2026
+
+Enviado ao TestFlight às 09:34: instrumentação do C30 (branch `fix/c30-pilha-na-expiracao`). O texto do build 114 em `CHANGELOG-USERS.md` saiu antes da regra de tom (sem emoji); a regra vale a partir do 115.
+
+### Adicionado
+- **Pilha de todas as threads quando a principal trava em segundo plano (C30).** Em 17/11/2026 o app travou ~31 s ao ir para segundo plano e o iOS o matou por não soltar o background task (`runningboardd`: "Timed-out waiting for process to invalidate assertion"), sem relatório de crash. Enquanto o background task do UIKit está ativo (`addBackgroundTask`, `MonalAppDelegate.m`), `+[HelperTools isaCloudStartHangWatchdogWhile:]` roda numa fila própria (`im.isacloud.hangwatch`): a cada 10 s pede à fila principal que responda; se ela não responder em 3 s, `isaCloudRecordAllThreadStacks` suspende uma thread por vez, lê os registradores (`thread_get_state`) e percorre a cadeia de frames, grava só endereços (28 frames por thread) em `isacloud-hang.log` no grupo de apps (até 256 KB) e no `os_log`, e `isaCloudDumpHangRecords` leva as linhas ao log normal (`isaCloud C30:`) na próxima abertura. No máximo 5 despejos por execução e uma vez por background task. Os endereços são simbolizados depois, com a linha de endereços-base no fim de cada linha (como no C20). Não corrige o travamento: só mostra onde ele está.
+
 ## 0.0.1 (build 113) — 16/11/2026
 
 Enviado ao TestFlight às 19:20: figurinhas XEP-0449 e a correção da figurinha ao vivo (já na `isaCloud`), mais a reversão do teste do C20 e o conserto do C27 (branch `fix/c25-reverter-fechamento-conexoes`, ainda sem commit).

@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "build": 114,
+      "date": "17/11/2026",
+      "sections": [
+        {
+          "title": "Melhorias",
+          "items": [
+            "Passamos a registrar mais detalhes quando o app trava ao ir para segundo plano, para conseguirmos corrigir de vez."
+          ]
+        }
+      ]
+    },
+    {
       "build": 113,
       "date": "16/11/2026",
       "sections": [

@@ -1619,6 +1619,10 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                         [HelperTools signalSuspension];
                 }
             }];
+            //isaCloud: C30, records the stack of every thread if the main thread stops answering while this task runs
+            [HelperTools isaCloudStartHangWatchdogWhile:^BOOL{
+                return self->_bgTask != UIBackgroundTaskInvalid;
+            }];
         }
     }];
 }
