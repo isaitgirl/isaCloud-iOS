@@ -1,6 +1,19 @@
 {
   "releases": [
     {
+      "build": 115,
+      "date": "17/11/2026",
+      "sections": [
+        {
+          "title": "Melhorias",
+          "items": [
+            "⚡ Abriu o app? Já pode mandar mensagem e foto na hora, mesmo com canais bem movimentados.",
+            "📊 Nova opção em Depuração para compartilhar medições de desempenho com a gente, sem nenhuma mensagem nem contato."
+          ]
+        }
+      ]
+    },
+    {
       "build": 114,
       "date": "17/11/2026",
       "sections": [

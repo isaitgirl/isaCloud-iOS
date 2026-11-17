@@ -205,6 +205,11 @@
 "Device Metrics" = "Métricas do aparelho";
 "Export Metrics" = "Exportar métricas";
 "Metrics export failed" = "Não foi possível exportar as métricas";
+"Performance Measurements" = "Medições de desempenho";
+"Times for opening the app, sending messages and uploading files. Contains no messages or contacts." = "Tempos de abertura do app, envio de mensagens e de arquivos. Não contém mensagens nem contatos.";
+"Share Measurements" = "Compartilhar medições";
+"No measurements yet" = "Ainda não há medições";
+"Use the app for a while (open it, send a message or a photo) and try again." = "Use o app um pouco (abra, mande uma mensagem ou uma foto) e tente de novo.";
 "The app could not build the metrics file. Try again after using the app for a while." = "O app não conseguiu montar o arquivo de métricas. Tente de novo depois de usar o app por um tempo.";
 
 /* isaCloud: motivo mostrado quando uma mensagem ficou sem confirmação de envio */

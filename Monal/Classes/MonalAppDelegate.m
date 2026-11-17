@@ -583,6 +583,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
 
 -(void) applicationDidBecomeActive:(UIApplication*) application
 {
+    [HelperTools isaCloudSpin:@"app became active"];
     [self updateAppIconIfNeeded];
     
     //isaCloud: remove push placeholders left in Notification Center (see HelperTools isaCloudPushPlaceholderContent)
@@ -1212,6 +1213,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
 
 -(void) applicationDidEnterBackground:(UIApplication*) application
 {
+    [HelperTools isaCloudSpin:@"app entered background"];
     UIApplicationState state = [application applicationState];
     if(state == UIApplicationStateInactive)
         DDLogInfo(@"Screen lock / incoming call");
@@ -1959,6 +1961,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
     
     NSString* completionId = [[NSUUID UUID] UUIDString];
     DDLogInfo(@"got incomingWakeupWithCompletionHandler with ID %@", completionId);
+    [HelperTools isaCloudSpin:@"background push woke the app (%@)", completionId];
     
     //only proceed with handling wakeup if the NotificationServiceExtension is not running
     [MLProcessLock lock];

@@ -100,6 +100,10 @@ NSDictionary* _Nullable dictionaryComprehension(NSDictionary* _Nullable dict, id
 +(void) isaCloudHangWatchdogTick:(int) generation attempt:(int) attempt stillNeeded:(BOOL (^)(void)) stillNeeded;
 +(void) isaCloudRecordAllThreadStacks;
 +(void) isaCloudDumpHangRecords;
+//isaCloud SPIN: logs the line and also appends it to isacloud-spin.log in the app group (read over USB with devicectl)
++(void) isaCloudSpin:(NSString*) format, ... NS_FORMAT_FUNCTION(1,2);
+//isaCloud SPIN: joins isacloud-spin.old.log and isacloud-spin.log into one temporary file to share, nil if there is nothing yet
++(NSURL* _Nullable) isaCloudExportSpinLog;
 //isaCloud: C21, turns the recording on before the suspension starts (kMonalWillBeFreezed) and off on resumption (see HelperTools.m)
 +(void) isaCloudArmDbAccessRecording;
 +(void) isaCloudDisarmDbAccessRecording;

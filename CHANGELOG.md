@@ -2,6 +2,17 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 115) — 17/11/2026
+
+Enviado ao TestFlight às 10:44: freio das gravações de estado na sessão retomada e medições de desempenho (branch `perf/freio-persiststate-retomada`). Análise em `docs/analise-trafego-canais.md`.
+
+### Corrigido
+- **Spinner de muitos segundos ao mandar mensagem ou foto logo depois de abrir o app.** Na sessão retomada (Stream Management), o servidor reenvia tudo o que guardou enquanto o app estava suspenso (em 17/11/2026, milhares de presenças de canais federados). Cada stanza fazia duas gravações completas do estado da conta (`realPersistState`, ~60 ms e 111 KB cada), então a fila de entrada processava ~7 stanzas/s e ficava cheia (~257) por mais de 35 s; a resposta do pedido de upload (XEP-0363) e a confirmação `<a/>` das mensagens esperavam atrás dela. O freio do build 109 (`isaCloudPersistStateThrottled`, no máximo uma gravação por segundo) só ligava com `inCatchup` não vazio, o que só acontece no catch-up por MAM. Agora liga enquanto `_catchupDone` é `NO` ou há mais de 4 stanzas na fila de parse (`xmpp.m`). As gravações forçadas (desconexão, suspensão, fim do catch-up) e o timer de 1 s continuam. No `.dev` (17/11/2026): fila esvaziando em 0,0–0,3 s, pedido de upload respondido em 45–113 ms e mensagens confirmadas em 115–502 ms. Risco: se o app morrer entre gravações, o servidor reenvia até ~1 s de stanzas (presença repetida é inofensiva, mensagem repetida é descartada pelo id).
+
+### Adicionado
+- **Medições de desempenho (`isaCloud SPIN:`).** `+[HelperTools isaCloudSpin:]` grava no log normal e em `Library/isacloud-spin.log` no grupo de apps (até 2 MB, roda para `isacloud-spin.old.log`; o `devicectl` só lê `Library`, `Documents` e `tmp`). Registra: início e fim de cada fila acumulada, resumo a cada 2 s (stanzas, tempo médio e máximo, gravações feitas e puladas, tamanho da fila), freio ligado/desligado, tempo de resposta dos IQs próprios (sempre o upload, os demais acima de 300 ms) e da confirmação do servidor para mensagens com corpo, sessão retomada, fim do catch-up, app ativo/em segundo plano e push silencioso que acordou o app. Sem conteúdo, JID ou nome de sala.
+- **Depuração → Logfiles → "Medições de desempenho" → "Compartilhar medições"** (`DebugView.swift`): junta os dois arquivos num `.txt` com cabeçalho (build, aparelho, iOS) e abre a folha de compartilhar. Traduções no override pt-BR.
+
 ## 0.0.1 (build 114) — 17/11/2026
 
 Enviado ao TestFlight às 09:34: instrumentação do C30 (branch `fix/c30-pilha-na-expiracao`). O texto do build 114 em `CHANGELOG-USERS.md` saiu antes da regra de tom (sem emoji); a regra vale a partir do 115.
