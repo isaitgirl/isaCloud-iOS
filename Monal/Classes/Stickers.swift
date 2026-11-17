@@ -17,7 +17,7 @@ import Vision
 
 // MARK: - Library
 
-/// isaCloud: one sticker of the library. `url` is its PNG (512x512, transparent where there is no picture).
+/// isaCloud: one sticker of the library. `url` is its file: a PNG (512x512, transparent where there is no picture) or an animated GIF.
 struct Sticker: Identifiable, Equatable {
     let id: String
     let created: Date
@@ -25,18 +25,22 @@ struct Sticker: Identifiable, Equatable {
     let favorite: Bool
     let sha256: String
     let url: URL
+    /// true for an animated GIF sticker (see StickerLibrary.add(data:))
+    let isAnimated: Bool
 }
 
-/// isaCloud: what index.json keeps for one sticker (its picture is `<id>.png` next to the index)
+/// isaCloud: what index.json keeps for one sticker (its picture is `<id>.png`, or `<id>.gif` next to the index)
 private struct StickerEntry: Codable {
     let id: String
     var created: Date
     var lastUsed: Date
     var favorite: Bool
     let sha256: String
+    /// nil for a PNG, "gif" for an animated GIF. Indexes saved before GIF stickers have no field, so they are PNGs.
+    var format: String? = nil
 }
 
-/// isaCloud: the stickers the person made, kept in `<app group>/stickers/`: one `<id>.png` per sticker and an `index.json` with the
+/// isaCloud: the stickers the person made, kept in `<app group>/stickers/`: one `<id>.png` or `<id>.gif` per sticker and an `index.json` with the
 /// creation date, the last use, the favorite flag and the hash (so the same picture is not kept twice). The index is written atomically.
 /// A damaged index starts the library empty, and an entry whose PNG is gone is dropped.
 final class StickerLibrary: ObservableObject {
@@ -68,25 +72,50 @@ final class StickerLibrary: ObservableObject {
         return all.filter { $0.favorite }
     }
 
-    /// keeps the PNG in the library. A picture already there (same hash) is not kept twice: its sticker comes back instead.
+    /// keeps a PNG in the library (the sticker editor makes PNGs); see add(data:)
     @discardableResult
     func add(pngData: Data) -> Sticker? {
-        let hash = SHA256.hash(data: pngData).map { String(format: "%02x", $0) }.joined()
+        return add(data: pngData)
+    }
+
+    /// keeps a PNG or an animated GIF in the library. The format is read from the bytes (GIF8 or the PNG signature), not from a name,
+    /// so a GIF saved from a chat is kept as a GIF. nil for any other data. A picture already there (same hash) is not kept twice: its
+    /// sticker comes back instead.
+    @discardableResult
+    func add(data: Data) -> Sticker? {
+        guard let format = StickerLibrary.format(of: data) else {
+            DDLogError("Stickers: the data is neither a PNG nor a GIF")
+            return nil
+        }
+        let hash = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
         if let existing = entries.first(where: { $0.sha256 == hash }) {
             return sticker(for: existing)
         }
         let id = UUID().uuidString
+        // a PNG keeps no format (nil), so an index read by the builds before GIF stickers stays valid
+        let stored: String? = format == "gif" ? "gif" : nil
         do {
-            try pngData.write(to: pngURL(for: id), options: .atomic)
+            try data.write(to: fileURL(for: id, format: stored), options: .atomic)
         } catch {
-            DDLogError("Stickers: could not write the PNG: \(error)")
+            DDLogError("Stickers: could not write the picture: \(error)")
             return nil
         }
         let now = Date()
-        let entry = StickerEntry(id: id, created: now, lastUsed: now, favorite: false, sha256: hash)
+        let entry = StickerEntry(id: id, created: now, lastUsed: now, favorite: false, sha256: hash, format: stored)
         entries.append(entry)
         save()
         return sticker(for: entry)
+    }
+
+    /// the format of a picture from its first bytes: "gif" for GIF8, "png" for the PNG signature, nil for anything else
+    static func format(of data: Data) -> String? {
+        if data.starts(with: [0x47, 0x49, 0x46, 0x38]) {
+            return "gif"
+        }
+        if data.starts(with: [0x89, 0x50, 0x4E, 0x47]) {
+            return "png"
+        }
+        return nil
     }
 
     func toggleFavorite(_ id: String) {
@@ -99,16 +128,16 @@ final class StickerLibrary: ObservableObject {
     }
 
     func delete(_ id: String) {
-        guard entries.contains(where: { $0.id == id }) else {
+        guard let entry = entries.first(where: { $0.id == id }) else {
             return
         }
-        try? FileManager.default.removeItem(at: pngURL(for: id))
+        try? FileManager.default.removeItem(at: fileURL(for: id, format: entry.format))
         entries.removeAll { $0.id == id }
         save()
     }
 
     func url(of sticker: Sticker) -> URL {
-        return pngURL(for: sticker.id)
+        return sticker.url
     }
 
     private func mutate(_ id: String, _ change: (inout StickerEntry) -> Void) {
@@ -120,11 +149,13 @@ final class StickerLibrary: ObservableObject {
     }
 
     private func sticker(for entry: StickerEntry) -> Sticker {
-        return Sticker(id: entry.id, created: entry.created, lastUsed: entry.lastUsed, favorite: entry.favorite, sha256: entry.sha256, url: pngURL(for: entry.id))
+        return Sticker(id: entry.id, created: entry.created, lastUsed: entry.lastUsed, favorite: entry.favorite, sha256: entry.sha256,
+                       url: fileURL(for: entry.id, format: entry.format), isAnimated: entry.format == "gif")
     }
 
-    private func pngURL(for id: String) -> URL {
-        return folder.appendingPathComponent("\(id).png")
+    /// the file of a sticker: `<id>.gif` for an animated GIF, `<id>.png` otherwise (a nil format is a PNG)
+    private func fileURL(for id: String, format: String?) -> URL {
+        return folder.appendingPathComponent("\(id).\(format ?? "png")")
     }
 
     private func load() {
@@ -137,7 +168,7 @@ final class StickerLibrary: ObservableObject {
             var loaded = try JSONDecoder().decode([StickerEntry].self, from: data)
             let count = loaded.count
             //a sticker whose picture is gone is dropped from the index
-            loaded.removeAll { !FileManager.default.fileExists(atPath: pngURL(for: $0.id).path) }
+            loaded.removeAll { !FileManager.default.fileExists(atPath: fileURL(for: $0.id, format: $0.format).path) }
             entries = loaded
             if loaded.count != count {
                 save()
@@ -175,12 +206,37 @@ enum StickerImageCache {
     }
 }
 
-/// isaCloud: a still sticker from a local file, fitted in its frame (the chat shows it without a bubble, the grids in squares)
+/// isaCloud: whether a sticker file is an animated GIF, read from its first bytes, not from its name (with OMEMO the name becomes a UUID).
+/// The answer is kept per URL, so a grid does not open the file again on every redraw.
+enum StickerFileKind {
+    private static let cache = NSCache<NSURL, NSNumber>()
+
+    static func isGIF(at url: URL) -> Bool {
+        if let known = cache.object(forKey: url as NSURL) {
+            return known.boolValue
+        }
+        guard let handle = try? FileHandle(forReadingFrom: url) else {
+            return false
+        }
+        defer {
+            try? handle.close()
+        }
+        let head = (try? handle.read(upToCount: 4)) ?? Data()
+        let gif = StickerLibrary.format(of: head) == "gif"
+        cache.setObject(NSNumber(value: gif), forKey: url as NSURL)
+        return gif
+    }
+}
+
+/// isaCloud: a sticker from a local file, fitted in its frame (the chat shows it without a bubble, the grids in squares). An animated
+/// GIF sticker plays its animation; a PNG is a still image.
 struct StickerImageView: View {
     let url: URL
 
     var body: some View {
-        if let image = StickerImageCache.image(at: url) {
+        if StickerFileKind.isGIF(at: url) {
+            AnimatedGifView(url: url, fit: true)
+        } else if let image = StickerImageCache.image(at: url) {
             Image(uiImage: image)
                 .resizable()
                 .aspectRatio(contentMode: .fit)

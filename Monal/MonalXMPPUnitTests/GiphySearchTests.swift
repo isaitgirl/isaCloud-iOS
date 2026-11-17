@@ -521,3 +521,80 @@ struct GiphyGifCodableTests {
         #expect(back == [gif])
     }
 }
+
+struct GifStickerURLTests {
+
+    @Test("the sticker of a Giphy result is the smallest animated version, and a still image is never used")
+    func giphyStickerURL() throws {
+        let json = """
+        {"data": [
+          {"id": "a1", "images": {
+             "fixed_width_small": {"url": "https://media.giphy.com/a1/100w.gif"},
+             "fixed_width": {"url": "https://media.giphy.com/a1/200w.gif"},
+             "fixed_width_small_still": {"url": "https://media.giphy.com/a1/100w_s.gif"},
+             "original": {"url": "https://media.giphy.com/a1/giphy.gif"}}},
+          {"id": "b2", "images": {
+             "fixed_width": {"url": "https://media.giphy.com/b2/200w.gif"},
+             "original": {"url": "https://media.giphy.com/b2/giphy.gif"}}},
+          {"id": "c3", "images": {
+             "fixed_width_small_still": {"url": "https://media.giphy.com/c3/100w_s.gif"},
+             "original": {"url": "https://media.giphy.com/c3/giphy.gif"}}}
+        ]}
+        """
+        let gifs = try GiphySearch.parse(Data(json.utf8))
+        #expect(gifs.map { $0.id } == ["a1", "b2", "c3"])
+        #expect(gifs[0].stickerURL == URL(string: "https://media.giphy.com/a1/100w.gif"))
+        #expect(gifs[1].stickerURL == URL(string: "https://media.giphy.com/b2/200w.gif"))
+        #expect(gifs[2].stickerURL == nil)
+    }
+
+    @Test("the sticker of a KLIPY result is the extra small GIF, and the small one when that is missing")
+    func klipyStickerURL() throws {
+        let json = """
+        {"result": true, "data": {"data": [
+          {"id": 1, "type": "gif", "file": {
+             "hd": {"gif": {"url": "https://static.klipy.com/a/hd.gif"}},
+             "sm": {"gif": {"url": "https://static.klipy.com/a/sm.gif"}},
+             "xs": {"gif": {"url": "https://static.klipy.com/a/xs.gif"}}}},
+          {"id": 2, "type": "gif", "file": {
+             "hd": {"gif": {"url": "https://static.klipy.com/b/hd.gif"}},
+             "sm": {"gif": {"url": "https://static.klipy.com/b/sm.gif"}}}}
+        ], "has_next": false}}
+        """
+        let page = try KlipySearch.parse(Data(json.utf8))
+        #expect(page.gifs.map { $0.stickerURL } == [URL(string: "https://static.klipy.com/a/xs.gif"), URL(string: "https://static.klipy.com/b/sm.gif")])
+    }
+
+    @Test("a GIF saved before the sticker URL existed still decodes, with no sticker URL")
+    func oldJSONDecodes() throws {
+        let old = #"{"id":"a1","previewURL":"https://media.giphy.com/a1/still.gif","originalURL":"https://media.giphy.com/a1/giphy.gif"}"#
+        let gif = try JSONDecoder().decode(GiphyGif.self, from: Data(old.utf8))
+        #expect(gif.id == "a1")
+        #expect(gif.stickerURL == nil)
+    }
+
+    @Test("a GIF without a sticker URL cannot be downloaded as a sticker, and no request is made")
+    func downloadWithoutStickerFails() async {
+        let gif = GiphyGif(id: "a1", previewURL: URL(string: "https://media.giphy.com/a1/p.gif")!,
+                           originalURL: URL(string: "https://media.giphy.com/a1/o.gif")!)
+        await #expect(throws: GiphySearchError.badResponse) {
+            try await GiphySearch.downloadSticker(gif)
+        }
+    }
+}
+
+struct GifTrendingCacheVersionTests {
+
+    @Test("a list saved under the -v2 name, before the sticker URL existed, is not loaded")
+    func oldV2FileIsIgnored() throws {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("gif-trending-v3-test-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let gif = GiphyGif(id: "a1", previewURL: URL(string: "https://media.giphy.com/a1/p.gif")!,
+                           originalURL: URL(string: "https://media.giphy.com/a1/o.gif")!)
+        let entry = GifTrendingCache.Entry(provider: "giphy", fetchedAt: start, hasMore: true, gifs: [gif])
+        try JSONEncoder().encode(entry).write(to: directory.appendingPathComponent("giphy-v2.json"))
+        #expect(GifTrendingCache(directory: directory).load(provider: .giphy, now: start) == nil)
+    }
+}

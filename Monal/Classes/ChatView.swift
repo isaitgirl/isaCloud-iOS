@@ -951,7 +951,7 @@ struct ChatView: View {
         }
     }
 
-    /// isaCloud: a sticker goes out like a photo (its PNG is uploaded), with the XEP-0449 marker: `isSticker` is stored with the message
+    /// isaCloud: a sticker goes out like a photo (its file is uploaded as it is: PNG or GIF), with the XEP-0449 marker: `isSticker` is stored with the message
     /// (see MLXMPPManager sendMessageAndAddToHistory). The upload copies the file to its own cache, so the library keeps its PNG.
     private func sendSticker(_ sticker: Sticker, plain: Bool = false) {
         if !plain && isWaitingForAcceptance() {
@@ -1534,8 +1534,8 @@ struct ChatView: View {
                     //isaCloud: the downloaded picture of the sticker is copied to the library (a sticker already there is not kept twice)
                     if let fileInfo = (message as! ChatViewMessage).fileInfo,
                        let fileURL = fileInfo.fileURL as URL?,
-                       let png = try? Data(contentsOf: fileURL),
-                       StickerLibrary.shared.add(pngData: png) != nil {
+                       let data = try? Data(contentsOf: fileURL),
+                       StickerLibrary.shared.add(data: data) != nil {
                         //a short notice above the input, where "Sending..." shows, instead of an alert to close (after the menu has closed)
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                             inputModel.showNotice(NSLocalizedString("Sticker saved", comment: "notice above the input after a sticker was added to the library"))
@@ -1807,6 +1807,21 @@ struct ChatView: View {
         .sheet(isPresented: $showGifPicker) {
             GifPickerView(keys: GifKeys.fromBundle(Bundle.main.infoDictionary), onPick: { url in
                 inputModel.addAttachment(ChatInputAttachment(kind: .animatedGif, url: url))
+            }, onPickSticker: { url in
+                //isaCloud: a GIF sent as a sticker is kept in the library as a GIF and goes out at once (the library keeps its copy)
+                let data = try? Data(contentsOf: url)
+                try? FileManager.default.removeItem(at: url)
+                guard let data, let sticker = StickerLibrary.shared.add(data: data) else {
+                    //(a moment later: an alert shown while the picker is closing does not appear)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        alertPrompt = AlertPrompt(title: Text("Could not save the sticker"), dismissLabel: Text("Close"))
+                    }
+                    return
+                }
+                sendSticker(sticker)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    inputModel.showNotice(NSLocalizedString("Sticker saved", comment: "notice above the input after a sticker was added to the library"))
+                }
             })
         }
         //isaCloud: stickers (Stickers.swift)

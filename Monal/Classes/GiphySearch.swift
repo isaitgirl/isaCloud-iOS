@@ -15,6 +15,9 @@ struct GiphyGif: Equatable, Codable {
     let previewURL: URL
     /// the animated GIF that is sent
     let originalURL: URL
+    /// isaCloud: the smallest animated version, the one a sticker is made from (never a still image); nil when the provider sends none.
+    /// Optional, so a list saved before it still decodes.
+    var stickerURL: URL? = nil
 }
 
 /// isaCloud: the GIF providers the picker can search. GIPHY is the default; KLIPY is the second option.
@@ -283,7 +286,7 @@ enum GiphySearch {
                   let originalURL = sentURL(in: images) else {
                 return nil
             }
-            return GiphyGif(id: id, previewURL: previewURL, originalURL: originalURL)
+            return GiphyGif(id: id, previewURL: previewURL, originalURL: originalURL, stickerURL: stickerURL(in: images))
         }
     }
 
@@ -302,6 +305,16 @@ enum GiphySearch {
     /// the small animated version, or the still one when Giphy does not send the animated one
     private static func previewURL(in images: [String: Any]) -> URL? {
         for name in ["fixed_width_small", "fixed_width_small_still"] {
+            if let image = images[name] as? [String: Any], let url = (image["url"] as? String).flatMap(URL.init(string:)) {
+                return url
+            }
+        }
+        return nil
+    }
+
+    /// isaCloud: the smallest animated version for a sticker: fixed_width_small, else fixed_width. The still images are never used.
+    private static func stickerURL(in images: [String: Any]) -> URL? {
+        for name in ["fixed_width_small", "fixed_width"] {
             if let image = images[name] as? [String: Any], let url = (image["url"] as? String).flatMap(URL.init(string:)) {
                 return url
             }
@@ -345,6 +358,21 @@ enum GiphySearch {
         }
         GifNetworkStats.shared.recordPreview(fromCache: result.fromCache)
         return result.data
+    }
+
+    /// isaCloud: downloads the smallest animated GIF of a result to a temporary file, to be kept in the sticker library. The bytes must
+    /// start with GIF8, or the download fails.
+    static func downloadSticker(_ gif: GiphyGif) async throws -> URL {
+        guard let source = gif.stickerURL else {
+            throw GiphySearchError.badResponse
+        }
+        let (data, response, _) = try await GifNetwork.fetch(source)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200, data.starts(with: [0x47, 0x49, 0x46, 0x38]) else {
+            throw GiphySearchError.badResponse
+        }
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("sticker-\(gif.id).gif")
+        try data.write(to: url, options: .atomic)
+        return url
     }
 
     /// downloads the animated GIF to a temporary file, to be sent as an attachment
@@ -413,7 +441,8 @@ enum KlipySearch {
               let originalURL = sentURL(file) else {
             return nil
         }
-        return GiphyGif(id: "klipy-\(id)", previewURL: previewURL, originalURL: originalURL)
+        return GiphyGif(id: "klipy-\(id)", previewURL: previewURL, originalURL: originalURL,
+                        stickerURL: gifURL(file, size: "xs") ?? gifURL(file, size: "sm"))
     }
 
     /// isaCloud: the GIF that is sent, the biggest of hd, md, sm and xs up to GifVariantPolicy.maxSendBytes. As before, an item
@@ -526,8 +555,8 @@ struct GifTrendingCache {
     }
 
     private func fileURL(for provider: GifProvider) -> URL {
-        // isaCloud: "-v2" because lists saved before the 2 MB rule point to the big variants; the old files are not read
-        return directory.appendingPathComponent("\(provider.rawValue)-v2.json")
+        // isaCloud: "-v3" because lists saved before the sticker URL (stickerURL) have no sticker variant; the old files are not read
+        return directory.appendingPathComponent("\(provider.rawValue)-v3.json")
     }
 
     /// keeps the page as the saved list of its provider; a failure to write is ignored, the list is only a cache

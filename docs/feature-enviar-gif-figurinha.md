@@ -1,6 +1,6 @@
 # Figurinha a partir de GIF
 
-**Status:** análise com as decisões tomadas em 13/11/2026. Nada implementado. Substitui a análise de 04/11/2026, resumida no fim.
+**Status:** implementado e testado no `.dev` em 17/11/2026 (branch `feature/gif-como-figurinha`; a Isadora aprovou). Decisões tomadas em 13/11/2026. O que a implementação decidiu a mais (volta à versão normal quando não há versão pequena, cache `-v3`, ordem do envio) está em `docs/figurinha-de-gif-android.md`, seção 10, e no `CHANGELOG.md`. Substitui a análise de 04/11/2026, resumida no fim.
 **Relacionado:** `docs/analise-figurinhas.md`, `docs/ferramenta-de-figurinhas.md` (guia para o Android), `docs/analise-gif-klipy.md` (versões dos GIFs), `docs/figurinha-de-gif-android.md` (guia desta feature para o isaCloud Android).
 
 ## Pedido

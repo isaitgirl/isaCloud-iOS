@@ -2,6 +2,23 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## Em breve (próxima versão)
+
+Branch `feature/gif-como-figurinha`, testada no `.dev` em 17/11/2026. Análise em `docs/feature-enviar-gif-figurinha.md`; guia para o Android em `docs/figurinha-de-gif-android.md`.
+
+### Adicionado
+- **GIF como figurinha.** Interruptor "Figurinha" (`GifPickerView.swift`, começa desligado a cada abertura, não é guardado). Ligado, o toque no GIF baixa a **menor versão animada** (`GiphyGif.stickerURL`: GIPHY `fixed_width_small`, depois `fixed_width`, nunca a `_still`; KLIPY `xs`, depois `sm`; `GiphySearch.downloadSticker`), guarda na biblioteca e envia na hora como figurinha (`isSticker`, sem compressão, `image/gif`). Se o GIF não tiver versão pequena animada, vai a versão normal, ainda GIF.
+- **A biblioteca de figurinhas guarda PNG e GIF** (`Stickers.swift`). O formato vem dos bytes (`GIF8` ou assinatura PNG), nunca do nome; `index.json` ganhou `format` opcional (ausente = PNG, sem migração). `StickerImageView` anima o GIF na conversa e na grade da folha (`AnimatedGifView`).
+- Traduções: "Send as sticker" (pt-BR no override).
+
+### Corrigido
+- **"Salvar figurinha" gravava qualquer arquivo como `.png`.** Agora o formato é detectado pelos bytes, e um GIF recebido continua animado.
+
+### Notas
+- O cache de "em alta" passou a `<provedor>-v3.json` (as listas antigas não têm `stickerURL`).
+- Builds anteriores mostram a figurinha GIF parada. Um `index.json` com `format: "gif"` lido por um build antigo perde essas entradas (não acha o `.png`).
+- `StickerFormatTests.swift` está fora do alvo de testes (`Stickers.swift` não faz parte dele); os testes de `StickerLibrary` ainda não foram escritos.
+
 ## 0.0.1 (build 115) — 17/11/2026
 
 Enviado ao TestFlight às 10:44: freio das gravações de estado na sessão retomada e medições de desempenho (branch `perf/freio-persiststate-retomada`). Análise em `docs/analise-trafego-canais.md`.

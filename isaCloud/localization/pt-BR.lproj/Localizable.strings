@@ -249,6 +249,7 @@
 /* isaCloud: figurinhas (criadas a partir de uma foto, com recorte, texto e remoção de fundo; ver Stickers.swift) */
 "Stickers" = "Figurinhas";
 "Sticker" = "Figurinha";
+"Send as sticker" = "Enviar como figurinha";
 "Favorites" = "Favoritas";
 "All stickers" = "Todas";
 "Create sticker" = "Criar figurinha";
