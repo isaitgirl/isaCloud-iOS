@@ -2,6 +2,32 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 117) — não enviado
+
+Ainda não enviado ao TestFlight: branch `feature/relatorio-crash-xmpp`, a ser mesclada na `isaCloud`. Decisão de 17/11/2026 (`docs/analise-relatorio-de-crash.md`, seção 8): o XMPP vem primeiro e o Compartilhar só como plano B.
+
+### Adicionado
+- **Relatório de crash por XMPP para `reports@isacloud.im`.** Depois do "Enviar" no aviso, o `.mcrash.gz` sobe pelo HTTP Upload cifrado (XEP-0363, `MLFiletransfer uploadFile:onAccount:withEncryption:YES`) e o link `aesgcm://` vai por OMEMO no mesmo caminho do anexo da conversa (`sendMessageAndAddToHistory`). Antes de cifrar, a lista de aparelhos de `reports@` é buscada de novo (`queryOMEMODevices:withSubscribe:NO`, exposto em `MLOMEMO.h`), com espera pelas listas e chaves (`openDevicelistFetches`, `openBundleFetches`). Uma linha de texto (versão, build e data do crash) vai antes do arquivo.
+- **Fila `crash-outbox/`** no App Group. O relatório é gravado nela antes de `kscrash_callCompletion` com sucesso, então o KSCrash só apaga a cópia dele depois. Nome: `crash_<epoch>_<versão>_<build>_<uuid>.mcrash.gz` (a data e a versão do crash vão no nome, porque o pipeline converte o relatório antes do último filtro). Limite de 5 arquivos e 7 dias. Na abertura seguinte, `reportPendingCrashes` reenvia o que sobrou sem perguntar de novo (o consentimento já foi dado); sem conexão, o arquivo fica na fila.
+- **Filtro `KSCrashReportFilterMLCaptureMetadata`** (logo depois do aviso): guarda data, versão e build de cada relatório na ordem do pipeline.
+- **Compartilhar como plano B** (`UIActivityViewController`, com cópias em pasta temporária que somem ao fechar): quando não há conta habilitada, a conta não conecta em 15 s, não há aparelho OMEMO confiável em `reports@`, o upload falha ou passa do limite de tamanho, o envio não termina em 60 s por arquivo, ou o servidor recusa o arquivo. Na abertura seguinte, o que está na fila não abre o Compartilhar sozinho.
+- **Botão de depuração** "Crash e relatório real (teste do envio por XMPP)" em `CrashTestingView` (`DebugView.swift`): derruba o app com `fatalError` depois de gravar o log.
+- Traduções pt-BR no override do isaCloud: aviso (título, texto, "Enviar", "Agora não"), texto da linha enviada, confirmação "Relatório enviado…" e o botão de depuração.
+- **Confirmação depois do envio** agora convida a escrever no canal Guia XMPP, mencionando `@reports`, se a pessoa quiser dar mais informação sobre o ocorrido (sai o texto que mandava usar o Contato das Configurações). O alerta não aceita link, então "Guia XMPP" virou o botão "Abrir o Guia XMPP": abre o canal (da primeira conta conectada que o tem) com `reports: ` já na caixa de texto, via rascunho (`saveMessageDraft`); se já houver rascunho no canal, o `reports: ` vem na linha seguinte. Um `reports: ` sozinho não conta como rascunho (`DataLayer saveMessageDraft` guarda vazio): quem abre o canal e sai sem escrever mais nada não fica com "Rascunho: reports:" na lista; o que sobrou de teste é limpo quando o aviso aparece. O botão some se nenhuma conta conectada tiver o canal.
+- **Nome legível no upload (teste):** o relatório sobe como `ios-b117-20261117-144750Z.mcrash.gz` (data e hora em UTC, marcadas com `Z`, porque quem envia está em fusos diferentes; cópia temporária com o prefixo `keepname.`, que `MLFiletransfer` respeita só nesse caso; os outros envios cifrados seguem com nome aleatório). Se o servidor de upload trocar o nome por um hash, nada muda e vale o script abaixo.
+- **`scripts/crash-report-renomear.py`**: o servidor de upload troca o nome do arquivo por um hash (`zb2rh….gz`), então o nome legível (`ios-b117-20261117-1447Z-sigtrap.mcrash.gz`, também em UTC) é dado na pasta de recebidos, a partir do conteúdo; `--extrair` separa as partes e decodifica o log.
+
+### Mudado
+- **O e-mail sai do relatório de crash.** `filterReports:onCompletion:` não abre mais o `MFMailComposeViewController` para `sysadmin@isacloud.cc`. Sai também o erro "This device is not configured to send email" e os delegates de e-mail do `MLCrashReporter` (o framework `MessageUI` não é mais importado). O `composeMail` das Configurações não mudou.
+- O aviso ganhou texto mais leve ("🥺 O app fechou inesperadamente da última vez"), com os botões "Enviar" (rosa isaCloud, em negrito) e "Agora não" (cinza), sem "Compartilhar…". Para colorir os botões o aviso agora é próprio (`KSCrashReportFilterMLAlert`), no lugar do `KSCrashReportFilterAlert` do KSCrash; um alerta do sistema não deixa diminuir o tamanho do botão.
+
+### Notas
+- O envio considera "enviado" quando a mensagem sai para a conexão (`sendMessageAndAddToHistory` não nil). O app não espera o recibo do servidor para esse caminho. Verificar no `.dev` que `reports@` recebe e decifra.
+- Com `allowMixedTrustInGroups` desligado, só contam aparelhos de `reports@` confiados explicitamente; caso contrário, cai no Compartilhar (a regra da seção 8.3).
+- A conversa com `reports@` entra na lista pelo `addActiveBuddies` (entrada local, `kSubNotListedLocally`, igual a uma conversa com quem não é contato); o roster do servidor não é alterado.
+- Pendência de decisão: a seção 8.2 da análise diz que quem fecha o app no meio recebe o aviso de novo, e a seção 2.2 diz que a fila é reenviada sem perguntar. Este build segue a 2.2.
+- Não verificado: formato exato do carimbo de data no relatório do KSCrash (`yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'`, sem data, o nome usa a hora atual) e o comportamento do `fatalError` com o depurador anexado (no `.dev` sem depurador).
+
 ## 0.0.1 (build 116) — 17/11/2026
 
 Enviado ao TestFlight às 12:47: figurinha a partir de GIF (branch `feature/gif-como-figurinha`, testada no `.dev` em 17/11/2026) e vídeo sem tela cinza no iOS 27. Análise em `docs/feature-enviar-gif-figurinha.md`; guia para o Android em `docs/figurinha-de-gif-android.md`.

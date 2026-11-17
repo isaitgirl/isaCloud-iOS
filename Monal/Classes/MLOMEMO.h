@@ -56,6 +56,8 @@ NS_ASSUME_NONNULL_BEGIN
 //isaCloud: removes all own devices from the devicelist except this one (returns how many were removed) and the current own device count
 -(NSUInteger) isaCloudClearOtherOwnDevices;
 -(NSUInteger) isaCloudOwnDeviceCount;
+//isaCloud: fetches the devicelist of a jid (used for reports@, which is not a contact: the crash report sender needs it before encrypting)
+-(void) queryOMEMODevices:(NSString*) jid withSubscribe:(BOOL) subscribe;
 //isaCloud: last devicelist fetch error of a jid ("access", "notFound", "other") or nil if the last fetch succeeded (in memory only)
 -(NSString* _Nullable) lastDevicelistFetchErrorForJid:(NSString*) jid;
 

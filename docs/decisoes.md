@@ -1045,3 +1045,13 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - **Decisão:** com `fullscreenSingleAttachment` ligado (o app liga), o fork mostra o anexo sozinho, sem o `TabView` (mudança nº 24). Descartados, sem efeito: trocar o `VideoPlayer` por `AVPlayerViewController`, esperar `isReadyForDisplay` para dar o play, desligar `allowsVideoFrameAnalysis`, forçar `layoutIfNeeded`.
 - **Como reproduzir e medir:** simulador iOS 27, abrir o vídeo e amostrar pixels de `xcrun simctl io <udid> screenshot` (o screenshot do MCP "acorda" a tela e esconde o bug). Antes: todos os quadros em (153,153,153); depois: quadros variando.
 - **Como desfazer:** remover o desvio `if singleAttachment` de `mediaPagerView` no fork. Sem anexo único (opção desligada) o caminho paginado continua e teria o mesmo problema no iOS 27.
+
+## Relatório de crash por XMPP (17/11/2026, build 117)
+
+- **Decisão:** o relatório de crash vai direto por XMPP para `reports@isacloud.im` (upload cifrado XEP-0363 + link `aesgcm://` por OMEMO). O Compartilhar do iOS só aparece como plano B, sem pedir o consentimento de novo; o e-mail (`MFMailComposeViewController`) saiu do relatório.
+- **Por que a lista de aparelhos é buscada antes de cada envio:** `reports@` não é contato e o `devicelistHandler` do Monal ignora avisos de lista de quem não está na lista de contatos (`isListedLocally`). Sem a busca, um aparelho novo logado em `reports@` não receberia a chave e um removido continuaria recebendo.
+- **Quando cai no Compartilhar:** sem conta habilitada, conta que não conecta em 15 s, sem aparelho OMEMO ou chave confiável em `reports@` (nunca manda em claro), falha no upload, sem resposta em 60 s.
+- **Fila `crash-outbox/`** (App Group, máx. 5 relatórios e 7 dias): gravada antes de chamar a conclusão do KSCrash, para o relatório não se perder.
+- **Simulador:** o KSCrash só é instalado se o Registrador UDP estiver ligado (`initSystem`); o teste de ponta a ponta é no `.dev`.
+- **Em aberto:** reenvio silencioso da fila (seção 2.2) x aviso de novo (seção 8.2); "enviado" não espera recibo do servidor; resposta automática no `mod_firewall`.
+- **Como desfazer:** voltar o último filtro de `MLCrashReporter.m` para o `MFMailComposeViewController`.

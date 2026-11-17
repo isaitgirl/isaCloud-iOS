@@ -10,6 +10,12 @@ O que está neste arquivo é o que aparece para o usuário na tela de **Novidade
 - Nada de texto sério ou técnico: sem jargão (OMEMO, SASL, WAL, 0xdead10cc, background task, thread), sem número de crash (C20), sem "passamos a registrar…". Detalhe técnico fica no [CHANGELOG.md](CHANGELOG.md).
 - Se a correção for interna e a pessoa não percebe, escreva algo leve como "🛠️ Mais estabilidade por dentro, para o app ficar redondinho."
 
+## Build 117 · 17/11/2026
+
+### Melhorias
+- 🛟 Se o app fechar de repente, o relatório agora chega até a nossa equipe direto pelo isaCloud, criptografado e sem precisar de app de e-mail configurado no aparelho.
+- 📤 Se não der para enviar pelo isaCloud, o app oferece para você compartilhar o relatório por onde preferir.
+
 ## Build 116 · 17/11/2026
 
 ### Novidades

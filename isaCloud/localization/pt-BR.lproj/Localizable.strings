@@ -349,3 +349,18 @@
 "You can use this screen to register an account with an XMPP server selected or provided by you." = "Você pode usar essa tela para registrar uma conta num servidor XMPP selecionado ou informado por você.";
 "Log in to your existing account or register a new account." = "Entre na sua conta existente ou registre uma nova conta.";
 "Add an account" = "Adicionar uma conta";
+
+/* MLCrashReporter.m: aviso de relatório de crash (o texto é o da seção 3 de docs/analise-relatorio-de-crash.md) */
+"🥺 The app closed unexpectedly last time" = "🥺 O app fechou inesperadamente da última vez";
+"Send the diagnostic report to help us fix this?\nWe only use it to investigate and discard the file right after." = "Envia o relatório de diagnóstico pra nos ajudar a arrumar isso?\nA gente só usa pra investigar e descarta o arquivo logo em seguida.";
+"Not now" = "Agora não";
+
+/* MLCrashReporter.m: texto enviado junto do relatório (versão, build e data do crash) */
+"Crash report of isaCloud %@ (build %@), from %@" = "Relatório de crash do isaCloud %@ (build %@), de %@";
+
+/* MLCrashReporter.m: confirmação depois que o relatório chega à conta reports@ */
+"Report sent. Thank you! If you want to share any extra information about what happened, write in the Guia XMPP channel and mention @reports." = "Relatório enviado. Obrigado! Se quiser compartilhar alguma informação extra sobre esse ocorrido, escreva no canal Guia XMPP e mencione @reports.";
+"Open Guia XMPP" = "Abrir o Guia XMPP";
+
+/* DebugView.swift: botão de depuração que derruba o app de verdade para testar o envio do relatório */
+"Real crash and report (test of the XMPP sending)" = "Crash e relatório real (teste do envio por XMPP)";

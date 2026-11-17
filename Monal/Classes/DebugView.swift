@@ -251,6 +251,11 @@ struct CrashTestingView: View {
                     let crasher:Int? = nil
                     print(crasher!)
                 }
+                //isaCloud: debug only. A real crash (KSCrash writes the report, the app sends it to reports@ on the next launch, see MLCrashReporter.m)
+                Button("Real crash and report (test of the XMPP sending)") {
+                    HelperTools.flushLogs(withTimeout: 0.100)
+                    fatalError("isaCloud: crash to test the report sent by XMPP")
+                }
             }
             .foregroundColor(.red)
             .listStyle(.grouped)
