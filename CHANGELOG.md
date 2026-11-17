@@ -13,6 +13,7 @@ Branch `feature/gif-como-figurinha`, testada no `.dev` em 17/11/2026. Análise e
 
 ### Corrigido
 - **"Salvar figurinha" gravava qualquer arquivo como `.png`.** Agora o formato é detectado pelos bytes, e um GIF recebido continua animado.
+- **Vídeo ficava cinza no visualizador até tocar na tela (iOS 27).** O `AVPlayerViewController` dentro do `TabView` paginado do visualizador do ExyteChat toca, mas a camada de vídeo não é composta no iOS 27 (no iPhone 12 Pro e no simulador a tela ficava em RGB 153 liso). No fork, com `fullscreenSingleAttachment` ligado, o anexo único é mostrado sem o `TabView` (PR 23 do fork, `80602dd`). Medido no simulador iOS 27 (antes cinza por 6 s, depois quadros variando) e no iPhone 12 Pro.
 
 ### Notas
 - O cache de "em alta" passou a `<provedor>-v3.json` (as listas antigas não têm `stickerURL`).
