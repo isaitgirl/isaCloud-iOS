@@ -348,3 +348,28 @@ Opções previstas: `muc_presence_quiet_window` (janela de "quem falou", por exe
 - Que o hook `presence/full` roda antes da fila de hibernação do `mod_smacks` no Prosody 13 (medir com a métrica do módulo em `dry_run`).
 
 Decisão em 17/11/2026: **só documentar**, nada foi implementado.
+
+## Item 2 (entrar nas salas só sob demanda): menções e o contador (17/11/2026)
+
+Decisão de 17/11/2026: o item 2 (contador de não lidas por MAM com `max=0` e entrada na sala só quando a pessoa abre o canal) foi **aprovado como direção**; nada foi implementado. Este trecho registra como ficam as menções.
+
+### Como é hoje (conferido no código)
+
+- **Cor do contador** (`MLContactCell.m`): num canal marcado "só menções" (`isMentionOnly`), o contador é **cinza** e vira **vermelho** quando há menção não lida. Não existe rosa. Canal silenciado fica sempre cinza, mesmo com menção.
+- **Outros sinais:** um "@" antes do sino e a prévia em negrito quando o contador está vermelho.
+- **Como a menção é detectada:** `-[DataLayer hasUnreadMentionInMuc:forAccount:withNames:]` procura o nick, o nome, a parte local do JID ou o JID, só como palavra inteira (`+[HelperTools text:mentionsAnyOfNames:]`), no texto das mensagens não lidas **que já estão no banco** (até 500). A mesma regra decide a notificação (`MLNotificationManager.m`).
+- **Ao abrir o canal:** vai para a primeira mensagem não lida (`firstUnreadHistoryId`). **Não existe** o "@" flutuante do WhatsApp para pular de menção em menção.
+
+### O problema que o item 2 cria
+
+A consulta MAM com `max=0` devolve só o total (RSM `count`), sem texto. O app saberia "há N novas", mas não se uma delas cita a pessoa. O contador de canais "só menções" ficaria sempre cinza e a menção só seria descoberta ao abrir o canal.
+
+### Opções, em ordem de custo
+
+1. **Página recente nos canais "só menções".** Baixar as últimas ~100 mensagens depois da última lida (mensagens, não presenças), uma vez por canal. Se houver menção, o contador fica vermelho. Se houver mais que isso, mostra "99+" cinza, e uma menção mais antiga só aparece ao abrir. Canais que não são "só menções" ficam só com o contador.
+2. **"@" flutuante (à la WhatsApp).** O app guarda os ids das mensagens com menção não lida e o botão leva de uma em uma, em ordem, com o número restante. Só enxerga menções já no banco: ao abrir o canal, busca páginas para trás até a última lida (com teto). É uma funcionalidade nova da tela de conversa (`ChatView.swift`) e vale por si só, mesmo sem o item 2.
+3. **Canais do isaCloud:** o `mod_cloud_notify_quiet` já classifica o push como `muc-mention`; o app poderia marcar o canal com menção sem baixar nada. Só vale para canais do nosso servidor, então é um bônus.
+
+### Compatibilidade
+
+Tudo acima usa só XEPs padrão (MAM XEP-0313, bookmarks XEP-0402, referências XEP-0372); nenhum cliente de outro lugar é afetado. A regra de compatibilidade do projeto fica: estender sem substituir, mudanças de comportamento do servidor só por opt-in negociado (feature anunciada pelo app), namespace próprio para o que for nosso, e conferir com Conversations, Gajim, Dino e o Monal oficial depois de cada mudança do servidor. **MIX fica fora** enquanto estiver Experimental e sem clientes.
