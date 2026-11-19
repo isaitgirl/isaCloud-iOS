@@ -293,6 +293,9 @@
 "Photos are resized to at most 1920 pixels on the longest side. GIFs and other files are sent as they are." = "As fotos são reduzidas para no máximo 1920 pixels no lado maior. GIFs e outros arquivos são enviados como estão.";
 "Preparing photo..." = "Preparando foto...";
 "Preparing %d of %d..." = "Preparando foto %d de %d...";
+/* isaCloud: espelhamento de selfies da câmera frontal (Ajustes > Anexos; GeneralSettings.swift) */
+"Mirror selfies" = "Espelhar selfies";
+"Photos taken with the front camera are mirrored before sending, like the iOS Camera setting \"Mirror Front Camera\". iOS does not let apps read that setting, so turn this off if you don't use it." = "As fotos tiradas com a câmera frontal são espelhadas antes do envio, como no ajuste \"Espelhar câmera frontal\" da Câmera do iOS. O iOS não deixa os apps lerem esse ajuste; desligue se você não o usa.";
 "Compress videos before sending" = "Reduzir vídeos antes de enviar";
 "Original" = "Original";
 "Videos are converted to 480p before sending. The conversion runs only while the app is open. A video larger than the server limit is not sent." = "Os vídeos são convertidos para 480p antes do envio. A conversão só acontece com o app aberto. Vídeos acima do limite do servidor não são enviados.";

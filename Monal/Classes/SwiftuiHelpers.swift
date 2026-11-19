@@ -483,6 +483,24 @@ struct CameraPicker: UIViewControllerRepresentable {
             self.onPicked = onPicked
         }
 
+        //isaCloud: the front camera photo as JPEG data, mirrored when it is a selfie and the "Mirror selfies" option is on
+        //(iOS hands the photo to the app without the "Mirror Front Camera" setting, see the docs)
+        private func isaCloudPhotoData(_ original: UIImage, picker: UIImagePickerController, info: [UIImagePickerController.InfoKey: Any]) -> Data? {
+            var isSelfie = picker.cameraDevice == .front
+            if !isSelfie, let metadata = info[.mediaMetadata] as? [String: Any], let exif = metadata["{Exif}"] as? [String: Any], let lens = exif["LensModel"] as? String {
+                isSelfie = lens.lowercased().contains("front")
+            }
+            guard isSelfie else {
+                return original.jpegData(compressionQuality: 0.9)
+            }
+            if HelperTools.defaultsDB().bool(forKey: "mirrorFrontCameraPhotos") {
+                DDLogInfo("Selfie mirrored before sending (front camera, option on)")
+                return original.isaCloudMirroredHorizontally().jpegData(compressionQuality: 0.9)
+            }
+            DDLogInfo("Front camera photo sent as it is (option off)")
+            return original.jpegData(compressionQuality: 0.9)
+        }
+
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
             isPresented = false
             //the system deletes the video file as soon as the camera closes: keep a copy of it, in a folder of its own
@@ -501,7 +519,7 @@ struct CameraPicker: UIViewControllerRepresentable {
                 } catch {
                     DDLogError("Could not copy the captured video: \(error)")
                 }
-            } else if let image = info[.originalImage] as? UIImage, let data = image.jpegData(compressionQuality: 0.9) {
+            } else if let image = info[.originalImage] as? UIImage, let data = isaCloudPhotoData(image, picker: picker, info: info) {
                 let url = directory.appendingPathComponent("IMG-\(UUID().uuidString).jpg")
                 do {
                     try data.write(to: url)
@@ -1461,6 +1479,23 @@ struct ImportFromMonalView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text("Confira se o arquivo é o banco principal do Monal e tente de novo.")
+        }
+    }
+}
+
+extension UIImage {
+    //isaCloud: the same pixels mirrored horizontally, with orientation .up. The mirror is written in the pixels,
+    //not in an EXIF orientation tag (Android reads that tag wrong, and "Never resize" sends the file as it is)
+    func isaCloudMirroredHorizontally() -> UIImage {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = scale
+        format.opaque = true
+        let renderer = UIGraphicsImageRenderer(size: size, format: format)
+        return renderer.image { context in
+            context.cgContext.translateBy(x: size.width, y: 0)
+            context.cgContext.scaleBy(x: -1, y: 1)
+            //draw(in:) already applies the orientation of the photo
+            self.draw(in: CGRect(origin: .zero, size: size))
         }
     }
 }

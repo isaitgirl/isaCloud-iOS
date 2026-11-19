@@ -142,6 +142,10 @@ class GeneralSettingsDefaultsDB: ObservableObject {
     @defaultsDB("videoCompressionMode")
     var videoCompressionMode: String
 
+    //isaCloud: selfies taken with the front camera are mirrored before the upload (default on; see SwiftuiHelpers.swift)
+    @defaultsDB("mirrorFrontCameraPhotos")
+    var mirrorFrontCameraPhotos: Bool
+
     //isaCloud: "giphy" or "klipy", the GIF search provider (also switched from the GIF picker; see GiphySearch.swift)
     @defaultsDB("gifProvider")
     var gifProvider: String
@@ -755,6 +759,11 @@ struct AttachmentSettings: View {
                     )
                     Text("Image Upload JPEG-Quality: \(String(format: "%.0f%%", generalSettingsDefaultsDB.imageUploadQuality*100))")
                 }
+                //isaCloud: selfies from the front camera are mirrored before sending (iOS does not expose its own "Mirror Front Camera" setting to apps)
+                Toggle("Mirror selfies", isOn: $generalSettingsDefaultsDB.mirrorFrontCameraPhotos)
+                Text("Photos taken with the front camera are mirrored before sending, like the iOS Camera setting \"Mirror Front Camera\". iOS does not let apps read that setting, so turn this off if you don't use it.")
+                    .foregroundColor(.secondary)
+                    .font(.footnote)
                 //isaCloud: videos from the gallery and the camera are converted to 480p before the upload (Original: sent as they are)
                 //the menu goes on the line below the title, so the row does not change its layout between "480p" and "Original"
                 VStack(alignment: .leading, spacing: 4) {

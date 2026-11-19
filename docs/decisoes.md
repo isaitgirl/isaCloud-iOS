@@ -1061,3 +1061,12 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - O "Criar" da folha de figurinhas pergunta "Com GIF" ou "Com imagem". "Com GIF" fecha a folha, espera 0,4 s e abre o seletor de GIF com o interruptor "Figurinha" ligado (`GifPickerView(startAsSticker:)`); "Com imagem" abre o editor como antes. Sem chave GIPHY/KLIPY a opção "Com GIF" não aparece.
 - O seletor de GIF do `ChatView` passou de `.sheet(isPresented:)` para `.sheet(item:)` (`gifPickerMode`): com um `Bool` lido só dentro do conteúdo da folha, a 1ª abertura usava o valor velho e vinha com "Figurinha" desligado. **Não voltar para o `Bool`.**
 - No iOS 26/27 o `confirmationDialog` do sistema ignora o tint e vira um alerta cinza; por isso o cartão de escolha é próprio (overlay fora do `NavigationStack`) e os botões Criar/Cancelar da barra têm `Color("isaCloudPink")` explícito. Só código do isaCloud; sem impacto em merges do Monal além de `Stickers.swift`, `GifPickerView.swift` e `ChatView.swift`.
+
+## Espelhar selfies (próximo build)
+
+- **Problema:** com "Espelhar câmera frontal" ligado no iOS, a câmera do app entrega a selfie sem espelho (log: `EXIF orientation 6`, só rotação). O iOS não tem API para o app ler esse ajuste.
+- **Decisão:** opção própria do isaCloud, `mirrorFrontCameraPhotos`, em Ajustes → Anexos → "Espelhar selfies", **ligada por padrão**. Espelha na horizontal só as fotos da câmera frontal (`picker.cameraDevice == .front`; fallback pelo `LensModel` do EXIF), antes do envio. Vídeo não muda.
+- **Espelho nos pixels, não na etiqueta:** a imagem nova é desenhada com `UIGraphicsImageRenderer` e sai com orientação `.up`. Um `withHorizontallyFlippedOrientation` deixaria uma etiqueta EXIF espelhada, que o Android lê errado e que o modo "Nunca redimensionar" enviaria como está.
+- **Migração:** a chave ganha o padrão YES no `MLXMPPManager` (`upgradeBoolUserSettingsIfUnset`), porque `@defaultsDB` sem valor crasha (C18).
+- **Caminho antigo:** `chatViewController.m` também espelha (`isaCloudMirroredIfSelfie`), porque ainda é alcançável com `showNewChatView` desligado no menu de debug.
+- **Como desfazer:** tirar as chamadas `isaCloudPhotoData` (SwiftuiHelpers.swift) e `isaCloudMirroredIfSelfie` (chatViewController.m), a migração e a chave em `GeneralSettings.swift`.
