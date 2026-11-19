@@ -227,7 +227,14 @@ struct ChatView: View {
     @State private var showCameraPermissionAlert = false
     //isaCloud: the alert for a gallery video that the server limit does not allow (the text is the alert title)
     @State private var serverLimitAlertMessage: String? = nil
-    @State private var showGifPicker = false
+    //isaCloud: the GIF picker is an item sheet: the mode (plain GIF, or "With GIF" from the sticker sheet with the Sticker switch on) travels with the
+    //presentation itself. A separate flag read only inside the sheet content was not tracked by the chat's body, so the first opening saw the old value.
+    private enum GifPickerMode: Int, Identifiable {
+        case gif
+        case sticker
+        var id: Int { rawValue }
+    }
+    @State private var gifPickerMode: GifPickerMode? = nil
     //isaCloud: the sticker sheet (Stickers.swift): a tap there sends the sticker at once
     @State private var showStickerPicker = false
     @State private var showLocationPicker = false
@@ -1066,7 +1073,7 @@ struct ChatView: View {
             onAttachCamera: { openCamera() },
             onAttachFile: { showFileImporter = true },
             onPasteImage: pasteImageFromClipboard,
-            onSearchGif: { showGifPicker = true },
+            onSearchGif: { gifPickerMode = .gif },
             onPickSticker: { showStickerPicker = true },
             onShareLocation: { showLocationPicker = true },
             onRemoveAttachment: { inputModel.removeAttachment(at: $0) },
@@ -1804,7 +1811,7 @@ struct ChatView: View {
                 sendLocation(coordinate)
             })
         }
-        .sheet(isPresented: $showGifPicker) {
+        .sheet(item: $gifPickerMode) { mode in
             GifPickerView(keys: GifKeys.fromBundle(Bundle.main.infoDictionary), onPick: { url in
                 inputModel.addAttachment(ChatInputAttachment(kind: .animatedGif, url: url))
             }, onPickSticker: { url in
@@ -1822,12 +1829,17 @@ struct ChatView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                     inputModel.showNotice(NSLocalizedString("Sticker saved", comment: "notice above the input after a sticker was added to the library"))
                 }
-            })
+            }, startAsSticker: mode == .sticker)
         }
         //isaCloud: stickers (Stickers.swift)
         .sheet(isPresented: $showStickerPicker) {
             StickerPickerView(onPick: { sticker in
                 sendSticker(sticker)
+            }, onCreateWithGif: {
+                //(a moment later: the sticker sheet is closing and two sheets cannot change at once)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                    gifPickerMode = .sticker
+                }
             })
         }
         .sheet(item: $selectedContactForContactDetails) { selectedContact in

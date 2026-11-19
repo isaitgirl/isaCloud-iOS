@@ -460,8 +460,8 @@ struct GifPickerView: View {
     @State private var gifs: [GiphyGif] = []
     @State private var state: LoadState = .loading
     @State private var downloading = false
-    /// isaCloud: the "Sticker" switch in the bar; it starts off each time the picker opens and is not remembered
-    @State private var asSticker = false
+    /// isaCloud: the "Sticker" switch in the bar; it starts as startAsSticker says each time the picker opens and is not remembered
+    @State private var asSticker: Bool
     /// the provider searched now; nil when the build has no key at all
     @State private var provider: GifProvider?
     /// the page of the GIFs on screen (the first page is 0); loadMore asks the next one
@@ -486,10 +486,12 @@ struct GifPickerView: View {
 
     private let columns = [GridItem(.adaptive(minimum: 110), spacing: 6)]
 
-    init(keys: GifKeys, onPick: @escaping (URL) -> Void, onPickSticker: @escaping (URL) -> Void) {
+    /// isaCloud: startAsSticker turns the "Sticker" switch on from the start (the sticker sheet's "With GIF" choice)
+    init(keys: GifKeys, onPick: @escaping (URL) -> Void, onPickSticker: @escaping (URL) -> Void, startAsSticker: Bool = false) {
         self.keys = keys
         self.onPick = onPick
         self.onPickSticker = onPickSticker
+        _asSticker = State(initialValue: startAsSticker)
         // isaCloud: the provider chosen last time (read as a plain string, not with @defaultsDB), or the one the build can use
         _provider = State(initialValue: keys.resolved(stored: HelperTools.defaultsDB().string(forKey: GifProvider.defaultsKey)))
     }

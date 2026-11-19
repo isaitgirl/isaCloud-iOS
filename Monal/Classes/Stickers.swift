@@ -262,12 +262,19 @@ struct StickerPickerView: View {
 
     @State private var tab: Tab = .all
     @State private var showEditor = false
+    /// isaCloud: the choice of the Create button: a GIF sticker (the GIF picker opens) or a sticker from an image (the editor)
+    @State private var showCreateChoice = false
     @State private var pendingDelete: Sticker?
+    /// isaCloud: the GIF choice is offered only when the build has a GIF provider key
+    private let canCreateWithGif = GifKeys.fromBundle(Bundle.main.infoDictionary).resolved(stored: nil) != nil
+    /// isaCloud: the sheet closes and the chat opens the GIF picker with the Sticker switch on
+    var onCreateWithGif: () -> Void
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 4)
 
-    init(onPick: @escaping (Sticker) -> Void) {
+    init(onPick: @escaping (Sticker) -> Void, onCreateWithGif: @escaping () -> Void = {}) {
         self.onPick = onPick
+        self.onCreateWithGif = onCreateWithGif
     }
 
     var body: some View {
@@ -284,23 +291,27 @@ struct StickerPickerView: View {
             }
             .navigationTitle(Text("Stickers"))
             .navigationBarTitleDisplayMode(.inline)
+            //isaCloud: iOS 26 and later draw the toolbar buttons and the choice dialog in neutral grey/black; the pink is set here, so every version looks the same
+            .tint(Color("isaCloudPink"))
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .tint(Color("isaCloudPink"))
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        showEditor = true
+                        showCreateChoice = true
                     } label: {
                         //a plain HStack: the toolbar of iOS 26 and later shows only the icon of a Label
                         HStack(spacing: 4) {
                             Image(systemName: "face.smiling")
                             Text("Create")
                         }
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(Color("isaCloudPink"))
                     }
+                    .tint(Color("isaCloudPink"))
                     .accessibilityLabel(Text("Create sticker"))
                 }
             }
@@ -319,6 +330,64 @@ struct StickerPickerView: View {
                 }
             }
         }
+        //isaCloud: our own choice card instead of a system dialog: iOS 26 and later draw that one in grey, with black text, and the app tint does not reach it.
+        //It sits outside the NavigationStack, so the dimmed background covers the navigation bar too.
+        .overlay {
+            if showCreateChoice {
+                createChoiceCard
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeOut(duration: 0.2), value: showCreateChoice)
+    }
+
+    /// isaCloud: the two ways to create a sticker, over a dimmed background (a tap outside closes it)
+    private var createChoiceCard: some View {
+        ZStack {
+            Color.black.opacity(0.35)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    showCreateChoice = false
+                }
+                .accessibilityHidden(true)
+            VStack(spacing: 12) {
+                Text("Create sticker")
+                    .font(.headline)
+                    .padding(.bottom, 4)
+                if canCreateWithGif {
+                    Button {
+                        showCreateChoice = false
+                        onCreateWithGif()
+                        dismiss()
+                    } label: {
+                        Label("With GIF", systemImage: "sparkles.rectangle.stack")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                Button {
+                    showCreateChoice = false
+                    showEditor = true
+                } label: {
+                    Label("With image", systemImage: "photo")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                Button("Cancel") {
+                    showCreateChoice = false
+                }
+                .padding(.top, 2)
+            }
+            .controlSize(.large)
+            .tint(Color("isaCloudPink"))
+            .padding(20)
+            .frame(maxWidth: 320)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24))
+            .shadow(color: .black.opacity(0.15), radius: 20, y: 8)
+            .padding(.horizontal, 24)
+            .accessibilityElement(children: .contain)
+            .accessibilityAddTraits(.isModal)
+        }
     }
 
     private var deleteDialogBinding: Binding<Bool> {
@@ -336,7 +405,7 @@ struct StickerPickerView: View {
                 Label("No stickers yet", systemImage: "face.smiling")
             } actions: {
                 Button("Create sticker") {
-                    showEditor = true
+                    showCreateChoice = true
                 }
                 .buttonStyle(.borderedProminent)
             }
