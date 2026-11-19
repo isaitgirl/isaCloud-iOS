@@ -2,7 +2,15 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
-## 0.0.1 (build 117) — 17/11/2026
+## 0.0.1 (build 118) — em teste no .dev (19/11/2026)
+
+Branch `fix/c32-timeouts-e-log-longo`, em teste no `.dev`. Análise do C32 em `docs/analises-crashes.md`.
+
+### Corrigido
+- **Timeouts de IQ param no início do desligamento (C32).** `xmpp isaCloudBeginShutdownAndWaitForTimeouts` liga a flag `isaCloudShuttingDown` antes do `disconnectAll` ("All accounts idle", os quatro caminhos de congelamento) e espera até 1 s pela transação de `updateIqHandlerTimeouts` que estiver em andamento. A flag é zerada ao conectar (`xmpp connect`, `MLXMPPManager connectIfNecessary`) e na volta para o primeiro plano (`signalResumption`, `applicationWillEnterForeground`).
+- **Registro do C20 sem I/O no caminho do SQL (C32).** `isaCloudRecordDbAccessAfterFreeze:` só monta a linha (endereços de retorno, sem symbolicar) e a guarda em memória sob `os_unfair_lock`; uma gravação assíncrona numa fila serial de prioridade utility (`im.isacloud.c20rec`) escreve no mesmo arquivo. `isaCloudDumpDbAfterFreezeRecords` grava o que estiver pendente antes de despejar no log.
+- **Limpeza de mensagens presas sai do launch (C31).** O `markStaleOutgoingMessagesAsFailedBefore:` roda 15 s depois da abertura, em segundo plano, e é reagendado por mais 15 s se o app estiver congelado.
+
 
 Enviado ao TestFlight às 15:40: relatório de crash por XMPP para `reports@isacloud.im` (PR 80, branch `feature/relatorio-crash-xmpp`, testada no `.dev` em 17/11/2026), mais o registro do crash C31. Decisão de 17/11/2026 (`docs/analise-relatorio-de-crash.md`, seção 8): o XMPP vem primeiro e o Compartilhar só como plano B.
 
@@ -16,6 +24,7 @@ Enviado ao TestFlight às 15:40: relatório de crash por XMPP para `reports@isac
 - **Confirmação depois do envio** agora convida a escrever no canal Guia XMPP, mencionando `@reports`, se a pessoa quiser dar mais informação sobre o ocorrido (sai o texto que mandava usar o Contato das Configurações). O alerta não aceita link, então "Guia XMPP" virou o botão "Abrir o Guia XMPP": abre o canal (da primeira conta conectada que o tem) com `reports: ` já na caixa de texto, via rascunho (`saveMessageDraft`); se já houver rascunho no canal, o `reports: ` vem na linha seguinte. Um `reports: ` sozinho não conta como rascunho (`DataLayer saveMessageDraft` guarda vazio): quem abre o canal e sai sem escrever mais nada não fica com "Rascunho: reports:" na lista; o que sobrou de teste é limpo quando o aviso aparece. O botão some se nenhuma conta conectada tiver o canal.
 - **Nome legível no upload (teste):** o relatório sobe como `ios-b117-20261117-144750Z.mcrash.gz` (data e hora em UTC, marcadas com `Z`, porque quem envia está em fusos diferentes; cópia temporária com o prefixo `keepname.`, que `MLFiletransfer` respeita só nesse caso; os outros envios cifrados seguem com nome aleatório). Se o servidor de upload trocar o nome por um hash, nada muda e vale o script abaixo.
 - **`scripts/crash-report-renomear.py`**: o servidor de upload troca o nome do arquivo por um hash (`zb2rh….gz`), então o nome legível (`ios-b117-20261117-1447Z-sigtrap.mcrash.gz`, também em UTC) é dado na pasta de recebidos, a partir do conteúdo; `--extrair` separa as partes e decodifica o log.
+- **Log longo opcional (depuração), desligado por padrão.** Chave `IsaCloudLogLongo` no `defaultsDB` do grupo de apps (valor padrão registrado em `+[HelperTools defaultsDB]`, com o período `IsaCloudLogLongoHours`, padrão 12). Quando ligado na tela de Depuração ("Log longo"), cada processo (app e `.notificationService`) grava um segundo log em texto puro, legível por `grep`, em `Library/logs-long/{app,appex}/`: arquivos de 25 MB, rotação a cada 24 h, até 40 arquivos ou 1 GB (`MLLongLog`, `MLLongLogFormatter`). Linha: `data hora L [proc] [fila] [classe] mensagem`. Filtro: erro e aviso sempre passam; informação sai só o ruído da lista de descarte; depuração e verbose passam só se baterem na lista de manter; limite de 40 linhas por segundo por texto (`[suppressed N lines of ...]`); uma linha `LONGLOG 10s` a cada 10 s conta stanzas e gravações de transação descartadas. O rawlog não muda. Vale a partir da próxima abertura do app. Exportar em Depuração: "Compartilhar log longo" (últimas 2 a 24 h, comprimido). Desligado, nada muda.
 
 ### Mudado
 - **O e-mail sai do relatório de crash.** `filterReports:onCompletion:` não abre mais o `MFMailComposeViewController` para `sysadmin@isacloud.cc`. Sai também o erro "This device is not configured to send email" e os delegates de e-mail do `MLCrashReporter` (o framework `MessageUI` não é mais importado). O `composeMail` das Configurações não mudou.

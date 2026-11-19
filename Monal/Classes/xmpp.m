@@ -199,9 +199,31 @@ static NSRegularExpression* fastTokenRemovalRegex;
 
 @end
 
+//isaCloud: C32, held while updateIqHandlerTimeouts writes its transaction; the shutdown waits for it (isaCloudBeginShutdownAndWaitForTimeouts)
+static NSLock* _isaCloudTimeoutsLock = nil;
 
+static NSLock* isaCloudTimeoutsLock(void)
+{
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        _isaCloudTimeoutsLock = [NSLock new];
+    });
+    return _isaCloudTimeoutsLock;
+}
 
 @implementation xmpp
+
++(void) isaCloudBeginShutdownAndWaitForTimeouts
+{
+    //from now on updateIqHandlerTimeouts does not open a transaction
+    [HelperTools isaCloudSetShuttingDown:YES];
+    //a transaction that is already running holds the lock: wait for it, but not more than 1 s
+    NSLock* lock = isaCloudTimeoutsLock();
+    if([lock lockBeforeDate:[NSDate dateWithTimeIntervalSinceNow:1.0]])
+        [lock unlock];
+    else
+        DDLogWarn(@"isaCloud C32: timeout transaction still running after 1 s, continuing shutdown");
+}
 
 +(void) initialize
 {
@@ -1052,6 +1074,7 @@ static NSRegularExpression* fastTokenRemovalRegex;
         self->_fast_used = NO;
         
         //(re)read persisted state and start connection
+        [HelperTools isaCloudSetShuttingDown:NO];       //isaCloud: C32, a connection means the app runs again
         [self readState];
         if([self connectionTask])
         {
@@ -6317,6 +6340,9 @@ static NSRegularExpression* fastTokenRemovalRegex;
     //(a frozen parse queue means the app or appex is freezing; the timeouts will continue once it is unfrozen)
     if([self parseQueueFrozen])
         return;
+    //isaCloud: C32, no new timeout transaction once the shutdown started (before the accounts are disconnected, not only after the freeze)
+    if([HelperTools isaCloudShuttingDown])
+        return;
     BOOL hasIqHandlers = NO;
     @synchronized(self->_iqHandlers) {
         hasIqHandlers = self->_iqHandlers.count > 0;
@@ -6324,6 +6350,13 @@ static NSRegularExpression* fastTokenRemovalRegex;
     if(!hasIqHandlers && ![[DataLayer sharedInstance] hasIdleTimersForAccount:self.accountID])
         return;
 
+    //isaCloud: C32, the lock lets the shutdown wait for this transaction (see isaCloudBeginShutdownAndWaitForTimeouts)
+    NSLock* lock = isaCloudTimeoutsLock();
+    [lock lock];
+    @try {
+    //isaCloud: C32, the shutdown may have started while this call was waiting for the lock
+    if([HelperTools isaCloudShuttingDown])
+        return;
     [[DataLayer sharedInstance] createTransaction:^{
         //update iq handlers
         BOOL stateUpdated = NO;
@@ -6393,6 +6426,9 @@ static NSRegularExpression* fastTokenRemovalRegex;
         if(stateUpdated || idleHandlerCalled)
             [self persistState];
     }];
+    } @finally {
+        [lock unlock];
+    }
 }
 
 -(void) delayIncomingMessageStanzasForArchiveJid:(NSString*) archiveJid

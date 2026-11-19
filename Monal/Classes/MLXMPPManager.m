@@ -808,6 +808,7 @@ static void isaCloudPingOrReconnect(xmpp* account, BOOL networkCameBack, BOOL le
 -(void) connectIfNecessary
 {
     DDLogVerbose(@"manager connectIfNecessary");
+    [HelperTools isaCloudSetShuttingDown:NO];       //isaCloud: C32, the app connects again: timeout transactions may run
     NSArray* enabledAccountList = [[DataLayer sharedInstance] enabledAccountList];
     for(NSDictionary* account in enabledAccountList)
         [self connectAccountWithDictionary:account];

@@ -28,6 +28,7 @@
 #include <string.h>
 #import <zlib.h>
 #import <sys/qos.h>
+#import <monalxmpp/MLLongLog.h>     //isaCloud: log longo opcional
 #import <BackgroundTasks/BackgroundTasks.h>
 #import <CommonCrypto/CommonDigest.h>
 #import <CommonCrypto/CommonHMAC.h>
@@ -115,6 +116,56 @@ static BOOL _suspensionHandling_isSuspended = NO;
 static atomic_bool _isaCloudSuspendedFast = false;
 //isaCloud: C20, how many database accesses were recorded in the current suspension (at most 30)
 static atomic_int _isaCloudDbAccessRecords = 0;
+//isaCloud: C32, YES from the start of the shutdown until the app runs again (timeout transactions stop, see xmpp.m)
+static atomic_bool _isaCloudShuttingDown = false;
+//isaCloud: C32, the recorder keeps its lines in memory and one async flush (utility queue) writes them: no file I/O on the SQL path
+static os_unfair_lock _isaCloudRecordLock = OS_UNFAIR_LOCK_INIT;
+static NSMutableArray<NSString*>* _isaCloudPendingRecords = nil;
+static BOOL _isaCloudFlushScheduled = NO;
+
+static dispatch_queue_t isaCloudRecordQueue(void)
+{
+    static dispatch_queue_t queue = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        dispatch_queue_attr_t attr = dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL, QOS_CLASS_UTILITY, 0);
+        queue = dispatch_queue_create("im.isacloud.c20rec", attr);
+    });
+    return queue;
+}
+
+//appends the lines to the recorder file (at most 64 KB); only called from isaCloudRecordQueue or a synchronous flush
+static void isaCloudWriteDbAccessRecords(NSArray<NSString*>* lines)
+{
+    if(lines.count == 0)
+        return;
+    NSURL* fileURL = [HelperTools getContainerURLForPathComponents:@[@"isacloud-db-after-freeze.log"]];
+    FILE* file = fopen(fileURL.path.UTF8String, "a");
+    if(file == NULL)
+        return;
+    fseek(file, 0, SEEK_END);
+    long size = ftell(file);
+    for(NSString* line in lines)
+    {
+        if(size >= 64 * 1024)
+            break;
+        fputs(line.UTF8String, file);
+        fputs("\n", file);
+        size += (long) strlen(line.UTF8String) + 1;
+    }
+    fclose(file);
+}
+
+//takes the pending lines out of memory and writes them
+static void isaCloudFlushDbAccessRecords(void)
+{
+    os_unfair_lock_lock(&_isaCloudRecordLock);
+    NSArray<NSString*>* lines = _isaCloudPendingRecords ?: @[];
+    _isaCloudPendingRecords = nil;
+    _isaCloudFlushScheduled = NO;
+    os_unfair_lock_unlock(&_isaCloudRecordLock);
+    isaCloudWriteDbAccessRecords(lines);
+}
 static NSMutableDictionary* _versionInfoCache;
 static NSCharacterSet* _invalidXMLCharacters;
 static NSCharacterSet* _validVs16Emojis;
@@ -2641,6 +2692,9 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         db = [[MonalUserDefaults alloc] initWithSuiteName:kAppGroup];
+        //isaCloud: defaults of the debug screen keys (registered in memory only, nothing is written); the @defaultsDB
+        //wrapper throws for a key without a value (C18), so the log longo keys always have one
+        [db registerDefaults:@{@"IsaCloudLogLongo": @NO, @"IsaCloudLogLongoHours": @12}];
     });
     return db;
 }
@@ -2809,6 +2863,8 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
             //isaCloud: C20, the logger works again: write the database accesses recorded while it was frozen (C21: see disarm)
             [HelperTools isaCloudDisarmDbAccessRecording];
 
+            //isaCloud: C32, the app runs again: timeout transactions may start again
+            [HelperTools isaCloudSetShuttingDown:NO];
             DDLogVerbose(@"Posting kMonalUnfrozen notification now...");
             [[NSNotificationCenter defaultCenter] postNotificationName:kMonalUnfrozen object:nil];
         }
@@ -2817,6 +2873,7 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
             //isaCloud: C21, the freeze was announced (prepareForFreeze armed the recording) but the app was never suspended:
             //stop the recording and let the deferred work (download state, account avatar) run now
             [HelperTools isaCloudDisarmDbAccessRecording];
+            [HelperTools isaCloudSetShuttingDown:NO];           //isaCloud: C32, the app runs again
             DDLogVerbose(@"Posting kIsaCloudFreezeEndedWithoutSuspension notification now...");
             [[NSNotificationCenter defaultCenter] postNotificationName:kIsaCloudFreezeEndedWithoutSuspension object:nil];
         }
@@ -2840,6 +2897,17 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
 +(BOOL) isaCloudSuspendedFast
 {
     return atomic_load(&_isaCloudSuspendedFast);
+}
+
+//isaCloud: C32, lock free read and write of the shutdown flag (see xmpp.m, updateIqHandlerTimeouts)
++(BOOL) isaCloudShuttingDown
+{
+    return atomic_load(&_isaCloudShuttingDown);
+}
+
++(void) isaCloudSetShuttingDown:(BOOL) value
+{
+    atomic_store(&_isaCloudShuttingDown, value ? true : false);
 }
 
 //isaCloud: C20, load addresses of the monalxmpp and the main executable images, computed once, so that the return
@@ -2913,19 +2981,18 @@ static NSString* _isaCloudImageLoadAddresses = nil;
         [self isaCloudImageLoadAddresses]
     ];
 
-    //isaCloud: no DDLog here, only the file below and os_log (which does not depend on the suspended queue)
-    NSURL* fileURL = [self getContainerURLForPathComponents:@[@"isacloud-db-after-freeze.log"]];
-    FILE* file = fopen(fileURL.path.UTF8String, "a");
-    if(file != NULL)
-    {
-        fseek(file, 0, SEEK_END);
-        if(ftell(file) < 64 * 1024)
-        {
-            fputs(line.UTF8String, file);
-            fputs("\n", file);
-        }
-        fclose(file);
-    }
+    //isaCloud: C32, no file I/O and no DDLog here: the line waits in memory and one async flush writes it to the file
+    os_unfair_lock_lock(&_isaCloudRecordLock);
+    if(_isaCloudPendingRecords == nil)
+        _isaCloudPendingRecords = [NSMutableArray new];
+    [_isaCloudPendingRecords addObject:line];
+    BOOL scheduleFlush = !_isaCloudFlushScheduled;
+    _isaCloudFlushScheduled = YES;
+    os_unfair_lock_unlock(&_isaCloudRecordLock);
+    if(scheduleFlush)
+        dispatch_async(isaCloudRecordQueue(), ^{
+            isaCloudFlushDbAccessRecords();
+        });
     os_log_error(OS_LOG_DEFAULT, "isaCloud C20: %{public}s", line.UTF8String);
 }
 
@@ -2933,6 +3000,10 @@ static NSString* _isaCloudImageLoadAddresses = nil;
 //Call only when the logging queue is running and outside any database lock
 +(void) isaCloudDumpDbAfterFreezeRecords
 {
+    //C32: write the lines still waiting in memory first (the queue is ours and never suspended)
+    dispatch_sync(isaCloudRecordQueue(), ^{
+        isaCloudFlushDbAccessRecords();
+    });
     NSURL* fileURL = [self getContainerURLForPathComponents:@[@"isacloud-db-after-freeze.log"]];
     NSString* content = [NSString stringWithContentsOfURL:fileURL encoding:NSUTF8StringEncoding error:nil];
     if(content == nil)
@@ -3248,6 +3319,9 @@ static char _isaCloudHangNames[ISA_HANG_MAX_THREADS][48];
     NSArray* directoryContents = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:containerUrl error:nil];
     for(NSString* file in directoryContents)
         DDLogVerbose(@"File %@/%@", containerUrl, file);
+
+    //isaCloud: optional long log (off by default), added after the rawlog so the rawlog stays the same
+    [MLLongLog startIfEnabled];
 }
 
 +(NSInteger) pendingCrashreportCount

@@ -33,9 +33,17 @@ class DebugDefaultDB: ObservableObject {
     
     @defaultsDB("debugNSNotifications")
     var debugNSNotifications: Bool
+
+    //isaCloud: optional long log (MLLongLog), off by default; the period is in hours (registered with the defaults)
+    @defaultsDB("IsaCloudLogLongo")
+    var longLogEnabled: Bool
+
+    @defaultsDB("IsaCloudLogLongoHours")
+    var longLogHours: Int
 }
 
 struct LogFilesView: View {
+    @ObservedObject var defaultDB = DebugDefaultDB()
     @State private var sortedLogFileInfos: [DDLogFileInfo] = []
     @State private var showShareSheet:Bool = false
     @State private var fileURL: URL?
@@ -47,7 +55,8 @@ struct LogFilesView: View {
     @State private var showingAvatarResetDoneAlert = false
     @State private var showingMetricsExportFailedAlert = false
     @State private var showingNoMeasurementsAlert = false
-    
+    @State private var showingNoLongLogAlert = false
+
     func refreshSortedLogfiles() {
         if let sortedLogFileInfos = HelperTools.fileLogger?.logFileManager.sortedLogFileInfos {
             self.sortedLogFileInfos = sortedLogFileInfos
@@ -114,6 +123,25 @@ struct LogFilesView: View {
                         }
                     }
                 }
+                //isaCloud: optional long log (off by default): a second, filtered text log per process, kept for 12 to 24 hours
+                Section(header: Text("Long Log"), footer: Text("Only turn this on when the team asks for it. It takes extra disk space (up to about 1 GB). It applies from the next time you open the app: close it and open it again.")) {
+                    Toggle(isOn: $defaultDB.longLogEnabled) {
+                        Text("Enable long log")
+                    }
+                    Picker("Period", selection: $defaultDB.longLogHours) {
+                        Text("2 h").tag(2)
+                        Text("6 h").tag(6)
+                        Text("12 h").tag(12)
+                        Text("24 h").tag(24)
+                    }
+                    Button("Share long log") {
+                        if let url = MLLongLog.export(forHours: defaultDB.longLogHours) {
+                            self.fileURL = url
+                        } else {
+                            showingNoLongLogAlert = true
+                        }
+                    }
+                }
                 Section(header: Text("Caches")) {
                     //isaCloud: the cached avatars live outside the database; this makes the app download them again (useful after
                     //importing a database, which brings the hashes but not the images)
@@ -170,6 +198,11 @@ struct LogFilesView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text("Use the app for a while (open it, send a message or a photo) and try again.")
+        }
+        .alert("No long log yet", isPresented: $showingNoLongLogAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Turn on the long log, close and open the app, use it for a while and try again.")
         }
         .alert("Metrics export failed", isPresented: $showingMetricsExportFailedAlert) {
             Button("OK", role: .cancel) {}

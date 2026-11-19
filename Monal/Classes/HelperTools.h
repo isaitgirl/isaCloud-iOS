@@ -95,6 +95,9 @@ NSDictionary* _Nullable dictionaryComprehension(NSDictionary* _Nullable dict, id
 +(BOOL) isaCloudSuspendedFast;
 +(void) isaCloudRecordDbAccessAfterFreeze:(NSString*) query;
 +(void) isaCloudDumpDbAfterFreezeRecords;
+//isaCloud: C32, YES from the start of the shutdown until the app runs again: no new timeout transaction (see xmpp.m)
++(BOOL) isaCloudShuttingDown;
++(void) isaCloudSetShuttingDown:(BOOL) value;
 //isaCloud: C30, stacks of all threads when the main thread does not answer while a UIKit background task runs
 +(void) isaCloudStartHangWatchdogWhile:(BOOL (^)(void)) stillNeeded;
 +(void) isaCloudHangWatchdogTick:(int) generation attempt:(int) attempt stillNeeded:(BOOL (^)(void)) stillNeeded;
