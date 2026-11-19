@@ -1,4 +1,4 @@
-# Estado atual e handoff (17/11/2026, build 117)
+# Estado atual e handoff (19/11/2026, build 118)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -8,8 +8,8 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 | | |
 |---|---|
 | Commit | o do **build 112** (aceita mensagem de qualquer aparelho OMEMO conhecido removido da lista, como o Android; bloqueia só aparelho marcado como não confiável e remetente com confiança explícita; log do motivo de recusa), tag `build-112`; ver `docs/analise-omemo-aparelho-removido.md`; `git log --oneline -3` |
-| TestFlight | **117** (17/11/2026, 15:40): relatório de crash por XMPP para `reports@isacloud.im` com o Compartilhar como plano B (PR 80, roadmap 177; análise em `docs/analise-relatorio-de-crash.md`); antes **116** (17/11/2026, 12:47): figurinha a partir de GIF (PR 78) e vídeo sem tela cinza no iOS 27 (PR 79 + PR 23 do fork); antes **115** (17/11/2026, 10:44; antes 114 às 09:34): freio das gravações de estado na sessão retomada (spinner ao enviar logo depois de abrir) e medições de desempenho (`isaCloud SPIN:`, Depuração → "Medições de desempenho"); ver `docs/analise-trafego-canais.md` |
-| `.dev` no iPhone | **117**, igual ao TestFlight (17/11/2026; **sem push**) |
+| TestFlight | **118** (19/11/2026, 10:07): correção do `0xdead10cc` dos timeouts no desligamento (C32), limpeza da abertura mais tarde (C31), registro do C20 sem I/O no SQL e log longo opcional na Depuração (`IsaCloudLogLongo`, desligado por padrão; PR 81). Análise em `docs/analise-log-perfil-12h.md` |
+| `.dev` no iPhone | **118**, igual ao TestFlight (19/11/2026; **sem push**) |
 | Simuladores | iPhone XR (iOS 18.6) com o código do build 100 (09/11/2026) e isaCloud iOS27 com o do build 94 (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261105-1036-linha-lido-2/` e `-1037-linha-lido-2/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
 | ExyteChat | `80602dd` na `isaCloud` (visualizador sem `TabView` paginado com um anexo só, PR 23, mudança nº 24; antes `3eb0aa1`: tamanho do arquivo nas mídias e nos áudios, PR 22; antes `7d3292b`: miniatura opcional dentro da citação, `Message.quotePreview`, PR 21; antes `e168ed8`: visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |

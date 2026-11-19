@@ -2,9 +2,9 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
-## 0.0.1 (build 118) — em teste no .dev (19/11/2026)
+## 0.0.1 (build 118) — 19/11/2026
 
-Branch `fix/c32-timeouts-e-log-longo`, em teste no `.dev`. Análise do C32 em `docs/analises-crashes.md`.
+Enviado ao TestFlight às 10:07 (PR 81, branch `fix/c32-timeouts-e-log-longo`; testado no `.dev` antes do envio). Análise do C32 em `docs/analises-crashes.md`.
 
 ### Corrigido
 - **Timeouts de IQ param no início do desligamento (C32).** `xmpp isaCloudBeginShutdownAndWaitForTimeouts` liga a flag `isaCloudShuttingDown` antes do `disconnectAll` ("All accounts idle", os quatro caminhos de congelamento) e espera até 1 s pela transação de `updateIqHandlerTimeouts` que estiver em andamento. A flag é zerada ao conectar (`xmpp connect`, `MLXMPPManager connectIfNecessary`) e na volta para o primeiro plano (`signalResumption`, `applicationWillEnterForeground`).
