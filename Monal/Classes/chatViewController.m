@@ -114,6 +114,36 @@
 
 @class HelperTools;
 
+//isaCloud: a selfie from the front camera is mirrored in the pixels before the upload, when "Mirror selfies" is on
+//(same rule as isaCloudPhotoData in SwiftuiHelpers.swift; iOS does not give apps its "Mirror Front Camera" setting)
+static UIImage* isaCloudMirroredIfSelfie(UIImage* image, UIImagePickerController* picker, NSDictionary<NSString*, id>* info)
+{
+    if(image == nil)
+        return image;
+    BOOL isSelfie = picker.cameraDevice == UIImagePickerControllerCameraDeviceFront;
+    NSDictionary* exif = info[UIImagePickerControllerMediaMetadata][@"{Exif}"];
+    if(!isSelfie && [exif[@"LensModel"] isKindOfClass:[NSString class]])
+        isSelfie = [[exif[@"LensModel"] lowercaseString] containsString:@"front"];
+    if(!isSelfie)
+        return image;
+    if(![[HelperTools defaultsDB] boolForKey:@"mirrorFrontCameraPhotos"])
+    {
+        DDLogInfo(@"Front camera photo sent as it is (option off)");
+        return image;
+    }
+    DDLogInfo(@"Selfie mirrored before sending (front camera, option on)");
+    UIGraphicsImageRendererFormat* format = [UIGraphicsImageRendererFormat defaultFormat];
+    format.scale = image.scale;
+    format.opaque = YES;
+    UIGraphicsImageRenderer* renderer = [[UIGraphicsImageRenderer alloc] initWithSize:image.size format:format];
+    return [renderer imageWithActions:^(UIGraphicsImageRendererContext* context) {
+        CGContextTranslateCTM(context.CGContext, image.size.width, 0);
+        CGContextScaleCTM(context.CGContext, -1, 1);
+        //drawInRect: already applies the orientation of the photo
+        [image drawInRect:CGRectMake(0, 0, image.size.width, image.size.height)];
+    }];
+}
+
 @implementation chatViewController
 
 enum chatViewControllerSections {
@@ -1691,6 +1721,7 @@ enum msgSentState {
         UIImage* selectedImage = info[UIImagePickerControllerEditedImage];
         if(!selectedImage)
             selectedImage = info[UIImagePickerControllerOriginalImage];
+        selectedImage = isaCloudMirroredIfSelfie(selectedImage, picker, info);
         [self addToUIQueue:@[@{
             @"type": @"image",
             @"preview": selectedImage,

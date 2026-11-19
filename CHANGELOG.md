@@ -2,6 +2,11 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## Próximo build
+
+### Adicionado
+- **Espelhar selfies (opção própria, ligada por padrão).** A câmera do iOS entrega a foto da frontal sem o espelho do ajuste "Espelhar câmera frontal" (EXIF orientation 6, só rotação), e não há API para o app ler esse ajuste. Por isso a opção `mirrorFrontCameraPhotos` (Ajustes → Anexos → "Espelhar selfies", padrão YES, migração no `MLXMPPManager` como a das outras chaves, C18) espelha na horizontal as fotos da câmera frontal antes do envio: `SwiftuiHelpers.swift` (`isaCloudPhotoData`, `UIImage.isaCloudMirroredHorizontally()`) e o caminho antigo `chatViewController.m` (`isaCloudMirroredIfSelfie`, alcançável pelo menu de debug `showNewChatView` desligado). O espelho vai nos pixels com orientação `.up`, não numa etiqueta EXIF. O vídeo não muda. Traduções pt-BR no override do isaCloud. Descrição em `docs/decisoes.md`, seção "Espelhar selfies".
+
 ## 0.0.1 (build 119) — 19/11/2026
 
 Enviado ao TestFlight às 14:45 (PR 82, branch `feature/criar-figurinha-com-gif`; testado no simulador e no `.dev` antes do envio).
