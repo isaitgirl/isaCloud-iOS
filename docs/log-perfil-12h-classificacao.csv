@@ -1,0 +1,716 @@
+decisao,categoria,classe_fonte,formato_da_mensagem,ocorrencias,bytes,pct_do_total
+ANEL,debug/verbose sem uso nas análises,xmpp,%@: %@,8229,6844420,1.11
+ANEL,debug/verbose sem uso nas análises,xmpp,readState unAckedStanza %@: %@,1357,1223613,0.198
+ANEL,debug/verbose sem uso nas análises,?,%@: %@,1645,1170416,0.19
+ANEL,debug/verbose sem uso nas análises,xmpp,NOT calling requestSMAck...,1321,883598,0.143
+ANEL,debug/verbose sem uso nas análises,DataLayer,count: %lu,1009,652830,0.106
+ANEL,debug/verbose sem uso nas análises,DataLayer,Trying to remove idle timer with id: %@,836,604916,0.098
+ANEL,debug/verbose sem uso nas análises,MLSQLite,db path %@,756,568719,0.092
+ANEL,debug/verbose sem uso nas análises,xmpp,Creating db transaction for delayed stanza handling of jid %@,607,483190,0.078
+ANEL,debug/verbose sem uso nas análises,xmpp,presence notice from %@,681,479526,0.078
+ANEL,debug/verbose sem uso nas análises,xmpp,Transaction for delayed stanza handling for jid %@ ended,607,477086,0.077
+ANEL,debug/verbose sem uso nas análises,DataLayer,caps count: %lu,661,455859,0.074
+ANEL,debug/verbose sem uso nas análises,MLPubSub,Processing pubsub data from jid '%@' for node '%@',566,451663,0.073
+ANEL,debug/verbose sem uso nas análises,MLPubSub,Handling pubsub data for node '%@',548,405372,0.066
+ANEL,debug/verbose sem uso nas análises,MLPubSub,All pubsub handlers called,548,391864,0.064
+ANEL,debug/verbose sem uso nas análises,MLPubSub,Handling publish,548,368848,0.06
+ANEL,debug/verbose sem uso nas análises,xmpp,RECV(%ld): %@,457,333107,0.054
+ANEL,debug/verbose sem uso nas análises,MLStreamRedirect,Waiting for flush of fd %d to complete...,438,315316,0.051
+ANEL,debug/verbose sem uso nas análises,xmpp,sendPing called - now inside receiveQueue,433,307732,0.05
+ANEL,debug/verbose sem uso nas análises,MLNotificationManager,notification manager got displayed messages notice with %lu entries,376,306052,0.05
+ANEL,debug/verbose sem uso nas análises,MLStreamRedirect,Flush on fd %d completed...,438,303052,0.049
+ANEL,debug/verbose sem uso nas análises,xmpp,no space to write. early return from writeFromQueue().,408,295077,0.048
+ANEL,debug/verbose sem uso nas análises,xmpp,sendPing called,433,281179,0.046
+ANEL,debug/verbose sem uso nas análises,ActiveChatsViewController,Reloading row at %@,343,257366,0.042
+ANEL,debug/verbose sem uso nas análises,MLMucProcessor,Updating muc contact...,343,251048,0.041
+ANEL,debug/verbose sem uso nas análises,MLMucProcessor,Removing from _joining[%@]: %@,318,239515,0.039
+ANEL,debug/verbose sem uso nas análises,xmpp,calling pinging requestSMAck...,339,234212,0.038
+ANEL,debug/verbose sem uso nas análises,xmpp,"removeAckedStanzasFromQueue: hvalue %@, lastOutboundStanza %@",297,225363,0.037
+ANEL,debug/verbose sem uso nas análises,DataLayer,[%@:%@] messageArray=%@,296,222834,0.036
+ANEL,debug/verbose sem uso nas análises,MLMucProcessor,Removing member '%@' from muc '%@'...,275,216834,0.035
+ANEL,debug/verbose sem uso nas análises,DataLayer,Removing member '%@' from muc '%@'...,275,213530,0.035
+ANEL,debug/verbose sem uso nas análises,xmpp,%@ --> realReadState before: used/available memory: %.3fMiB / %.3fMiB)...,271,210117,0.034
+ANEL,debug/verbose sem uso nas análises,xmpp,%@ --> realReadState after: used/available memory: %.3fMiB / %.3fMiB)...,271,209576,0.034
+ANEL,debug/verbose sem uso nas análises,xmpp,%@ --> readState before: used/available memory: %.3fMiB / %.3fMiB)...,271,206865,0.034
+ANEL,debug/verbose sem uso nas análises,xmpp,%@ --> readState after: used/available memory: %.3fMiB / %.3fMiB)...,271,206324,0.033
+ANEL,debug/verbose sem uso nas análises,?,RECV(%ld): %@,284,204056,0.033
+ANEL,debug/verbose sem uso nas análises,MLContact,Calculated ownDisplayName for '%@': %@,278,199531,0.032
+ANEL,debug/verbose sem uso nas análises,DataLayer,Decrementing idle timer %@(%@): %@,270,197887,0.032
+ANEL,debug/verbose sem uso nas análises,xmpp,Cleanup of sendQueue finished [internal],276,195796,0.032
+ANEL,debug/verbose sem uso nas análises,xmpp,Stream %@ open completed,272,194674,0.032
+ANEL,debug/verbose sem uso nas análises,MLMucProcessor,Removing from _creating[%@]: %@,257,194572,0.032
+ANEL,debug/verbose sem uso nas análises,MLContact,Own nickname in accounts table %@: '%@',278,194373,0.032
+ANEL,debug/verbose sem uso nas análises,MLProcessLock,Checking if remote %@ is running (path=%s)...,222,193269,0.031
+ANEL,debug/verbose sem uso nas análises,xmpp,Removing scramHandler...,276,191755,0.031
+ANEL,debug/verbose sem uso nas análises,xmpp,Cleaning up sendQueue [internal],276,191380,0.031
+ANEL,debug/verbose sem uso nas análises,MLXMPPManager,All accounts updated (inside barrier),258,190374,0.031
+ANEL,debug/verbose sem uso nas análises,xmpp,Cleanup of sendQueue finished,276,187792,0.03
+ANEL,debug/verbose sem uso nas análises,MLPubSub,Loading internal pubsub data,271,186676,0.03
+ANEL,debug/verbose sem uso nas análises,xmpp,Cleaning up sendQueue,276,183376,0.03
+ANEL,debug/verbose sem uso nas análises,MLImageManager,Loading avatar image at: %@,203,171288,0.028
+ANEL,debug/verbose sem uso nas análises,DataLayer,nothing worked --> message not found,218,170996,0.028
+ANEL,debug/verbose sem uso nas análises,MLMucProcessor,Muc %@ is already configured to be of type '%@' ('%@')...,197,169707,0.028
+ANEL,debug/verbose sem uso nas análises,MLOMEMO,Processing omemo devices from %@: %@,207,168170,0.027
+ANEL,debug/verbose sem uso nas análises,xmpp,Ignoring CSI transition from INactive to INactive,226,165812,0.027
+ANEL,debug/verbose sem uso nas análises,MLMessageProcessor,"Empty stanza ID, using random UUID instead",202,159259,0.026
+ANEL,debug/verbose sem uso nas análises,MLPubSubProcessor,Got new avatar metadata from '%@',195,153275,0.025
+ANEL,debug/verbose sem uso nas análises,xmpp,Updating lastStanzaId of user archive in database to: %@,195,152916,0.025
+ANEL,debug/verbose sem uso nas análises,DataLayer,Added idle timer %@(%@): %@,197,152483,0.025
+ANEL,debug/verbose sem uso nas análises,HelperTools,calling handler for timer: %@,167,149820,0.024
+ANEL,debug/verbose sem uso nas análises,MLOMEMO,Removed devices detected: %@,207,145387,0.024
+ANEL,debug/verbose sem uso nas análises,DataLayer,stanzaid provided,194,144810,0.023
+ANEL,debug/verbose sem uso nas análises,xmpp,Muc marked as read: %@,201,136847,0.022
+ANEL,debug/verbose sem uso nas análises,MLMessageProcessor,Not a carbon copy of a muc pm for contact: %@,153,133387,0.022
+ANEL,debug/verbose sem uso nas análises,HT,Checking fast signature remote: %@ local: %@ rawValue: %@,135,131663,0.021
+ANEL,debug/verbose sem uso nas análises,NotificationService,updating app badge via updateUnread,167,124595,0.02
+ANEL,debug/verbose sem uso nas análises,NotificationService,Adding badge value: %lu,167,120086,0.019
+ANEL,debug/verbose sem uso nas análises,NotificationService,Raw badge value: %lu,167,119251,0.019
+ANEL,debug/verbose sem uso nas análises,MLMucProcessor,_firstJoin set: %@ _noUpdateBookmarks set: %@,146,110535,0.018
+ANEL,debug/verbose sem uso nas análises,DataLayer,"Stanzaid not found, trying messageid",138,106764,0.017
+ANEL,debug/verbose sem uso nas análises,xmpp,SCRAM/HT says this server-final-message/responder-message was correct,135,104933,0.017
+ANEL,debug/verbose sem uso nas análises,ActiveChatsViewController,Not calling next block: there is none...,143,104641,0.017
+ANEL,debug/verbose sem uso nas análises,MLOMEMO,Replaying queuedKeyTransportElements for all jids: %@,134,99558,0.016
+ANEL,debug/verbose sem uso nas análises,ActiveChatsViewController,Queue is empty...,143,98063,0.016
+ANEL,debug/verbose sem uso nas análises,MLOMEMO,"Current prekey count: %u, lastPreKeyId=%d",135,97407,0.016
+ANEL,debug/verbose sem uso nas análises,MLBasePaser,"Document start, xml version: %@",139,96498,0.016
+ANEL,debug/verbose sem uso nas análises,xmpp,Checking remote process lock...,139,95802,0.016
+ANEL,debug/verbose sem uso nas análises,MLMessageProcessor,Added or LMC-replaced message in history db: %@,95,91398,0.015
+ANEL,debug/verbose sem uso nas análises,MLMucProcessor,Checking if avatar hash in presence '%@' equals stored hash '%@'...,97,83724,0.014
+ANEL,debug/verbose sem uso nas análises,MLMucProcessor,Publishing own affiliation/role change...,113,83212,0.013
+ANEL,debug/verbose sem uso nas análises,MLXMPPManager,"Not pinging %@ after 1s, parse queue frozen!",104,81548,0.013
+ANEL,debug/verbose sem uso nas análises,MLOMEMO,Checked trust of devices of %@: %@,97,81401,0.013
+ANEL,debug/verbose sem uso nas análises,MLOMEMO,Current state: %@,81,78968,0.013
+ANEL,debug/verbose sem uso nas análises,MLOMEMO,New state: %@,81,78512,0.013
+ANEL,debug/verbose sem uso nas análises,MLHandler,Calling invalidation %@...,100,76505,0.012
+ANEL,debug/verbose sem uso nas análises,xmpp,1:1 marked as read: %@,110,75079,0.012
+ANEL,debug/verbose sem uso nas análises,xmpp,Updating lastStanzaId of muc archive %@ in database to: %@,87,71176,0.012
+ANEL,debug/verbose sem uso nas análises,ActiveChatsViewController,pinnedChatsArray=%@,78,68245,0.011
+ANEL,debug/verbose sem uso nas análises,DataLayer,"setting sent %@, %@",88,66648,0.011
+ANEL,debug/verbose sem uso nas análises,HelperTools,QOS level: %@ = %d,90,62710,0.01
+ANEL,debug/verbose sem uso nas análises,MLDNSLookup,"pri=%d, w=%d, port=%d, target=%s, ttl=%u, flags=%u ",68,61519,0.01
+ANEL,debug/verbose sem uso nas análises,HelperTools,Success submitting BGTask request %@,77,61018,0.01
+ANEL,debug/verbose sem uso nas análises,MLNotificationManager,Building INPerson for contact: %@ using display name: %@,66,58885,0.01
+ANEL,debug/verbose sem uso nas análises,HelperTools,File %@/%@,73,58703,0.01
+ANEL,debug/verbose sem uso nas análises,DataLayer,%@,74,58066,0.009
+ANEL,debug/verbose sem uso nas análises,MLNotificationManager,Current NotificationPrivacySettingOption: %d,72,55443,0.009
+ANEL,debug/verbose sem uso nas análises,MLOMEMO,Replaying queuedSessionRepairs: %@,68,54181,0.009
+ANEL,debug/verbose sem uso nas análises,MLNotificationManager,Using avatar image: %@,66,53932,0.009
+ANEL,debug/verbose sem uso nas análises,MLNotificationManager,Using own avatar image: %@,66,52878,0.009
+ANEL,debug/verbose sem uso nas análises,MLOMEMO,Returning recipient device map: %@,56,52002,0.008
+ANEL,debug/verbose sem uso nas análises,MLOMEMO,Own devicelist for account %@ is now: %@,59,51394,0.008
+ANEL,debug/verbose sem uso nas análises,MLNotificationManager,Building INPerson for self contact...,66,49398,0.008
+ANEL,debug/verbose sem uso nas análises,MLMessageProcessor,"Ignoring subject, nothing changed for %@",56,48825,0.008
+ANEL,debug/verbose sem uso nas análises,MLNotificationManager,Removing pending/delivered notification for message '%@' with identifier '%@'...,51,48567,0.008
+ANEL,debug/verbose sem uso nas análises,IPC,writeIpcMessage:%@ withData:%@ andResponseId:%@ to:%@,62,47651,0.008
+ANEL,debug/verbose sem uso nas análises,MLXMPPManager,manager disconnecAll done (inside barrier),66,47052,0.008
+ANEL,debug/verbose sem uso nas análises,MLDNSLookup,DNS select() returned %d,68,46612,0.008
+ANEL,debug/verbose sem uso nas análises,MLOMEMO,"Trust state: tofuOnlyRecipientAllowed=%@, tofuOnlyRecipients=%@",56,44712,0.007
+ANEL,debug/verbose sem uso nas análises,MLXMPPManager,manager disconnecAll done,66,43423,0.007
+ANEL,debug/verbose sem uso nas análises,MLXMPPManager,manager disconnecAll,66,42764,0.007
+ANEL,debug/verbose sem uso nas análises,MLXMPPManager,manager connectIfNecessary done,58,39519,0.006
+ANEL,debug/verbose sem uso nas análises,MLXMPPManager,manager connectIfNecessary,58,38924,0.006
+ANEL,debug/verbose sem uso nas análises,MLOMEMO,Decrypting using: rid=%u --> messageKey=%@ rid=%u --> isPreKey=%@,41,37239,0.006
+ANEL,debug/verbose sem uso nas análises,MLMucProcessor,This room is non-anonymous: everybody can see all jids...,47,36227,0.006
+ANEL,debug/verbose sem uso nas análises,MLContact,Calculated contactDisplayName for '%@': %@,46,34671,0.006
+ANEL,debug/verbose sem uso nas análises,MLNotificationManager,notification manager should show notification for: %@,38,34285,0.006
+ANEL,debug/verbose sem uso nas análises,MLOMEMO,Removing deviceid %@ on jid %@ from queuedSessionRepairs (we successfully decrypted a message)...,34,30700,0.005
+ANEL,debug/verbose sem uso nas análises,xmpp,initSM3 done,47,30025,0.005
+ANEL,debug/verbose sem uso nas análises,?,notification manager should show notification for: %@,59,29891,0.005
+ANEL,debug/verbose sem uso nas análises,MLPubSubProcessor,Got new mds displayed status from '%@' (should be own jid)...,35,29341,0.005
+ANEL,debug/verbose sem uso nas análises,MLMessageProcessor,Marked as read: %@,36,28404,0.005
+ANEL,debug/verbose sem uso nas análises,MonalAppDelegate,got didReceiveRemoteNotification: %@,34,28238,0.005
+ANEL,debug/verbose sem uso nas análises,xmpp,"ping delay expired, retrying ping.",39,26269,0.004
+ANEL,debug/verbose sem uso nas análises,MLNotificationManager,not showing notification: this contact got muted,31,25794,0.004
+ANEL,debug/verbose sem uso nas análises,MLDNSLookup,Querying DNS for xmpps AND xmpp records...,34,25618,0.004
+ANEL,debug/verbose sem uso nas análises,NotificationService,done freezing: %@,34,25357,0.004
+ANEL,debug/verbose sem uso nas análises,MLDNSLookup,SRV DNS queries completed (xmpps AND xmpp)...,34,25074,0.004
+ANEL,debug/verbose sem uso nas análises,NotificationService,freezing: %@,34,25017,0.004
+ANEL,debug/verbose sem uso nas análises,MLDNSLookup,Lowest ttl for SRV records: %u,34,24835,0.004
+ANEL,debug/verbose sem uso nas análises,MLSignalStore,Cleaning up devices: %@,34,24361,0.004
+ANEL,debug/verbose sem uso nas análises,MLSignalStore,Loading signed prekey %lu,34,23953,0.004
+ANEL,debug/verbose sem uso nas análises,MLOMEMO,Deviceid of this device: %@,34,23295,0.004
+ANEL,debug/verbose sem uso nas análises,MLOMEMO,Adding encryption for devices of %@: %@,30,23142,0.004
+ANEL,debug/verbose sem uso nas análises,MLNotificationManager,not showing notification: showAlert is NO,28,22882,0.004
+ANEL,debug/verbose sem uso nas análises,DataLayer,"setting received confrmed %@, %@",29,22821,0.004
+ANEL,debug/verbose sem uso nas análises,ActiveChatsViewController,moving already present contact...,31,22784,0.004
+ANEL,debug/verbose sem uso nas análises,MLNotificationQueue,Calling direct handlers for notification created in the same queue (%@): %@,26,22639,0.004
+ANEL,debug/verbose sem uso nas análises,xmpp,Called from extension: CSI inactive,32,22162,0.004
+ANEL,debug/verbose sem uso nas análises,MLNotificationManager,Using user configured alert sound: %@,27,21778,0.004
+ANEL,debug/verbose sem uso nas análises,MLMessageProcessor,"Searching for history ID of messageIdOrStanzaId=%@, inChat=%@",23,21611,0.004
+ANEL,debug/verbose sem uso nas análises,MLIQProcessor,Setting subscription status '%@' (ask=%@) for contact %@,26,21194,0.003
+ANEL,debug/verbose sem uso nas análises,MLNotificationManager,Publishing communication notification with id %@,24,21165,0.003
+ANEL,debug/verbose sem uso nas análises,DataLayer,"For contact %@ and account %@, intend to persist these groups: %@",26,21142,0.003
+ANEL,debug/verbose sem uso nas análises,MLMessageProcessor,Setting showAlert to NO,28,20978,0.003
+ANEL,debug/verbose sem uso nas análises,MLIQProcessor,Setting roster groups for contact %@: %@,26,20206,0.003
+ANEL,debug/verbose sem uso nas análises,MLIQProcessor,Adding contact %@ (%@) to database,26,19894,0.003
+ANEL,debug/verbose sem uso nas análises,MLNotificationManager,Raw badge value: %@,27,19352,0.003
+ANEL,debug/verbose sem uso nas análises,ChatView,Sending chatstate isTyping=%i,31,18786,0.003
+ANEL,debug/verbose sem uso nas análises,MLMessageProcessor,Marked as displayed: %@,20,18103,0.003
+ANEL,debug/verbose sem uso nas análises,DataLayer,Returning newest historyId (no stanzaid/messageid given),23,18031,0.003
+ANEL,debug/verbose sem uso nas análises,ChatViewHelpers,Sending MDS (and possibly XEP-0333 displayed marker) for messages: %@,19,15989,0.003
+ANEL,debug/verbose sem uso nas análises,MLContact,Setting new avatar for %@,21,15859,0.003
+ANEL,debug/verbose sem uso nas análises,MLXMPPManager,Notifying active chats of change for contact %@,18,15527,0.003
+ANEL,debug/verbose sem uso nas análises,HelperTools,"Replaced unhandled exception handler, old handler: %p, new handler: %p",18,14546,0.002
+ANEL,debug/verbose sem uso nas análises,MLCrashReporter,Trying to send crash reports...,21,14194,0.002
+ANEL,debug/verbose sem uso nas análises,MLMucProcessor,Got latest muc stanza id to prime database with: %@,17,14046,0.002
+ANEL,debug/verbose sem uso nas análises,xmpp,sending new outgoing message %@ to %@,18,13999,0.002
+ANEL,debug/verbose sem uso nas análises,HelperTools,Current logfile: %@,17,13973,0.002
+ANEL,debug/verbose sem uso nas análises,MLXMPPManager,Message added to history with id %ld,18,13755,0.002
+ANEL,debug/verbose sem uso nas análises,HelperTools,KSCrash installing handler with callback: %p,18,13629,0.002
+ANEL,debug/verbose sem uso nas análises,HelperTools,KSCrash data files: %@,18,13521,0.002
+ANEL,debug/verbose sem uso nas análises,NotificationService,Feeding next handler,19,13179,0.002
+ANEL,debug/verbose sem uso nas análises,MLOMEMO,Adding encryption for OWN (%@) devices to contactDeviceMap: %@,15,13063,0.002
+ANEL,debug/verbose sem uso nas análises,MLXMPPManager,Current timezone name: '%@'...,18,13052,0.002
+ANEL,debug/verbose sem uso nas análises,MLMucProcessor,Ignoring empty item/jid: %@,16,13036,0.002
+ANEL,debug/verbose sem uso nas análises,NotificationService,freezeAllParseQueues done (inside barrier),17,12993,0.002
+ANEL,debug/verbose sem uso nas análises,?,Decrypted: %@,28,12783,0.002
+ANEL,debug/verbose sem uso nas análises,HelperTools,KSCrash report files: %@,18,12765,0.002
+ANEL,debug/verbose sem uso nas análises,MonalAppDelegate,stopping UIKit _bgTask,17,11678,0.002
+ANEL,debug/verbose sem uso nas análises,MLFiletransfer,Could not find cache file for url '%@' having mime type '%@'...,13,11366,0.002
+ANEL,debug/verbose sem uso nas análises,?,Got nickname of %@: %@,24,10904,0.002
+ANEL,debug/verbose sem uso nas análises,MLNotificationManager,not showing notification: chat is archived,13,10667,0.002
+ANEL,debug/verbose sem uso nas análises,MLNotificationManager,Checking for 'delivered' notification state for '%@'...,12,10560,0.002
+ANEL,debug/verbose sem uso nas análises,MLNotificationManager,Checking for 'pending' notification state for '%@'...,12,10512,0.002
+ANEL,debug/verbose sem uso nas análises,xmpp,"bareJid=%@, resource=%@, fullJid=%@",13,10391,0.002
+ANEL,debug/verbose sem uso nas análises,MLMessageProcessor,Decrypted: %@,13,10012,0.002
+ANEL,debug/verbose sem uso nas análises,MLNotificationManager,Notification state check for '%@' completed...,12,10008,0.002
+ANEL,debug/verbose sem uso nas análises,MLFiletransfer,Updating db and sending out kMonalMessageFiletransferUpdateNotice,12,9620,0.002
+ANEL,debug/verbose sem uso nas análises,MLPubSub,Publishing item on node '%@': %@,10,9517,0.002
+ANEL,debug/verbose sem uso nas análises,DataLayer,Setting mime type '%@' and size %@ for history id %@,12,9488,0.002
+ANEL,debug/verbose sem uso nas análises,MLImageManager,Creating shared image manager instance...,12,8963,0.001
+ANEL,debug/verbose sem uso nas análises,xmpp,Sending display marker: %@,9,8871,0.001
+ANEL,debug/verbose sem uso nas análises,?,Got MUC subject for %@: '%@',15,8603,0.001
+ANEL,debug/verbose sem uso nas análises,ActiveChatsViewController,active chats view will appear,12,8361,0.001
+ANEL,debug/verbose sem uso nas análises,ActiveChatsViewController,active chats view did appear,12,8325,0.001
+ANEL,debug/verbose sem uso nas análises,ActiveChatsViewController,Dismissing view controller hierarchy: %@,10,7589,0.001
+ANEL,debug/verbose sem uso nas análises,ActiveChatsViewController,View chain completely dismissed...,10,7519,0.001
+ANEL,debug/verbose sem uso nas análises,ChatView,ChatView got new message notice %@,8,7481,0.001
+ANEL,debug/verbose sem uso nas análises,MLProcessLock,"Process still locked, doing nothing...",11,7328,0.001
+ANEL,debug/verbose sem uso nas análises,xmpp,Ignoring CSI transition from active to active,10,7240,0.001
+ANEL,debug/verbose sem uso nas análises,ChatView,ChatView of chat %@ received %@,11,7122,0.001
+ANEL,debug/verbose sem uso nas análises,ActiveChatsViewController,active chats view will disappear,10,7059,0.001
+ANEL,debug/verbose sem uso nas análises,MonalAppDelegate,RUNNING BGREFRESHING LAUNCH HANDLER,10,7036,0.001
+ANEL,debug/verbose sem uso nas análises,HelperTools,"KSCrash: _origLogfilePath=%s, _logfilePath=%s",7,6541,0.001
+ANEL,debug/verbose sem uso nas análises,?,notification manager should show notification in background: %@,13,6541,0.001
+ANEL,debug/verbose sem uso nas análises,?,"carbon extracted, messageNode is now: %@",8,6169,0.001
+ANEL,debug/verbose sem uso nas análises,MLStream,"nw_framer_parse_input got callback with is_complete:%@, length=%zu",8,6080,0.001
+ANEL,debug/verbose sem uso nas análises,MLStream,dispatching async call to nw_framer_parse_input into framer queue,8,5966,0.001
+ANEL,debug/verbose sem uso nas análises,MLStream,now calling nw_framer_parse_input inside framer queue,8,5864,0.001
+ANEL,debug/verbose sem uso nas análises,MLFiletransfer,Background filetransfer completed: %@,6,5719,0.001
+ANEL,debug/verbose sem uso nas análises,MLNotificationManager,Using muc avatar image: %@,6,5015,0.001
+ANEL,debug/verbose sem uso nas análises,?,Got unhandled muc status code in presence from %@: %@,10,4944,0.001
+ANEL,debug/verbose sem uso nas análises,MonalAppDelegate,stopping backgroundProcessingTask: %@,6,4608,0.001
+ANEL,debug/verbose sem uso nas análises,?,Quiet error (no banner): %@,8,4596,0.001
+ANEL,debug/verbose sem uso nas análises,MLNotificationManager,notification manager should show notification in background: %@,5,4475,0.001
+ANEL,debug/verbose sem uso nas análises,MonalAppDelegate,Dispatching to main queue...,6,4344,0.001
+ANEL,debug/verbose sem uso nas análises,MonalAppDelegate,Now entered @synchronized(self) block...,6,4344,0.001
+ANEL,debug/verbose sem uso nas análises,MonalAppDelegate,Waiting for @synchronized(self)...,6,4272,0.001
+ANEL,debug/verbose sem uso nas análises,MLDelayableTimer,Paused timer: %@ (remaining time: %@),5,4183,0.001
+ANEL,debug/verbose sem uso nas análises,DataLayer,"Updating occupant_id of message_history_id %@ to %@ for (account=%@, messageid=%@, inbound=%d)...",4,3924,0.001
+ANEL,debug/verbose sem uso nas análises,MLMessageProcessor,Managed to update stanzaid of message (or stanzaid already known): %@,4,3900,0.001
+ANEL,debug/verbose sem uso nas análises,DataLayer,"Updating stanzaid of message_history_id %@ to %@ for (account=%@, messageid=%@, inbound=%d)...",4,3868,0.001
+ANEL,debug/verbose sem uso nas análises,?,Got mds displayed element for chat %@ by %@: %@,6,3251,0.001
+ANEL,debug/verbose sem uso nas análises,DataLayer,stanzaid provided and could be found: %@,4,3220,0.001
+ANEL,debug/verbose sem uso nas análises,MLStream,Got new input for framer: %@,4,3116,0.001
+ANEL,debug/verbose sem uso nas análises,DataLayer,found by origin-id or messageid,4,3088,0.001
+ANEL,debug/verbose sem uso nas análises,MLStream,"Framer is the first one, using it...",4,3052,0.0
+ANEL,debug/verbose sem uso nas análises,MLStream,Calling nw_framer_write_output_data() in COLD path...,4,2976,0.0
+ANEL,debug/verbose sem uso nas análises,MLMessage,Updating stanzaid of %p: %@,4,2940,0.0
+ANEL,debug/verbose sem uso nas análises,MLStream,Switching async to framer thread in COLD path...,4,2914,0.0
+ANEL,debug/verbose sem uso nas análises,MLStream,Returning from write in COLD path: %zu,4,2834,0.0
+ANEL,debug/verbose sem uso nas análises,MLMucProcessor,"No avatar available for %@ (hash %@), failed attempts in a row: %ld",3,2773,0.0
+ANEL,debug/verbose sem uso nas análises,xmpp,iStream done draining %ld bytes,4,2726,0.0
+ANEL,debug/verbose sem uso nas análises,ChatView,Got omemo fetching update: %@ --> %@,3,2726,0.0
+ANEL,debug/verbose sem uso nas análises,MLNotificationManager,Publishing sound-but-no-body notification with id %@,3,2654,0.0
+ANEL,debug/verbose sem uso nas análises,MLNotificationManager,not showing notification and only playing sound: chat is open,3,2568,0.0
+ANEL,debug/verbose sem uso nas análises,NotificationService,"Main app already in foreground, sleeping for 5 seconds and trying again",3,2448,0.0
+ANEL,debug/verbose sem uso nas análises,MLFiletransfer,Tempstoring file at %@,3,2391,0.0
+ANEL,debug/verbose sem uso nas análises,MLHTTPRequest,Calling: %@ %@,3,2383,0.0
+ANEL,debug/verbose sem uso nas análises,MLMucProcessor,Asking the vcard of %@ for avatar hash %@...,3,2370,0.0
+ANEL,debug/verbose sem uso nas análises,MLStream,ignoring schedule_read call because connection is closed: %@,3,2311,0.0
+ANEL,debug/verbose sem uso nas análises,MLFiletransfer,Requesting file upload slot for mimeType %@,3,2299,0.0
+ANEL,debug/verbose sem uso nas análises,MLStreamRedirect,%@,3,2270,0.0
+ANEL,debug/verbose sem uso nas análises,MLFiletransfer,Reading file data into NSData object,3,2202,0.0
+ANEL,debug/verbose sem uso nas análises,NotificationService,Pinging main app again,3,2151,0.0
+ANEL,debug/verbose sem uso nas análises,?,Calculated contactDisplayName for '%@': %@,5,2143,0.0
+ANEL,debug/verbose sem uso nas análises,MonalAppDelegate,stopping backgroundRefreshingTask,3,2127,0.0
+ANEL,debug/verbose sem uso nas análises,?,notification manager should show notification in foreground: %@,4,2072,0.0
+ANEL,debug/verbose sem uso nas análises,ChatView,"Rechecking omemo support with alert, if needed...",3,1884,0.0
+ANEL,debug/verbose sem uso nas análises,MLFiletransfer,Creating hardlinking dir struct at '%@'...,2,1866,0.0
+ANEL,debug/verbose sem uso nas análises,ChatView,Sending chatstate isTyping=false,3,1839,0.0
+ANEL,debug/verbose sem uso nas análises,MLImageManager,wrote image to file: %@,2,1711,0.0
+ANEL,debug/verbose sem uso nas análises,ChatView,Checking if we can react to: %@ --> %@,2,1534,0.0
+ANEL,debug/verbose sem uso nas análises,MLXMPPManager,manager pinging %@,2,1465,0.0
+ANEL,debug/verbose sem uso nas análises,ActiveChatsViewController,segueToIntroScreensIfNeeded got called...,2,1464,0.0
+ANEL,debug/verbose sem uso nas análises,MonalAppDelegate,stopping backgroundProcessingTask,2,1419,0.0
+ANEL,debug/verbose sem uso nas análises,MonalAppDelegate,RUNNING BGPROCESSING LAUNCH HANDLER,2,1406,0.0
+ANEL,debug/verbose sem uso nas análises,IPC,Got incoming darwin notification: %@,2,1400,0.0
+ANEL,debug/verbose sem uso nas análises,MonalAppDelegate,Not opening chat for contact %@,2,1390,0.0
+ANEL,debug/verbose sem uso nas análises,ActiveChatsViewController,active chats view did load,2,1370,0.0
+ANEL,debug/verbose sem uso nas análises,MonalAppDelegate,Active chats did load...,2,1316,0.0
+ANEL,debug/verbose sem uso nas análises,xmpp,Called in background: CSI inactive,2,1278,0.0
+ANEL,debug/verbose sem uso nas análises,?,"Message(%@) %@ with stanzaid %@ already existing, ignoring history update: %@",2,1013,0.0
+ANEL,debug/verbose sem uso nas análises,MonalAppDelegate,notification action '%@' triggered for %@,1,1004,0.0
+ANEL,debug/verbose sem uso nas análises,HelperTools,"KSCrash: _origProfilePath=%s, _profilePath=%s",1,975,0.0
+ANEL,debug/verbose sem uso nas análises,MLNotificationManager,notification manager should show notification in foreground: %@,1,921,0.0
+ANEL,debug/verbose sem uso nas análises,HelperTools,current audio route: %@,1,867,0.0
+ANEL,debug/verbose sem uso nas análises,MLXMPPManager,scheduling background fetching task to start app in background once our connectivity gets restored,1,812,0.0
+ANEL,debug/verbose sem uso nas análises,MLVoIPProcessor,Ignoring APNS voip token string for type %@: %@,1,805,0.0
+ANEL,debug/verbose sem uso nas análises,MLNotificationManager,Notification manager will NOT show notification for reaction: %@,1,805,0.0
+ANEL,debug/verbose sem uso nas análises,MLMessageProcessor,Message id to LMC-replace: %@,1,795,0.0
+ANEL,debug/verbose sem uso nas análises,MLOMEMO,Replaying queuedKeyTransportElements for %@: %@,1,787,0.0
+ANEL,debug/verbose sem uso nas análises,MLMessageProcessor,History id to LMC-replace: %@,1,765,0.0
+ANEL,debug/verbose sem uso nas análises,MLOMEMO,Sending KeyTransportElement to jid: %@,1,747,0.0
+ANEL,debug/verbose sem uso nas análises,MonalAppDelegate,Opening chat for contact %@,1,726,0.0
+ANEL,debug/verbose sem uso nas análises,MLVoIPProcessor,CXProvider: providerDidBegin with provider=%@,1,723,0.0
+ANEL,debug/verbose sem uso nas análises,MonalAppDelegate,"Stopping bg refreshing task, we are foregrounded now",1,720,0.0
+ANEL,debug/verbose sem uso nas análises,xmpp,Not sending XEP-0333 chat marker in channel...,1,701,0.0
+ANEL,debug/verbose sem uso nas análises,ActiveChatsViewController,initializing active chats class,1,692,0.0
+ANEL,debug/verbose sem uso nas análises,ChatView,Adding %lli messages that were saved while the chat view was not updating,1,687,0.0
+ANEL,debug/verbose sem uso nas análises,MLOMEMO,Removing device %@,1,682,0.0
+ANEL,debug/verbose sem uso nas análises,DataLayer,Removing all promises from the DB,1,655,0.0
+ANEL,ruído por stanza/objeto,MLSQLite,Running transaction trigger declared at %@: (%@),47628,39687807,6.436
+ANEL,ruído por stanza/objeto,MLSQLite,Added transaction trigger declared at %@: %@,47628,39592550,6.421
+ANEL,ruído por stanza/objeto,MLNotificationQueue,"Queueing notification: %@, object = %@, userInfo = %@",22717,21943512,3.559
+ANEL,ruído por stanza/objeto,MLNotificationQueue,Notifications in queue '%@': %@,22394,21401024,3.471
+ANEL,ruído por stanza/objeto,MLNotificationQueue,Done flushing %@ notifications in queue '%@',24296,18330555,2.973
+ANEL,ruído por stanza/objeto,MLNotificationQueue,"Flushing queue '%@', current stack: %@",24296,18087574,2.933
+ANEL,ruído por stanza/objeto,xmpp,Starting transaction for: %@,23685,16991468,2.756
+ANEL,ruído por stanza/objeto,xmpp,Started transaction for: %@,23685,16944104,2.748
+ANEL,ruído por stanza/objeto,xmpp,Ending transaction for: %@,23685,16896742,2.74
+ANEL,ruído por stanza/objeto,xmpp,Ended transaction for: %@,23685,16802003,2.725
+ANEL,ruído por stanza/objeto,xmpp,sendQueue is frozen now...,24394,16444214,2.667
+ANEL,ruído por stanza/objeto,xmpp,Freezing sendQueue...,24394,16200272,2.627
+ANEL,ruído por stanza/objeto,MLMucProcessor,Adding participant from muc(%@): %@,14905,14276414,2.315
+ANEL,ruído por stanza/objeto,MLMucProcessor,Got muc presence from full jid: %@,17852,13538945,2.196
+ANEL,ruído por stanza/objeto,MLMucProcessor,Publishing participants list update...,17702,12895371,2.091
+ANEL,ruído por stanza/objeto,SwiftHelpers,Adding observer for member '%@' in KVOObserver %@ with wrapped obj %@...,15332,11451899,1.857
+ANEL,ruído por stanza/objeto,xmpp,Stream %@ has event %lu,8649,6147838,0.997
+ANEL,ruído por stanza/objeto,DataLayer,"LastInteraction of %@: online=%@, idle=%@, globalIdle=%@",6926,5505415,0.893
+ANEL,ruído por stanza/objeto,MLMessage,"Singleton cache for message filled: %@, entry: %@",5106,4336095,0.703
+ANEL,ruído por stanza/objeto,MLStream,"Incoming data handler called with is_complete=%@, st_error=%@, content=%@",4566,4001692,0.649
+ANEL,ruído por stanza/objeto,SwiftHelpers,Calling objectWillChange.send() for obj: %@,4852,3747547,0.608
+ANEL,ruído por stanza/objeto,MLStream,"nw_connection_receive got callback with is_complete:%@, receive_error=%@, length=%zu",4558,3703614,0.601
+ANEL,ruído por stanza/objeto,xmpp,Stream %@ has bytes to read,4434,3125659,0.507
+ANEL,ruído por stanza/objeto,MLStream,calling nw_connection_receive,4560,3092086,0.501
+ANEL,ruído por stanza/objeto,MLMucProcessor,Removing participant from muc(%@): %@,3358,3070790,0.498
+ANEL,ruído por stanza/objeto,xmpp,XML parser returned...,4425,2960014,0.48
+ANEL,ruído por stanza/objeto,xmpp,Stream %@ has space to write,3940,2832146,0.459
+ANEL,ruído por stanza/objeto,xmpp,no entries in _outputQueue. early return from writeFromQueue().,3804,2821960,0.458
+ANEL,ruído por stanza/objeto,xmpp,tried to send empty message. returning without doing anything.,3804,2810547,0.456
+ANEL,ruído por stanza/objeto,xmpp,no entries in _outputQueue. trying to send half-sent data.,3804,2783919,0.451
+ANEL,ruído por stanza/objeto,MLStream,Calling nw_connection_send() in hot path...,3825,2757193,0.447
+ANEL,ruído por stanza/objeto,MLSQLite,Triggering db checkpoint at %d for: %@,3233,2714961,0.44
+ANEL,ruído por stanza/objeto,MLStream,Returning from write in hot path: %zu,3825,2709853,0.439
+ANEL,ruído por stanza/objeto,MLStream,Write completed...,3829,2599220,0.422
+ANEL,ruído por stanza/objeto,xmpp,removing sent %@ entry from _outputQueue,3696,2597699,0.421
+ANEL,ruído por stanza/objeto,MLSQLite,Checkpointing database: %@,2974,2460123,0.399
+ANEL,ruído por stanza/objeto,MLMessage,Handling global refresh for MLMessage: %@,2822,2358990,0.383
+ANEL,ruído por stanza/objeto,xmpp,iterating _outputQueue,3432,2264730,0.367
+ANEL,ruído por stanza/objeto,MLSignalStore,"Getting trust level for: accountID=%@, deviceId=%@, name=%@, identityKey=%@",2054,1909087,0.31
+ANEL,ruído por stanza/objeto,MLNotificationQueue,Promoting all %lu direct handlers for '%@' to next queue: %@,1421,1222704,0.198
+ANEL,ruído por stanza/objeto,MLDelayableTimer,Could not invalidate already invalid timer: %@,1404,1213888,0.197
+ANEL,ruído por stanza/objeto,xmpp,DISPATCHING %@ OPERATION ON RECEIVE QUEUE %@: %lu,1598,1174877,0.191
+ANEL,ruído por stanza/objeto,MLDelayableTimer,Starting timer: %@,1420,1124570,0.182
+ANEL,ruído por stanza/objeto,MLHandler,Calling handler %@...,1492,1076297,0.175
+ANEL,ruído por stanza/objeto,xmpp,Adding %@ to iqHandlers...,1418,1042537,0.169
+ANEL,ruído por stanza/objeto,xmpp,Adding idle state notification to receive queue...,1360,1005111,0.163
+ANEL,ruído por stanza/objeto,MLDelayableTimer,Canceling timer: %@,1252,1000442,0.162
+ANEL,ruído por stanza/objeto,xmpp,Adding non-idle state notification to receive queue...,1155,874272,0.142
+ANEL,ruído por stanza/objeto,MLMucProcessor,Adding member '%@' to muc '%@'...,1071,845821,0.137
+ANEL,ruído por stanza/objeto,MLMucProcessor,Publishing new memberslist...,954,691985,0.112
+ANEL,ruído por stanza/objeto,MLDelayedDealloc,Done deallocating %lu objects in %.3fs (%lu still used objects (%lu roots) requeued for later deallocation)...,775,659801,0.107
+ANEL,ruído por stanza/objeto,MLContact,Updating lastInteractionTime=%@ of %@,788,644413,0.105
+ANEL,ruído por stanza/objeto,MLDelayedDealloc,"Deallocating %lu objects, %lu still used objects (%lu roots) requeued for later deallocation...",775,635776,0.103
+ANEL,ruído por stanza/objeto,ActiveChatsViewController,Prepending block with id %lu defined in %s at %@:%d to queue...,604,557166,0.09
+ANEL,ruído por stanza/objeto,DataLayer,Setting lastInteraction of %@/%@ to %@...,681,544342,0.088
+ANEL,ruído por stanza/objeto,ActiveChatsViewController,Block with id %lu defined in %s at %@:%d finished...,586,511010,0.083
+ANEL,ruído por stanza/objeto,ActiveChatsViewController,Calling block with id %lu defined in %s at %@:%d...,586,509838,0.083
+ANEL,ruído por stanza/objeto,xmpp,Updating lastInteraction from normal presence...,681,500256,0.081
+ANEL,ruído por stanza/objeto,ActiveChatsViewController,Looping to next block...,586,411200,0.067
+ANEL,ruído por stanza/objeto,ActiveChatsViewController,"Ignoring call to processViewQueue, block still running, showing: %@",496,390700,0.063
+ANEL,ruído por stanza/objeto,MLMessage,Deallocating %@,563,354200,0.057
+ANEL,ruído por stanza/objeto,?,Got muc presence from full jid: %@,556,259341,0.042
+ANEL,ruído por stanza/objeto,MLStream,Closing connection via nw_connection_send()...,274,196072,0.032
+ANEL,ruído por stanza/objeto,MLStream,%@: ignoring call to nw_connection state_changed_handler with state nw_connection_state_preparing: %@ (%@),141,131655,0.021
+ANEL,ruído por stanza/objeto,MLStream,"%@: ignoring call to nw_connection state_changed_handler, connection already closed: %@ --> %du, %@",134,123164,0.02
+ANEL,ruído por stanza/objeto,DataLayer,Resetting global lastInteraction of %@...,131,101045,0.016
+ANEL,ruído por stanza/objeto,MLStream,Calling nw_connection_start()...,139,95385,0.015
+ANEL,ruído por stanza/objeto,xmpp,Updating lastInteraction from unavailable presence...,108,80394,0.013
+ANEL,ruído por stanza/objeto,MLMucProcessor,Got muc presence from bare jid: %@,97,72959,0.012
+ANEL,ruído por stanza/objeto,MLFiletransferInfo,"Singleton cache for filetransferInfo filled: %@, entry: %@",82,67174,0.011
+ANEL,ruído por stanza/objeto,ActiveChatsViewController,"Ignoring call to processViewQueue, already showing: %@",23,18607,0.003
+ANEL,ruído por stanza/objeto,NotificationService,Deallocating notification service extension class,17,13224,0.002
+ANEL,ruído por stanza/objeto,MLStream,"%@: got nw_connection_state_waiting and ignoring it, see comments in code: %@ (%@)",4,3542,0.001
+ANEL,ruído por stanza/objeto,MLStream,%@: ignoring call to nw_connection state_changed_handler with state nw_connection_state_cancelled: %@ (%@),3,2799,0.0
+MANTER,aviso,DataLayer,"isaCloud: slow persistState serialization for account %@: %.0f ms, %lu bytes",1264,1000347,0.162
+MANTER,aviso,xmpp,Invalidating iq handler for iq id '%@',562,421692,0.068
+MANTER,aviso,MLMucProcessor,Got unhandled muc status code in presence from %@: %@,410,327535,0.053
+MANTER,aviso,HelperTools,isaCloud C20: %@,148,140181,0.023
+MANTER,aviso,xmpp,Waiting until TLS stream is connected before pipelining the auth element due to channel binding...,135,113838,0.018
+MANTER,aviso,xmpp,"Server supports SASL2 PLAIN, ignoring because this is insecure!",135,106278,0.017
+MANTER,aviso,xmpp,"All %lu SRV dns records tried, starting over again",135,96828,0.016
+MANTER,aviso,DataLayer,Could not get message_history_id for stanzaid/messageid %@,102,86962,0.014
+MANTER,aviso,xmpp,"Mds stanza-id by not equal to own bare jid, ignoring!",102,75514,0.012
+MANTER,aviso,MLStreamRedirect,Timeout waiting for UUID EOF marker at outfd %d!,70,53965,0.009
+MANTER,aviso,MLMucProcessor,Ignoring muc disco result for '%@' on account %@: not joining anymore...,52,47553,0.008
+MANTER,aviso,xmpp,"%@: Throwing away incoming stanza *before* queueing in parse queue, accountState < kStateConnected",40,33176,0.005
+MANTER,aviso,xmpp,"parseQueue overflow, delaying ping by 4 seconds.",40,28932,0.005
+MANTER,aviso,MonalAppDelegate,### Wakeup timer triggered for ID %@ ###,29,22666,0.004
+MANTER,aviso,xmpp,"Ping already delayed, ignoring additional ping...",23,16678,0.003
+MANTER,aviso,MLDelayableTimer,Tried to cancel already fired timer: %@,18,15374,0.002
+MANTER,aviso,MLDelayableTimer,Tried to resume non-paused timer: %@,17,14235,0.002
+MANTER,aviso,MLCrashReporter,Sent %lu reports,21,13774,0.002
+MANTER,aviso,xmpp,Could not purge offline storage (using XEP-0013): %@,13,13171,0.002
+MANTER,aviso,MLPubSub,Queueing pubsub call until account disco is resolved...,13,9997,0.002
+MANTER,aviso,xmpp,Resending unacked message stanzas only...,13,9386,0.002
+MANTER,aviso,xmpp,"Throwing away incoming stanza queued in parse queue, accountState < kStateConnected",11,8858,0.001
+MANTER,aviso,xmpp,"Connected to prosody, waiting for unsolicited stanza storm triggered by failed smacks resume to cease, before initializing further...",10,8847,0.001
+MANTER,aviso,xmpp,Ignoring unhandled top-level xml element <%@>: %@,9,7681,0.001
+MANTER,aviso,xmpp,%@: Timeout of handler triggered: %@,7,6990,0.001
+MANTER,aviso,MLMucProcessor,"Tried to muc-ping non-muc jid '%@', trying to join regularily with disco...",7,5852,0.001
+MANTER,aviso,MonalAppDelegate,Got xmpp error %@,5,5022,0.001
+MANTER,aviso,MonalAppDelegate,Ignoring incomingWakeupWithCompletionHandler: because app is in FG!,6,4602,0.001
+MANTER,aviso,xmpp,Did not receive anything in NSStreamEventHasBytesAvailable event!,6,4526,0.001
+MANTER,aviso,MonalAppDelegate,Not showing error banner: quiet error,6,4419,0.001
+MANTER,aviso,MonalAppDelegate,*** BGREFRESHING EXPIRED ***,6,4338,0.001
+MANTER,aviso,MonalAppDelegate,"Wakeup %@: state changed while preparing the shutdown (foregrounded or new wakeup), not disconnecting",4,3538,0.001
+MANTER,aviso,xmpp,"isaCloud: slow realPersistState for account %@: %.0f ms, unAckedStanzas=%lu, iqHandlers=%lu, reconnectionHandlers=%lu, mucState=%lu, pubsubD",3,3053,0.0
+MANTER,aviso,MLMucProcessor,Muc mam catchup query %@ returned error: %@,3,2768,0.0
+MANTER,aviso,MLIQProcessor,"Invalid sender for iq, ignoring: %@",1,933,0.0
+MANTER,aviso,xmpp,Aborting delayed replay because not >= kStateInitStarted anymore! Remaining stanzas will be kept in DB and be handled after next smacks reco,1,928,0.0
+MANTER,aviso,xmpp,"Ignoring stale open completed event of stream %@ (current: %@, status %ld), waiting for the event of the current stream...",1,911,0.0
+MANTER,aviso,MLMucProcessor,Ping failed with 'not-acceptable' --> we have to re-join %@,1,807,0.0
+MANTER,aviso,MLMucProcessor,"Ping handler for %@ got invalidated, aborting ping...",1,806,0.0
+MANTER,aviso,MLMucProcessor,%@,1,755,0.0
+MANTER,aviso,MonalAppDelegate,BG WAKE EXPIRING,1,661,0.0
+MANTER,banco,MLSQLite,Chekpointing returned: %@,2991,2335796,0.379
+MANTER,banco,MLSQLite,Database opened: %@,756,581572,0.094
+MANTER,banco,MLSQLite,Closing database in NSThreadWillExitNotification: %@,594,503464,0.082
+MANTER,banco,DataLayerMigrations,"Database: no migration needed, version: %@",17,13242,0.002
+MANTER,banco,DataLayerMigrations,Device id not changed: %@,17,13191,0.002
+MANTER,banco,DataLayerMigrations,dbversion table already migrated,17,12783,0.002
+MANTER,banco,DataLayer,Database version check completed,17,11882,0.002
+MANTER,banco,DataLayer,Database version check,17,11543,0.002
+MANTER,banco,MLMessageSearch,Search index: indexing messages above id %@,15,11272,0.002
+MANTER,ciclo de vida,MonalAppDelegate,### SOME ACCOUNT CHANGED TO IDLE STATE ###,1210,886971,0.144
+MANTER,ciclo de vida,MonalAppDelegate,### SOME ACCOUNT CHANGED TO NON-IDLE STATE ###,1162,864532,0.14
+MANTER,ciclo de vida,MonalAppDelegate,### ALL ACCOUNTS IDLE AND FILETRANSFERS COMPLETE NOW ###,755,560928,0.091
+MANTER,ciclo de vida,MonalAppDelegate,### checking if background is still needed ###,538,388962,0.063
+MANTER,ciclo de vida,xmpp,Parse queue is UNfrozen now!,277,191563,0.031
+MANTER,ciclo de vida,MonalAppDelegate,### ignoring idle state because background timer or wakeup completion timers or pending calls are still running ###,215,185305,0.03
+MANTER,ciclo de vida,MLProcessLock,Remote %@ running: %@,222,155983,0.025
+MANTER,ciclo de vida,NotificationService,### SOME ACCOUNT CHANGED TO IDLE STATE ###,150,113114,0.018
+MANTER,ciclo de vida,MLXMPPManager,### MAM/SMACKS CATCHUP FINISHED FOR ACCOUNT NO %@ ###,134,101305,0.016
+MANTER,ciclo de vida,xmpp,Parse queue is frozen now!,132,90642,0.015
+MANTER,ciclo de vida,MLXMPPManager,App now backgrounded...,134,86789,0.014
+MANTER,ciclo de vida,xmpp,Unfreezing account: %@,132,85160,0.014
+MANTER,ciclo de vida,xmpp,Reloading UNfrozen account %@,98,66857,0.011
+MANTER,ciclo de vida,xmpp,Freezing account: %@,98,62706,0.01
+MANTER,ciclo de vida,MLProcessLock,Locking process (_ownLockPath=%s)...,77,60168,0.01
+MANTER,ciclo de vida,IPC,Wrote IPC message %@ to database,62,41203,0.007
+MANTER,ciclo de vida,MLProcessLock,Unlocking process (_ownLockPath=%s)...,49,37864,0.006
+MANTER,ciclo de vida,MonalAppDelegate,Setting _shutdownPending to YES...,53,37580,0.006
+MANTER,ciclo de vida,MonalAppDelegate,Posting kMonalWillBeFreezed notification now...,49,36261,0.006
+MANTER,ciclo de vida,HelperTools,Posting kMonalUnfrozen notification now...,49,33453,0.005
+MANTER,ciclo de vida,HelperTools,Posting kMonalFrozen notification now...,48,32579,0.005
+MANTER,ciclo de vida,HelperTools,Suspending logger queue...,49,31886,0.005
+MANTER,ciclo de vida,MonalAppDelegate,Setting _shutdownPending to NO...,33,22903,0.004
+MANTER,ciclo de vida,MonalAppDelegate,got incomingWakeupWithCompletionHandler with ID %@,29,22227,0.004
+MANTER,ciclo de vida,MonalAppDelegate,"### All accounts idle, disconnecting and stopping all background tasks ###",21,16352,0.003
+MANTER,ciclo de vida,MLXMPPManager,App now foregrounded...,25,16199,0.003
+MANTER,ciclo de vida,MonalAppDelegate,"Not starting UIKit background task, already running: %d",20,14768,0.002
+MANTER,ciclo de vida,IPC,IPC readNextMessage waiting for wakeup via darwin notification,19,14129,0.002
+MANTER,ciclo de vida,HelperTools,Starting: %@,18,14041,0.002
+MANTER,ciclo de vida,IPC,Now running IPC server for '%@' with thread priority %f...,18,13794,0.002
+MANTER,ciclo de vida,NotificationService,Posting kMonalWillBeFreezed notification now...,17,12625,0.002
+MANTER,ciclo de vida,MonalAppDelegate,Starting UIKit background task...,18,12470,0.002
+MANTER,ciclo de vida,IPC,IPC db version: %@,18,12082,0.002
+MANTER,ciclo de vida,MonalAppDelegate,_bgTask == UIBackgroundTaskInvalid --> disconnecting and ending background task,6,4812,0.001
+MANTER,ciclo de vida,MonalAppDelegate,### FILETRANSFERS CHANGED TO IDLE STATE ###,6,4413,0.001
+MANTER,ciclo de vida,IPC,Handled IPC message: %@,2,1698,0.0
+MANTER,ciclo de vida,IPC,Got IPC message: %@,2,1682,0.0
+MANTER,ciclo de vida,NotificationService,"Unfreezing all incoming streams again, we got another push",2,1553,0.0
+MANTER,ciclo de vida,MonalAppDelegate,### ignoring idle state because a shutdown is already pending ###,2,1522,0.0
+MANTER,ciclo de vida,MonalAppDelegate,self.bgProcessing == nil && self.bgRefreshing == nil --> disconnecting and ending background task,1,824,0.0
+MANTER,ciclo de vida,MonalAppDelegate,App started: %@,1,761,0.0
+MANTER,ciclo de vida,MonalAppDelegate,App launching with options: %@,1,699,0.0
+MANTER,ciclo de vida,NotificationService,Got disconnectAll IPC message,1,693,0.0
+MANTER,conexão,xmpp,%@: Sleeping %f seconds because parse queue has %lu entries and used/available memory: %.3fMiB / %.3fMiB...,2677,2314173,0.375
+MANTER,conexão,xmpp,"no smacks request, there is nothing pending or a request already in flight...",2342,1781368,0.289
+MANTER,conexão,xmpp,"%@: Sleeping has ended, parse queue has %lu entries and used/available memory: %.3fMiB / %.3fMiB...",1918,1616011,0.262
+MANTER,conexão,xmpp,_smacksAckHandler: %@,740,546427,0.089
+MANTER,conexão,xmpp,requesting smacks ack...,641,426033,0.069
+MANTER,conexão,xmpp,Adding smacks ack handler to call list: %@,449,355817,0.058
+MANTER,conexão,xmpp,Now calling smacks ack handler: %@,449,348633,0.057
+MANTER,conexão,MLXMPPManager,"nw_path update: %@ (changed=%@, first=%@)",260,202069,0.033
+MANTER,conexão,MLXMPPManager,*** nw_path_monitor: nw_path_is_constrained=%@,260,183822,0.03
+MANTER,conexão,MLXMPPManager,*** nw_path_monitor: nw_path_is_expensive=%@,260,182846,0.03
+MANTER,conexão,MLXMPPManager,*** nw_path_monitor: update_handler called,260,182002,0.03
+MANTER,conexão,MLXMPPManager,*** nw_path_monitor: on 'mobile' --> %@,260,180246,0.029
+MANTER,conexão,xmpp,%lu mam catchups running: Handled %u stanzas in %f seconds (%f stanzas per second)...,202,162518,0.026
+MANTER,conexão,MLXMPPManager,still reachable,240,154980,0.025
+MANTER,conexão,xmpp,"Stream features (before auth) already read from cache, ignoring incoming stream features (but refreshing cache)...",135,116947,0.019
+MANTER,conexão,xmpp,Adding mam queryid to list: %@,156,115552,0.019
+MANTER,conexão,xmpp,Not reacting with smacks resume or bind to stream features after login: we are already binding/bound!,135,112786,0.018
+MANTER,conexão,MLOMEMO,"Own devicelist was handled, now trying to repair queued sessions...",134,102979,0.017
+MANTER,conexão,MLMucProcessor,Muc %@ supports mam:2...,140,102849,0.017
+MANTER,conexão,xmpp,stream creating to server: %@ port: %@ directTLS: %@,139,102609,0.017
+MANTER,conexão,xmpp,Handling NOT-pipelined stream features (after auth)...,135,100636,0.016
+MANTER,conexão,xmpp,Saving channel-binding types list: %@,135,99938,0.016
+MANTER,conexão,xmpp,resetting internal stream state to disconnected,137,99269,0.016
+MANTER,conexão,xmpp,Adding resume smacks handler to check for completed catchup on account %@: %@,122,96758,0.016
+MANTER,conexão,xmpp,Handling SASL2 inlined smacks result...,135,96563,0.016
+MANTER,conexão,MLOMEMO,"Catchup done now, handling omemo stuff...",134,95743,0.016
+MANTER,conexão,xmpp,"Replay really done, now posting kMonalFinishedCatchup notification",122,95687,0.016
+MANTER,conexão,xmpp,disconnect called...,144,94989,0.015
+MANTER,conexão,xmpp,disconnecting,137,94748,0.015
+MANTER,conexão,xmpp,Trying SASL2...,139,93995,0.015
+MANTER,conexão,xmpp,Inside resume smacks handler: catchup *possibly* done (%@),122,93923,0.015
+MANTER,conexão,xmpp,TLS early data accepted: %@,135,93323,0.015
+MANTER,conexão,xmpp,Got SASL2 Success/Continue,135,93053,0.015
+MANTER,conexão,xmpp,Got SASL2 Success,135,90623,0.015
+MANTER,conexão,xmpp,creating directTLS streams,135,90483,0.015
+MANTER,conexão,MLXMPPManager,manager disconnecting: %@,130,87741,0.014
+MANTER,conexão,MLXMPPManager,manager disconnected: %@,130,87481,0.014
+MANTER,conexão,xmpp,"Session resumed, initializing state...",122,86998,0.014
+MANTER,conexão,xmpp,Not in extension --> sending out presence after resume,93,69244,0.011
+MANTER,conexão,MLMucProcessor,Querying muc mam:2 archive after stanzaid '%@' for catchup,83,68280,0.011
+MANTER,conexão,MLXMPPManager,"disconnected existing account, reconnecting.",98,67788,0.011
+MANTER,conexão,MonalAppDelegate,"Returning NORMAL graceful timeout: reducedBackgroundActivity = %@, isLowPowerModeEnabled = %@, reducedLowPowerBackgroundActivity = %@",59,52251,0.008
+MANTER,conexão,xmpp,Catchup finished for jid %@,68,50019,0.008
+MANTER,conexão,HelperTools,Resuming logger queue...,49,31689,0.005
+MANTER,conexão,MLMucProcessor,Muc mam catchup of %@ finished,39,30947,0.005
+MANTER,conexão,xmpp,"NOT sending csi state, because we are not bound and smacks enabled yet (or csi is not supported)",36,29914,0.005
+MANTER,conexão,MLMucProcessor,Querying muc mam:2 archive for latest stanzaid to prime database,38,29798,0.005
+MANTER,conexão,MLXMPPManager,connecting account %@@%@,34,24767,0.004
+MANTER,conexão,xmpp,Creating account %@ with id %@,34,24240,0.004
+MANTER,conexão,MonalAppDelegate,background && _bgTask == UIBackgroundTaskInvalid && self.bgProcessing == nil && self.bgRefreshing == nil --> disconnecting and feeding wakeu,25,23792,0.004
+MANTER,conexão,MLXMPPManager,"network update without a real change, letting the current attempt of %@ finish (state %ld)",22,19655,0.003
+MANTER,conexão,MLMucProcessor,Querying muc mam:2 archive of %@ since %@ for catchup (history window),19,16390,0.003
+MANTER,conexão,NotificationService,Disconnecting all accounts and feeding all pending handlers: %lu,17,13595,0.002
+MANTER,conexão,MLXMPPManager,reachable again,19,12338,0.002
+MANTER,conexão,NotificationService,locking process and connecting accounts,16,12016,0.002
+MANTER,conexão,MLIQProcessor,Querying mam:2 archive after stanzaid '%@' for catchup,13,10948,0.002
+MANTER,conexão,MLOMEMO,"We did a non-smacks-resume reconnect, resetting some of our state (MLOMEMO instance=%@)...",13,10881,0.002
+MANTER,conexão,MLIQProcessor,Mam catchup finished for %@,13,9947,0.002
+MANTER,conexão,xmpp,"Now bound and past smacks enable, initializing new xmpp session...",13,9932,0.002
+MANTER,conexão,xmpp,reconnect starts,14,9667,0.002
+MANTER,conexão,xmpp,reconnect exits,14,9639,0.002
+MANTER,conexão,xmpp,reconnect called...,14,9593,0.002
+MANTER,conexão,xmpp,++++++++++++++++++++++++ failed resume: h=%@,13,9503,0.002
+MANTER,conexão,MLIQProcessor,supports mam:2,13,9453,0.002
+MANTER,conexão,xmpp,Handling BIND2 inlined smacks result...,13,9321,0.002
+MANTER,conexão,xmpp,Now posting kMonalFinishedCatchup notification,12,8956,0.001
+MANTER,conexão,xmpp,ping calling reconnect,7,4692,0.001
+MANTER,conexão,MLDelayableTimer,Resumed timer: %@ (remaining time: %@),5,4318,0.001
+MANTER,conexão,MonalAppDelegate,NOT (background && _bgTask == UIBackgroundTaskInvalid && self.bgProcessing == nil && self.bgRefreshing == nil) --> not disconnecting,4,3644,0.001
+MANTER,conexão,xmpp,Ignoring non-encrypted stream features (we already pipelined the starttls command when opening the stream),4,3398,0.001
+MANTER,conexão,MLStream,%@: Not doing direct TLS: appending framer to protocol stack...,4,3341,0.001
+MANTER,conexão,MLStream,Prepending tls to framer: %@,4,2856,0.0
+MANTER,conexão,MLStream,Framer deactivated and TLS prepended now...,4,2844,0.0
+MANTER,conexão,MLStream,Starting TLS handshake on framer: %@,4,2840,0.0
+MANTER,conexão,xmpp,configuring/starting tls handshake,4,2800,0.0
+MANTER,conexão,MLStream,TLS handshake completed: %@...,4,2664,0.0
+MANTER,conexão,MLMucProcessor,Querying COMPLETE muc mam:2 archive at %@ after timestamp %@ for catchup,3,2645,0.0
+MANTER,conexão,xmpp,"ping took too long, reconnecting",3,2089,0.0
+MANTER,conexão,MLXMPPManager,"network changed and %@ is not bound yet (state %ld), reconnecting now instead of pinging",2,1779,0.0
+MANTER,conexão,?,"mam extracted, messageNode is now: %@",2,1589,0.0
+MANTER,conexão,NotificationService,"NOT connecting accounts, main app already running in foreground, terminating immediately instead",1,866,0.0
+MANTER,conexão,MonalAppDelegate,"Got local notification authorization response: granted=%@, error=%@",1,789,0.0
+MANTER,conexão,GifPickerView,"GIF cache: picker closed, API %lli from HTTP cache / %lli from network, previews %lli from cache / %lli from network",1,768,0.0
+MANTER,conexão,HelperTools,configuring default audio session...,1,678,0.0
+MANTER,conexão,MLXMPPManager,NOT reachable,1,641,0.0
+MANTER,erro,NotificationService,Error posting local badge_update notification: %@,167,165176,0.027
+MANTER,erro,MLMucProcessor,Querying muc info returned a temporary error: %@,7,6871,0.001
+MANTER,erro,xmpp,"asymmetrical call to login without a teardown logout, calling reconnect...",2,1548,0.0
+MANTER,erro,HelperTools,Error posting notification: %@,1,1023,0.0
+MANTER,info (revisar),HelperTools,Removing syncError notification for %@ (now synced)...,1833,1429740,0.232
+MANTER,info (revisar),HelperTools,Updating syncError notifications: %@,954,824879,0.134
+MANTER,info (revisar),xmpp,Processing message stanza (delayedReplay=%@)...,1042,763507,0.124
+MANTER,info (revisar),MLMucProcessor,Handling members list update for %@: %@,553,505973,0.082
+MANTER,info (revisar),xmpp,Saving incoming message node to delayedMessageStanzas...,664,498578,0.081
+MANTER,info (revisar),MLPubSub,Calling pubsub handlers for node '%@' (and jid '%@'),548,448154,0.073
+MANTER,info (revisar),ActiveChatsViewController,Refreshing contact %@ at %@: unread=%lu,561,440156,0.071
+MANTER,info (revisar),xmpp,Added additional caps feature for pubsub node: %@,510,396890,0.064
+MANTER,info (revisar),xmpp,Got mds displayed element for chat %@ by %@: %@,411,331946,0.054
+MANTER,info (revisar),MLMucProcessor,Querying disco for muc %@...,349,272692,0.044
+MANTER,info (revisar),MonalAppDelegate,Updating unread called,355,242719,0.039
+MANTER,info (revisar),MonalAppDelegate,Updating unread badge to: %ld,356,240964,0.039
+MANTER,info (revisar),xmpp,"ping response received, all seems to be well",327,234721,0.038
+MANTER,info (revisar),MLSQLite,isaCloud: appex opened the database %@ at %@,267,228318,0.037
+MANTER,info (revisar),xmpp,"SRV entry in _discoveredServersList: server=%@, port=%@, isSecure=%s, priority=%@, ttl=%@",270,220250,0.036
+MANTER,info (revisar),MLMucProcessor,Clearing muc members table for type %@: %@,248,204718,0.033
+MANTER,info (revisar),MLContact,Updated the blocking state of contact %@ => isBlocked=%@,234,195461,0.032
+MANTER,info (revisar),MLMucProcessor,Got %@s list from %@...,248,195062,0.032
+MANTER,info (revisar),MLPubSubProcessor,"Avatar hash of '%@' is the same, we don't need to update our avatar image data",195,171020,0.028
+MANTER,info (revisar),MLMucProcessor,Trying to join muc '%@' with nick '%@' on account %@...,197,165798,0.027
+MANTER,info (revisar),MLMucProcessor,"Muc ping returned: we are still connected to %@, everything is fine",198,164653,0.027
+MANTER,info (revisar),MLMucProcessor,Clearing muc participants table: %@,197,159183,0.026
+MANTER,info (revisar),MLMessageProcessor,Extracted participantJid: %@,205,157203,0.025
+MANTER,info (revisar),xmpp,New caps hash: %@,204,138557,0.022
+MANTER,info (revisar),MLPubSub,Adding PEP handler %@ for node %@,170,130979,0.021
+MANTER,info (revisar),xmpp,"Using connection parameters discovered via SRV dns record: server=%@, port=%@, isSecure=%s, priority=%@, ttl=%@",139,119305,0.019
+MANTER,info (revisar),xmpp,Authenticating using FAST token with cb-type %@ and cb-data: %@,135,118698,0.019
+MANTER,info (revisar),MLMucProcessor,Querying outcast/member/admin/owner lists for muc %@...,146,117275,0.019
+MANTER,info (revisar),xmpp,got self presence,174,116609,0.019
+MANTER,info (revisar),MLPubSubProcessor,"Adding muc '%@' on account %@ to the list without joining it, it is kept with autojoin=false in bookmarks...",120,114526,0.019
+MANTER,info (revisar),MLStream,"%@: Connection established, wasOpenOnce: %@",139,110768,0.018
+MANTER,info (revisar),xmpp,BIND2 inlining supported for: %@,139,109980,0.018
+MANTER,info (revisar),xmpp,"SRV entry in _usableServersList: server=%@, port=%@, isSecure=%s, priority=%@, ttl=%@",135,109247,0.018
+MANTER,info (revisar),MLMucProcessor,Successfully joined muc %@...,146,108736,0.018
+MANTER,info (revisar),xmpp,Saving fastMethods list: %@,135,101693,0.016
+MANTER,info (revisar),MLContact,Returning dummy MLContact for %@ on accountID %@,126,100312,0.016
+MANTER,info (revisar),xmpp,removing streams from runLoop and aborting parser,137,99817,0.016
+MANTER,info (revisar),xmpp,Server supports inlined BIND2,139,97887,0.016
+MANTER,info (revisar),xmpp,stopping running timers,137,97488,0.016
+MANTER,info (revisar),xmpp,Server supports inlined SM3,139,97331,0.016
+MANTER,info (revisar),xmpp,Saving saslMethods list: %@,135,93593,0.015
+MANTER,info (revisar),xmpp,Server identity: %@,135,92536,0.015
+MANTER,info (revisar),xmpp,XMPP connnect start,139,92327,0.015
+MANTER,info (revisar),xmpp,closing output stream,137,92145,0.015
+MANTER,info (revisar),xmpp,closing input stream,137,91871,0.015
+MANTER,info (revisar),xmpp,%lu SRV entries left:,139,91632,0.015
+MANTER,info (revisar),xmpp,opening TCP streams,139,91215,0.015
+MANTER,info (revisar),xmpp,streams created ok,139,90937,0.015
+MANTER,info (revisar),xmpp,TCP streams opened,139,90937,0.015
+MANTER,info (revisar),MLXMPPManager,"existing account, calling unfreeze",132,88658,0.014
+MANTER,info (revisar),MLMucProcessor,"Not pinging all mucs, last ping was less than %d seconds ago: %@",107,85643,0.014
+MANTER,info (revisar),xmpp,sending last ack,133,85603,0.014
+MANTER,info (revisar),xmpp,Done resending unacked stanzas...,122,84436,0.014
+MANTER,info (revisar),xmpp,Resending unacked stanzas...,122,83216,0.013
+MANTER,info (revisar),MLMucProcessor,"Avatar hash '%@' of muc %@ did not change, not updating avatar...",94,80050,0.013
+MANTER,info (revisar),MLMessageProcessor,Sending out kMonalNewMessageNotice notification for historyId %@,94,78599,0.013
+MANTER,info (revisar),MLMucProcessor,Removing muc '%@' from _joining...,92,75268,0.012
+MANTER,info (revisar),xmpp,%@: resetting parser delegate,109,75254,0.012
+MANTER,info (revisar),MLMessageProcessor,Got message of type: %@,99,74410,0.012
+MANTER,info (revisar),MLXMPPManager,"message %@, %@ sent, setting status accordingly",88,70853,0.011
+MANTER,info (revisar),MLPubSubProcessor,Got nickname of %@: %@,74,57560,0.009
+MANTER,info (revisar),HelperTools,Scheduling new BackgroundTask with force=%s...,77,54090,0.009
+MANTER,info (revisar),MLOMEMO,"Successfully decrypted message, passing back cleartext string...",41,33016,0.005
+MANTER,info (revisar),MLPubSub,Fetching node '%@' at jid '%@' using callback %@...,38,31956,0.005
+MANTER,info (revisar),MLMessageProcessor,Got MUC subject for %@: '%@',33,26207,0.004
+MANTER,info (revisar),xmpp,"Not reloading UNfrozen account %@, already connected",34,24751,0.004
+MANTER,info (revisar),MLXMPPManager,starting connect,34,23626,0.004
+MANTER,info (revisar),MLMessageProcessor,Sending out kMonalUpdatedMessageNotice notification for historyId %@,28,23608,0.004
+MANTER,info (revisar),xmpp,%@: creating parser delegate,34,23595,0.004
+MANTER,info (revisar),MLXMPPManager,"connected(?) existing account, just pinging.",34,23510,0.004
+MANTER,info (revisar),MLMessageProcessor,"Got outgoing message to contact '%@' sent by another client, removing all notifications for unread messages of this contact",24,23405,0.004
+MANTER,info (revisar),xmpp,Querying for SRV records,34,22830,0.004
+MANTER,info (revisar),MLMessageProcessor,Found history ID '%@' for reactions '%@' from '%@' in chat %@,23,22172,0.004
+MANTER,info (revisar),MonalAppDelegate,Added timer %@ to wakeup completion list...,29,21821,0.004
+MANTER,info (revisar),MonalAppDelegate,Handling wakeup completion %@,29,21448,0.003
+MANTER,info (revisar),HelperTools,Clearing syncError notification states: %@,25,21399,0.003
+MANTER,info (revisar),MonalAppDelegate,Calling wakeup completion handler...,29,20868,0.003
+MANTER,info (revisar),MLMucProcessor,Got non-joining muc presence for %@...,26,19725,0.003
+MANTER,info (revisar),MLMessageProcessor,Got remote display marker from %@ for message id: %@,22,19100,0.003
+MANTER,info (revisar),NotificationService,Notification handler called (request id: %@),19,15490,0.003
+MANTER,info (revisar),MLProcessLock,Set _ownLockPath to '%s'...,18,14939,0.002
+MANTER,info (revisar),NotificationService,Notification Service Extension started: %@,17,14875,0.002
+MANTER,info (revisar),HelperTools,"Removing pending syncError notifications, current state: %@",16,14784,0.002
+MANTER,info (revisar),NotificationService,Initializing notification service extension class,19,14559,0.002
+MANTER,info (revisar),NotificationService,"This was the last handler, freezing all parse queues and posting sync errors...",17,13741,0.002
+MANTER,info (revisar),MLXMPPManager,Sending message...,18,13035,0.002
+MANTER,info (revisar),MLSQLite,sqlite initialize: using mysql lib version: %s,18,12981,0.002
+MANTER,info (revisar),HelperTools,Crash monitoring active now...,18,12945,0.002
+MANTER,info (revisar),HelperTools,Current crash report ids: %@,18,12783,0.002
+MANTER,info (revisar),MLSQLite,sqlite initialize: sqlite3 configured ok,18,12693,0.002
+MANTER,info (revisar),MonalAppDelegate,Entering FG,19,12349,0.002
+MANTER,info (revisar),DataLayerMigrations,Got db version %@,17,12307,0.002
+MANTER,info (revisar),xmpp,"ping already sent, ignoring second ping request.",17,12288,0.002
+MANTER,info (revisar),NotificationService,"Now killing appex process, goodbye...",17,12268,0.002
+MANTER,info (revisar),NotificationService,All parse queues frozen now,17,12109,0.002
+MANTER,info (revisar),MLMessageProcessor,Got OWN display marker to %@ for message id: %@,14,12027,0.002
+MANTER,info (revisar),MonalAppDelegate,BG time available: %f,12,11874,0.002
+MANTER,info (revisar),MonalAppDelegate,Entering BG,18,11681,0.002
+MANTER,info (revisar),NotificationService,Shutting down appex now,15,10429,0.002
+MANTER,info (revisar),xmpp,Trying to connect again in %G seconds...,14,10342,0.002
+MANTER,info (revisar),MLIQProcessor,supports http upload with server: %@,13,10272,0.002
+MANTER,info (revisar),MLIQProcessor,got disco result with carbons ns,13,9908,0.002
+MANTER,info (revisar),MLIQProcessor,Supports modern pep multi-items,13,9895,0.002
+MANTER,info (revisar),MLIQProcessor,Supports pep 'max' item count,13,9843,0.002
+MANTER,info (revisar),MLPubSubProcessor,Got own nickname: %@,13,9817,0.002
+MANTER,info (revisar),MLIQProcessor,Upload max filesize: %lu,13,9791,0.002
+MANTER,info (revisar),MLIQProcessor,Supports pubsub (pep),13,9635,0.002
+MANTER,info (revisar),xmpp,Now bound to fullJid: %@,13,9542,0.002
+MANTER,info (revisar),MLOMEMO,Marking our own devicelist as seen now...,12,9196,0.001
+MANTER,info (revisar),xmpp,Carbons now enabled via BIND2...,13,9139,0.001
+MANTER,info (revisar),xmpp,"Now bound, resetting state...",13,8866,0.001
+MANTER,info (revisar),MonalAppDelegate,BGREFRESHING SETUP HANDLER COMPLETED SUCCESSFULLY...,10,7316,0.001
+MANTER,info (revisar),MonalAppDelegate,RUNNING BGREFRESHING SETUP HANDLER,10,6956,0.001
+MANTER,info (revisar),MLStream,"%@, Framer(%d) stop called: %@",8,6412,0.001
+MANTER,info (revisar),xmpp,"ping attempted before logged in and bound, ignoring ping.",7,5180,0.001
+MANTER,info (revisar),MLXMPPManager,sending idle ping,8,5168,0.001
+MANTER,info (revisar),MonalAppDelegate,userNotificationCenter:willPresentNotification:withCompletionHandler called,6,4896,0.001
+MANTER,info (revisar),HelperTools,Compressing file at '%@' into '%@'...,5,4815,0.001
+MANTER,info (revisar),MLFiletransfer,Got http mime-type and size for historyID %@: %@ (%@),6,4712,0.001
+MANTER,info (revisar),MLFiletransfer,Requesting mime-type and size for historyID %@ from http server,6,4700,0.001
+MANTER,info (revisar),MLFiletransfer,Downloading file for historyID %@,6,4394,0.001
+MANTER,info (revisar),MLFiletransfer,Autodownloading file,6,4220,0.001
+MANTER,info (revisar),MLStream,%@: Framer(%d) %@ start called with wasOpenOnce=%@...,4,3359,0.001
+MANTER,info (revisar),MLFiletransfer,Moving (possibly encrypted) file to our document cache at %@,3,3058,0.0
+MANTER,info (revisar),MLFiletransfer,URL for download: %@,3,2766,0.0
+MANTER,info (revisar),xmpp,stopping old xml parser,4,2730,0.0
+MANTER,info (revisar),xmpp,creating plaintext streams,4,2678,0.0
+MANTER,info (revisar),MLFiletransfer,Uploading file stored at %@,3,2537,0.0
+MANTER,info (revisar),MLFiletransfer,Preparing for upload of file stored at %@,3,2525,0.0
+MANTER,info (revisar),xmpp,"Upload succeded, get url: %@",3,2458,0.0
+MANTER,info (revisar),xmpp,Got slot for upload: %@,3,2446,0.0
+MANTER,info (revisar),ActiveChatsViewController,Got segue identifier '%@',3,2121,0.0
+MANTER,info (revisar),MLMucProcessor,"Room info of muc %@ advertises new avatar hash '%@' (stored: '%@'), fetching new image via vcard-temp...",2,1915,0.0
+MANTER,info (revisar),HelperTools,Returning new avatar png data with size %lu for image: %@,2,1737,0.0
+MANTER,info (revisar),xmpp,"Presence included unknown caps hash %@, but disco query already running, not querying again",2,1688,0.0
+MANTER,info (revisar),MLFiletransfer,"Photo %@ reduced (mode %@): %@ -> %lu bytes, %@",2,1684,0.0
+MANTER,info (revisar),MLMucProcessor,Avatar of muc '%@' fetched and updated successfully,2,1679,0.0
+MANTER,info (revisar),MetricsCollector,isaCloud: abertura a frio: total %.0f ms | didFinishLaunching %.0f ms | montar a lista %.0f ms | na main %.0f ms,2,1667,0.0
+MANTER,info (revisar),HelperTools,Shrinked/masked image is now: %@,2,1637,0.0
+MANTER,info (revisar),xmpp,"Presence included unknown caps hash %@, requesting disco query",2,1570,0.0
+MANTER,info (revisar),MLMessageProcessor,Ignoring fallback body on reaction...,2,1554,0.0
+MANTER,info (revisar),HelperTools,Only masking image to a %lux%lu pixels circle,2,1535,0.0
+MANTER,info (revisar),MLMucProcessor,Avatar of muc '%@' deleted successfully,2,1534,0.0
+MANTER,info (revisar),MetricsCollector,isaCloud: saved MetricKit payload (%@),2,1473,0.0
+MANTER,info (revisar),GifPickerView,"GIF cache: %@ %@ page %lli%@ from %@, %lli GIFs, rate limit remaining %@",2,1463,0.0
+MANTER,info (revisar),MonalAppDelegate,BGPROCESSING SETUP HANDLER COMPLETED SUCCESSFULLY...,2,1462,0.0
+MANTER,info (revisar),MLFiletransfer,Encrypting file data before upload,2,1460,0.0
+MANTER,info (revisar),NotificationService,All parse queues operational again,2,1457,0.0
+MANTER,info (revisar),MonalAppDelegate,RUNNING BGPROCESSING SETUP HANDLER,2,1390,0.0
+MANTER,info (revisar),SwiftuiHelpers,"Gallery picker: %lli of %lli copied, %lli video(s)",2,1306,0.0
+MANTER,info (revisar),SwiftuiHelpers,Gallery picker: %lli result(s),2,1240,0.0
+MANTER,info (revisar),MLFiletransfer,Decrypting encrypted filetransfer stored at '%@'...,1,999,0.0
+MANTER,info (revisar),MLMucProcessor,"Got new muc avatar hash '%@' for muc %@, fetching new image via vcard-temp...",1,883,0.0
+MANTER,info (revisar),MonalAppDelegate,"Now unblocking connect of connectIfNecessary (applicationState%@UIApplicationStateBackground, count=%ld, options=%@)...",1,865,0.0
+MANTER,info (revisar),xmpp,Sending reactions for message %@: %@,1,848,0.0
+MANTER,info (revisar),DataLayer,isaCloud: %lu outgoing message(s) without confirmation older than the launch,1,789,0.0
+MANTER,info (revisar),xmpp,Sending out kMonalUpdatedMessageNotice notification for historyId %@,1,782,0.0
+MANTER,info (revisar),MonalAppDelegate,"NotificationServiceExtension is running, waiting for its termination",1,764,0.0
+MANTER,info (revisar),MonalAppDelegate,APNS token string: %@,1,758,0.0
+MANTER,info (revisar),MLFiletransfer,Attachment %@ sent as it is (%@): %llu bytes%@,1,744,0.0
+MANTER,info (revisar),xmpp,Got new FAST token with expiry: %@,1,727,0.0
+MANTER,info (revisar),MonalAppDelegate,Registering for APNS...,1,696,0.0
+MANTER,info (revisar),MonalAppDelegate,calling MonalAppDelegate configureBackgroundTasks,1,694,0.0
+MANTER,info (revisar),GifPickerView,"GIF cache: trending %@ from saved list, age %lli min, %lli GIFs",1,679,0.0
+MANTER,medição,HelperTools,isaCloud SPIN: %@,3768,2875506,0.466
+MANTER,medição,HelperTools,"activity: %lu, memory used / available: %.3fMiB / %.3fMiB",2095,1548906,0.251
+MANTER,medição,MLIQProcessor,Push is enabled now,135,98617,0.016
+MANTER,medição,NotificationService,Push userInfo: %@,19,18074,0.003
+MANTER,medição,MLXMPPManager,"push token valid, current push settings: token=%@, isSandboxAPNS=%@",20,16781,0.003
+MANTER,medição,NotificationService,proxying to incomingPush,19,14502,0.002
+MANTER,medição,NotificationService,Freezing all incoming streams until we know if we are either terminating or got another push,17,14336,0.002
+MANTER,medição,NotificationService,incomingPush proxy completed,18,13899,0.002
+MANTER,medição,NotificationService,Last push expired shutting down in 1500ms if no new push comes in in the meantime,17,13809,0.002
+MANTER,medição,NotificationService,Got incoming push,19,13438,0.002
+MANTER,medição,HelperTools,isaCloud: removing %lu push placeholder notification(s),15,12801,0.002
+MANTER,medição,NotificationService,"First push, pinging main app",17,12393,0.002
+MANTER,medição,NotificationService,Initializing push singleton,17,12206,0.002
+MANTER,medição,NotificationService,Handling expired push: %lu,17,11888,0.002
+MANTER,medição,MLIQProcessor,supports push,13,9427,0.002
+MANTER,medição,xmpp,"NOT registering and enabling push: %@ token: %@ (accountState: %ld, supportsPush: %@)",2,1628,0.0
+MANTER,medição,NotificationService,"Main app not in foreground anymore, handling first push now",2,1582,0.0
+MANTER,medição,NotificationService,"Got next push, not shutting down appex",2,1451,0.0
+RESUMIR,contador a cada 10 s,xmpp,"Inside transaction end trigger: now calling realPersistState, saved %d calls in this transaction...",47628,39640204,6.429
+RESUMIR,contador a cada 10 s,xmpp,Would now call realPersistState for the %@. time this transaction...,49456,37947710,6.154
+RESUMIR,contador a cada 10 s,xmpp,"Synchronously handling next stanza on receive queue (%lu stanzas queued in parse queue, %lu current operations in receive queue, %.3fMiB / ",23696,23015266,3.733
+RESUMIR,contador a cada 10 s,xmpp,%@: Parse finished for new <%@> stanza (id=%@)...,24946,18650996,3.025
+RESUMIR,contador a cada 10 s,xmpp,%@ --> realPersistState before: used/available memory: %.3fMiB / %.3fMiB)...,10148,8125851,1.318
+RESUMIR,contador a cada 10 s,xmpp,%@ --> realPersistState after: used/available memory: %.3fMiB / %.3fMiB)...,10148,8105522,1.315
+RESUMIR,contador a cada 10 s,xmpp,%@ --> realPersistState is now serializing the state...,10148,7600469,1.233

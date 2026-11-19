@@ -271,6 +271,8 @@ typedef void (^monal_iq_handler_t)(XMPPIQ* _Nullable);
 
 +(NSMutableDictionary*) invalidateState:(NSDictionary* _Nullable) dic;
 -(void) updateIqHandlerTimeouts;
+//isaCloud: C32, called at the start of the shutdown (before the accounts are disconnected): stops new timeout transactions and waits (max 1 s) for the one running
++(void) isaCloudBeginShutdownAndWaitForTimeouts;
 
 -(void) addReconnectionHandler:(MLHandler*) handler;
 

@@ -223,6 +223,23 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
     return YES;
 }
 
+//isaCloud: C31, marks the outgoing messages that stayed unsent as failed. It used to run at the launch, together with connectIfNecessary,
+//and crashed once there (SIGSEGV in the first 200 ms). Now it runs after the given delay on a background queue and, while the app is
+//frozen (no database work then), it is scheduled again for the same delay.
+-(void) isaCloudScheduleStaleMessagesCleanupAfter:(NSTimeInterval) delay
+{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delay * NSEC_PER_SEC)), dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
+        if([HelperTools isaCloudSuspendedFast])
+        {
+            [self isaCloudScheduleStaleMessagesCleanupAfter:15.0];
+            return;
+        }
+        NSUInteger stale = [[DataLayer sharedInstance] markStaleOutgoingMessagesAsFailedBefore:[NSDate dateWithTimeIntervalSinceNow:-60]];
+        if(stale > 0)
+            DDLogWarn(@"isaCloud: marked %lu message(s) that stayed unsent as failed", (unsigned long)stale);
+    });
+}
+
 -(BOOL) application:(UIApplication*) application didFinishLaunchingWithOptions:(NSDictionary*) launchOptions
 {
     //isaCloud: sets the batch of "Novidades do isaCloud" (the news of the chats list) for this launch, once per launch
@@ -238,11 +255,8 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
     
     //isaCloud: a message that was on its way when the app died keeps sent=0 and nobody would retry it (the sending indicator would
     //stay forever): mark it as failed so the chat offers the retry button. Anything younger than a minute may still be in flight.
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
-        NSUInteger stale = [[DataLayer sharedInstance] markStaleOutgoingMessagesAsFailedBefore:[NSDate dateWithTimeIntervalSinceNow:-60]];
-        if(stale > 0)
-            DDLogWarn(@"isaCloud: marked %lu message(s) that stayed unsent as failed", (unsigned long)stale);
-    });
+    //isaCloud: C31, it runs 15 s after the launch (see isaCloudScheduleStaleMessagesCleanupAfter:), not together with connectIfNecessary
+    [self isaCloudScheduleStaleMessagesCleanupAfter:15.0];
     
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleScheduleBackgroundTaskNotification:) name:kScheduleBackgroundTask object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(nowIdle:) name:kMonalIdle object:nil];
@@ -1143,6 +1157,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
 {
     //resume logging and other core tasks
     [HelperTools signalResumption];
+    [HelperTools isaCloudSetShuttingDown:NO];       //isaCloud: C32, the app is in the foreground again: timeout transactions may run
 
     DDLogInfo(@"Entering FG");
     [MLProcessLock lock];
@@ -1512,6 +1527,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
             if(background)
             {
                 DDLogInfo(@"### All accounts idle, disconnecting and stopping all background tasks ###");
+                [xmpp isaCloudBeginShutdownAndWaitForTimeouts];     //isaCloud: C32, stops new timeout transactions before the disconnect
                 DDLogVerbose(@"Setting _shutdownPending to YES...");
                 _shutdownPending = YES;
                 [HelperTools scheduleBackgroundTask:NO];            //request bg fetch execution in BGFETCH_DEFAULT_INTERVAL seconds
@@ -1600,6 +1616,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                         [HelperTools scheduleBackgroundTask:YES];      //force as soon as possible
                         
                         //disconnect all accounts to prevent TCP buffer leaking
+                        [xmpp isaCloudBeginShutdownAndWaitForTimeouts];     //isaCloud: C32, stops new timeout transactions before the disconnect
                         [[MLXMPPManager sharedInstance] disconnectAll];
                         
                         //notify about pending app freeze (don't queue this notification because it should be handled IMMEDIATELY and INLINE)
@@ -1666,6 +1683,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                     [HelperTools scheduleBackgroundTask:YES];      //force as soon as possible
                     
                     //disconnect all accounts to prevent TCP buffer leaking
+                    [xmpp isaCloudBeginShutdownAndWaitForTimeouts];     //isaCloud: C32, stops new timeout transactions before the disconnect
                     [[MLXMPPManager sharedInstance] disconnectAll];
                     
                     //notify about pending app freeze (don't queue this notification because it should be handled IMMEDIATELY and INLINE)
@@ -1773,6 +1791,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                     [HelperTools scheduleBackgroundTask:YES];      //force as soon as possible
                     
                     //disconnect all accounts to prevent TCP buffer leaking
+                    [xmpp isaCloudBeginShutdownAndWaitForTimeouts];     //isaCloud: C32, stops new timeout transactions before the disconnect
                     [[MLXMPPManager sharedInstance] disconnectAll];
                     
                     //notify about pending app freeze (don't queue this notification because it should be handled IMMEDIATELY and INLINE)
@@ -2028,6 +2047,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                             }];
                             
                             //disconnect all accounts to prevent TCP buffer leaking
+                            [xmpp isaCloudBeginShutdownAndWaitForTimeouts];     //isaCloud: C32, stops new timeout transactions before the disconnect
                             [[MLXMPPManager sharedInstance] disconnectAll];
                             
                             //notify about pending app freeze (don't queue this notification because it should be handled IMMEDIATELY and INLINE)

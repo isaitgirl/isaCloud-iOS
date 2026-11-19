@@ -1,6 +1,19 @@
 {
   "releases": [
     {
+      "build": 118,
+      "date": "19/11/2026",
+      "sections": [
+        {
+          "title": "Melhorias",
+          "items": [
+            "🛡️ Mais estabilidade ao bloquear o telefone: o app fica mais tranquilo para dormir e acordar.",
+            "🔍 Nova opção em Depuração para guardar mais histórico do app e nos ajudar a deixar tudo ainda mais redondinho."
+          ]
+        }
+      ]
+    },
+    {
       "build": 117,
       "date": "17/11/2026",
       "sections": [

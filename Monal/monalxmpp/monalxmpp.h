@@ -28,6 +28,7 @@ FOUNDATION_EXPORT const unsigned char monalxmppVersionString[];
 #import <monalxmpp/MLOMEMO.h>
 #import <monalxmpp/MLXMPPManager.h>
 #import <monalxmpp/MLConnectTiming.h>   //isaCloud: medição do tempo de conexão
+#import <monalxmpp/MLLongLog.h>   //isaCloud: log longo opcional (depuração)
 #import <monalxmpp/MLImageManager.h>
 #import <monalxmpp/MLMucProcessor.h>
 #import <monalxmpp/MLCall.h>
