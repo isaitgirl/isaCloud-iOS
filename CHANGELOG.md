@@ -2,7 +2,9 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
-## Próximo build (não lançado)
+## 0.0.1 (build 119) — 19/11/2026
+
+Enviado ao TestFlight às 14:45 (PR 82, branch `feature/criar-figurinha-com-gif`; testado no simulador e no `.dev` antes do envio).
 
 ### Adicionado
 - **Criar figurinha com GIF (atalho).** O botão "Criar" da folha de figurinhas pergunta antes, num cartão próprio (`createChoiceCard`, fora do `NavigationStack`, com fundo escurecido): "Com GIF" fecha a folha e abre o seletor de GIF com o interruptor "Figurinha" já ligado (`GifPickerView(startAsSticker:)`). "Com imagem" segue para o `StickerEditorView`, como antes. A opção "Com GIF" some quando a build não tem chave de GIPHY nem de KLIPY (`GifKeys.resolved(stored: nil) == nil`). O seletor de GIF do `ChatView` passou a ser uma folha por item (`gifPickerMode`: `.gif` do clipe, `.sticker` do atalho), de modo que o modo viaja junto com a apresentação; com uma flag separada lida só dentro da folha, a primeira abertura saía com o interruptor desligado. A abertura espera 0,4 s depois do fechamento da folha de figurinhas, para não empilhar duas folhas. O cartão próprio e o rosa (`isaCloudPink`) em "Criar" e "Cancelar" da folha existem porque o iOS 26 e o 27 pintam os botões da barra de preto e o diálogo do sistema de cinza, sem aplicar a cor do app. Traduções pt-BR "Com GIF" e "Com imagem" no override do isaCloud. Descrição em `docs/feature-enviar-gif-figurinha.md`, seção "Atalho: Criar com GIF".

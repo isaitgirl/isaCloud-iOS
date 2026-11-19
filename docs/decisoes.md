@@ -1055,3 +1055,9 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - **Simulador:** o KSCrash só é instalado se o Registrador UDP estiver ligado (`initSystem`); o teste de ponta a ponta é no `.dev`.
 - **Em aberto:** reenvio silencioso da fila (seção 2.2) x aviso de novo (seção 8.2); "enviado" não espera recibo do servidor; resposta automática no `mod_firewall`.
 - **Como desfazer:** voltar o último filtro de `MLCrashReporter.m` para o `MFMailComposeViewController`.
+
+## Criar figurinha com GIF pelo botão Criar (19/11/2026, build 119)
+
+- O "Criar" da folha de figurinhas pergunta "Com GIF" ou "Com imagem". "Com GIF" fecha a folha, espera 0,4 s e abre o seletor de GIF com o interruptor "Figurinha" ligado (`GifPickerView(startAsSticker:)`); "Com imagem" abre o editor como antes. Sem chave GIPHY/KLIPY a opção "Com GIF" não aparece.
+- O seletor de GIF do `ChatView` passou de `.sheet(isPresented:)` para `.sheet(item:)` (`gifPickerMode`): com um `Bool` lido só dentro do conteúdo da folha, a 1ª abertura usava o valor velho e vinha com "Figurinha" desligado. **Não voltar para o `Bool`.**
+- No iOS 26/27 o `confirmationDialog` do sistema ignora o tint e vira um alerta cinza; por isso o cartão de escolha é próprio (overlay fora do `NavigationStack`) e os botões Criar/Cancelar da barra têm `Color("isaCloudPink")` explícito. Só código do isaCloud; sem impacto em merges do Monal além de `Stickers.swift`, `GifPickerView.swift` e `ChatView.swift`.

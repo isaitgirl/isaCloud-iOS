@@ -1,4 +1,4 @@
-# Estado atual e handoff (19/11/2026, build 118)
+# Estado atual e handoff (19/11/2026, build 119)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -8,8 +8,8 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 | | |
 |---|---|
 | Commit | o do **build 112** (aceita mensagem de qualquer aparelho OMEMO conhecido removido da lista, como o Android; bloqueia só aparelho marcado como não confiável e remetente com confiança explícita; log do motivo de recusa), tag `build-112`; ver `docs/analise-omemo-aparelho-removido.md`; `git log --oneline -3` |
-| TestFlight | **118** (19/11/2026, 10:07): correção do `0xdead10cc` dos timeouts no desligamento (C32), limpeza da abertura mais tarde (C31), registro do C20 sem I/O no SQL e log longo opcional na Depuração (`IsaCloudLogLongo`, desligado por padrão; PR 81). Análise em `docs/analise-log-perfil-12h.md` |
-| `.dev` no iPhone | **118**, igual ao TestFlight (19/11/2026; **sem push**) |
+| TestFlight | **119** (19/11/2026): atalho "Com GIF" / "Com imagem" no botão Criar das figurinhas (roadmap 179; PR 82). Antes, **118** (19/11/2026, 10:07): correção do `0xdead10cc` dos timeouts no desligamento (C32), limpeza da abertura mais tarde (C31), registro do C20 sem I/O no SQL e log longo opcional na Depuração (`IsaCloudLogLongo`, desligado por padrão; PR 81). Análise em `docs/analise-log-perfil-12h.md` |
+| `.dev` no iPhone | **119**, igual ao TestFlight (19/11/2026; **sem push**) |
 | Simuladores | iPhone XR (iOS 18.6) com o código do build 100 (09/11/2026) e isaCloud iOS27 com o do build 94 (ad-hoc, por cima do banco; último backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261105-1036-linha-lido-2/` e `-1037-linha-lido-2/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
 | ExyteChat | `80602dd` na `isaCloud` (visualizador sem `TabView` paginado com um anexo só, PR 23, mudança nº 24; antes `3eb0aa1`: tamanho do arquivo nas mídias e nos áudios, PR 22; antes `7d3292b`: miniatura opcional dentro da citação, `Message.quotePreview`, PR 21; antes `e168ed8`: visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |

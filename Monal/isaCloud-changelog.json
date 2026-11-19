@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "build": 119,
+      "date": "19/11/2026",
+      "sections": [
+        {
+          "title": "Novidades",
+          "items": [
+            "🎞️ Agora criar uma figurinha ficou mais divertido: no botão \"Criar\", escolha \"Com GIF\" e mande o seu GIF favorito como figurinha em um toque, ou escolha \"Com imagem\" para montar a sua do jeito tradicional."
+          ]
+        }
+      ]
+    },
+    {
       "build": 118,
       "date": "19/11/2026",
       "sections": [
