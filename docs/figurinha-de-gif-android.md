@@ -11,6 +11,8 @@ O guia descreve **o comportamento**, não o código. Nomes do iOS aparecem só c
 
 No seletor de GIF, um interruptor **"Figurinha"**. Ligado, o GIF tocado vai como figurinha, na menor versão do provedor, e fica salvo na biblioteca de figurinhas.
 
+**Atalho pela folha de figurinhas:** o botão **Criar** da folha oferece **"Com GIF"** (abre o seletor de GIF com o interruptor "Figurinha" já ligado, e o resto do fluxo é o mesmo) e **"Com imagem"** (o editor de figurinha atual). Sem chave de provedor no build, "Com GIF" não aparece.
+
 ## 2. Decisões da Isadora (13/11/2026)
 
 | Tema | Decisão |

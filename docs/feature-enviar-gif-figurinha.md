@@ -70,6 +70,16 @@ O modelo `GiphyGif` hoje tem só `previewURL` e `originalURL`. Com A, a figurinh
 
 Não muda: banco, `xmpp.m`, `MLXMPPManager`, upload e compressão (figurinha já pula a compressão; o GIF vai como está, `image/gif` pela extensão).
 
+## Atalho: Criar com GIF
+
+Além do interruptor no seletor de GIF, o botão **Criar** da folha de figurinhas oferece duas opções, num cartão próprio (título "Criar figurinha", botões rosa; não é o diálogo do sistema, que no iOS 26 e no 27 sai cinza):
+- **Com GIF:** a folha fecha e o seletor de GIF abre já com o interruptor **"Figurinha"** ligado. Tocar num GIF segue o fluxo normal: baixa a menor versão, salva na biblioteca e envia na hora. O interruptor continua podendo ser desligado.
+- **Com imagem:** o fluxo de sempre, com o editor (`StickerEditorView`).
+
+A opção "Com GIF" só aparece quando a build tem chave de GIPHY ou de KLIPY (`GifKeys.resolved(stored: nil)` não é nil); sem chave, o cartão mostra só "Com imagem". O interruptor continua voltando desligado a cada abertura do seletor **pelo clipe**: só o atalho da folha de figurinhas o liga, e essa escolha não é lembrada.
+
+Código: `StickerPickerView` (`Stickers.swift`) mostra o cartão e chama `onCreateWithGif`; `ChatView` abre o seletor como folha por item (`gifPickerMode`: `.gif` pelo clipe, `.sticker` pelo atalho), esperando 0,4 s para não empilhar duas folhas. `GifPickerView` recebe `startAsSticker`. Armadilha: uma flag separada, lida só dentro do conteúdo da folha, não era vista na primeira abertura; por isso o modo vai no próprio item da folha.
+
 ## Bug que aparece mesmo sem esta feature
 
 Hoje, se alguém mandar uma figurinha GIF (de outro app, ou do isaCloud depois desta mudança) e um aparelho com o build atual tocar em **"Salvar figurinha"**, o GIF é gravado como `<id>.png`. A figurinha fica parada e, se for reenviada, sobe com extensão `.png` e conteúdo GIF. A detecção de formato por bytes no `add` resolve isso. Entra no mesmo PR.
