@@ -1062,7 +1062,7 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - O seletor de GIF do `ChatView` passou de `.sheet(isPresented:)` para `.sheet(item:)` (`gifPickerMode`): com um `Bool` lido só dentro do conteúdo da folha, a 1ª abertura usava o valor velho e vinha com "Figurinha" desligado. **Não voltar para o `Bool`.**
 - No iOS 26/27 o `confirmationDialog` do sistema ignora o tint e vira um alerta cinza; por isso o cartão de escolha é próprio (overlay fora do `NavigationStack`) e os botões Criar/Cancelar da barra têm `Color("isaCloudPink")` explícito. Só código do isaCloud; sem impacto em merges do Monal além de `Stickers.swift`, `GifPickerView.swift` e `ChatView.swift`.
 
-## Espelhar selfies (próximo build)
+## Espelhar selfies (build 120)
 
 - **Problema:** com "Espelhar câmera frontal" ligado no iOS, a câmera do app entrega a selfie sem espelho (log: `EXIF orientation 6`, só rotação). O iOS não tem API para o app ler esse ajuste.
 - **Decisão:** opção própria do isaCloud, `mirrorFrontCameraPhotos`, em Ajustes → Anexos → "Espelhar selfies", **ligada por padrão**. Espelha na horizontal só as fotos da câmera frontal (`picker.cameraDevice == .front`; fallback pelo `LensModel` do EXIF), antes do envio. Vídeo não muda.

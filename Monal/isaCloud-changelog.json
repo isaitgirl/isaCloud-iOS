@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "build": 120,
+      "date": "19/11/2026",
+      "sections": [
+        {
+          "title": "Novidades",
+          "items": [
+            "🤳 Suas selfies agora saem espelhadas, igualzinho ao que você vê na câmera! Dá para desligar em Ajustes → Anexos."
+          ]
+        }
+      ]
+    },
+    {
       "build": 119,
       "date": "19/11/2026",
       "sections": [
