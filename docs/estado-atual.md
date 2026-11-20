@@ -7,7 +7,7 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 112** (aceita mensagem de qualquer aparelho OMEMO conhecido removido da lista, como o Android; bloqueia só aparelho marcado como não confiável e remetente com confiança explícita; log do motivo de recusa), tag `build-112`; ver `docs/analise-omemo-aparelho-removido.md`; `git log --oneline -3` |
+| Commit | o do **build 121** (`38b814af7`, tag `build-121`: correção do C33 e do log longo, PR 84); antes, o 120 (`f884e6c04`, tag `build-120`: espelhar selfies, PR 83); `git log --oneline -3` |
 | TestFlight | **121** (20/11/2026, 08:42): correção do `0xdead10cc` da gravação adiada do estado (C33) e do log longo que gravava 0 bytes desde o 118 (PR 84). Antes, **120** (19/11/2026, 17:27): opção "Espelhar selfies" (padrão ligado) para fotos da câmera frontal (roadmap 180; PR 83). Antes, **119** (19/11/2026): atalho "Com GIF" / "Com imagem" no botão Criar das figurinhas (roadmap 179; PR 82). Antes, **118** (19/11/2026, 10:07): correção do `0xdead10cc` dos timeouts no desligamento (C32), limpeza da abertura mais tarde (C31), registro do C20 sem I/O no SQL e log longo opcional na Depuração (`IsaCloudLogLongo`, desligado por padrão; PR 81). Análise em `docs/analise-log-perfil-12h.md` |
 | `.dev` no iPhone | **121**, igual ao TestFlight (20/11/2026; **sem push**) |
 | Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o código do build 121 (20/11/2026, ad-hoc, por cima do banco; backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261120-0833-c33/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
