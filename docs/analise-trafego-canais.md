@@ -429,6 +429,15 @@ Não é coisa do app nem da extensão perderem a sessão uma da outra: é o serv
 
 A conta do isacloud.cc não está nos canais grandes e nunca chega a 500. Por isso retoma sempre.
 
+### Por que a Guia XMPP aparece mais que os canais maiores (Gajim, Prosody, Conversations)
+
+Medido por entrada em cada sala no mesmo trecho:
+
+- **Guia XMPP:** é sala do nosso próprio servidor, sem s2s no caminho. A lista inteira (~229 ocupantes) chega em 5 a 15 s a cada entrada, enquanto o app ainda está acordado. Por isso ela inteira aparece no log, ~10 vezes.
+- **Gajim (481 ocupantes), Prosody (376) e Conversations (148):** vêm por s2s e a lista chega devagar. A do Gajim levou 3 min para entregar 273 presenças. Muitas entradas registraram 0 ou poucas presenças, porque o app ou a extensão já tinham sido suspensos.
+- O resto dessas listas não some: cai na fila do smacks com o app congelado. Esses canais são **combustível invisível** do transbordo. Pesam tanto quanto a Guia ou mais, mas não aparecem no log do app.
+- O `mod_default_bookmarks` não tem papel nisso. Ele só age com a lista de bookmarks vazia (conta nova). Quem entra na Guia a cada sessão é o app, como em todas as salas.
+
 ### Propostas (servidor, do mais barato ao mais completo)
 
 1. **Aumentar a fila do smacks** no `prosody.cfg.lua` (global ou nos VirtualHosts isacloud.im, xmpp.social.br e voz.social.br), por exemplo `smacks_max_queue_size = 5000`. A fila é por sessão hibernada, e com `smacks_max_hibernated_sessions = 2` o custo fica em alguns MB por usuário pesado, no pior caso. É uma linha de config e um reload, e quebra o ciclo do passo 4. O preço é que, na retomada, o servidor reenvia tudo o que estava na fila. Isso é bem menos do que a lista inteira de todas as salas de uma sessão nova.
