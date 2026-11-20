@@ -1,6 +1,19 @@
 {
   "releases": [
     {
+      "build": 121,
+      "date": "20/11/2026",
+      "sections": [
+        {
+          "title": "Correções",
+          "items": [
+            "🛡️ Mais estabilidade quando o telefone fica bloqueado: o app dorme sem tropeçar, mesmo com as conversas a mil.",
+            "🔍 O histórico extra da Depuração agora guarda tudo direitinho, para a gente caçar qualquer probleminha."
+          ]
+        }
+      ]
+    },
+    {
       "build": 120,
       "date": "19/11/2026",
       "sections": [

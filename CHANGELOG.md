@@ -2,7 +2,9 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
-## Próximo build
+## 0.0.1 (build 121) — 20/11/2026
+
+Enviado ao TestFlight às 08:42 (PR 84, branch `fix/c33-gravacao-adiada-e-log-longo`; log longo testado no `.dev` antes do envio; o C33 só se prova em produção).
 
 ### Corrigido
 - **Gravação adiada do estado não abre transação com o app congelando (C33).** `xmpp isaCloudFlushPendingPersist` (o `dispatch_after` de até 1 s do limitador de gravações, fila global utility) agora sai sem gravar quando `HelperTools isaCloudShuttingDown`, `isaCloudSuspendedFast` ou `parseQueueFrozen` estão ligados, deixando o pendente marcado: a queda da conexão já grava o estado inteiro (`isaCloudPersistStateNow`) e, depois de descongelar, o próximo `persistState` grava ou reagenda. O caminho imediato (`isaCloudPersistStateThrottled`) continua igual, porque roda no fim de uma transação já aberta. Log: `isaCloud C33: deferred state save of account N skipped`. Análise em `docs/analises-crashes.md` (C33).

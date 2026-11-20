@@ -1,4 +1,4 @@
-# Estado atual e handoff (19/11/2026, build 120)
+# Estado atual e handoff (20/11/2026, build 121)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -8,9 +8,9 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 | | |
 |---|---|
 | Commit | o do **build 112** (aceita mensagem de qualquer aparelho OMEMO conhecido removido da lista, como o Android; bloqueia só aparelho marcado como não confiável e remetente com confiança explícita; log do motivo de recusa), tag `build-112`; ver `docs/analise-omemo-aparelho-removido.md`; `git log --oneline -3` |
-| TestFlight | **120** (19/11/2026, 17:27): opção "Espelhar selfies" (padrão ligado) para fotos da câmera frontal (roadmap 180; PR 83). Antes, **119** (19/11/2026): atalho "Com GIF" / "Com imagem" no botão Criar das figurinhas (roadmap 179; PR 82). Antes, **118** (19/11/2026, 10:07): correção do `0xdead10cc` dos timeouts no desligamento (C32), limpeza da abertura mais tarde (C31), registro do C20 sem I/O no SQL e log longo opcional na Depuração (`IsaCloudLogLongo`, desligado por padrão; PR 81). Análise em `docs/analise-log-perfil-12h.md` |
-| `.dev` no iPhone | **120**, igual ao TestFlight (19/11/2026; **sem push**) |
-| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o código do build 120 (19/11/2026, ad-hoc, por cima do banco; backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261119-1710-espelhar-selfie/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
+| TestFlight | **121** (20/11/2026, 08:42): correção do `0xdead10cc` da gravação adiada do estado (C33) e do log longo que gravava 0 bytes desde o 118 (PR 84). Antes, **120** (19/11/2026, 17:27): opção "Espelhar selfies" (padrão ligado) para fotos da câmera frontal (roadmap 180; PR 83). Antes, **119** (19/11/2026): atalho "Com GIF" / "Com imagem" no botão Criar das figurinhas (roadmap 179; PR 82). Antes, **118** (19/11/2026, 10:07): correção do `0xdead10cc` dos timeouts no desligamento (C32), limpeza da abertura mais tarde (C31), registro do C20 sem I/O no SQL e log longo opcional na Depuração (`IsaCloudLogLongo`, desligado por padrão; PR 81). Análise em `docs/analise-log-perfil-12h.md` |
+| `.dev` no iPhone | **121**, igual ao TestFlight (20/11/2026; **sem push**) |
+| Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o código do build 121 (20/11/2026, ad-hoc, por cima do banco; backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261120-0833-c33/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
 | ExyteChat | `80602dd` na `isaCloud` (visualizador sem `TabView` paginado com um anexo só, PR 23, mudança nº 24; antes `3eb0aa1`: tamanho do arquivo nas mídias e nos áudios, PR 22; antes `7d3292b`: miniatura opcional dentro da citação, `Message.quotePreview`, PR 21; antes `e168ed8`: visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
 
@@ -23,6 +23,11 @@ Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 - **Ainda em avaliação:** build 112 (aceitar mensagem de aparelho OMEMO conhecido removido da lista; testar com dois aparelhos).
 - **Primeira mensagem não lida (build 87):** só no roadmap, sem previsão de nova avaliação.
 - **Figurinhas e XEP-0449 (roadmap 155):** análise iOS e Android pronta em `docs/analise-xep0449-conformidade.md`; aguarda 3 decisões, sem código.
+
+## O que entrou no build 121 (sobre o 120)
+
+- **C33** (PR 84): crash `0xdead10cc` de 20/11 04:55 no build 120, com uma thread em `realPersistState` gravando o estado da conta com o app já congelado. O timer de 1 s do limitador de gravações (`isaCloudFlushPendingPersist`) não abre mais transação com `isaCloudShuttingDown`, `isaCloudSuspendedFast` ou `parseQueueFrozen`; o pendente fica marcado e a queda da conexão já grava tudo. Log: `isaCloud C33: deferred state save ... skipped`. **Só se prova em produção** (madrugadas com canais estrangeiros ativos). Análise em `docs/analises-crashes.md` (C33).
+- **Log longo gravando de novo:** nos builds 118–120 os arquivos ficavam com 0 bytes (`unrecognized selector` em `shouldLockLogFile:`); agora com `MLLongLogFileManager`. No `.dev`: 1,1 MB em 3 min. **Falta ver a extensão (`appex`) gravando no TestFlight.** Com crash de madrugada, exportar o log longo de manhã cobre a noite toda (os 4 rawlogs cobrem menos de 2 h).
 
 ## O que entrou no build 120 (sobre o 119)
 
