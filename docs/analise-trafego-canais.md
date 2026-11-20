@@ -320,7 +320,7 @@ Módulo Prosody no estilo do `cloud_notify_quiet` (`dry_run`, log por decisão, 
 
 - A presença de sala chega ao usuário pela rota `presence/full`. Descartar ali, **antes da fila do Stream Management**, também esvazia a fila de hibernação, e some a enxurrada ao abrir o app (1.000+ presenças em 2 s em 17/11/2026).
 - O `mod_csi_battery_saver` do isaCloud só **segura** a presença de sala enquanto o app está inativo (fila de até 256) e solta tudo ao ficar ativo; não remove nada. E remover repetidas ajuda pouco: no pico, 756 de 849 presenças eram de pessoas diferentes (~11% de repetição).
-- Só vale para contas **hospedadas no servidor do isaCloud**. A conta do xmpp.social.br da Isadora (98% das presenças dos logs de 17/11) não é afetada.
+- Vale para as contas dos VirtualHosts do isaCloud: `isacloud.im`, `xmpp.social.br` e `voz.social.br` são todos do mesmo Prosody (correção de 20/11/2026: a conta do xmpp.social.br, com 98% das presenças, **também é nossa**).
 
 ### Regra
 
@@ -373,3 +373,83 @@ A consulta MAM com `max=0` devolve só o total (RSM `count`), sem texto. O app s
 ### Compatibilidade
 
 Tudo acima usa só XEPs padrão (MAM XEP-0313, bookmarks XEP-0402, referências XEP-0372); nenhum cliente de outro lugar é afetado. A regra de compatibilidade do projeto fica: estender sem substituir, mudanças de comportamento do servidor só por opt-in negociado (feature anunciada pelo app), namespace próprio para o que for nosso, e conferir com Conversations, Gajim, Dino e o Monal oficial depois de cada mudança do servidor. **MIX fica fora** enquanto estiver Experimental e sem clientes.
+
+## Medição de 20/11/2026: a enxurrada é quase toda reentrada, não movimento
+
+Rawlogs do iPhone de 20/11, 06:37–07:15 (app e extensão, contas do isacloud.cc e do xmpp.social.br), presenças de sala classificadas por ocupante (sala + apelido):
+
+| Tipo | Presenças |
+|---|---|
+| Ocupante já visto, presença repetida sem mudança de `show`/`status` | 3.251 |
+| Ocupante visto pela primeira vez no trecho (lista inicial ou entrada real) | 1.938 |
+| Mudança real de `show`/`status` | 197 |
+| Própria presença (código 110, o app entrando na sala) | 106 |
+| Saída (`unavailable`) | **11** |
+
+- O movimento real (gente entrando e saindo) é pequeno: **11 saídas** em ~35 min. O volume vem da **lista inteira de ocupantes que o servidor manda a cada vez que o app entra na sala** (XEP-0045 obriga). A sala `guiaxmpp@conference.isacloud.cc` sozinha deu 2.235 presenças, 1.994 delas repetidas.
+- O app entra de novo nas salas a cada **sessão nova** (sem retomar o Stream Management). No trecho houve **10 sessões novas** (6 da extensão, 4 do app) contra 22 retomadas.
+- O app apaga a lista ao entrar (`cleanupParticipantsListFor:` em `MLMucProcessor.m`, antes de `sendJoinPresenceFor:`) e remonta com a lista que chega. Por isso um filtro no servidor que corte repetidas, ou o filtro "quem falou em 7 dias" do `mod_muc_presence_quiet`, esvaziaria a lista, o `@` e a contagem.
+
+### Caminhos que mantêm lista, `@` e contagem
+
+1. **Menos sessões novas (app):** entender por que app e extensão perdem a retomada um do outro. Cada sessão nova a menos poupa a lista inteira de todas as salas, nas duas contas.
+2. **Reentrada com diferença (servidor do isaCloud + app, opt-in):** um módulo guarda, por usuário e sala, a última presença entregue de cada ocupante; na reentrada manda só quem entrou, quem saiu (como `unavailable`) e quem mudou. O app anuncia a feature e deixa de apagar a lista ao entrar. Lista, `@` e contagem ficam exatos. Vale para as contas de todos os VirtualHosts do isaCloud (isacloud.im, xmpp.social.br, voz.social.br).
+3. **O filtro "quem falou em 7 dias" sai da mesa:** corta justamente o que o app usa e não ataca a origem da enxurrada.
+4. **fpush não serve para isso:** ele só recebe os pedidos de push e não vê nem filtra presença.
+
+## Por que as sessões novas acontecem (20/11/2026)
+
+### O que o log mostra
+
+Toda sessão nova do trecho veio logo depois de uma retomada recusada pelo servidor:
+
+```
+<failed xmlns='urn:xmpp:sm:3'><error type='cancel'><resource-constraint/>
+<text>Too many unacked stanzas remaining, session can't be resumed</text></error></failed>
+```
+
+- Conta do xmpp.social.br (a que está nos canais grandes): **10 retomadas recusadas, 1 aceita**.
+- Conta do isacloud.cc: **10 retomadas, todas aceitas**.
+
+Não é coisa do app nem da extensão perderem a sessão uma da outra: é o servidor que recusa.
+
+### O que o Prosody faz (conferido no código do trunk e no `prosody.cfg.lua`)
+
+- `mod_smacks` guarda as stanzas não confirmadas numa fila de tamanho fixo, `smacks_max_queue_size`, **padrão 500**. A config não define esse valor.
+- A fila é circular (`util.queue` com sobrescrita): passou de 500, a mais antiga é descartada. Na retomada, `smqueue:resumable()` vê que faltam stanzas e devolve o erro `overflow`, que é o texto acima.
+- `smacks_hibernation_time = 86400` não ajuda aqui: a sessão não expira, ela **transborda**.
+- `mod_csi_battery_saver` (cópia própria em `isacloud-custom-plugins`) segura presenças enquanto o app está inativo. Mas qualquer mensagem de grupo com texto é "importante" e despeja a fila inteira. Nos canais movimentados isso acontece o tempo todo, então as presenças vão quase direto para a fila do smacks.
+
+### O ciclo
+
+1. O app é suspenso. As salas continuam mandando mensagens e presenças, que ficam na fila do smacks sem confirmação.
+2. Passa de 500 e a retomada é recusada. Com a lista inteira de uma única sala grande isso já acontece: a `guiaxmpp` sozinha deu 2.235 presenças.
+3. Sessão nova: o app entra de novo em todas as salas e recebe a lista inteira de cada uma (milhares de presenças).
+4. Se o app é suspenso antes de confirmar tudo isso, a fila já está acima de 500 e a próxima retomada também falha. Volta ao passo 3.
+
+A conta do isacloud.cc não está nos canais grandes e nunca chega a 500. Por isso retoma sempre.
+
+### Propostas (servidor, do mais barato ao mais completo)
+
+1. **Aumentar a fila do smacks** no `prosody.cfg.lua` (global ou nos VirtualHosts isacloud.im, xmpp.social.br e voz.social.br), por exemplo `smacks_max_queue_size = 5000`. A fila é por sessão hibernada, e com `smacks_max_hibernated_sessions = 2` o custo fica em alguns MB por usuário pesado, no pior caso. É uma linha de config e um reload, e quebra o ciclo do passo 4. O preço é que, na retomada, o servidor reenvia tudo o que estava na fila. Isso é bem menos do que a lista inteira de todas as salas de uma sessão nova.
+2. **Compactar presença de sala no `mod_csi_battery_saver`** enquanto o cliente está inativo. Presenças de ocupante (sem o código 110) vão para um mapa por JID de origem (`sala/apelido`) em vez da fila, e a última vence. Esse mapa não é despejado pelas mensagens "importantes", só no `csi-client-active`, no fim da hibernação ou ao passar de um teto. A semântica de presença é preservada, porque só o estado mais recente de cada ocupante importa: `unavailable` depois de `available` fica `unavailable`, e a troca de apelido (303) é uma presença do apelido antigo. Assim a fila do smacks recebe no máximo uma presença por ocupante, e as repetidas somem.
+3. **Reentrada com diferença** (item 2 da seção anterior) continua valendo para quando houver sessão nova, mas com 1 e 2 ela passa a ser rara.
+
+Medir depois de aplicar: contar `<failed` e `<resumed` por conta nos rawlogs (no trecho de hoje foram 10 e 1 na conta do xmpp.social.br).
+
+### O que foi feito (20/11/2026)
+
+- **Fila do smacks:** `smacks_max_queue_size = 5000`, configurado no servidor pela Isadora. O 24 h de hibernação fica: a wiki do Monal para admins pede pelo menos 24 h de timeout de sessão, porque o Monal entra e retoma muito por causa do desenho do push. A mesma página recomenda 2000 a 4000 de fila para quem está em canais movimentados.
+- **Compactação no `mod_csi_battery_saver`** (cópia própria em `isacloud-custom-plugins/share/lua/5.4/`):
+  - Enquanto o cliente está inativo, presença de ocupante (disponível ou `unavailable`, sem o código 110) vai para um buffer por `sala/apelido`, e a última vence.
+  - Mensagens "importantes" não despejam esse buffer.
+  - Ele é liberado em quatro casos:
+    - quando o cliente fica ativo;
+    - no fim da hibernação, depois do que já estava na fila;
+    - quando chega a presença própria (110) de uma sala, e aí só os ocupantes daquela sala, antes da 110, para manter a ordem do XEP-0045 7.2.3 (a lista termina com a própria presença);
+    - quando passa do teto.
+  - Opções: `csi_battery_saver_compact_muc_presence` (padrão `true`, desliga a compactação sem tirar o módulo) e `csi_battery_saver_muc_presence_max` (padrão 1000).
+  - Testado fora do servidor com um harness que usa o `util.stanza`, o `util.jid` e o `util.queue` do trunk, com 12 verificações. Elas cobrem compactação, ordem antes da 110, liberação ao ficar ativo, fim da hibernação, teto e nenhuma compactação com o cliente ativo.
+- **Para validar em produção:**
+  - a contagem de `<failed` contra `<resumed` da conta do xmpp.social.br nos rawlogs das próximas manhãs;
+  - a lista de participantes e o `@` continuam completos depois de uma noite com o app suspenso.
