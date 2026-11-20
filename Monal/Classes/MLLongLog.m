@@ -52,6 +52,21 @@ static NSArray<NSString*>* longLogDropLiterals(void)
 //debug and verbose lines that are kept (regular expression, one alternation)
 static NSString* const kLongLogKeepPattern = @"App now|App started|App launching|Starting: |background task|UIKit background|Posting kMonal|kMonal(Will|Is)|Freezing account|Unfreezing|Reloading UNfrozen|Parse queue is|Locking process|Unlocking process|Suspending logger|_shutdownPending|incomingWakeup|Remote .* running|IPC|CHANGED TO|ALL ACCOUNTS IDLE|checking if background|disconnect|Disconnect|reconnect|Reconnect|connecting account|Creating account|bind|resum|Resum|smacks|nw_path|path monitor|Connection (state|failed|closed)|stream error|TLS|SASL|login|catchup|catch-up|mam catchups|handler triggered|Invalidating iq|Sleeping|Write transaction|Database opened|Closing database|Chekpointing returned|slow persistState|Database version|migration|Device id|isaCloud (SPIN|C20|C30|C32|LONGLOG)|push token|Current notification settings|Handling push";
 
+//isaCloud: the DDFileLogger of this build calls shouldLockLogFile: on its file manager for every write, and the plain
+//DDLogFileManagerDefault does not implement it: every write threw "unrecognized selector" and the long log files stayed
+//empty (0 bytes, builds 118-120). The lock is wanted anyway: the notification and share extensions write to the same "appex" folder.
+@interface MLLongLogFileManager : DDLogFileManagerDefault
+@end
+
+@implementation MLLongLogFileManager
+
+-(BOOL) shouldLockLogFile:(NSString*) filePath
+{
+    return YES;
+}
+
+@end
+
 //one line of the storm limiter: messages per key in the current second
 @interface MLLongLogRate : NSObject
 @property (nonatomic) int64_t second;
@@ -255,7 +270,7 @@ static NSString* const kLongLogKeepPattern = @"App now|App started|App launching
         return;
     }
 
-    DDLogFileManagerDefault* manager = [[DDLogFileManagerDefault alloc] initWithLogsDirectory:dirURL.path defaultFileProtectionLevel:NSFileProtectionCompleteUntilFirstUserAuthentication];
+    DDLogFileManagerDefault* manager = [[MLLongLogFileManager alloc] initWithLogsDirectory:dirURL.path defaultFileProtectionLevel:NSFileProtectionCompleteUntilFirstUserAuthentication];
     manager.maximumNumberOfLogFiles = 40;
     manager.logFilesDiskQuota = (unsigned long long)1024 * 1024 * 1024;
 
