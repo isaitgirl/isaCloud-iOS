@@ -2,6 +2,12 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## Próximo build
+
+### Corrigido
+- **Gravação adiada do estado não abre transação com o app congelando (C33).** `xmpp isaCloudFlushPendingPersist` (o `dispatch_after` de até 1 s do limitador de gravações, fila global utility) agora sai sem gravar quando `HelperTools isaCloudShuttingDown`, `isaCloudSuspendedFast` ou `parseQueueFrozen` estão ligados, deixando o pendente marcado: a queda da conexão já grava o estado inteiro (`isaCloudPersistStateNow`) e, depois de descongelar, o próximo `persistState` grava ou reagenda. O caminho imediato (`isaCloudPersistStateThrottled`) continua igual, porque roda no fim de uma transação já aberta. Log: `isaCloud C33: deferred state save of account N skipped`. Análise em `docs/analises-crashes.md` (C33).
+- **Log longo voltou a gravar.** O `DDFileLogger` guarda numa variável `static` (uma vez por processo) se o gerenciador de arquivos implementa `shouldLockLogFile:`; o primeiro a gravar é o rawlog (`MLLogFileManager`, que implementa), então o logger longo, com o `DDLogFileManagerDefault`, recebia a chamada e lançava `unrecognized selector` a cada linha: os arquivos de `Library/logs-long` ficavam com 0 bytes desde o build 118. O `MLLongLog` passou a usar `MLLongLogFileManager`, que implementa o método (com trava, porque as duas extensões gravam na mesma pasta `appex`).
+
 ## 0.0.1 (build 120) — 19/11/2026
 
 Enviado ao TestFlight às 17:27 (PR 83, branch `feature/espelhar-selfie`; testado no `.dev` antes do envio).

@@ -4610,6 +4610,20 @@ static NSLock* isaCloudTimeoutsLock(void)
 -(void) isaCloudFlushPendingPersist
 {
     BOOL save = NO;
+    //isaCloud: C33, this timer opens a write transaction of its own, up to 1 s after it was scheduled: if the app started
+    //to shut down or freeze meanwhile, that transaction can still be open when iOS suspends the app (0xdead10cc).
+    //Leave the save pending instead: the disconnect saves the whole state right away (isaCloudPersistStateNow),
+    //and after the resume the next persistState saves it (or schedules this timer again).
+    BOOL shuttingDown = [HelperTools isaCloudShuttingDown];
+    BOOL frozen = [HelperTools isaCloudSuspendedFast] || [self parseQueueFrozen];
+    if(shuttingDown || frozen)
+    {
+        @synchronized(self->_isaCloudPersistLock) {
+            self->_isaCloudPersistTimerScheduled = NO;
+        }
+        DDLogInfo(@"isaCloud C33: deferred state save of account %@ skipped (shuttingDown=%@, frozen=%@), left pending", self.accountID, bool2str(shuttingDown), bool2str(frozen));
+        return;
+    }
     @synchronized(self->_isaCloudPersistLock) {
         self->_isaCloudPersistTimerScheduled = NO;
         if(self->_isaCloudPersistPending)
