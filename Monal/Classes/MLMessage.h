@@ -130,6 +130,12 @@ The of the message in the DB , should be int
 @property (nonatomic, assign) BOOL isSticker;
 //isaCloud: the id of the message this one quotes, when it quotes a photo, a GIF or a sticker (element urn:isacloud:quote:0, column isacloud_quote_id)
 @property (nonatomic, copy) NSString* _Nullable quotedMessageId;
+//isaCloud: a poll message (urn:fluux:poll:0, column isacloud_poll): the JSON of its definition, decoded by PollDefinition (Polls.swift). nil if it is not a poll
+@property (nonatomic, copy) NSString* _Nullable poll;
+//isaCloud: the <poll-closed> carried by a closing message (column isacloud_poll_closed), as JSON, decoded by PollClosedInfo (Polls.swift)
+@property (nonatomic, copy) NSString* _Nullable pollClosed;
+//isaCloud: when the poll message was closed by its creator (column isacloud_poll_closed_at). nil while the poll is open
+@property (nonatomic, copy) NSDate* _Nullable pollClosedAt;
 
 @property (nonatomic, readonly) xmpp* _Nullable account;
 @property (nonatomic, readonly) id<MLContactProtocol> contact;

@@ -23,6 +23,9 @@ struct ChatInputBar: View {
     /// isaCloud: opens the sticker sheet (favorites, all, create); see Stickers.swift
     var onPickSticker: () -> Void = {}
     var onShareLocation: () -> Void
+    /// isaCloud: opens the sheet that creates a poll (PollViews.swift); the item is only offered in a group or channel with occupant-id
+    var onCreatePoll: () -> Void = {}
+    var showsPollItem: Bool = false
     var onRemoveAttachment: (Int) -> Void
     var onSendRecording: (URL) -> Void
     /// isaCloud: the nicks offered for "@" in a group or channel (none in a 1:1 chat)
@@ -144,6 +147,14 @@ struct ChatInputBar: View {
                 onShareLocation()
             } label: {
                 Label("Location", systemImage: "location")
+            }
+            //isaCloud: a poll, in a group or channel only (see PollViews.swift)
+            if showsPollItem {
+                Button {
+                    onCreatePoll()
+                } label: {
+                    Label("Poll", systemImage: "chart.bar")
+                }
             }
         } label: {
             Image(systemName: "paperclip")

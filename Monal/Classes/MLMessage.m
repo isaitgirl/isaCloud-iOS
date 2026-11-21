@@ -112,6 +112,13 @@ static NSMutableDictionary* _singletonCache;
     //isaCloud: a missing key means "quotes nothing"
     NSString* quotedId = [dic objectForKey:@"isacloud_quote_id"];
     message.quotedMessageId = [quotedId isKindOfClass:[NSString class]] && quotedId.length > 0 ? quotedId : nil;
+    //isaCloud: missing keys (dictionaries built without the columns) mean "not a poll", "not closed"
+    NSString* pollJSON = [dic objectForKey:@"isacloud_poll"];
+    message.poll = [pollJSON isKindOfClass:[NSString class]] && pollJSON.length > 0 ? pollJSON : nil;
+    NSString* pollClosedJSON = [dic objectForKey:@"isacloud_poll_closed"];
+    message.pollClosed = [pollClosedJSON isKindOfClass:[NSString class]] && pollClosedJSON.length > 0 ? pollClosedJSON : nil;
+    NSNumber* pollClosedAtMillis = [dic objectForKey:@"isacloud_poll_closed_at"];
+    message.pollClosedAt = [pollClosedAtMillis isKindOfClass:[NSNumber class]] ? [NSDate dateWithTimeIntervalSince1970:pollClosedAtMillis.doubleValue / 1000.0] : nil;
 }
 
 +(MLMessage* _Nullable) createDraftMessageFromDatabaseWithJid:(NSString*) jid andAccountID:(NSNumber*) accountID

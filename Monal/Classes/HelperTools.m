@@ -4488,9 +4488,13 @@ a=%@\r\n", mid, candidate];
     //"parse" reactions (iterate over grapheme clusters as required in XEP-0444 Business Rules)
     NSMutableOrderedSet* reactionsList = [NSMutableOrderedSet new];
     [reactions enumerateSubstringsInRange:NSMakeRange(0, [reactions length]) options:NSStringEnumerationByComposedCharacterSequences usingBlock:^(NSString * _Nullable substring, NSRange substringRange __unused, NSRange enclosingRange __unused, BOOL * _Nonnull stop __unused) {
+        //isaCloud: keycaps (1\ufe0f\u20e3 = 0031 FE0F 20E3, also #/*) lost their FE0F above: it goes right after the base character again,
+        //not at the end of the cluster (0031 20E3 FE0F does not match the emoji of a poll option, see docs/implementacao-enquetes-ios.md)
+        if([substring rangeOfString:@"\u20e3"].location != NSNotFound)
+            [reactionsList addObject:[[substring substringToIndex:1] stringByAppendingString:@"\ufe0f\u20e3"]];
         //add vs16 modifier to every emoji it is allowed
         //see https://www.unicode.org/Public/emoji/latest/emoji-sequences.txt
-        if([_validVs16Emojis characterIsMember:[substring characterAtIndex:0]])
+        else if([_validVs16Emojis characterIsMember:[substring characterAtIndex:0]])
             [reactionsList addObject:[substring stringByAppendingString:@"\ufe0f"]];
         else
             [reactionsList addObject:substring];

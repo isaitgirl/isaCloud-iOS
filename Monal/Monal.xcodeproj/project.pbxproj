@@ -121,6 +121,11 @@
 		A1C0FFEE00000000000002A3 /* QuoteFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000002A1 /* QuoteFormatting.swift */; };
 		A1C0FFEE00000000000002A5 /* QuoteFormattingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000002A4 /* QuoteFormattingTests.swift */; };
 		A1C0FFEE0000000000000F02 /* StickerFileSharingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000F01 /* StickerFileSharingTests.swift */; };
+		A1C0FFEE0000000000001011 /* PollsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000001012 /* PollsTests.swift */; };
+		A1C0FFEE0000000000001F32 /* PollCardRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000001F31 /* PollCardRules.swift */; };
+		A1C0FFEE0000000000001F33 /* PollCardRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000001F31 /* PollCardRules.swift */; };
+		A1C0FFEE0000000000001F35 /* PollViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000001F34 /* PollViews.swift */; };
+		A1C0FFEE0000000000001F37 /* PollCardRulesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000001F36 /* PollCardRulesTests.swift */; };
 		A1C0FFEE0000000000000403 /* IsaCloudColorMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000401 /* IsaCloudColorMath.swift */; };
 		A1C0FFEE0000000000000405 /* IsaCloudBubbleColorsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000404 /* IsaCloudBubbleColorsTests.swift */; };
 		A1C0FFEE0000000000000B03 /* MucNickTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000B02 /* MucNickTests.swift */; };
@@ -263,6 +268,7 @@
 		BE8B63D2491B1E5582965A8F /* Pods_monalxmpp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5B9C86E0A568734587FE9BA2 /* Pods_monalxmpp.framework */; };
 		C10490492612ED2F0054AC9E /* MLEmoji.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10490482612ED2F0054AC9E /* MLEmoji.swift */; };
 		C10490E32612F3D00054AC9E /* MLCrypto.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10490E22612F3D00054AC9E /* MLCrypto.swift */; };
+		A1C0FFEE0000000000001001 /* Polls.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000001002 /* Polls.swift */; };
 		C10490EB2612F3E00054AC9E /* EncryptedPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10490EA2612F3E00054AC9E /* EncryptedPayload.swift */; };
 		C1049189261301530054AC9E /* MonalXMPPUnitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1049188261301530054AC9E /* MonalXMPPUnitTests.swift */; };
 		C104918B261301530054AC9E /* monalxmpp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 26CC579223A0867400ABB92A /* monalxmpp.framework */; };
@@ -624,6 +630,10 @@
 		A1C0FFEE0000000000000205 /* MessageSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageSearchTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000002A4 /* QuoteFormattingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuoteFormattingTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE0000000000000F01 /* StickerFileSharingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickerFileSharingTests.swift; sourceTree = "<group>"; };
+		A1C0FFEE0000000000001012 /* PollsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PollsTests.swift; sourceTree = "<group>"; };
+		A1C0FFEE0000000000001F31 /* PollCardRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PollCardRules.swift; sourceTree = "<group>"; };
+		A1C0FFEE0000000000001F34 /* PollViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PollViews.swift; sourceTree = "<group>"; };
+		A1C0FFEE0000000000001F36 /* PollCardRulesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PollCardRulesTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE0000000000000404 /* IsaCloudBubbleColorsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IsaCloudBubbleColorsTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE0000000000000B02 /* MucNickTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MucNickTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000001E6 /* ChatLocationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatLocationTests.swift; sourceTree = "<group>"; };
@@ -789,6 +799,7 @@
 		BFA9EFD7A8064201C81F52CF /* Pods-Monal.alpha.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Monal.alpha.xcconfig"; path = "Target Support Files/Pods-Monal/Pods-Monal.alpha.xcconfig"; sourceTree = "<group>"; };
 		C10490482612ED2F0054AC9E /* MLEmoji.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLEmoji.swift; sourceTree = "<group>"; };
 		C10490E22612F3D00054AC9E /* MLCrypto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLCrypto.swift; sourceTree = "<group>"; };
+		A1C0FFEE0000000000001002 /* Polls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Polls.swift; sourceTree = "<group>"; };
 		C10490EA2612F3E00054AC9E /* EncryptedPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EncryptedPayload.swift; sourceTree = "<group>"; };
 		C1049186261301530054AC9E /* MonalXMPPUnitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MonalXMPPUnitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C1049188261301530054AC9E /* MonalXMPPUnitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonalXMPPUnitTests.swift; sourceTree = "<group>"; };
@@ -1298,6 +1309,8 @@
 				A1C0FFEE00000000000001F4 /* MucHatViews.swift */,
 				A1C0FFEE00000000000001E4 /* LocationPickerView.swift */,
 				A1C0FFEE00000000000001D4 /* GifPickerView.swift */,
+				A1C0FFEE0000000000001F31 /* PollCardRules.swift */,
+				A1C0FFEE0000000000001F34 /* PollViews.swift */,
 				A1C0FFEE0000000000000C02 /* RecentReactions.swift */,
 				A1C0FFEE0000000000000E01 /* Stickers.swift */,
 				A1C0FFEE0000000000000401 /* IsaCloudColorMath.swift */,
@@ -1327,6 +1340,7 @@
 				267B6720226A222E003DB850 /* MLEncryptedPayload.m */,
 				C1850E6625F37EC0003D506A /* Monal Tests-Bridging-Header.h */,
 				C10490E22612F3D00054AC9E /* MLCrypto.swift */,
+				A1C0FFEE0000000000001002 /* Polls.swift */,
 				C10490EA2612F3E00054AC9E /* EncryptedPayload.swift */,
 				848904A8289C82C30097E19C /* SCRAM.m */,
 				848904AA289C82DB0097E19C /* SCRAM.h */,
@@ -1670,6 +1684,8 @@
 				A1C0FFEE000000000000020C /* MessageSearchSnippetTests.swift */,
 				A1C0FFEE00000000000002A4 /* QuoteFormattingTests.swift */,
 				A1C0FFEE0000000000000F01 /* StickerFileSharingTests.swift */,
+				A1C0FFEE0000000000001012 /* PollsTests.swift */,
+				A1C0FFEE0000000000001F36 /* PollCardRulesTests.swift */,
 				A1C0FFEE0000000000000404 /* IsaCloudBubbleColorsTests.swift */,
 				A1C0FFEE0000000000000B02 /* MucNickTests.swift */,
 				A1C0FFEE00000000000001E6 /* ChatLocationTests.swift */,
@@ -2494,6 +2510,8 @@
 				A1C0FFEE00000000000001F5 /* MucHatViews.swift in Sources */,
 				A1C0FFEE00000000000001E5 /* LocationPickerView.swift in Sources */,
 				A1C0FFEE00000000000001D5 /* GifPickerView.swift in Sources */,
+				A1C0FFEE0000000000001F32 /* PollCardRules.swift in Sources */,
+				A1C0FFEE0000000000001F35 /* PollViews.swift in Sources */,
 				A1C0FFEE0000000000000C01 /* RecentReactions.swift in Sources */,
 				A1C0FFEE0000000000000E02 /* Stickers.swift in Sources */,
 				A1C0FFEE0000000000000402 /* IsaCloudColorMath.swift in Sources */,
@@ -2567,6 +2585,7 @@
 				26CC57D323A08D7100ABB92A /* DataLayer.m in Sources */,
 				26CC57A323A086AA00ABB92A /* MLDNSLookup.m in Sources */,
 				C10490E32612F3D00054AC9E /* MLCrypto.swift in Sources */,
+				A1C0FFEE0000000000001001 /* Polls.swift in Sources */,
 				C1F5C7AA2775DA000001F295 /* MLContactSoftwareVersionInfo.m in Sources */,
 				26CC57D423A08D7100ABB92A /* MLImageManager.m in Sources */,
 				540E13A024CDCDB30038FDA0 /* MLProcessLock.m in Sources */,
@@ -2632,6 +2651,9 @@
 				A1C0FFEE00000000000002A3 /* QuoteFormatting.swift in Sources */,
 				A1C0FFEE00000000000002A5 /* QuoteFormattingTests.swift in Sources */,
 				A1C0FFEE0000000000000F02 /* StickerFileSharingTests.swift in Sources */,
+				A1C0FFEE0000000000001011 /* PollsTests.swift in Sources */,
+				A1C0FFEE0000000000001F33 /* PollCardRules.swift in Sources */,
+				A1C0FFEE0000000000001F37 /* PollCardRulesTests.swift in Sources */,
 				A1C0FFEE0000000000000403 /* IsaCloudColorMath.swift in Sources */,
 				A1C0FFEE0000000000000405 /* IsaCloudBubbleColorsTests.swift in Sources */,
 				A1C0FFEE0000000000000B03 /* MucNickTests.swift in Sources */,

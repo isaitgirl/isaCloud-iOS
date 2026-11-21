@@ -290,6 +290,17 @@ extern NSString* const kMessageTypeFiletransfer;
 -(NSString* _Nullable) mimeTypeOfOutboundFiletransferMessageId:(NSString*) messageId forAccount:(NSNumber*) accountID;
 //isaCloud: the history id of the message in this chat whose messageid or stanzaid is `quotedId` (nil if it is not in the database)
 -(NSNumber* _Nullable) historyIdOfQuotedMessageId:(NSString*) quotedId inChat:(NSString*) buddy forAccount:(NSNumber*) accountID;
+//isaCloud: polls (urn:fluux:poll:0), columns isacloud_poll, isacloud_poll_closed and isacloud_poll_closed_at (migration 9 of +migrateISACloudDB:).
+//The JSON strings are built by ISACloudPolls (Polls.swift); the closed-at value is epoch millis
+-(void) setPollJSON:(NSString*) pollJSON forHistoryId:(NSNumber*) historyId;
+-(void) setPollClosedJSON:(NSString*) closedJSON forHistoryId:(NSNumber*) historyId;
+-(void) setPollClosedAt:(NSNumber*) closedAtMillis forHistoryId:(NSNumber*) historyId;
+//isaCloud: the poll JSON / closed JSON of our outbound message with this messageid (nil if it has none); used when sending it, resends too
+-(NSString* _Nullable) pollJSONForOutboundMessageId:(NSString*) messageId forAccount:(NSNumber*) accountID;
+-(NSString* _Nullable) pollClosedJSONForOutboundMessageId:(NSString*) messageId forAccount:(NSNumber*) accountID;
+//isaCloud: the history id of the poll message (one with a poll JSON) whose messageid is `messageId` in this chat (a group or channel); nil if unknown.
+//Only the client id (messageid) is matched: <poll-closed message-id=…> carries that one, not the stanza id
+-(NSNumber* _Nullable) historyIdOfPollMessageId:(NSString*) messageId inChat:(NSString*) buddy forAccount:(NSNumber*) accountID;
 -(NSDictionary*) messageDataForHistoryID:(NSNumber*) historyID;
 //isaCloud: like messageDataForHistoryID:, but nil instead of an assertion if the message does not exist (anymore), e.g. after removing its account
 -(NSDictionary* _Nullable) optionalMessageDataForHistoryID:(NSNumber*) historyID;

@@ -848,6 +848,12 @@ static void isaCloudPingOrReconnect(xmpp* account, BOOL networkCameBack, BOOL le
 //isaCloud: see the header. The quoted id is stored before the message is sent, like the sticker flag, so that the stanza carries it
 -(MLMessage*) sendMessageAndAddToHistory:(NSString*) message havingType:(NSString*) messageType toContact:(MLContact*) contact isEncrypted:(BOOL) encrypted uploadInfo:(NSDictionary* _Nullable) uploadInfo quotedMessageId:(NSString* _Nullable) quotedMessageId
 {
+    return [self sendMessageAndAddToHistory:message havingType:messageType toContact:contact isEncrypted:encrypted uploadInfo:uploadInfo quotedMessageId:quotedMessageId pollJSON:nil closedJSON:nil];
+}
+
+//isaCloud: the same, with the JSON of a poll or of its closing (see Polls.swift). Both are stored before the message is sent, like the quoted id
+-(MLMessage*) sendMessageAndAddToHistory:(NSString*) message havingType:(NSString*) messageType toContact:(MLContact*) contact isEncrypted:(BOOL) encrypted uploadInfo:(NSDictionary* _Nullable) uploadInfo quotedMessageId:(NSString* _Nullable) quotedMessageId pollJSON:(NSString* _Nullable) pollJSON closedJSON:(NSString* _Nullable) closedJSON
+{
     NSString* msgid = [[NSUUID UUID] UUIDString];
     xmpp* account = contact.account;
 
@@ -890,6 +896,12 @@ static void isaCloudPingOrReconnect(xmpp* account, BOOL networkCameBack, BOOL le
         if(quotedMessageId != nil)
             [[DataLayer sharedInstance] setQuotedMessageIdForHistoryId:messageDBId quotedId:quotedMessageId];
 
+        //isaCloud: the poll of this message, or the closing of a poll (see xmpp sendMessage:...)
+        if(pollJSON != nil)
+            [[DataLayer sharedInstance] setPollJSON:pollJSON forHistoryId:messageDBId];
+        if(closedJSON != nil)
+            [[DataLayer sharedInstance] setPollClosedJSON:closedJSON forHistoryId:messageDBId];
+
         // MLMessage object that will be returned by the method
         MLMessage* newMLMessage = [MLMessage createMessageFromHistoryID:messageDBId];
         if (!newMLMessage)
@@ -913,6 +925,49 @@ static void isaCloudPingOrReconnect(xmpp* account, BOOL networkCameBack, BOOL le
         DDLogError(@"Could not add message to history!");
         return nil;
     }
+}
+
+//isaCloud: see the header. The body is the fallback text of the poll, the poll JSON is stored with the message before it is sent
+-(MLMessage* _Nullable) sendPollAndAddToHistory:(NSString*) pollJSON toContact:(MLContact*) contact isEncrypted:(BOOL) encrypted
+{
+    NSString* fallbackBody = [ISACloudPolls fallbackBodyForPollJSON:pollJSON];
+    if(fallbackBody == nil)
+    {
+        DDLogError(@"Not sending the poll: its JSON is not valid");
+        return nil;
+    }
+    return [self sendMessageAndAddToHistory:fallbackBody havingType:kMessageTypeText toContact:contact isEncrypted:encrypted uploadInfo:nil quotedMessageId:nil pollJSON:pollJSON closedJSON:nil];
+}
+
+//isaCloud: see the header. The closing is built from the reactions the poll has now (voters: {reactions, nick?}), sent like any message, and only then
+//the poll is marked as closed in our database (closed-at), so that the chat shows it as closed and it takes no more votes
+-(MLMessage* _Nullable) closePollAndAddToHistory:(MLMessage*) pollMessage voters:(NSArray<NSDictionary*>*) voters isEncrypted:(BOOL) encrypted
+{
+    MLAssert(pollMessage.messageDBId != nil, @"A poll to close must be in the database", (@{@"pollMessage": pollMessage}));
+    NSString* closedJSON = pollMessage.poll != nil && pollMessage.messageId != nil ? [ISACloudPolls closedJSONForPollJSON:pollMessage.poll messageId:pollMessage.messageId voters:voters] : nil;
+    NSString* fallbackBody = closedJSON != nil ? [ISACloudPolls fallbackBodyForClosedJSON:closedJSON] : nil;
+    if(fallbackBody == nil)
+    {
+        DDLogError(@"Not closing the poll: %@ is not a valid poll", pollMessage.messageId);
+        return nil;
+    }
+    MLMessage* closing = [self sendMessageAndAddToHistory:fallbackBody havingType:kMessageTypeText toContact:pollMessage.chatContact isEncrypted:encrypted uploadInfo:nil quotedMessageId:nil pollJSON:nil closedJSON:closedJSON];
+    if(closing != nil)
+    {
+        NSDate* closedAt = [NSDate date];
+        [[DataLayer sharedInstance] setPollClosedAt:@((long long)([closedAt timeIntervalSince1970] * 1000)) forHistoryId:pollMessage.messageDBId];
+        //isaCloud: the poll on screen takes its closed-at at once, and the chat draws its card again (ChatView, kMonalUpdatedMessageNotice with pollUpdate)
+        pollMessage.pollClosedAt = closedAt;
+        [[MLNotificationQueue currentQueue] postNotificationName:kMonalUpdatedMessageNotice object:pollMessage.chatContact.account userInfo:@{
+            @"message": pollMessage,
+            @"showAlert": @NO,
+            @"contact": pollMessage.chatContact,
+            @"LMCReplaced": @NO,
+            @"reactionsUpdate": @NO,
+            @"pollUpdate": @YES,
+        }];
+    }
+    return closing;
 }
 
 -(void) sendMessage:(NSString*) message toContact:(MLContact*) contact isEncrypted:(BOOL) encrypted isUpload:(BOOL) isUpload messageId:(NSString*) messageId withCompletionHandler:(void (^ _Nullable)(BOOL success, NSString* messageId)) completion
