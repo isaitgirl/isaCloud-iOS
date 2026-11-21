@@ -50,9 +50,18 @@
 @property (atomic, readonly) void (^incoming_data_handler)(NSData* _Nullable, BOOL, NSError* _Nullable, BOOL);
 @end
 
+//isaCloud: C36, the condition of one write, with its own state: the waiter checks what happened instead of trusting a signal
+@interface IsaCloudWriteCondition : NSCondition
+@property (atomic, assign) BOOL completed;      //the write completion ran
+@property (atomic, assign) BOOL abandoned;      //the stream was closed while the write was waiting
+@end
+@implementation IsaCloudWriteCondition
+@end
+
 @interface MLOutputStream()
 {
     volatile __block unsigned long _writing;
+    IsaCloudWriteCondition* _isaCloudPendingWrite;     //isaCloud: C36, the write waiting for its completion (nil if none)
 }
 @end
 
@@ -272,17 +281,38 @@
 //isaCloud: C21, called with the condition locked: waits for the write completion, but if it does not come within 15 s (the network
 //stopped and nw_connection_send() never completes) the connection is force-cancelled, which completes all pending sends with an error
 //and so the completion (which also decrements _writing and signals the condition) runs. The caller returns after the completion
-static void isaCloudWaitForWriteCompletion(NSCondition* condition, MLSharedStreamState* shared_state)
+//isaCloud: C36, the write also returns when the stream gets closed meanwhile (close marks it abandoned), and the wait after the
+//force-cancel has a deadline too: in C36 (good Wi-Fi) the completion of the last ack never came, not even after the close
+//force-cancelled the connection, and the disconnect, the freeze and the release of the process lock waited behind it until iOS
+//suspended the app (0xdead10cc). Returning without the completion is safe: it still runs later (or never) and only touches
+//the condition, _writing and the stream events, which nobody waits for anymore.
+static void isaCloudWaitForWriteCompletion(IsaCloudWriteCondition* condition, MLSharedStreamState* shared_state)
 {
-    if([condition waitUntilDate:[NSDate dateWithTimeIntervalSinceNow:15.0]])
+    NSDate* deadline = [NSDate dateWithTimeIntervalSinceNow:15.0];
+    while(!condition.completed && !condition.abandoned)
+        if(![condition waitUntilDate:deadline])
+            break;
+    if(condition.completed)
         return;
+    if(condition.abandoned)
+    {
+        //close already force-cancelled the connection, the socket is going away: don't hold the disconnect any longer
+        DDLogWarn(@"isaCloud C36: stream closed while a write waited for its completion, returning without it");
+        return;
+    }
     nw_connection_t connection;
     @synchronized(shared_state) {
         connection = shared_state.connection;
     }
     DDLogWarn(@"isaCloud C21: no write completion after 15 seconds, force-cancelling connection...");
     nw_connection_force_cancel(connection);
-    [condition wait];
+    //the cancel completes all pending sends with an error: give that completion a short time, but never wait forever
+    deadline = [NSDate dateWithTimeIntervalSinceNow:2.0];
+    while(!condition.completed)
+        if(![condition waitUntilDate:deadline])
+            break;
+    if(!condition.completed)
+        DDLogWarn(@"isaCloud C36: write completion still missing after the cancel, returning without it");
 }
 
 @implementation MLOutputStream
@@ -301,15 +331,16 @@ static void isaCloudWaitForWriteCompletion(NSCondition* condition, MLSharedStrea
             return -1;
     }
     
-    NSCondition* condition = [NSCondition new];
+    IsaCloudWriteCondition* condition = [IsaCloudWriteCondition new];      //isaCloud: C36, see isaCloudWaitForWriteCompletion
     void (^write_completion)(nw_error_t) = ^(nw_error_t  _Nullable error) {
         DDLogVerbose(@"Write completed...");
-        
+
         @synchronized(self) {
             self->_writing--;
         }
-        
+
         [condition lock];
+        condition.completed = YES;
         [condition signal];
         [condition unlock];
         
@@ -347,8 +378,9 @@ static void isaCloudWaitForWriteCompletion(NSCondition* condition, MLSharedStrea
     }
     @synchronized(self) {
         _writing++;
+        _isaCloudPendingWrite = condition;      //isaCloud: C36, lets close release this write
     }
-    
+
     //decide if we should use our framer or normal nw_connection_send()
     //framer being nil is the hot path --> make it fast (we'll check if it's still != nil in an @synchronized block below --> still threadsafe
     //for the record: wrapping this into an @synchronized block would create a deadlock with our condition wait inside this
@@ -385,6 +417,7 @@ static void isaCloudWaitForWriteCompletion(NSCondition* condition, MLSharedStrea
         //isaCloud: C21, with a 15 s safety net (see isaCloudWaitForWriteCompletion)
         isaCloudWaitForWriteCompletion(condition, self.shared_state);
         [condition unlock];
+        [self isaCloudWriteFinished:condition];
         DDLogDebug(@"Returning from write in COLD path: %zu", (unsigned long)len);
         return len;     //return instead of else to leave @synchronized block early
     }
@@ -394,8 +427,18 @@ static void isaCloudWaitForWriteCompletion(NSCondition* condition, MLSharedStrea
     //isaCloud: C21, with a 15 s safety net (see isaCloudWaitForWriteCompletion)
     isaCloudWaitForWriteCompletion(condition, self.shared_state);
     [condition unlock];
+    [self isaCloudWriteFinished:condition];
     DDLogVerbose(@"Returning from write in hot path: %zu", (unsigned long)len);
     return len;
+}
+
+//isaCloud: C36, the write stopped waiting (completed, abandoned or timed out)
+-(void) isaCloudWriteFinished:(IsaCloudWriteCondition*) condition
+{
+    @synchronized(self) {
+        if(_isaCloudPendingWrite == condition)
+            _isaCloudPendingWrite = nil;
+    }
 }
 
 //isaCloud: C21, closing while a write waits for its completion would hang the close (the final message is queued behind that
@@ -405,8 +448,10 @@ static void isaCloudWaitForWriteCompletion(NSCondition* condition, MLSharedStrea
     //queues the final message and marks the stream as closed
     [super close];
     BOOL writing = NO;
+    IsaCloudWriteCondition* pendingWrite = nil;
     @synchronized(self) {
         writing = _writing > 0;
+        pendingWrite = _isaCloudPendingWrite;
     }
     if(writing)
     {
@@ -416,6 +461,15 @@ static void isaCloudWaitForWriteCompletion(NSCondition* condition, MLSharedStrea
         }
         DDLogWarn(@"isaCloud C21: closing stream with a write in progress, force-cancelling connection...");
         nw_connection_force_cancel(connection);
+    }
+    //isaCloud: C36, the cancel above should complete the waiting write, but in C36 it did not: release that write directly,
+    //so closeSocket (cleanupSendQueue) and the freeze (freezeSendQueue) do not wait behind it
+    if(pendingWrite != nil)
+    {
+        [pendingWrite lock];
+        pendingWrite.abandoned = YES;
+        [pendingWrite signal];
+        [pendingWrite unlock];
     }
 }
 

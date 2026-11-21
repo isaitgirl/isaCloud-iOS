@@ -4643,8 +4643,26 @@ static NSLock* isaCloudTimeoutsLock(void)
             save = YES;
         }
     }
-    if(save)
+    if(!save)
+        return;
+    //isaCloud: C35, the check above runs before the write transaction, and getting the write lock can take a while: during a
+    //disconnect every account saves its state several times in a row (~50-110 ms each). The timer passed the check before the
+    //shutdown began, got the lock only after those saves and was still writing when iOS suspended the app (0xdead10cc).
+    //Check again inside the transaction, once we hold the lock. The nested transaction in realPersistState is a no-op.
+    //Only here: isaCloudShuttingDown is set before disconnectAll, so the forced saves of the disconnect itself must not check it.
+    [[DataLayer sharedInstance] createTransaction:^{
+        BOOL shuttingDownNow = [HelperTools isaCloudShuttingDown];
+        BOOL frozenNow = [HelperTools isaCloudSuspendedFast] || [self parseQueueFrozen];
+        if(shuttingDownNow || frozenNow)
+        {
+            @synchronized(self->_isaCloudPersistLock) {
+                self->_isaCloudPersistPending = YES;
+            }
+            DDLogInfo(@"isaCloud C35: deferred state save of account %@ skipped after getting the write lock (shuttingDown=%@, frozen=%@), left pending", self.accountID, bool2str(shuttingDownNow), bool2str(frozenNow));
+            return;
+        }
         [self realPersistState];
+    }];
 }
 
 //saves right away, also cancels a deferred save (used when the connection goes down)

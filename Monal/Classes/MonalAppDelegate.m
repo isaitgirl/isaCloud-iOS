@@ -64,7 +64,10 @@
 #define BGREFRESH_GRACEFUL_TIMEOUT           5.0
 #define BGPROCESS_GRACEFUL_TIMEOUT           5.0
 //wakeup timeout gets triggered by notification interactions
-#define WAKEUP_TIMEOUT                      20.0
+//isaCloud: C36, 20 s -> 15 s. For a push wakeup iOS warned at ~26 s, took the run time away at ~31 s and suspended the app
+//~4 s later (runningboardd, 21/11/2026). With 20 s the disconnect, the freeze and the release of the process lock had ~11 s,
+//and a disconnect behind a big backlog did not make it (0xdead10cc on locks/MainApp). 15 s keeps most of the catchup time.
+#define WAKEUP_TIMEOUT                      15.0
 
 //reduced timeouts
 #define REDUCED_GRACEFUL_TIMEOUT             5.0

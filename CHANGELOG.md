@@ -2,6 +2,12 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## Não lançado
+
+### Corrigido
+- **C35: gravação adiada do estado ainda aberta na suspensão.** O timer de 1 s do limitador (`isaCloudFlushPendingPersist`) conferia o desligamento e o congelamento só antes de abrir a transação. No C35 (build 122, 21/11/2026 12:15:36) ele passou pela checagem, esperou a trava de escrita atrás das gravações da desconexão e ainda estava gravando quando o iOS suspendeu o app. Agora confere de novo dentro da transação, já com a trava; se o app está desligando ou congelado, a gravação fica pendente. Só nesse caminho: o `isaCloudShuttingDown` liga antes do `disconnectAll`, e as gravações do próprio desligamento não podem ser puladas.
+- **C36: desligamento do despertar por push preso na escrita do último ack.** Com Wi-Fi bom (log do sistema do iPhone), a confirmação do `sendLastAck` não chegou nem depois do `force_cancel` do `close`, e o `cleanupSendQueue`, o congelamento e a liberação do `locks/MainApp` esperaram atrás dela até a suspensão (`0xdead10cc` no lock do processo, 21/11/2026 16:39:46, build 124). Agora cada escrita tem a própria condição (`IsaCloudWriteCondition`, com `completed`/`abandoned`): o `close` solta a escrita pendente, e a espera depois do `force_cancel` tem prazo de 2 s em vez de ser infinita. Também `WAKEUP_TIMEOUT` 20 s → 15 s: o iOS avisa em ~26 s, tira o tempo em ~31 s e suspende ~4 s depois.
+
 ## 0.0.1 (build 124) — 21/11/2026
 
 Enviado ao TestFlight às 16:06 (correções de ligação: Jingle sem `name` no Rust e extensão que morria antes do CallKit; testado no `.dev`, com os simuladores desligados).
