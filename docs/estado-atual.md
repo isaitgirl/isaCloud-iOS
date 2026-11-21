@@ -24,6 +24,14 @@ Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 - **Primeira mensagem não lida (build 87):** só no roadmap, sem previsão de nova avaliação.
 - **Figurinhas e XEP-0449 (roadmap 155):** análise iOS e Android pronta em `docs/analise-xep0449-conformidade.md`; aguarda 3 decisões, sem código.
 
+## O que entrou no build 123 (sobre o 122)
+
+- **Enquetes Fluux** (PR 86, roadmap 181): item "Enquete" no clipe (só em grupo ou canal com `occupant-id`), voto com um toque e "Encerrar enquete" no menu da mensagem (só o criador). Compatível com o Android e o Fluux (`urn:fluux:poll:0`). Migração 9 do banco (`isacloud_poll`, `isacloud_poll_closed`, `isacloud_poll_closed_at`). Docs: `docs/implementacao-enquetes-ios.md`, `docs/decisoes-enquetes-fluux.md`. **Falta:** teste cruzado com o Fluux e a fase 4 (roadmap 184).
+- **Criar conferência pelo Galene** (fase 1, roadmap 182; mesclada direto na `isaCloud`, sem PR): item "Criar conferência" no clipe cria a sala em `meet.isacloud.cc` e põe o link no compositor; tocar no link abre o `hostURL` guardado no Keychain (anfitrião) ou a página pública. **Sem card na lista** (foi feito e retirado no mesmo dia; o histórico está no commit `ffb9c36d2`). Decisões em `docs/decisoes-conferencia-galene-ios.md`. **Falta:** encerrar/recuperar sala e Universal Link (roadmap 183).
+- **Figurinhas só no atalho da caixa de texto:** o item "Figurinhas" saiu do menu do clipe.
+- **Repositório limpo (21/11/2026):** só a `isaCloud`, a `develop` e a `medicao/c05-estado-da-conta` (worktree `isaCloud-iOS-medicao`, com alterações do C05 ainda sem commit). Branches `feature/video-conferencia` e `feature/enquetes-fluux` apagadas (a do remoto também).
+- **A validar:** os testes do build 123 estão listados em "Testes pendentes" do roadmap. Os simuladores seguem no código do build 121 (outro agente os usava).
+
 ## O que entrou no build 122 (sobre o 121)
 
 - **C34** (PR 85): a extensão de notificação foi morta com `0xdead10cc` em 20/11 21:18:29. Depois de entregar a notificação ela tem ~5 s, e gastava 1,5 s esperando um push atrasado; o `disconnectAll` da segunda conta não coube. A espera agora é de 0,5 s, e a linha `isaCloud C34: disconnectAll took N ms` mede o desligamento. **Validar:** nenhum `.ips` de `NotificationService` com `disconnectAll` na pilha.
