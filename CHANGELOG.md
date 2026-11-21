@@ -2,7 +2,9 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
-## Próximo build
+## 0.0.1 (build 122) — 21/11/2026
+
+Enviado ao TestFlight às 10:34 (PR 85, branch `fix/c34-desligamento-da-extensao`; compila no simulador; a extensão só se prova em produção).
 
 ### Corrigido
 - **Extensão de notificação com folga para se desligar (C34).** Depois de entregar a última notificação, a extensão tem ~5 s até o iOS congelá-la, e o `pushExpired` gastava 1,5 s desses esperando algum push atrasado (`usleep(1500000)`). Com isso o `disconnectAll` (estado de cada conta salvo no banco) não coube para a segunda conta, e a extensão foi morta com a escrita aberta (`0xdead10cc`, 20/11 21:18:29, build 121). A espera passou para 500 ms, e a linha `isaCloud C34: disconnectAll took N ms` mede o desligamento.

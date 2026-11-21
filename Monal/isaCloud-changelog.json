@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "build": 122,
+      "date": "21/11/2026",
+      "sections": [
+        {
+          "title": "Correções",
+          "items": [
+            "🔔 As notificações se despedem com calma: o app guarda tudo antes de descansar, sem sustos."
+          ]
+        }
+      ]
+    },
+    {
       "build": 121,
       "date": "20/11/2026",
       "sections": [
