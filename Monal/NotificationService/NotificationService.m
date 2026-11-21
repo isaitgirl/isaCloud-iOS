@@ -209,7 +209,9 @@ static void isaCloudTerminateAppex(void)
     DDLogInfo(@"Disconnecting all accounts and feeding all pending handlers: %lu", [self.handlerList count]);
     
     //this has to be synchronous because we only want to continue if all accounts are completely disconnected
+    NSDate* isaCloudDisconnectStart = [NSDate date];
     [[MLXMPPManager sharedInstance] disconnectAll];
+    DDLogInfo(@"isaCloud C34: disconnectAll took %.0f ms", [[NSDate date] timeIntervalSinceDate:isaCloudDisconnectStart] * 1000.0);
     
     //feed all waiting handlers with empty notifications to silence them and commit suicide afterwards
     while([self feedNextHandler])
@@ -303,7 +305,7 @@ static void isaCloudTerminateAppex(void)
     //check if this was the last handler (ignore if we got a new one in between our call to checkForLastHandler and feedNextHandler, this case will be handled below anyways)
     if(isLastHandler)
     {
-        DDLogInfo(@"Last push expired shutting down in 1500ms if no new push comes in in the meantime");
+        DDLogInfo(@"Last push expired shutting down in 500ms if no new push comes in in the meantime");
         //wait 500ms to allow other pushed already queued on the device (but not yet delivered to us) to be delivered to us
         //after the last push expired we have ~5 seconds run time left to do the clean disconnect
         //--> waiting 500ms before checking if this was the last push that expired (e.g. no new push came in) does not do any harm here
@@ -312,7 +314,10 @@ static void isaCloudTerminateAppex(void)
         //still in the TCP queue delivered on next appex unfreeze even if they have been handled by the mainapp already)
         //NOTE: not sure if that really can happen since we use file based locking, because iOS will kill processes holding such a lock
         //when trying to freeze the process (and we would still hold the MLProcessLock for the appex when the freeze happens --> process kill)
-        usleep(1500000);
+        //isaCloud C34: 500ms instead of 1500ms. The ~5 seconds after feeding the last handler are shared with the disconnect below
+        //(state of every account saved to the db); with 1500ms the disconnect of the second account did not fit and iOS killed
+        //the appex with the write open (0xdead10cc, 20/11/2026 21:18:29)
+        usleep(500000);
         
         //this returns YES if we got new pushes in the meantime --> do nothing if so
         if(![self checkForNewPushes])
