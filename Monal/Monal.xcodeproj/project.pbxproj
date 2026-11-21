@@ -117,6 +117,7 @@
 		A1C0FFEE00000000000000E6 /* ChatInputModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000000E5 /* ChatInputModelTests.swift */; };
 		A1C0FFEE00000000000001C3 /* ChatAudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001C1 /* ChatAudioRecorder.swift */; };
 		A1C0FFEE00000000000001D3 /* GiphySearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001D1 /* GiphySearch.swift */; };
+		A1C0FFEE0000000000ECF002 /* IsaCloudConference.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000ECF004 /* IsaCloudConference.swift */; };
 		A1C0FFEE00000000000001E3 /* ChatLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001E1 /* ChatLocation.swift */; };
 		A1C0FFEE00000000000002A3 /* QuoteFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000002A1 /* QuoteFormatting.swift */; };
 		A1C0FFEE00000000000002A5 /* QuoteFormattingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000002A4 /* QuoteFormattingTests.swift */; };
@@ -133,6 +134,7 @@
 		A1C0FFEE0000000000000206 /* MessageSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000000205 /* MessageSearchTests.swift */; };
 		A1C0FFEE00000000000001E7 /* ChatLocationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001E6 /* ChatLocationTests.swift */; };
 		A1C0FFEE00000000000001D7 /* GiphySearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001D6 /* GiphySearchTests.swift */; };
+		A1C0FFEE0000000000ECF003 /* IsaCloudConferenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000ECF005 /* IsaCloudConferenceTests.swift */; };
 		34E26BC2304C399F00287300 /* Recording in Frameworks */ = {isa = PBXBuildFile; productRef = 34E26BC1304C399F00287300 /* Recording */; };
 		34E58B4B2C68E7BC009A1634 /* ContactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34E58B4A2C68E7BC009A1634 /* ContactsView.swift */; };
 		34F978CF303B90CB002029CF /* CSQLite+MonalTraits in Frameworks */ = {isa = PBXBuildFile; productRef = 34F978CE303B90CB002029CF /* CSQLite+MonalTraits */; };
@@ -274,6 +276,7 @@
 		A1C0FFEE00000000000000F4 /* ChatTextInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000000F3 /* ChatTextInput.swift */; };
 		A1C0FFEE00000000000001C2 /* ChatAudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001C1 /* ChatAudioRecorder.swift */; };
 		A1C0FFEE00000000000001D2 /* GiphySearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001D1 /* GiphySearch.swift */; };
+		A1C0FFEE0000000000ECF001 /* IsaCloudConference.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000ECF004 /* IsaCloudConference.swift */; };
 		A1C0FFEE00000000000001E2 /* ChatLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001E1 /* ChatLocation.swift */; };
 		A1C0FFEE00000000000002A2 /* QuoteFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000002A1 /* QuoteFormatting.swift */; };
 		A1C0FFEE00000000000001F2 /* MucHatRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE00000000000001F1 /* MucHatRules.swift */; };
@@ -620,6 +623,7 @@
 		34C9CAA330293B5E00A87694 /* HelperToolsTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelperToolsTest.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000000E5 /* ChatInputModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatInputModelTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000001D6 /* GiphySearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GiphySearchTests.swift; sourceTree = "<group>"; };
+		A1C0FFEE0000000000ECF005 /* IsaCloudConferenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IsaCloudConferenceTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000001F6 /* MucHatRulesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MucHatRulesTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE0000000000000205 /* MessageSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageSearchTests.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000002A4 /* QuoteFormattingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuoteFormattingTests.swift; sourceTree = "<group>"; };
@@ -649,6 +653,7 @@
 		A1C0FFEE00000000000000F3 /* ChatTextInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatTextInput.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000001C1 /* ChatAudioRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAudioRecorder.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000001D1 /* GiphySearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GiphySearch.swift; sourceTree = "<group>"; };
+		A1C0FFEE0000000000ECF004 /* IsaCloudConference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IsaCloudConference.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000001E1 /* ChatLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatLocation.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000002A1 /* QuoteFormatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuoteFormatting.swift; sourceTree = "<group>"; };
 		A1C0FFEE00000000000001F1 /* MucHatRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MucHatRules.swift; sourceTree = "<group>"; };
@@ -1288,6 +1293,7 @@
 				A1C0FFEE00000000000000F3 /* ChatTextInput.swift */,
 				A1C0FFEE00000000000001C1 /* ChatAudioRecorder.swift */,
 				A1C0FFEE00000000000001D1 /* GiphySearch.swift */,
+				A1C0FFEE0000000000ECF004 /* IsaCloudConference.swift */,
 				A1C0FFEE00000000000001E1 /* ChatLocation.swift */,
 				A1C0FFEE00000000000002A1 /* QuoteFormatting.swift */,
 				A1C0FFEE00000000000001F1 /* MucHatRules.swift */,
@@ -1664,6 +1670,7 @@
 				34C9CAA330293B5E00A87694 /* HelperToolsTest.swift */,
 				A1C0FFEE00000000000000E5 /* ChatInputModelTests.swift */,
 				A1C0FFEE00000000000001D6 /* GiphySearchTests.swift */,
+				A1C0FFEE0000000000ECF005 /* IsaCloudConferenceTests.swift */,
 				A1C0FFEE00000000000001F6 /* MucHatRulesTests.swift */,
 				A1C0FFEE0000000000000205 /* MessageSearchTests.swift */,
 				A1C0FFEE0000000000000211 /* MessageForwardTests.swift */,
@@ -2484,6 +2491,7 @@
 				A1C0FFEE00000000000000F4 /* ChatTextInput.swift in Sources */,
 				A1C0FFEE00000000000001C2 /* ChatAudioRecorder.swift in Sources */,
 				A1C0FFEE00000000000001D2 /* GiphySearch.swift in Sources */,
+				A1C0FFEE0000000000ECF001 /* IsaCloudConference.swift in Sources */,
 				A1C0FFEE00000000000001E2 /* ChatLocation.swift in Sources */,
 				A1C0FFEE00000000000002A2 /* QuoteFormatting.swift in Sources */,
 				A1C0FFEE00000000000001F2 /* MucHatRules.swift in Sources */,
@@ -2627,7 +2635,9 @@
 				A1C0FFEE00000000000000E6 /* ChatInputModelTests.swift in Sources */,
 				A1C0FFEE00000000000001C3 /* ChatAudioRecorder.swift in Sources */,
 				A1C0FFEE00000000000001D3 /* GiphySearch.swift in Sources */,
+				A1C0FFEE0000000000ECF002 /* IsaCloudConference.swift in Sources */,
 				A1C0FFEE00000000000001D7 /* GiphySearchTests.swift in Sources */,
+				A1C0FFEE0000000000ECF003 /* IsaCloudConferenceTests.swift in Sources */,
 				A1C0FFEE00000000000001E3 /* ChatLocation.swift in Sources */,
 				A1C0FFEE00000000000002A3 /* QuoteFormatting.swift in Sources */,
 				A1C0FFEE00000000000002A5 /* QuoteFormattingTests.swift in Sources */,

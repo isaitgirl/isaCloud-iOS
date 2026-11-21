@@ -23,6 +23,8 @@ struct ChatInputBar: View {
     /// isaCloud: opens the sticker sheet (favorites, all, create); see Stickers.swift
     var onPickSticker: () -> Void = {}
     var onShareLocation: () -> Void
+    /// isaCloud: creates a video conference (IsaCloudConference.swift) and puts its link in the field
+    var onCreateConference: () -> Void
     var onRemoveAttachment: (Int) -> Void
     var onSendRecording: (URL) -> Void
     /// isaCloud: the nicks offered for "@" in a group or channel (none in a 1:1 chat)
@@ -144,6 +146,11 @@ struct ChatInputBar: View {
                 onShareLocation()
             } label: {
                 Label("Location", systemImage: "location")
+            }
+            Button {
+                onCreateConference()
+            } label: {
+                Label("Create conference", systemImage: "video.badge.plus")
             }
         } label: {
             Image(systemName: "paperclip")

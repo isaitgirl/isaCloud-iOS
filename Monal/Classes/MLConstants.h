@@ -51,6 +51,8 @@ static const DDLogLevel ddLogLevel = LOG_LEVEL_STDOUT;
 #define kMonalHtTokenKeychainName @"Monal.HT"
 #define kMonalDeviceUUIDKeychainName @"Monal.deviceUUID"
 #define kDeviceUUIDKeychainAccount @"deviceUUIDKeychainAccount"
+//isaCloud: keychain service of the host links of the video conferences (account = room id), see IsaCloudConference.swift
+#define kIsaCloudMeetKeychainName @"IsaCloudMeet"
 
 //this is in seconds
 #if TARGET_OS_MACCATALYST

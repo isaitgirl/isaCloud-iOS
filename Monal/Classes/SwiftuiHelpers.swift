@@ -766,6 +766,15 @@ struct ExternalLinkViewModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .environment(\.openURL, OpenURLAction { url in
+                //isaCloud: a conference link of a room this device created opens the host link (the room is run by its host); without one, the public link goes on below
+                if let roomID = IsaCloudConference.roomID(from: url), let hostURL = IsaCloudConferenceStore.hostURL(forRoomID: roomID) {
+                    if HelperTools.defaultsDB().bool(forKey:"useInlineSafari") {
+                        urlToOpen = hostURL
+                    } else {
+                        UIApplication.shared.open(hostURL)
+                    }
+                    return .handled
+                }
                 let openableInSFSafariView = url.scheme == "http" || url.scheme == "https"
                 if openableInSFSafariView && HelperTools.defaultsDB().bool(forKey:"useInlineSafari") {
                     urlToOpen = url

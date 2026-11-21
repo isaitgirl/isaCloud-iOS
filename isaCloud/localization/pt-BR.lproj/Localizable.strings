@@ -380,3 +380,12 @@
 
 /* DebugView.swift: botão de depuração que derruba o app de verdade para testar o envio do relatório */
 "Real crash and report (test of the XMPP sending)" = "Crash e relatório real (teste do envio por XMPP)";
+
+/* isaCloud: vídeo conferência (menu de anexos, texto no compositor, card da lista). "Join" já vem do Monal como "Ingressar" */
+"Create conference" = "Criar conferência";
+"Access the video conference via the link: %@" = "Acesse a vídeo conferência pelo link: %@";
+"Could not create the conference. Please try again." = "Não foi possível criar a conferência. Tente novamente.";
+"Your conference is ready" = "Sua conferência está pronta";
+"Tap Join to open the room" = "Toque em Entrar para abrir a sala";
+"Hide shortcut" = "Ocultar atalho";
+"Join conference" = "Entrar";
