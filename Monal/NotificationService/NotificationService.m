@@ -187,7 +187,11 @@ static void isaCloudTerminateAppex(void)
         //do this in an extra thread to avoid deadlocks via: receive_queue -> disconnect_thread -> receive_queue
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
             //directly disconnect without handling any possibly queued stanzas (they will be handled in mainapp once we wake it up)
-            [self disconnectAndFeedAllWaitingHandlers];
+            //isaCloud: NOT disconnectAndFeedAllWaitingHandlers: that one ends with killAppex (since upstream commit 8044d7c99), so the process
+            //was gone before the voip payload below was posted and an incoming call never rang in the background (log of 21/11/2026 15:36:
+            //"Got incoming VOIP call", "Now killing appex process" and no "Dispatching voip call to mainapp"). The appex is killed in the
+            //completion handler below, as before.
+            [self disconnectAndFeedAllWaitingHandlersWithoutKilling];
         
             DDLogInfo(@"Dispatching voip call to mainapp...");
             NSString* payload = [HelperTools encodeBase64WithData:[HelperTools serializeObject:notification.userInfo]];
@@ -206,6 +210,13 @@ static void isaCloudTerminateAppex(void)
 
 -(void) disconnectAndFeedAllWaitingHandlers
 {
+    [self disconnectAndFeedAllWaitingHandlersWithoutKilling];
+    [self killAppex];
+}
+
+//isaCloud: the first part of disconnectAndFeedAllWaitingHandlers, for the caller that has to do more before the appex dies (incoming call)
+-(void) disconnectAndFeedAllWaitingHandlersWithoutKilling
+{
     DDLogInfo(@"Disconnecting all accounts and feeding all pending handlers: %lu", [self.handlerList count]);
     
     //this has to be synchronous because we only want to continue if all accounts are completely disconnected
@@ -213,10 +224,9 @@ static void isaCloudTerminateAppex(void)
     [[MLXMPPManager sharedInstance] disconnectAll];
     DDLogInfo(@"isaCloud C34: disconnectAll took %.0f ms", [[NSDate date] timeIntervalSinceDate:isaCloudDisconnectStart] * 1000.0);
     
-    //feed all waiting handlers with empty notifications to silence them and commit suicide afterwards
+    //feed all waiting handlers with empty notifications to silence them (the callers commit suicide afterwards)
     while([self feedNextHandler])
         ;
-    [self killAppex];
 }
 
 -(void) incomingPush:(void (^)(UNNotificationContent* _Nullable)) contentHandler

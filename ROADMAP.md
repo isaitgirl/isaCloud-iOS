@@ -4,7 +4,7 @@ Todas as funcionalidades do isaCloud numa tabela só: o que está **feito** (ris
 
 A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23/10/2026 sobre a `develop` (Monal 7), base atual do fork. As reações (XEP-0444), que eram o item mais trabalhoso, saíram da lista porque já existem na `develop`.
 
-**Total de features no roadmap:** 177 (numeração até o 184; faltam os números 4, 7, 85, 93 e 142, que não existem ou foram fundidos em outros itens)
+**Total de features no roadmap:** 178 (numeração até o 185; faltam os números 4, 7, 85, 93 e 142, que não existem ou foram fundidos em outros itens)
 **Features concluídas:** 163 (contagem de 21/11/2026, build 123: linhas riscadas)
 
 | # | Funcionalidade | Esforço | Observações |
@@ -201,6 +201,7 @@ A avaliação original foi feita sobre o Monal 6.x (19/10/2026) e revisada em 23
 | 182 | ~~Criar conferência pelo Galene (fase 1)~~ | **feito (build 123, 21/11/2026, mesclado direto na `isaCloud`)** | Item "Criar conferência" no clipe cria a sala em `meet.isacloud.cc` e põe o link no compositor; tocar no link abre a sala como anfitrião (`hostURL` só no Keychain). O card na lista foi retirado por ora. Falta: encerrar/recuperar sala, Universal Link (`apple-app-site-association`). Ver `docs/decisoes-conferencia-galene-ios.md`. |
 | 183 | Conferência: encerrar a sala, recuperar a sala em outro aparelho e abrir o link fora do app (Universal Link) | **planejado em 21/11/2026, nada implementado** | O `hostURL` fica só no aparelho que criou a sala (Keychain); o `hostKey` está guardado mas sem uso. Falta "Encerrar conferência" (`DELETE` da sala), recuperar a sala se o aparelho mudar, e o `apple-app-site-association` no `meet.isacloud.cc` para o link abrir o app. O card na lista (como no Android) foi tirado por ora e pode voltar. Ver `docs/decisoes-conferencia-galene-ios.md`. |
 | 184 | Enquetes: teste cruzado com Fluux/Android e fase 4 (consulta de resultados por IQ e MAM) | **pendente (21/11/2026)** | As enquetes (181) foram testadas no `.dev` com o Conversations; falta o teste cruzado com o Fluux e a fase 4 (`poll-results` por IQ e leitura pelo MAM). Ver `docs/implementacao-enquetes-ios.md`. |
+| 185 | Ligação de áudio do isaCloud Web atendida no iOS (`<parameter>` sem `name`) | **corrigido no código em 21/11/2026, falta validar no `.dev`** | Leitor Jingle → SDP em Rust com `name` opcional; a Web também vai parar de mandar o parâmetro sem nome. Falta testar a chamada completa e uma chamada com o app em segundo plano (extensão de notificação + `reportNewIncomingVoIPPushPayload`, nunca vista em log). Ver `docs/decisoes.md`. |
 
 ## Aguardando o Monal
 

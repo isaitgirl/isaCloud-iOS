@@ -284,7 +284,9 @@ impl JingleRtpSessionsPayloadType {
         let mut retval: Vec<T> = Vec::new();
         for param in &self.parameter {
             match param {
-                JingleRtpSessionsPayloadTypeValue::Parameter(param) if param.name == name => {
+                JingleRtpSessionsPayloadTypeValue::Parameter(param)
+                    if param.name.as_deref() == Some(name) =>
+                {
                     known_param_names.insert(name.to_string());
                     let mut value = param.value.clone();
                     //bool preprocessing (in xmpp "1" and "true" are defined as true, while "0" and "false are defined as false)
@@ -321,10 +323,18 @@ impl JingleRtpSessionsPayloadType {
         let mut retval: Vec<String> = Vec::new();
         for param in &self.parameter {
             match param {
+                // a parameter without name (isaCloud Web, "red": 111/111) is a bare fmtp token: "a=fmtp:63 111/111"
+                JingleRtpSessionsPayloadTypeValue::Parameter(param) if param.name.is_none() => {
+                    retval.push(param.value.clone());
+                }
                 JingleRtpSessionsPayloadTypeValue::Parameter(param)
-                    if !known_param_names.contains(&param.name) =>
+                    if !known_param_names.contains(param.name.as_deref().unwrap_or_default()) =>
                 {
-                    retval.push(format!("{}={}", param.name, param.value));
+                    retval.push(format!(
+                        "{}={}",
+                        param.name.as_deref().unwrap_or_default(),
+                        param.value
+                    ));
                 }
                 _ => {}
             }
@@ -435,15 +445,21 @@ pub enum JingleRtpSessionsPayloadTypeValue {
 // *** xep-0167
 #[derive(Serialize, Deserialize, Clone)]
 pub struct JingleRtpSessionsPayloadTypeParam {
-    #[serde(rename = "@name")]
-    name: String,
+    // isaCloud: XEP-0167 wants a name, but isaCloud Web sends <parameter value='111/111'/> (the fmtp of "red") without one:
+    // a missing name must not make the whole session-initiate unreadable (the call used to end with failed-application).
+    // A parameter without name is a bare fmtp token (see get_fmtp_unknown_tokens_vec).
+    #[serde(rename = "@name", default, skip_serializing_if = "Option::is_none")]
+    name: Option<String>,
     #[serde(rename = "@value")]
     value: String,
 }
 
 impl JingleRtpSessionsPayloadTypeParam {
     pub fn new(name: String, value: String) -> Self {
-        Self { name, value }
+        Self {
+            name: Some(name),
+            value,
+        }
     }
 }
 

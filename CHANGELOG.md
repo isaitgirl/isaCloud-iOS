@@ -2,6 +2,12 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## Não lançado
+
+### Corrigido
+- **Ligação com o app fechado nunca tocava no iOS (bug herdado do Monal).** Na extensão de notificação, `handleIncomingVoipCall` chamava `disconnectAndFeedAllWaitingHandlers`, que desde o commit upstream `8044d7c99` termina com `killAppex` (`_exit`): o processo morria antes de `reportNewIncomingVoIPPushPayload`, então o app principal nunca era acordado (log de 21/11/2026 15:36: "Got incoming VOIP call" e "Now killing appex process", sem "Dispatching voip call to mainapp"). Novo `disconnectAndFeedAllWaitingHandlersWithoutKilling`, usado só nesse caminho; a extensão morre no `completion` do `reportNewIncomingVoIPPushPayload`, como antes. Os outros chamadores não mudaram. **A validar no `.dev`** (o upstream pode ter o mesmo problema: vale avisar o Monal).
+- **Ligação de áudio vinda do isaCloud Web caía depois de atendida no iOS.** O `session-initiate` da Web traz o codec `red` com `<parameter value='111/111'/>`, sem `name`; o leitor Jingle → SDP em Rust (`rust/sdp-to-jingle`, `JingleRtpSessionsPayloadTypeParam`) exigia `@name` (erro `missing field @name`), devolvia nada e o `MLCall.m` respondia `session-terminate` com `failed-application` ("Failed to convert jingle to raw sdp!", log de 21/11/2026 15:28, 13 s depois de atender). Agora o `name` é opcional e o parâmetro sem nome vira um token cru do `a=fmtp` (`a=fmtp:63 ...;111/111`). Teste Rust com o XML real da Web (`cargo test -p sdp-to-jingle`). O Android já atendia. A Web também vai deixar de mandar o parâmetro sem nome (XEP-0167 pede `name`). Pede recompilar o xcframework (`rust/LibMonalRustSwiftBridge`, ignorado pelo Git) antes do archive.
+
 ## 0.0.1 (build 123) — 21/11/2026
 
 Enviado ao TestFlight às 13:52 (enquetes do Fluux, PR 86, e criar conferência pelo Galene, mesclada direto na `isaCloud` a partir da `feature/video-conferencia`; testado no simulador e no `.dev`).
