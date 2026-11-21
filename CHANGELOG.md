@@ -2,7 +2,9 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
-## Não lançado
+## 0.0.1 (build 125) — 21/11/2026
+
+Enviado ao TestFlight às 17:08 (correções do `0xdead10cc` C35 e C36; compilado no simulador, a validar no TestFlight e no `.dev`).
 
 ### Corrigido
 - **C35: gravação adiada do estado ainda aberta na suspensão.** O timer de 1 s do limitador (`isaCloudFlushPendingPersist`) conferia o desligamento e o congelamento só antes de abrir a transação. No C35 (build 122, 21/11/2026 12:15:36) ele passou pela checagem, esperou a trava de escrita atrás das gravações da desconexão e ainda estava gravando quando o iOS suspendeu o app. Agora confere de novo dentro da transação, já com a trava; se o app está desligando ou congelado, a gravação fica pendente. Só nesse caminho: o `isaCloudShuttingDown` liga antes do `disconnectAll`, e as gravações do próprio desligamento não podem ser puladas.

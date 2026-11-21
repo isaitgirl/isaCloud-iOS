@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "build": 125,
+      "date": "21/11/2026",
+      "sections": [
+        {
+          "title": "Correções",
+          "items": [
+            "🛠️ Mais estabilidade por dentro, para o app ficar redondinho mesmo quando acorda com muita mensagem chegando."
+          ]
+        }
+      ]
+    },
+    {
       "build": 124,
       "date": "21/11/2026",
       "sections": [
