@@ -2,7 +2,9 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
-## Não lançado
+## 0.0.1 (build 124) — 21/11/2026
+
+Enviado ao TestFlight às 16:06 (correções de ligação: Jingle sem `name` no Rust e extensão que morria antes do CallKit; testado no `.dev`, com os simuladores desligados).
 
 ### Corrigido
 - **Ligação com o app fechado nunca tocava no iOS (bug herdado do Monal).** Na extensão de notificação, `handleIncomingVoipCall` chamava `disconnectAndFeedAllWaitingHandlers`, que desde o commit upstream `8044d7c99` termina com `killAppex` (`_exit`): o processo morria antes de `reportNewIncomingVoIPPushPayload`, então o app principal nunca era acordado (log de 21/11/2026 15:36: "Got incoming VOIP call" e "Now killing appex process", sem "Dispatching voip call to mainapp"). Novo `disconnectAndFeedAllWaitingHandlersWithoutKilling`, usado só nesse caminho; a extensão morre no `completion` do `reportNewIncomingVoIPPushPayload`, como antes. Os outros chamadores não mudaram. **A validar no `.dev`** (o upstream pode ter o mesmo problema: vale avisar o Monal).

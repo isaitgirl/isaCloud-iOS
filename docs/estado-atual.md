@@ -1,4 +1,4 @@
-# Estado atual e handoff (21/11/2026, build 123)
+# Estado atual e handoff (21/11/2026, build 124)
 
 Página de passagem: o que está no ar, o que foi tentado, o que **não** repetir e por onde continuar.
 Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
@@ -7,9 +7,9 @@ Detalhes de cada frente ficam nos documentos citados; aqui está o mapa.
 
 | | |
 |---|---|
-| Commit | o do **build 123** (tag `build-123`: enquetes do Fluux, criar conferência pelo Galene, figurinhas só no atalho da caixa de texto); antes, o do **build 122** (tag `build-122`: folga no desligamento da extensão de notificação, C34, PR 85); antes, o 121 (`38b814af7`, tag `build-121`: correção do C33 e do log longo, PR 84); antes, o 120 (`f884e6c04`, tag `build-120`: espelhar selfies, PR 83); `git log --oneline -3` |
-| TestFlight | **123** (21/11/2026, 13:52): enquetes (PR 86), criar conferência pelo Galene (`meet.isacloud.cc`, link no chat; sem card na lista) e figurinhas só no atalho da caixa de texto. Antes, **122** (21/11/2026, 10:34): a extensão de notificação espera 0,5 s em vez de 1,5 s antes de se desligar, para caber a gravação do estado das contas (C34, PR 85). Antes, **121** (20/11/2026, 08:42): correção do `0xdead10cc` da gravação adiada do estado (C33) e do log longo que gravava 0 bytes desde o 118 (PR 84). Antes, **120** (19/11/2026, 17:27): opção "Espelhar selfies" (padrão ligado) para fotos da câmera frontal (roadmap 180; PR 83). Antes, **119** (19/11/2026): atalho "Com GIF" / "Com imagem" no botão Criar das figurinhas (roadmap 179; PR 82). Antes, **118** (19/11/2026, 10:07): correção do `0xdead10cc` dos timeouts no desligamento (C32), limpeza da abertura mais tarde (C31), registro do C20 sem I/O no SQL e log longo opcional na Depuração (`IsaCloudLogLongo`, desligado por padrão; PR 81). Análise em `docs/analise-log-perfil-12h.md` |
-| `.dev` no iPhone | **123**, igual ao TestFlight (21/11/2026; **sem push**) |
+| Commit | o do **build 124** (tag `build-124`: ligações com o Web e com o app fechado); antes, o do **build 123** (tag `build-123`: enquetes do Fluux, criar conferência pelo Galene, figurinhas só no atalho da caixa de texto); antes, o do **build 122** (tag `build-122`: folga no desligamento da extensão de notificação, C34, PR 85); antes, o 121 (`38b814af7`, tag `build-121`: correção do C33 e do log longo, PR 84); antes, o 120 (`f884e6c04`, tag `build-120`: espelhar selfies, PR 83); `git log --oneline -3` |
+| TestFlight | **124** (21/11/2026, 16:06): ligação de áudio do isaCloud Web completa no iOS (`<parameter>` sem `name` no leitor Rust) e ligações tocam com o app fechado (a extensão não morre mais antes do `reportNewIncomingVoIPPushPayload`). Antes, **123** (21/11/2026, 13:52): enquetes (PR 86), criar conferência pelo Galene (`meet.isacloud.cc`, link no chat; sem card na lista) e figurinhas só no atalho da caixa de texto. Antes, **122** (21/11/2026, 10:34): a extensão de notificação espera 0,5 s em vez de 1,5 s antes de se desligar, para caber a gravação do estado das contas (C34, PR 85). Antes, **121** (20/11/2026, 08:42): correção do `0xdead10cc` da gravação adiada do estado (C33) e do log longo que gravava 0 bytes desde o 118 (PR 84). Antes, **120** (19/11/2026, 17:27): opção "Espelhar selfies" (padrão ligado) para fotos da câmera frontal (roadmap 180; PR 83). Antes, **119** (19/11/2026): atalho "Com GIF" / "Com imagem" no botão Criar das figurinhas (roadmap 179; PR 82). Antes, **118** (19/11/2026, 10:07): correção do `0xdead10cc` dos timeouts no desligamento (C32), limpeza da abertura mais tarde (C31), registro do C20 sem I/O no SQL e log longo opcional na Depuração (`IsaCloudLogLongo`, desligado por padrão; PR 81). Análise em `docs/analise-log-perfil-12h.md` |
+| `.dev` no iPhone | **124** com o código do build (21/11/2026), a reinstalar com o número 124 quando a Isadora voltar (**sem push**) |
 | Simuladores | iPhone XR (iOS 18.6) e isaCloud iOS27 com o código do build 121 (o 122 só mexe na extensão, que não roda no simulador) (20/11/2026, ad-hoc, por cima do banco; backup em `~/Library/Application Support/isacloud-sim-backups/<udid>-20261120-0833-c33/`) e as 3 contas de teste; a extensão não roda no simulador com `simctl push` |
 | ExyteChat | `80602dd` na `isaCloud` (visualizador sem `TabView` paginado com um anexo só, PR 23, mudança nº 24; antes `3eb0aa1`: tamanho do arquivo nas mídias e nos áudios, PR 22; antes `7d3292b`: miniatura opcional dentro da citação, `Message.quotePreview`, PR 21; antes `e168ed8`: visualizador de mídia só com o anexo tocado, opção `fullscreenSingleAttachment`, PR 20; antes `f49d4f6`: card de link com altura fixa, PR 19). Detalhes em `docs/exytechat-fork.md`. |
 | Instrumentação temporária | **fora do código**; patches da sonda em `isaCloud/local/` (`chatjump-app.patch`, `chatjump-exytechat.patch`, ver `docs/investigacao-atraso-na-conversa.md` §8) |
@@ -23,6 +23,14 @@ Comando para conferir: `git log --oneline -3 && git status --porcelain`.
 - **Ainda em avaliação:** build 112 (aceitar mensagem de aparelho OMEMO conhecido removido da lista; testar com dois aparelhos).
 - **Primeira mensagem não lida (build 87):** só no roadmap, sem previsão de nova avaliação.
 - **Figurinhas e XEP-0449 (roadmap 155):** análise iOS e Android pronta em `docs/analise-xep0449-conformidade.md`; aguarda 3 decisões, sem código.
+
+## O que entrou no build 124 (sobre o 123)
+
+- **Ligação do isaCloud Web caía depois de atendida:** `<parameter value='111/111'/>` do `red` sem `name` derrubava a conversão Jingle → SDP (`rust/sdp-to-jingle`, `name` agora opcional). A Web vai parar de mandar sem `name`.
+- **Ligação com o app fechado nunca tocava (bug herdado do Monal):** a extensão de notificação morria (`killAppex`) antes de chamar `reportNewIncomingVoIPPushPayload`; novo `disconnectAndFeedAllWaitingHandlersWithoutKilling` (`NotificationService.m`).
+- **Armadilha de teste:** com um simulador ligado na mesma conta, ele recusa a chamada com `reject` `<busy/>` e a chamada cai em todos os aparelhos. **Desligar os simuladores ao testar ligações.**
+- **Rust:** o xcframework (`rust/LibMonalRustSwiftBridge`, ignorado pelo Git) foi regerado só para iOS; copiar para outras worktrees. Ver `docs/decisoes.md`.
+- **A validar:** ligação com o app fechado no TestFlight (a linha `Dispatching voip call to mainapp` da extensão); o `.dev` ainda não está no 124.
 
 ## O que entrou no build 123 (sobre o 122)
 

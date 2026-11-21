@@ -1,6 +1,19 @@
 {
   "releases": [
     {
+      "build": 124,
+      "date": "21/11/2026",
+      "sections": [
+        {
+          "title": "Correções",
+          "items": [
+            "📞 Ligações de áudio que chegam do isaCloud Web agora completam: é só atender e conversar!",
+            "🔔 Ligações também tocam com o app fechado: o telefone acorda e você atende normalmente!"
+          ]
+        }
+      ]
+    },
+    {
       "build": 123,
       "date": "21/11/2026",
       "sections": [
