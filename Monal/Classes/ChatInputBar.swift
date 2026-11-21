@@ -141,11 +141,6 @@ struct ChatInputBar: View {
                 Label("GIF", systemImage: "play.rectangle")
             }
             Button {
-                onPickSticker()
-            } label: {
-                Label("Stickers", image: "StickerIcon")
-            }
-            Button {
                 onShareLocation()
             } label: {
                 Label("Location", systemImage: "location")
@@ -358,7 +353,7 @@ struct ChatInputBar: View {
         .accessibilityIdentifier("clearTextButton")
     }
 
-    /// isaCloud: shown in the empty field, at the place of the clear button: a shortcut to the sticker sheet (the same action as the Stickers item of the paperclip menu)
+    /// isaCloud: shown in the empty field, at the place of the clear button: a shortcut to the sticker sheet (the only way in: the paperclip menu has no Stickers item since build 123)
     private var stickerShortcutButton: some View {
         Button {
             onPickSticker()

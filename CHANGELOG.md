@@ -2,7 +2,12 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
-## Não lançado
+## 0.0.1 (build 123) — 21/11/2026
+
+Enviado ao TestFlight às 13:52 (enquetes do Fluux, PR 86, e criar conferência pelo Galene, mesclada direto na `isaCloud` a partir da `feature/video-conferencia`; testado no simulador e no `.dev`).
+
+### Alterado
+- **Figurinhas saíram do menu do clipe.** O acesso fica só no atalho de figurinha dentro da caixa de texto (`ChatInputBar.swift`, o item "Stickers" do `Menu` foi removido; `onPickSticker` continua sendo usado pelo atalho). A string "Stickers" segue em uso no rótulo de acessibilidade do atalho.
 
 ### Adicionado
 - **Criar conferência (vídeo chamada pelo Galene).** Item "Criar conferência" no menu de anexos do chat: `POST https://meet.isacloud.cc/meet-api/v1/rooms` (`IsaCloudConferenceApi`, 15 s, sem cookies, só aceita 201 e URLs https do host) e o texto "Acesse a vídeo conferência pelo link: <roomURL>" vai para o compositor, sem enviar. O `hostURL` (credencial de quem criou a sala), o `hostKey` e a validade ficam só no Keychain (`IsaCloudConferenceStore`, serviço `IsaCloudMeet`, `ThisDeviceOnly`), nunca no chat nem em log. Tocar no link `/join/<id>` (balão do chat, pelo `ExternalLinkViewModifier`, sem mexer no fork do ExyteChat) abre o `hostURL` se este aparelho criou a sala, senão a página pública. O card "Sua conferência está pronta" na lista de conversas foi retirado por ora: o anfitrião entra tocando no mesmo link enviado ao convidado. O convidado não precisa de nada no app: a página web `/join/<id>` faz a entrada. Textos em inglês e pt-BR no override do isaCloud. Guia e decisões em `docs/implementacao-video-conferencia-ios.md` e `docs/decisoes-conferencia-galene-ios.md`.

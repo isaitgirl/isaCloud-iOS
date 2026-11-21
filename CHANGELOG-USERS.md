@@ -10,12 +10,15 @@ O que está neste arquivo é o que aparece para o usuário na tela de **Novidade
 - Nada de texto sério ou técnico: sem jargão (OMEMO, SASL, WAL, 0xdead10cc, background task, thread), sem número de crash (C20), sem "passamos a registrar…". Detalhe técnico fica no [CHANGELOG.md](CHANGELOG.md).
 - Se a correção for interna e a pessoa não percebe, escreva algo leve como "🛠️ Mais estabilidade por dentro, para o app ficar redondinho."
 
-## Próximo build
+## Build 123 · 21/11/2026
 
 ### Novidades
 - 📊 Agora dá para criar enquetes nos grupos e canais e votar com um toque!
 - 🔒 Enquete sua? Encerre quando quiser, e o placar fica congelado para todos.
 - 🎥 Agora dá para criar uma vídeo conferência direto do chat: toque no clipe, escolha "Criar conferência" e mande o link para a turma!
+
+### Melhorias
+- 🎨 As figurinhas ficam a um toque, no ícone dentro da caixa de texto, e o menu do clipe ficou mais enxuto.
 
 ## Build 122 · 21/11/2026
 
