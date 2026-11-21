@@ -462,3 +462,20 @@ Medir depois de aplicar: contar `<failed` e `<resumed` por conta nos rawlogs (no
 - **Para validar em produção:**
   - a contagem de `<failed` contra `<resumed` da conta do xmpp.social.br nos rawlogs das próximas manhãs;
   - a lista de participantes e o `@` continuam completos depois de uma noite com o app suspenso.
+
+## Resultado da primeira noite (20/11 18:38 → 21/11 07:19, build 121, fila 5000 e compactação no ar)
+
+Rawlogs e log longo exportados em 21/11 às 07:19. Os rawlogs cobrem 12 h 40 min.
+
+| | 20/11 06:40–07:10 (antes) | 20/11 18:38 → 21/11 07:19 (depois) |
+|---|---|---|
+| Retomadas recusadas (`<failed>`) | 10 na conta do xmpp.social.br | **0** |
+| Sessões novas (`<enabled>`) | 10 | **0** |
+| Retomadas aceitas (`<resumed>`) | 11 | **192** |
+| Pedidos de entrada em sala enviados | ~10 por sala | **0** |
+| Presenças de sala | ~5.400 em 30 min (~10.800/h) | 10.139 em 12 h 40 min (~800/h, pico de 1.156/h) |
+
+- **O ciclo quebrou.** Nenhuma retomada recusada e nenhuma sessão nova a noite toda, nas duas contas. Sem sessão nova, o app não entrou de novo em nenhuma sala.
+- **As presenças caíram ~13 vezes por hora.** O que sobrou é quase todo movimento real: 3.155 mudanças de `show`/`status` e 1.961 saídas, a maior parte nos canais federados (Gajim 2.291, Conversations 1.963, monocles 1.880, Prosody 1.481; a Guia XMPP ficou em 510).
+- **A compactação está agindo.** 9.885 das 10.139 presenças vieram com carimbo de atraso, ou seja, passaram pelo buffer do `mod_csi_battery_saver`. Só 162 vezes o mesmo ocupante apareceu duas vezes em menos de 2 s, então as listas liberadas de uma vez não trazem repetição.
+- **Falta conferir no uso:** se a lista de participantes e o `@` continuam completos nos canais grandes depois da noite.
