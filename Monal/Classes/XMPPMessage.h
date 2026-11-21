@@ -49,4 +49,13 @@ FOUNDATION_EXPORT NSString* const kMessageHeadlineType;
 -(void) setStoreHint;
 -(void) setNoStoreHint;
 
+/**
+ isaCloud: adds the poll element (urn:fluux:poll:0) of a poll message, built from its poll JSON (see Polls.swift), with the fallback body marker
+ */
+-(void) addPollFromJSON:(NSString*) pollJSON;
+/**
+ isaCloud: adds the <poll-closed> element of the closing of a poll, built from its closing JSON, with the fallback body marker
+ */
+-(void) addPollClosedFromJSON:(NSString*) closedJSON;
+
 @end

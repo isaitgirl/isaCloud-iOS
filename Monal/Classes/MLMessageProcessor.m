@@ -23,9 +23,16 @@
 #import <monalxmpp/MLChannelContact.h>
 #import <monalxmpp/MLReactionsEntry.h>
 #import "MonalAppDelegate.h"
+#import <monalxmpp/monalxmpp-Swift.h>
 
 @interface MLPubSub ()
 -(void) handleHeadlineMessage:(XMPPMessage*) messageNode;
+@end
+
+//isaCloud: helpers of the polls, defined below processMessage:
+@interface MLMessageProcessor (PollHelpers)
++(BOOL) isTrueXMLBoolean:(NSString* _Nullable) value;
++(void) processPollClosedNode:(MLXMLNode*) messageNode historyId:(NSNumber*) historyId inChat:(NSString*) chat forAccount:(xmpp*) account participantJid:(NSString* _Nullable) participantJid occupantId:(NSString* _Nullable) occupantId actualFrom:(NSString* _Nullable) actualFrom;
 @end
 
 static NSMutableDictionary* _typingNotifications;
@@ -800,6 +807,22 @@ static NSMutableDictionary* _typingNotifications;
                     [[DataLayer sharedInstance] setQuotedMessageIdForHistoryId:historyId quotedId:quotedId];
             }
 
+            //isaCloud: a poll (urn:fluux:poll:0) of a group or channel: its definition is kept as JSON with the message (see Polls.swift). The body stays,
+            //it is the fallback text of the poll. Polls exist only in MUCs: in 1:1 chats the text is shown as it is
+            if(historyId != nil && possiblyUnknownContact.isMuc && [messageNode check:@"{urn:fluux:poll:0}poll"])
+            {
+                NSString* pollJSON = [ISACloudPolls pollJSONFromFields:[MLMessageProcessor pollFieldsFromMessageNode:messageNode]];
+                if(pollJSON != nil)
+                    [[DataLayer sharedInstance] setPollJSON:pollJSON forHistoryId:historyId];
+                else
+                    DDLogWarn(@"Ignoring poll %@ without a title or with less than two options", messageId);
+            }
+
+            //isaCloud: the closing of a poll (<poll-closed>) is kept with its message. The poll it closes is marked as closed only if the closing
+            //comes from its creator and matches it (title and emojis), see processPollClosedNode:... below
+            if(historyId != nil && possiblyUnknownContact.isMuc && [messageNode check:@"{urn:fluux:poll:0}poll-closed"])
+                [MLMessageProcessor processPollClosedNode:messageNode historyId:historyId inChat:buddyName forAccount:account participantJid:participantJid occupantId:occupantId actualFrom:actualFrom];
+
             if(historyId != nil)
                 message = [MLMessage createMessageFromHistoryID:historyId];
             if(message != nil && historyId != nil)      //check historyId to make static analyzer happy
@@ -1079,4 +1102,131 @@ static NSMutableDictionary* _typingNotifications;
     return message;
 }
 
+
+//isaCloud: the fields of the <poll> element of a message (urn:fluux:poll:0), as ISACloudPolls.pollJSONFromFields: wants them. Empty when there is no poll element
++(NSDictionary*) pollFieldsFromMessageNode:(MLXMLNode*) messageNode
+{
+    NSMutableDictionary* fields = [NSMutableDictionary new];
+    NSArray* pollNodes = [messageNode find:@"{urn:fluux:poll:0}poll"];
+    if(pollNodes.count == 0)
+        return fields;
+    MLXMLNode* pollNode = pollNodes.firstObject;
+    NSString* title = [pollNode findFirst:@"title#"];
+    if(title != nil)
+        fields[@"title"] = title;
+    NSString* description = [pollNode findFirst:@"description#"];
+    if(description != nil)
+        fields[@"description"] = description;
+    fields[@"allowMultiple"] = @([self isTrueXMLBoolean:pollNode.attributes[@"allow-multiple"]]);
+    fields[@"hideResults"] = @([self isTrueXMLBoolean:pollNode.attributes[@"hide-results"]]);
+    if(pollNode.attributes[@"deadline"] != nil)
+        fields[@"deadline"] = pollNode.attributes[@"deadline"];
+    NSMutableArray* options = [NSMutableArray new];
+    for(MLXMLNode* option in [pollNode find:@"option"])
+        [options addObject:@{
+            @"emoji": option.attributes[@"emoji"] ?: @"",
+            @"label": option.data ?: @"",
+        }];
+    fields[@"options"] = options;
+    return fields;
+}
+
+//isaCloud: the fields of the <poll-closed> element of a message (urn:fluux:poll:0), as ISACloudPolls.closedJSONFromFields: wants them. Empty when there is none
++(NSDictionary*) pollClosedFieldsFromMessageNode:(MLXMLNode*) messageNode
+{
+    NSMutableDictionary* fields = [NSMutableDictionary new];
+    NSArray* closedNodes = [messageNode find:@"{urn:fluux:poll:0}poll-closed"];
+    if(closedNodes.count == 0)
+        return fields;
+    MLXMLNode* closedNode = closedNodes.firstObject;
+    if(closedNode.attributes[@"message-id"] != nil)
+        fields[@"messageId"] = closedNode.attributes[@"message-id"];
+    NSString* title = [closedNode findFirst:@"title#"];
+    if(title != nil)
+        fields[@"title"] = title;
+    NSString* description = [closedNode findFirst:@"description#"];
+    if(description != nil)
+        fields[@"description"] = description;
+    NSMutableArray* tally = [NSMutableArray new];
+    for(MLXMLNode* line in [closedNode find:@"tally"])
+        [tally addObject:@{
+            @"emoji": line.attributes[@"emoji"] ?: @"",
+            @"label": line.attributes[@"label"] ?: @"",
+            @"count": line.attributes[@"count"] ?: @"",
+            @"voters": line.attributes[@"voters"] ?: @"",
+        }];
+    fields[@"tally"] = tally;
+    return fields;
+}
+
++(BOOL) isTrueXMLBoolean:(NSString* _Nullable) value
+{
+    return [value isEqualToString:@"true"] || [value isEqualToString:@"1"];
+}
+
+//isaCloud: the closing of a poll from a group or channel. The closing is kept with its message; the poll it closes gets its closed-at only when
+//(1) the poll is in this chat and not closed yet, (2) the closing comes from the creator of the poll, (3) title and emojis match the poll.
+//A closing that does not match is kept, but the poll stays open. The voters of the closing are NOT compared with the reactions (they are nicks)
++(void) processPollClosedNode:(MLXMLNode*) messageNode historyId:(NSNumber*) historyId inChat:(NSString*) chat forAccount:(xmpp*) account participantJid:(NSString* _Nullable) participantJid occupantId:(NSString* _Nullable) occupantId actualFrom:(NSString* _Nullable) actualFrom
+{
+    NSDictionary* fields = [self pollClosedFieldsFromMessageNode:messageNode];
+    NSString* closedJSON = [ISACloudPolls closedJSONFromFields:fields];
+    if(closedJSON == nil)
+    {
+        DDLogWarn(@"Ignoring poll-closed without a message-id or a title in chat %@", chat);
+        return;
+    }
+    [[DataLayer sharedInstance] setPollClosedJSON:closedJSON forHistoryId:historyId];
+
+    //the poll is looked up by its client id (message-id), in this chat only: a stanza id would not match here
+    NSNumber* pollHistoryId = [[DataLayer sharedInstance] historyIdOfPollMessageId:fields[@"messageId"] inChat:chat forAccount:account.accountID];
+    if(pollHistoryId == nil)
+    {
+        DDLogInfo(@"Poll %@ closed in %@ is not in our database (yet), nothing to mark", fields[@"messageId"], chat);
+        return;
+    }
+    MLMessage* poll = [MLMessage createMessageFromHistoryID:pollHistoryId];
+    if(poll.pollClosedAt != nil)
+    {
+        DDLogInfo(@"Poll %@ is already closed, keeping the first closing", fields[@"messageId"]);
+        return;
+    }
+
+    //the creator: the participant jid in groups, else the occupant id, else the nick
+    BOOL sameCreator = NO;
+    if(poll.participantJid != nil && participantJid != nil)
+        sameCreator = [poll.participantJid isEqualToString:participantJid];
+    else if(poll.occupantId != nil && occupantId != nil)
+        sameCreator = [poll.occupantId isEqualToString:occupantId];
+    else if(poll.actualFrom.length > 0 && actualFrom.length > 0)
+        sameCreator = [poll.actualFrom isEqualToString:actualFrom];
+    if(!sameCreator)
+    {
+        DDLogWarn(@"Ignoring poll-closed for poll %@ from someone else than its creator", fields[@"messageId"]);
+        return;
+    }
+    if(![ISACloudPolls isClosedJSON:closedJSON matchingPollJSON:poll.poll])
+    {
+        DDLogWarn(@"Ignoring poll-closed for poll %@: title or emojis do not match the poll", fields[@"messageId"]);
+        return;
+    }
+
+    NSDate* stamp = [messageNode findFirst:@"{urn:xmpp:delay}delay@stamp|datetime"];
+    if(stamp == nil)
+        stamp = [NSDate date];
+    [[DataLayer sharedInstance] setPollClosedAt:@((long long)([stamp timeIntervalSince1970] * 1000)) forHistoryId:pollHistoryId];
+    DDLogInfo(@"Poll %@ in %@ closed by its creator", fields[@"messageId"], chat);
+
+    //isaCloud: the cached poll takes its closed-at at once, and the chat draws its card again (ChatView, kMonalUpdatedMessageNotice with pollUpdate)
+    poll.pollClosedAt = stamp;
+    DDLogInfo(@"Sending out kMonalUpdatedMessageNotice notification for the closed poll %@", pollHistoryId);
+    [[MLNotificationQueue currentQueue] postNotificationName:kMonalUpdatedMessageNotice object:account userInfo:@{
+        @"message": poll,
+        @"showAlert": @NO,
+        @"contact": poll.chatContact,
+        @"LMCReplaced": @NO,
+        @"reactionsUpdate": @NO,
+        @"pollUpdate": @YES,
+    }];
+}
 @end

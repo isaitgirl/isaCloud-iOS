@@ -4327,6 +4327,16 @@ static NSLock* isaCloudTimeoutsLock(void)
         [messageNode addChildNode:quoteNode];
     }
 
+    //isaCloud: a poll (urn:fluux:poll:0) and the closing of a poll (<poll-closed>) carry their data in their own elements, outside any OMEMO payload
+    //(see Polls.swift and docs/implementacao-enquetes-ios.md, 2.1 and 2.3). Stored with the message before it is sent, so resends carry them too.
+    //The body of the message is the fallback text of the poll
+    NSString* pollJSON = messageId ? [[DataLayer sharedInstance] pollJSONForOutboundMessageId:messageId forAccount:self.accountID] : nil;
+    if(pollJSON != nil)
+        [messageNode addPollFromJSON:pollJSON];
+    NSString* pollClosedJSON = messageId ? [[DataLayer sharedInstance] pollClosedJSONForOutboundMessageId:messageId forAccount:self.accountID] : nil;
+    if(pollClosedJSON != nil)
+        [messageNode addPollClosedFromJSON:pollClosedJSON];
+
     //set message type
     if(contact.isMuc)
         [messageNode.attributes setObject:kMessageGroupChatType forKey:@"type"];

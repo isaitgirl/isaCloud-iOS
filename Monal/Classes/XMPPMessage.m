@@ -8,6 +8,7 @@
 
 #import "XMPPMessage.h"
 #import <monalxmpp/MLContact.h>
+#import <monalxmpp/monalxmpp-Swift.h>
 
 @class MLContact;
 
@@ -134,6 +135,72 @@ NSString* const kMessageHeadlineType = @"headline";
 {
     [self addChildNode:[[MLXMLNode alloc] initWithElement:@"no-store" andNamespace:@"urn:xmpp:hints"]];
     [self addChildNode:[[MLXMLNode alloc] initWithElement:@"no-storage" andNamespace:@"urn:xmpp:hints"]];
+}
+
+//isaCloud: the poll element (urn:fluux:poll:0) of a poll message, built from the poll JSON (see Polls.swift). The flags go in only when they are true
+//(absence means false, as in the Fluux client); the fallback body (XEP-0428 style, `<fallback for="urn:fluux:poll:0"><body/></fallback>`) tells the clients
+//that do not know the poll to show the body of the message. See docs/implementacao-enquetes-ios.md, 2.1
+-(void) addPollFromJSON:(NSString*) pollJSON
+{
+    NSDictionary* fields = [ISACloudPolls pollFieldsFromJSON:pollJSON];
+    if(fields == nil)
+    {
+        DDLogWarn(@"Not adding a poll element: the poll JSON is not valid");
+        return;
+    }
+    MLXMLNode* pollNode = [[MLXMLNode alloc] initWithElement:@"poll" andNamespace:@"urn:fluux:poll:0"];
+    if([fields[@"allowMultiple"] boolValue])
+        pollNode.attributes[@"allow-multiple"] = @"true";
+    if([fields[@"hideResults"] boolValue])
+        pollNode.attributes[@"hide-results"] = @"true";
+    if(fields[@"deadline"] != nil)
+        pollNode.attributes[@"deadline"] = fields[@"deadline"];
+    [pollNode addChildNode:[[MLXMLNode alloc] initWithElement:@"title" andData:fields[@"title"]]];
+    if(fields[@"description"] != nil)
+        [pollNode addChildNode:[[MLXMLNode alloc] initWithElement:@"description" andData:fields[@"description"]]];
+    for(NSDictionary* option in fields[@"options"])
+        [pollNode addChildNode:[[MLXMLNode alloc] initWithElement:@"option" withAttributes:@{
+            @"emoji": option[@"emoji"],
+        } andChildren:@[] andData:option[@"label"]]];
+    [self addChildNode:pollNode];
+    [self addPollFallbackFor:@"urn:fluux:poll:0"];
+}
+
+//isaCloud: the closing of a poll (`<poll-closed message-id="…">`, the message-id is the client id of the poll message), built from the closing JSON.
+//Each option has a tally (emoji, label, count and voters as a CSV of nicks; the voters attribute is left out when nobody has a nick)
+-(void) addPollClosedFromJSON:(NSString*) closedJSON
+{
+    NSDictionary* fields = [ISACloudPolls closedFieldsFromJSON:closedJSON];
+    if(fields == nil)
+    {
+        DDLogWarn(@"Not adding a poll-closed element: the closing JSON is not valid");
+        return;
+    }
+    NSMutableArray* children = [NSMutableArray new];
+    [children addObject:[[MLXMLNode alloc] initWithElement:@"title" andData:fields[@"title"]]];
+    if(fields[@"description"] != nil)
+        [children addObject:[[MLXMLNode alloc] initWithElement:@"description" andData:fields[@"description"]]];
+    for(NSDictionary* line in fields[@"tally"])
+    {
+        NSMutableDictionary* attributes = [NSMutableDictionary new];
+        attributes[@"emoji"] = line[@"emoji"];
+        attributes[@"label"] = line[@"label"];
+        attributes[@"count"] = [NSString stringWithFormat:@"%@", line[@"count"]];
+        if([line[@"voters"] length] > 0)
+            attributes[@"voters"] = line[@"voters"];
+        [children addObject:[[MLXMLNode alloc] initWithElement:@"tally" withAttributes:attributes andChildren:@[] andData:nil]];
+    }
+    [self addChildNode:[[MLXMLNode alloc] initWithElement:@"poll-closed" andNamespace:@"urn:fluux:poll:0" withAttributes:@{
+        @"message-id": fields[@"messageId"],
+    } andChildren:children andData:nil]];
+    [self addPollFallbackFor:@"urn:fluux:poll:0"];
+}
+
+-(void) addPollFallbackFor:(NSString*) pollNamespace
+{
+    [self addChildNode:[[MLXMLNode alloc] initWithElement:@"fallback" andNamespace:@"urn:xmpp:fallback:0" withAttributes:@{
+        @"for": pollNamespace,
+    } andChildren:@[[[MLXMLNode alloc] initWithElement:@"body"]] andData:nil]];
 }
 
 @end

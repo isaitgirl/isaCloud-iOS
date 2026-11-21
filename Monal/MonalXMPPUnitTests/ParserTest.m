@@ -11,6 +11,7 @@
 #import <monalxmpp/monalxmpp-Swift.h>
 #import <monalxmpp/MLConstants.h>
 #import <monalxmpp/HelperTools.h>
+#import <monalxmpp/MLMessageProcessor.h>
 #import "MLBasePaser.h"
 
 static NSMutableArray<MLXMLNode*>* _parsedStanzas;
@@ -67,6 +68,7 @@ static NSString* _rawXML = @"<?xml version='1.0'?>\n\
 </stream:stream>";
 
 @interface ParserTest : XCTestCase
++(NSArray<MLXMLNode*>*) parseStanzasOfXML:(NSString*) xml;
 @end
 
 @implementation ParserTest
@@ -607,6 +609,83 @@ static NSString* _rawXML = @"<?xml version='1.0'?>\n\
     NSString* ver = [HelperTools getEntityCapsHashForIdentities:identities andFeatures:features andForms:forms];
     NSLog(@"Caps hash calculated: %@", ver);
     XCTAssertEqualObjects(ver, @"q07IKJEyjvHSyhy//CH0CxmKi8w=", "Caps hash NOT equal to testcase hash 'q07IKJEyjvHSyhy//CH0CxmKi8w='!");
+}
+
+
+//isaCloud: <poll> and <poll-closed> (urn:fluux:poll:0) as the Fluux client and the Android app send them. Parsed with a stream of their own, so the
+//stanza indexes of the tests above stay the same. See docs/implementacao-enquetes-ios.md, 2.1 and 2.3
++(NSArray<MLXMLNode*>*) parseStanzasOfXML:(NSString*) xml
+{
+    NSMutableArray<MLXMLNode*>* stanzas = [NSMutableArray new];
+    MLBasePaser* delegate = [[MLBasePaser alloc] initWithCompletion:^(MLXMLNode* _Nullable parsedStanza) {
+        if(parsedStanza != nil)
+            [stanzas addObject:parsedStanza];
+    }];
+    XmlParserBridge* xmlParser = [[XmlParserBridge alloc] initWith:delegate];
+    NSData* data = [xml dataUsingEncoding:NSUTF8StringEncoding];
+    [xmlParser feedData:data.bytes withLength:data.length];
+    return stanzas;
+}
+
+-(void) testParsePollAndPollClosed
+{
+    NSString* xml = @"<?xml version='1.0'?>\n\
+        <stream:stream xmlns:stream='http://etherx.jabber.org/streams' version='1.0' xmlns='jabber:client' from='example.org' id='poll-test'>\n\
+        <message from='sala@conference.example.org/Ana' to='bia@example.org' type='groupchat' id='poll-1' xmlns='jabber:client'>\n\
+            <body>📊 Poll: Almoço?\n1️⃣ Pizza\n2️⃣ Sushi</body>\n\
+            <poll xmlns='urn:fluux:poll:0' allow-multiple='true' deadline='2026-12-01T10:00:00.000Z'>\n\
+                <title>Almoço?</title>\n\
+                <description>opcional</description>\n\
+                <option emoji='1️⃣'>Pizza</option>\n\
+                <option emoji='2️⃣'>Sushi</option>\n\
+                <option>sem emoji</option>\n\
+            </poll>\n\
+            <fallback xmlns='urn:xmpp:fallback:0' for='urn:fluux:poll:0'><body/></fallback>\n\
+        </message>\n\
+        <message from='sala@conference.example.org/Ana' to='bia@example.org' type='groupchat' id='poll-1-closed' xmlns='jabber:client'>\n\
+            <body>📊 Poll encerrada: Almoço?</body>\n\
+            <poll-closed xmlns='urn:fluux:poll:0' message-id='poll-1'>\n\
+                <title>Almoço?</title>\n\
+                <tally emoji='1️⃣' label='Pizza' count='3' voters='ana,bia'/>\n\
+                <tally emoji='2️⃣' label='Sushi' count='x'/>\n\
+            </poll-closed>\n\
+        </message>\n\
+        <message from='sala@conference.example.org' to='bia@example.org' type='groupchat' id='plain' xmlns='jabber:client'><body>sem enquete</body></message>\n\
+        </stream:stream>";
+    NSArray<MLXMLNode*>* stanzas = [ParserTest parseStanzasOfXML:xml];
+    XCTAssertEqual(stanzas.count, 3);
+
+    //the poll: title, description, the flags (only the true one is set), the deadline and the options (the one without emoji comes out without it)
+    NSDictionary* poll = [MLMessageProcessor pollFieldsFromMessageNode:stanzas[0]];
+    XCTAssertEqualObjects(poll[@"title"], @"Almoço?");
+    XCTAssertEqualObjects(poll[@"description"], @"opcional");
+    XCTAssertEqualObjects(poll[@"allowMultiple"], @YES);
+    XCTAssertEqualObjects(poll[@"hideResults"], @NO);
+    XCTAssertEqualObjects(poll[@"deadline"], @"2026-12-01T10:00:00.000Z");
+    XCTAssertEqual([poll[@"options"] count], 3);
+    XCTAssertEqualObjects(poll[@"options"][0], (@{@"emoji": @"1️⃣", @"label": @"Pizza"}));
+    XCTAssertEqualObjects(poll[@"options"][2][@"emoji"], @"");
+    NSString* pollJSON = [ISACloudPolls pollJSONFromFields:poll];
+    XCTAssertNotNil(pollJSON);
+    XCTAssertEqual([[ISACloudPolls pollFieldsFromJSON:pollJSON][@"options"] count], 2);
+
+    //the closing: message-id, title and the tally (a count that is not a number is 0)
+    NSDictionary* closed = [MLMessageProcessor pollClosedFieldsFromMessageNode:stanzas[1]];
+    XCTAssertEqualObjects(closed[@"messageId"], @"poll-1");
+    XCTAssertEqualObjects(closed[@"title"], @"Almoço?");
+    XCTAssertEqual([closed[@"tally"] count], 2);
+    NSString* closedJSON = [ISACloudPolls closedJSONFromFields:closed];
+    XCTAssertNotNil(closedJSON);
+    NSDictionary* closedFields = [ISACloudPolls closedFieldsFromJSON:closedJSON];
+    XCTAssertEqualObjects(closedFields[@"tally"][0][@"count"], @3);
+    XCTAssertEqualObjects(closedFields[@"tally"][0][@"voters"], @"ana,bia");
+    XCTAssertEqualObjects(closedFields[@"tally"][1][@"count"], @0);
+
+    //a message without a poll has no poll fields and a poll without a title or with one option is no poll
+    XCTAssertEqual([[MLMessageProcessor pollFieldsFromMessageNode:stanzas[2]] count], 0);
+    XCTAssertFalse([stanzas[2] check:@"{urn:fluux:poll:0}poll"]);
+    NSDictionary* oneOption = (@{@"title": @"x", @"options": @[@{@"emoji": @"1️⃣", @"label": @"a"}]});
+    XCTAssertNil([ISACloudPolls pollJSONFromFields:oneOption]);
 }
 
 @end

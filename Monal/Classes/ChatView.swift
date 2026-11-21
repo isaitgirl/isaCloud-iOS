@@ -238,6 +238,10 @@ struct ChatView: View {
     //isaCloud: the sticker sheet (Stickers.swift): a tap there sends the sticker at once
     @State private var showStickerPicker = false
     @State private var showLocationPicker = false
+    //isaCloud: the sheet that creates a poll (PollViews.swift), and the poll of the message whose closing the user is asked to confirm
+    @State private var showCreatePoll = false
+    @State private var pollToClose: MLMessage? = nil
+    @State private var showClosePollDialog = false
     @State private var showFileImporter = false
     @State private var editSaveClosure: ((String) -> Void)?
     @State private var isTyping = false
@@ -298,11 +302,15 @@ struct ChatView: View {
         case copy, quote, forward, share, edit, retract, moderate, delete, resend
         //isaCloud: a received sticker goes to the sticker library (Stickers.swift)
         case saveSticker
+        //isaCloud: the creator closes its poll (<poll-closed>, see PollCardRules.canClose)
+        case closePoll
 
         func title() -> String {
             switch self {
                 case .copy:
                     NSLocalizedString("Copy", comment: "message menu")
+                case .closePoll:
+                    NSLocalizedString("Close poll", comment: "message menu: the creator of a poll closes it, its results freeze for everyone")
                 case .saveSticker:
                     NSLocalizedString("Save sticker", comment: "message menu: copies the sticker of the message to the sticker library")
                 case .quote:
@@ -328,6 +336,8 @@ struct ChatView: View {
             switch self {
                 case .copy:
                     Image(systemName: "doc.on.doc")
+                case .closePoll:
+                    Image(systemName: "checkmark.circle")
                 case .saveSticker:
                     Image(systemName: "face.smiling")
                 case .quote:
@@ -403,8 +413,14 @@ struct ChatView: View {
                 availableActions.append(.saveSticker)
             }
 
-            if !mlMessage.inbound && DataLayer.sharedInstance().checkLMCEligible(mlMessage.messageDBId, encrypted: mlMessage.encrypted || contact.isEncrypted, historyBaseID: nil) {
+            //isaCloud: a poll (or its closing) cannot be edited: see PollCardRules.allowsEdit
+            if !mlMessage.inbound && DataLayer.sharedInstance().checkLMCEligible(mlMessage.messageDBId, encrypted: mlMessage.encrypted || contact.isEncrypted, historyBaseID: nil) && PollCardRules.allowsEdit(hasPoll: mlMessage.poll != nil, hasClosing: mlMessage.pollClosed != nil) {
                 availableActions.append(.edit)
+            }
+
+            //isaCloud: our own poll is closed from its menu, while it is open (the confirmation is asked by the chat, see closePoll(_:))
+            if PollCardRules.canClose(isOwn: !mlMessage.inbound, hasPoll: mlMessage.poll != nil, isFrozen: mlMessage.pollClosed != nil, isEnded: mlMessage.pollClosedAt != nil, isMuc: mlMessage.isMuc, roomHasOccupantId: account.mucProcessor.getRoomFeatures(forMuc: contact.contactJid).contains("urn:xmpp:occupant-id:0"), isPending: false) {
+                availableActions.append(.closePoll)
             }
 
             if !mlMessage.inbound && (!mlMessage.isMuc || mlMessage.stanzaId != nil) {
@@ -1076,6 +1092,9 @@ struct ChatView: View {
             onSearchGif: { gifPickerMode = .gif },
             onPickSticker: { showStickerPicker = true },
             onShareLocation: { showLocationPicker = true },
+            //isaCloud: polls are offered in a group or channel whose room announces occupant-id (see PollViews.swift)
+            onCreatePoll: { showCreatePoll = true },
+            showsPollItem: contact.obj.isMuc && roomHasOccupantId(),
             onRemoveAttachment: { inputModel.removeAttachment(at: $0) },
             onSendRecording: { url in
                 sendRecording(url)
@@ -1083,6 +1102,102 @@ struct ChatView: View {
             mentionCandidates: mentionNicks,
             sendingHintTypeSize: ChatTextSize.dynamicTypeSize(system: dynamicTypeSize, step: chatViewDefaultsDB.chatTextSizeStep)       //isaCloud: the "sending" capsule follows the chat text size
         )
+    }
+
+    /// isaCloud: the poll functions (PollCardRules, PollViews.swift): the card of a message, a vote, the creation and the closing
+    /// the room of this chat announces occupant-id (the condition of a vote and of a poll, as for reacting in a group or channel)
+    private func roomHasOccupantId() -> Bool {
+        return account.mucProcessor.getRoomFeatures(forMuc: contact.obj.contactJid).contains("urn:xmpp:occupant-id:0")
+    }
+
+    /// isaCloud: the card of a poll message of this group or channel, nil when the message is not a poll
+    private func pollCardModel(for message: ExyteChat.Message) -> PollCardModel? {
+        guard let chatMessage = message as? ChatViewMessage else {
+            return nil
+        }
+        let mlMessage = chatMessage.innerMessage.obj
+        guard PollCardRules.showsCard(isMuc: mlMessage.isMuc, hasPoll: mlMessage.poll != nil, hasClosing: mlMessage.pollClosed != nil) else {
+            return nil
+        }
+        let poll: PollDefinition? = mlMessage.poll.flatMap { PollRules.decode($0) }
+        let closing: PollClosedInfo? = mlMessage.pollClosed.flatMap { PollRules.decodeClosed($0) }
+        let voters: [PollVoter] = pollVoterEntries(of: mlMessage).enumerated().map { index, voter in
+            PollVoter(id: "\(index)", nick: voter.nick, reactions: voter.reactions)
+        }
+        let votesAllowed = PollCardRules.votesAllowed(isMuc: mlMessage.isMuc, hasStanzaId: mlMessage.stanzaId != nil, roomHasOccupantId: roomHasOccupantId(), isPending: chatMessage.isPending)
+        return PollCardRules.card(poll: poll, closing: closing, endedAt: mlMessage.pollClosedAt != nil, voters: voters, ownReactions: ownPollReactions(mlMessage), votesAllowed: votesAllowed)
+    }
+
+    /// isaCloud: our own reactions on a message: the set that a vote replaces (XEP-0444 sends the whole set)
+    private func ownPollReactions(_ mlMessage: MLMessage) -> [String] {
+        var own: [String] = []
+        for reactionsInfo in mlMessage.reactions where reactionsInfo.contact.isSelf {
+            own = reactionsInfo.reactions.array.compactMap { $0 as? String }
+        }
+        return own
+    }
+
+    /// isaCloud: every reacting person of a poll message with the reactions on it; the nick is nil when it is not known (a jid is never sent as a nick)
+    private func pollVoterEntries(of mlMessage: MLMessage) -> [(nick: String?, reactions: [String])] {
+        var voters: [(nick: String?, reactions: [String])] = []
+        for reactionsInfo in mlMessage.reactions {
+            let reactions = reactionsInfo.reactions.array.compactMap { $0 as? String }
+            voters.append((nick: pollNick(of: reactionsInfo), reactions: reactions))
+        }
+        return voters
+    }
+
+    /// isaCloud: the nick of a reacting person: the nick of a channel, else the nick of the participant with this jid in a group
+    private func pollNick(of entry: MLReactionsEntry) -> String? {
+        if let mucNick = entry.mucNick, !mucNick.isEmpty {
+            return mucNick
+        }
+        guard let jid = entry.jid else {
+            return nil
+        }
+        let participants = DataLayer.sharedInstance().getMembersAndParticipants(ofMuc: contact.obj.contactJid, forAccountID: account.accountID)
+        let match = participants.first { ($0["participant_jid"] as? String) == jid || ($0["member_jid"] as? String) == jid }
+        return match?["room_nick"] as? String
+    }
+
+    /// isaCloud: a vote on an option of the poll: the new set of reactions of the user (PollRules.toggledReactions) is sent on the stanza id of the poll.
+    /// Not recorded in the recent reactions (a vote is not a reaction to remember). Nothing happens when the poll is closed or cannot take votes
+    private func votePoll(_ emoji: String, in message: ExyteChat.Message) {
+        guard let chatMessage = message as? ChatViewMessage else {
+            return
+        }
+        let mlMessage = chatMessage.innerMessage.obj
+        guard let pollJSON = mlMessage.poll, mlMessage.pollClosed == nil, mlMessage.pollClosedAt == nil, ISACloudPolls.canVote(pollJSON: pollJSON),
+              mlMessage.stanzaId != nil, roomHasOccupantId(), !chatMessage.isPending else {
+            return
+        }
+        guard let newReactions = ISACloudPolls.toggledReactions(forPollJSON: pollJSON, current: ownPollReactions(mlMessage), option: emoji) else {
+            return
+        }
+        self.account.sendReactions(NSOrderedSet(array: newReactions), for: mlMessage)
+    }
+
+    /// isaCloud: the creator closes its poll: the closing is built from the reactions the poll has now, and the results freeze for everyone
+    private func closePoll(_ pollMessage: MLMessage) {
+        let voters: [[AnyHashable: Any]] = pollVoterEntries(of: pollMessage).map { voter in
+            var dictionary: [AnyHashable: Any] = ["reactions": voter.reactions]
+            if let nick = voter.nick {
+                dictionary["nick"] = nick
+            }
+            return dictionary
+        }
+        guard let closing = MLXMPPManager.sharedInstance().closePollAndAddToHistory(pollMessage: pollMessage, voters: voters, isEncrypted: contact.isEncrypted) else {
+            return
+        }
+        messages.append(ChatViewMessage(closing))
+    }
+
+    /// isaCloud: the poll created in the sheet, sent as a message of the group or channel
+    private func sendPoll(_ pollJSON: String) {
+        guard let newMLMessage = MLXMPPManager.sharedInstance().sendPollAndAddToHistory(pollJSON: pollJSON, toContact: contact.obj, isEncrypted: contact.isEncrypted) else {
+            return
+        }
+        messages.append(ChatViewMessage(newMLMessage))
     }
 
     /// isaCloud: the nicks of the occupants online in this group or channel, without our own nick (for "@" suggestions)
@@ -1475,6 +1590,19 @@ struct ChatView: View {
                         isSticker: true,
                         onSelect: { params.showAttachmentClosure(sticker) }
                     )
+                //isaCloud: a poll of a group or channel is a card (PollViews.swift); its body is only the fallback text of the poll, so it is not drawn
+                } else if contact.isMuc, let pollCard = pollCardModel(for: params.message) {
+                    PollMessageBubble(
+                        model: pollCard,
+                        message: params.message,
+                        user: params.message.user,
+                        isCurrentUser: params.message.user.isCurrentUser,
+                        showSender: contact.isMuc,
+                        isLastOfSenderGroup: params.positionInGroup == .single || params.positionInGroup == .last,
+                        showContextMenu: params.showContextMenuClosure,
+                        onReactionsTap: params.showReactionDetailsClosure,
+                        onVote: { emoji in votePoll(emoji, in: params.message) }
+                    )
                 // GIFs are shown animated; the other messages keep the ExyteChat bubble
                 } else if let gif = params.message.attachments.first(where: { $0.mimeType == "image/gif" }) {
                     GifMessageBubble(
@@ -1553,6 +1681,10 @@ struct ChatView: View {
                             alertPrompt = AlertPrompt(title: Text("Could not save the sticker"), dismissLabel: Text("Close"))
                         }
                     }
+                case .closePoll:
+                    //isaCloud: the confirmation is asked first (closing freezes the results for everyone), see the dialog after the sheets
+                    pollToClose = mlMessage
+                    showClosePollDialog = true
                 case .edit:
                     inputModel.startEdit(of: mlMessage.messageId, text: mlMessage.messageText)
                     editSaveClosure = { editedText in
@@ -1657,6 +1789,11 @@ struct ChatView: View {
             let mlMessage = (message as! ChatViewMessage).innerMessage.obj
             switch reaction.type {
                 case .emoji(let emoji):
+                    //isaCloud: an option of a poll is a vote (the whole set of reactions of the user, see votePoll), not a plain reaction
+                    if let pollJSON = mlMessage.poll, PollCardRules.isOptionEmoji(emoji, of: PollCardRules.optionEmojis(pollJSON: pollJSON, closingJSON: nil)) {
+                        votePoll(emoji, in: message)
+                        return
+                    }
                     var currentReactions: NSMutableOrderedSet = []
                     for reactionsInfo in mlMessage.reactions {
                         if reactionsInfo.contact.isSelf {
@@ -1810,6 +1947,26 @@ struct ChatView: View {
             LocationPickerView(onSend: { coordinate in
                 sendLocation(coordinate)
             })
+        }
+        //isaCloud: the sheet that creates a poll (PollViews.swift); the poll is sent once the sheet has closed its form
+        .sheet(isPresented: $showCreatePoll) {
+            PollCreateView(onCreate: { pollJSON in
+                sendPoll(pollJSON)
+            })
+        }
+        //isaCloud: closing a poll freezes its results for everyone, so it is confirmed first (the chat has other alerts: a dialog, not an alert)
+        .confirmationDialog(Text("Close the poll?"), isPresented: $showClosePollDialog, titleVisibility: .visible) {
+            Button(NSLocalizedString("Close poll", comment: "message menu: the creator of a poll closes it, its results freeze for everyone"), role: .destructive) {
+                if let pollMessage = pollToClose {
+                    closePoll(pollMessage)
+                }
+                pollToClose = nil
+            }
+            Button(NSLocalizedString("Cancel", comment: "poll sheet: closes without creating the poll"), role: .cancel) {
+                pollToClose = nil
+            }
+        } message: {
+            Text("Closing freezes the results for everyone, and it cannot be reopened.")
         }
         .sheet(item: $gifPickerMode) { mode in
             GifPickerView(keys: GifKeys.fromBundle(Bundle.main.infoDictionary), onPick: { url in
@@ -2343,6 +2500,32 @@ struct ChatView: View {
             redrawn.triggerRedraw = UUID()
             messages[index] = redrawn
         }
+        //isaCloud: a poll of this group was closed by its creator, or by us (MLMessageProcessor and MLXMPPManager mark the poll and send this
+        //notice). The card of the poll is drawn again: its row is redrawn only when its object is replaced (see the sticker below)
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kMonalUpdatedMessageNotice)).receive(on: RunLoop.main)) { notification in
+            //isaCloud: a vote is a reaction, and ExyteChat redraws a row only when its visible reactions change; the options of the poll are filtered out
+            //of them (see ChatViewMessage.reactions), so a new vote changes nothing there and the card stayed at zero. A reaction on a poll redraws it too
+            let isPollUpdate = notification.userInfo?["pollUpdate"] as? Bool == true
+            let isReactionOnPoll = notification.userInfo?["reactionsUpdate"] as? Bool == true
+                && ((notification.userInfo?["message"] as? MLMessage)?.poll != nil)
+            //(the chat is compared by its contact)
+            guard isPollUpdate || isReactionOnPoll else {
+                return
+            }
+            guard let updated = notification.userInfo?["message"] as? MLMessage,
+                  updated.chatContact == self.contact.obj,
+                  let index = messages.firstIndex(where: { $0.historyId == updated.messageDBId }) else {
+                return
+            }
+            //isaCloud: the notice carries the current reactions; the message may not have taken them yet when this runs (the card showed the state before the
+            //last vote or the last removed vote), so they are set here before the row is drawn again
+            if isReactionOnPoll, let currentReactions = notification.userInfo?["reactions"] as? [MLReactionsEntry] {
+                updated.reactions = currentReactions
+            }
+            let redrawn = ChatViewMessage(updated)
+            redrawn.triggerRedraw = UUID()
+            messages[index] = redrawn
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kMonalShareOutboxUpdate)).receive(on: RunLoop.main)) { notification in
             //isaCloud: messages sent from the share sheet go through the outbox; show the sending state and the message here
             guard let shared = notification.userInfo?["contact"] as? MLContact,
@@ -2635,8 +2818,15 @@ class ChatViewMessage: ExyteChat.Message {
             //TODO: create new wrapper class ChatViewReaction just like we've already done for User and Contact
             var retval: [Reaction] = []
             let reactions: [MLReactionsEntry] = (innerMessage.reactions as [MLReactionsEntry]).sorted(by: { $0.user < $1.user })
+            //isaCloud: the options of a poll are its votes, drawn in the poll card: their emojis are no chips here (👍 and the others stay)
+            let pollJSON: String? = innerMessage.poll
+            let closingJSON: String? = innerMessage.pollClosed
+            let optionEmojis = PollCardRules.optionEmojis(pollJSON: pollJSON, closingJSON: closingJSON)
             for reactionsInfo in reactions {
                 for reaction in reactionsInfo.reactions {
+                    if PollCardRules.isOptionEmoji(reaction as! String, of: optionEmojis) {
+                        continue
+                    }
                     //isaCloud: a stable id (the default is a new UUID on every call, which made the same reactions compare as different
                     //on every render, so ExyteChat redid the whole list update several times per second in busy channels)
                     retval.append(Reaction(

@@ -120,6 +120,16 @@ NS_ASSUME_NONNULL_BEGIN
 -(MLMessage* _Nullable) sendMessageAndAddToHistory:(NSString*) message havingType:(NSString*) messageType toContact:(MLContact*) contact isEncrypted:(BOOL) encrypted uploadInfo:(NSDictionary* _Nullable) uploadInfo NS_SWIFT_NAME(sendMessageAndAddToHistory(message:havingType:toContact:isEncrypted:uploadInfo:));
 //isaCloud: the same, for a message that replies to (quotes) a photo, a GIF or a sticker: `quotedMessageId` is the id of that message (messageid in 1:1, stanzaid in groups and channels), see xmpp sendMessage:
 -(MLMessage* _Nullable) sendMessageAndAddToHistory:(NSString*) message havingType:(NSString*) messageType toContact:(MLContact*) contact isEncrypted:(BOOL) encrypted uploadInfo:(NSDictionary* _Nullable) uploadInfo quotedMessageId:(NSString* _Nullable) quotedMessageId NS_SWIFT_NAME(sendMessageAndAddToHistory(message:havingType:toContact:isEncrypted:uploadInfo:quotedMessageId:));
+/**
+ isaCloud: sends a poll (urn:fluux:poll:0) to a group or channel and returns the message (nil on failure). `pollJSON` is the JSON of the poll (PollDefinition,
+ built with ISACloudPolls.pollJSONFromFields:). Its body is the fallback text of the poll. Polls need the occupant-id feature of the room (see the chat view)
+ */
+-(MLMessage* _Nullable) sendPollAndAddToHistory:(NSString*) pollJSON toContact:(MLContact*) contact isEncrypted:(BOOL) encrypted NS_SWIFT_NAME(sendPollAndAddToHistory(pollJSON:toContact:isEncrypted:));
+/**
+ isaCloud: closes a poll of ours: sends its <poll-closed> with the tally of `voters` (an array of {reactions: [emoji], nick?: name}, one per voter, from the
+ reactions of the poll message) and then marks the poll as closed in our database. nil on failure. Only the creator of the poll can close it
+ */
+-(MLMessage* _Nullable) closePollAndAddToHistory:(MLMessage*) pollMessage voters:(NSArray<NSDictionary*>*) voters isEncrypted:(BOOL) encrypted NS_SWIFT_NAME(closePollAndAddToHistory(pollMessage:voters:isEncrypted:));
 -(void)sendMessage:(NSString*) message toContact:(MLContact*) contact isEncrypted:(BOOL) encrypted isUpload:(BOOL) isUpload messageId:(NSString*) messageId withCompletionHandler:(void (^ _Nullable)(BOOL success, NSString* messageId)) completion;
 -(void) sendChatState:(BOOL) isTyping toContact:(MLContact*) contact;
 

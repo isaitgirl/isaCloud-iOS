@@ -274,3 +274,34 @@ struct ImageCompressionTests {
         }
     }
 }
+
+//isaCloud: reactions as the database keeps them (joined without separators, read back by createReactionsSetFromString) must come back
+//as they were sent. Keycaps (1️⃣…9️⃣) used to come back as 0031 20E3 FE0F, which does not match the emoji of a poll option (docs/implementacao-enquetes-ios.md)
+struct ReactionRoundTripTests {
+
+    private func roundTrip(_ sent: [String]) -> [String] {
+        let stored = sent.joined()     //DataLayer setReactions:... joins the set the same way
+        return (HelperTools.createReactionsSet(from: stored).array as? [String]) ?? []
+    }
+
+    @Test("keycap reactions 1 to 9 come back with VS16 after the base character")
+    func testKeycapsRoundTrip() {
+        let keycaps = (1...9).map { "\($0)\u{FE0F}\u{20E3}" }
+        for keycap in keycaps {
+            #expect(roundTrip([keycap]) == [keycap])
+        }
+        #expect(roundTrip(keycaps) == keycaps)
+        //# and * keycaps, too
+        #expect(roundTrip(["#\u{FE0F}\u{20E3}", "*\u{FE0F}\u{20E3}"]) == ["#\u{FE0F}\u{20E3}", "*\u{FE0F}\u{20E3}"])
+    }
+
+    @Test("other reactions are not changed by the keycap fix")
+    func testOtherReactionsRoundTrip() {
+        //thumbs up has no VS16 and stays as it is
+        #expect(roundTrip(["\u{1F44D}"]) == ["\u{1F44D}"])
+        //red heart is sent with VS16 and comes back with it
+        #expect(roundTrip(["\u{2764}\u{FE0F}"]) == ["\u{2764}\u{FE0F}"])
+        //a mix of keycaps and other reactions keeps the order
+        #expect(roundTrip(["\u{1F44D}", "2\u{FE0F}\u{20E3}", "\u{2764}\u{FE0F}"]) == ["\u{1F44D}", "2\u{FE0F}\u{20E3}", "\u{2764}\u{FE0F}"])
+    }
+}

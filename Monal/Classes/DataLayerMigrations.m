@@ -1337,6 +1337,18 @@
         );"];
     }];
 
+    //isaCloud: polls (urn:fluux:poll:0, see Polls.swift and docs/implementacao-enquetes-ios.md). isacloud_poll is the JSON of the definition of a poll message,
+    //isacloud_poll_closed the JSON of the <poll-closed> that came with (or was sent as) a closing message, and isacloud_poll_closed_at (epoch millis)
+    //marks the poll message itself as closed. The votes stay in the reactions table. Harmless to run again: each column is only added if it is missing.
+    [self updateISACloudDB:db toVersion:9 withBlock:^{
+        if(![[db executeScalar:@"SELECT count(*) FROM pragma_table_info('message_history') WHERE name='isacloud_poll';"] boolValue])
+            [db executeNonQuery:@"ALTER TABLE message_history ADD COLUMN isacloud_poll TEXT;"];
+        if(![[db executeScalar:@"SELECT count(*) FROM pragma_table_info('message_history') WHERE name='isacloud_poll_closed';"] boolValue])
+            [db executeNonQuery:@"ALTER TABLE message_history ADD COLUMN isacloud_poll_closed TEXT;"];
+        if(![[db executeScalar:@"SELECT count(*) FROM pragma_table_info('message_history') WHERE name='isacloud_poll_closed_at';"] boolValue])
+            [db executeNonQuery:@"ALTER TABLE message_history ADD COLUMN isacloud_poll_closed_at INTEGER;"];
+    }];
+
     //...and at every start it indexes what the hooks of the DataLayer did not see (messages written by an older build, for example)
     [MLMessageSearch catchUpIndexInDatabase:db];
 }

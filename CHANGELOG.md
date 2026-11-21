@@ -2,6 +2,19 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## Não lançado
+
+### Adicionado
+- **Enquetes em grupos e canais (`urn:fluux:poll:0`, compatível com o Fluux e com o app Android).** Item "Enquete" no clipe, só em sala com `urn:xmpp:occupant-id:0`: pergunta (obrigatória), descrição opcional, 2 a 9 opções com 1️⃣…9️⃣ por posição, múltipla escolha e ocultar resultados (sem prazo na v1). O `<poll>` vai no stanza externo com o `<fallback>` (também em OMEMO, em claro, decisão da v1). O cartão (`PollMessageBubble` em `PollViews.swift`) mostra o placar e o rodapé de estado; um toque numa opção vota: o conjunto completo de reações no stanza-id da enquete (XEP-0444), escolha única substitui o voto anterior, e a votação não entra nas reações recentes. Regras em `PollCardRules.swift`, que usa `Polls.swift`.
+- **Encerrar enquete pelo menu da mensagem.** Só o criador, em enquete aberta, com confirmação antes: envia `<poll-closed>` com o tally das reações atuais (voters em nicks, sem JID) e marca a original com `isacloud_poll_closed_at`; o cartão da original e o do encerramento se redesenham na hora (`kMonalUpdatedMessageNotice` com `pollUpdate`, em `MLXMPPManager closePollAndAddToHistory` e em `MLMessageProcessor processPollClosedNode`). Recebimento só congela a original se o encerramento vier do criador, com título e emojis iguais. Enquete não é editável.
+- **Banco:** migração 9 do isaCloud: colunas `isacloud_poll`, `isacloud_poll_closed` e `isacloud_poll_closed_at` em `message_history` (idempotente).
+
+### Corrigido
+- **Keycap (1️⃣) voltava malformada do banco.** `HelperTools createReactionsSetFromString` punha o VS16 no fim do cluster (`0031 20E3 FE0F`), então um voto em `1️⃣` não casava com a opção nem era reenviado certo. Agora o FE0F volta logo depois da base (`0031 FE0F 20E3`). Teste em `HelperToolsTest.swift`.
+- **Chips de reação não repetem as opções da enquete.** Os emojis de opção saem do rodapé de reações (o voto já aparece no cartão); 👍 e as outras reações continuam.
+
+Documentação: `docs/implementacao-enquetes-ios.md` (protocolo e fases) e `docs/decisoes-enquetes-fluux.md` (decisões). Testes: `PollsTests.swift`, `PollCardRulesTests.swift` e `ParserTest.m`.
+
 ## 0.0.1 (build 122) — 21/11/2026
 
 Enviado ao TestFlight às 10:34 (PR 85, branch `fix/c34-desligamento-da-extensao`; compila no simulador; a extensão só se prova em produção).

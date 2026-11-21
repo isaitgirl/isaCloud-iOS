@@ -23,6 +23,15 @@ NS_ASSUME_NONNULL_BEGIN
 +(MLMessage* _Nullable) processMessage:(XMPPMessage*) messageNode andOuterMessage:(XMPPMessage*) outerMessageNode forAccount:(xmpp*) account;
 +(MLMessage* _Nullable) processMessage:(XMPPMessage*) messageNode andOuterMessage:(XMPPMessage*) outerMessageNode forAccount:(xmpp*) account withHistoryId:(NSNumber* _Nullable) historyId;
 
+/**
+ isaCloud: the fields of the <poll> element (urn:fluux:poll:0) of a message, as ISACloudPolls wants them; empty if there is none. Used by processMessage and the unit tests
+ */
++(NSDictionary*) pollFieldsFromMessageNode:(MLXMLNode*) messageNode;
+/**
+ isaCloud: the fields of the <poll-closed> element (urn:fluux:poll:0) of a message, as ISACloudPolls wants them; empty if there is none
+ */
++(NSDictionary*) pollClosedFieldsFromMessageNode:(MLXMLNode*) messageNode;
+
 @end
 
 NS_ASSUME_NONNULL_END

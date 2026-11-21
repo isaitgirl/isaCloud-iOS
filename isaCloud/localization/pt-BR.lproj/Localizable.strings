@@ -380,3 +380,26 @@
 
 /* DebugView.swift: botão de depuração que derruba o app de verdade para testar o envio do relatório */
 "Real crash and report (test of the XMPP sending)" = "Crash e relatório real (teste do envio por XMPP)";
+
+/* isaCloud: enquetes (PollViews.swift, PollCardRules.swift, ChatInputBar.swift e ChatView.swift). Sem chave em Base: o inglês é a própria chave */
+"Poll" = "Enquete";
+"Select one or more options" = "Selecione uma ou mais opções";
+"1 vote" = "1 voto";
+"%d votes" = "%d votos";
+"Final result" = "Resultado final";
+"Poll closed" = "Enquete encerrada";
+"Vote to see the results" = "Vote para ver os resultados";
+"No votes yet" = "Nenhum voto ainda";
+"Your vote" = "Seu voto";
+"New poll" = "Nova enquete";
+"Question" = "Pergunta";
+"Description (optional)" = "Descrição (opcional)";
+"Options" = "Opções";
+"Option" = "Opção";
+"Add option" = "Adicionar opção";
+"Remove option" = "Remover opção";
+"Multiple choice" = "Múltipla escolha";
+"Hide results until you vote" = "Ocultar resultados até votar";
+"Close poll" = "Encerrar enquete";
+"Close the poll?" = "Encerrar a enquete?";
+"Closing freezes the results for everyone, and it cannot be reopened." = "Encerrar congela o placar para todos, e não dá para reabrir.";
