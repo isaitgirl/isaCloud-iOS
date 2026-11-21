@@ -25,8 +25,6 @@
 #import <Monal-Swift.h>
 #import "chatViewController.h"
 #import "GeneratedAssetSymbols.h"
-//isaCloud: the Join button of the conference card opens the room in a Safari sheet
-@import SafariServices;
 
 //isaCloud: same switch as in MonalAppDelegate.m (ISACLOUD_SYNC_INDICATOR_ONLY_WHEN_CONNECTING there; keep both equal, HOW TO REVERT: set to 0)
 #define ISACLOUD_SYNC_INDICATOR_ONLY_WHEN_CONNECTING 1
@@ -390,123 +388,6 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
 
 @end
 
-//isaCloud: the "Your conference is ready" card on top of the chats list (under the news item, when both are shown). Its height comes from
-//its constraints (see isaCloudUpdateNewsHeader). Join opens the host link of the room; the x hides the card until a new room is saved.
-@interface ChatListConferenceView : UIView
-@property (nonatomic, copy) void (^onJoin)(void);
-@property (nonatomic, copy) void (^onHide)(void);
-@end
-
-@implementation ChatListConferenceView
-{
-    UIImageView* _icon;
-    UILabel* _title;
-    UILabel* _subtitle;
-    UIButton* _join;
-    UIButton* _hide;
-    UIView* _separator;
-}
-
--(instancetype) initWithFrame:(CGRect) frame
-{
-    self = [super initWithFrame:frame];
-    if(self)
-    {
-        self.backgroundColor = [UIColor clearColor];
-
-        //the video icon, in the pink of isaCloud like the badges and the archive button of the news item
-        _icon = [UIImageView new];
-        _icon.image = [UIImage systemImageNamed:@"video.fill" withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:22 weight:UIImageSymbolWeightRegular]];
-        _icon.tintColor = [UIColor colorNamed:@"isaCloudPink"];
-        _icon.contentMode = UIViewContentModeCenter;
-
-        //the text styles follow the Dynamic Type of the person
-        _title = [UILabel new];
-        _title.text = NSLocalizedString(@"Your conference is ready", @"");
-        _title.font = [UIFont preferredFontForTextStyle:UIFontTextStyleHeadline];
-        _title.adjustsFontForContentSizeCategory = YES;
-        _title.textColor = [UIColor labelColor];
-        _title.numberOfLines = 0;
-
-        _subtitle = [UILabel new];
-        _subtitle.text = NSLocalizedString(@"Tap Join to open the room", @"");
-        _subtitle.font = [UIFont preferredFontForTextStyle:UIFontTextStyleSubheadline];
-        _subtitle.adjustsFontForContentSizeCategory = YES;
-        _subtitle.textColor = [UIColor secondaryLabelColor];
-        _subtitle.numberOfLines = 0;
-
-        [self addSubview:_title];
-        [self addSubview:_subtitle];
-
-        //the Join button: a pink capsule with white text, its text grows with Dynamic Type
-        UIButtonConfiguration* joinConfiguration = [UIButtonConfiguration filledButtonConfiguration];
-        joinConfiguration.title = NSLocalizedString(@"Join conference", @"");
-        joinConfiguration.baseBackgroundColor = [UIColor colorNamed:@"isaCloudPink"];
-        joinConfiguration.baseForegroundColor = [UIColor whiteColor];
-        joinConfiguration.cornerStyle = UIButtonConfigurationCornerStyleCapsule;
-        joinConfiguration.contentInsets = NSDirectionalEdgeInsetsMake(6, 14, 6, 14);
-        _join = [UIButton buttonWithConfiguration:joinConfiguration primaryAction:nil];
-        [_join addTarget:self action:@selector(joinTapped) forControlEvents:UIControlEventTouchUpInside];
-
-        //the x hides the card; its label is the one of the news archive button
-        _hide = [UIButton buttonWithType:UIButtonTypeCustom];
-        [_hide setImage:[UIImage systemImageNamed:@"xmark" withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:14 weight:UIImageSymbolWeightSemibold]] forState:UIControlStateNormal];
-        _hide.tintColor = [UIColor secondaryLabelColor];
-        _hide.accessibilityLabel = NSLocalizedString(@"Hide shortcut", @"");
-        [_hide addTarget:self action:@selector(hideTapped) forControlEvents:UIControlEventTouchUpInside];
-
-        _separator = [UIView new];
-        _separator.backgroundColor = [UIColor separatorColor];
-
-        for(UIView* view in @[_icon, _join, _hide, _separator])
-            [self addSubview:view];
-    }
-    return self;
-}
-
-//the card is laid out by hand: the frame is set by the table header code, and the table header is frame-based
--(CGSize) sizeThatFits:(CGSize) size
-{
-    CGFloat width = size.width;
-    CGFloat joinWidth = [_join sizeThatFits:CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX)].width;
-    CGFloat textWidth = MAX(40, width - 60 - joinWidth - 4 - 32 - 8 - 8);
-    CGFloat textHeight = [_title sizeThatFits:CGSizeMake(textWidth, CGFLOAT_MAX)].height + 2 + [_subtitle sizeThatFits:CGSizeMake(textWidth, CGFLOAT_MAX)].height;
-    return CGSizeMake(width, MAX(72, ceil(textHeight) + 24));
-}
-
--(void) layoutSubviews
-{
-    [super layoutSubviews];
-    CGFloat width = self.bounds.size.width;
-    CGFloat height = self.bounds.size.height;
-    _icon.frame = CGRectMake(16, (height - 32) / 2, 32, 32);
-    _hide.frame = CGRectMake(width - 8 - 32, (height - 32) / 2, 32, 32);
-    CGSize joinSize = [_join sizeThatFits:CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX)];
-    _join.frame = CGRectMake(CGRectGetMinX(_hide.frame) - 4 - joinSize.width, (height - joinSize.height) / 2, joinSize.width, joinSize.height);
-    CGFloat textX = 60;
-    CGFloat textWidth = MAX(40, CGRectGetMinX(_join.frame) - 8 - textX);
-    CGFloat titleHeight = [_title sizeThatFits:CGSizeMake(textWidth, CGFLOAT_MAX)].height;
-    CGFloat subtitleHeight = [_subtitle sizeThatFits:CGSizeMake(textWidth, CGFLOAT_MAX)].height;
-    CGFloat top = (height - (titleHeight + 2 + subtitleHeight)) / 2;
-    _title.frame = CGRectMake(textX, top, textWidth, titleHeight);
-    _subtitle.frame = CGRectMake(textX, top + titleHeight + 2, textWidth, subtitleHeight);
-    _separator.frame = CGRectMake(60, height - 0.5, width - 60, 0.5);
-}
-
--(void) joinTapped
-{
-    if(self.onJoin != nil)
-        self.onJoin();
-}
-
--(void) hideTapped
-{
-    if(self.onHide != nil)
-        self.onHide();
-}
-
-@end
-
 @interface ActiveChatsViewController() <UISearchResultsUpdating, UISearchControllerDelegate> {
     int _startedOrientation;
     double _portraitTop;
@@ -518,8 +399,6 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
     NSMutableArray* _blockQueue;
     ChatListFilterBar* _chatListFilterBar;      //isaCloud: chips under the search bar
     ChatListNewsView* _chatListNewsView;        //isaCloud: "isaCloud news" on top of the list (the table header), made when first needed
-    ChatListConferenceView* _chatListConferenceView;    //isaCloud: "Your conference is ready" card on top of the list, made when first needed
-    UIView* _isaCloudHeaderContainer;           //isaCloud: the news and the conference cards, stacked as the table header
     dispatch_semaphore_t _blockQueueSemaphore;
 }
 @property (atomic, strong) NSMutableArray* unpinnedContacts;
@@ -953,10 +832,6 @@ static NSMutableSet<NSNumber*>* _hiddenChatListAccountIDs;      //isaCloud: only
     [nc addObserver:self selector:@selector(isaCloudPendingInvitesUpdated) name:kMonalIsaCloudPendingInvitesUpdated object:nil];
     //isaCloud: the news were read, archived or unarchived (the item follows it)
     [nc addObserver:self selector:@selector(isaCloudUpdateNewsHeader) name:[IsaCloudChangelog changedNotification] object:nil];
-    //isaCloud: the conference card appears, is hidden or expires (removed with the other observers in dealloc)
-    [nc addObserver:self selector:@selector(isaCloudUpdateNewsHeader) name:[IsaCloudConferenceBridge changedNotification] object:nil];
-    //isaCloud: a room can expire while the app is in the background: the card is checked again when the app comes back
-    [nc addObserver:self selector:@selector(isaCloudUpdateNewsHeader) name:UIApplicationWillEnterForegroundNotification object:nil];
 
     [_chatListTable registerNib:[UINib nibWithNibName:@"MLContactCell" bundle:[NSBundle mainBundle]] forCellReuseIdentifier:@"ContactCell"];
     
@@ -1008,13 +883,11 @@ static NSMutableSet<NSNumber*>* _hiddenChatListAccountIDs;      //isaCloud: only
 
 #pragma mark - isaCloud: novidades na lista
 
-//isaCloud: the "isaCloud news" item and the "Your conference is ready" card are the table header of the chats list, one above the other
-//(the header is a container of both). They show while no filter is on (the list is incomplete then) and the search is not on. A table
-//header does not size itself: the frame is set here, with the width of the table, the height of a chat row (72 pt, or 86 pt while the
-//account jids are shown, see heightForRowAtIndexPath) and the height the conference card fits to.
+//isaCloud: the "isaCloud news" item is the table header of the chats list. It shows while the news are not archived, no filter is on
+//(the list is incomplete then) and the search is not on. A table header does not size itself: the frame is set here, with the width
+//of the table and the height of a chat row (72 pt, or 86 pt while the account jids are shown, see heightForRowAtIndexPath).
 //Called from viewDidLoad, viewWillAppear, viewDidLayoutSubviews (width), updateAccountAvatar (account jids), chatListFilterChanged,
-//refreshDisplay (hidden accounts come with kMonalRefresh), the search delegate methods and the changed notifications of the news and of
-//the conference (new, hidden or expired room).
+//refreshDisplay (hidden accounts come with kMonalRefresh), the search delegate methods and the changed notification of the news.
 -(void) isaCloudUpdateNewsHeader
 {
     if(![NSThread isMainThread])
@@ -1025,13 +898,11 @@ static NSMutableSet<NSNumber*>* _hiddenChatListAccountIDs;      //isaCloud: only
         return;
     }
     BOOL searching = self.navigationItem.searchController.isActive;
-    BOOL listComplete = ![self chatListFiltersActive] && !searching;
-    BOOL showNews = listComplete && [IsaCloudChangelog isVisible];
-    //isaCloud: the host link of the room the card shows (nil: no card, it was hidden or the room expired); the link is never logged
-    BOOL showConference = !searching && [IsaCloudConferenceBridge activeHostURL] != nil;   //the card is not a chat of the list: filters do not hide it
-    if(!showNews && !showConference)
+    BOOL show = [IsaCloudChangelog isVisible] && ![self chatListFiltersActive] && !searching;
+    UIView* current = self.chatListTable.tableHeaderView;
+    if(!show)
     {
-        if(self.chatListTable.tableHeaderView != nil)
+        if(current != nil)
         {
             self.chatListTable.tableHeaderView = nil;
             //the empty state is back when the list is empty
@@ -1039,7 +910,7 @@ static NSMutableSet<NSNumber*>* _hiddenChatListAccountIDs;      //isaCloud: only
         }
         return;
     }
-    if(showNews && _chatListNewsView == nil)
+    if(_chatListNewsView == nil)
     {
         _chatListNewsView = [[ChatListNewsView alloc] initWithFrame:CGRectZero];
         __weak typeof(self) weakSelf = self;
@@ -1050,78 +921,19 @@ static NSMutableSet<NSNumber*>* _hiddenChatListAccountIDs;      //isaCloud: only
             [weakSelf isaCloudAskArchiveNews];
         };
     }
-    if(showConference && _chatListConferenceView == nil)
-    {
-        _chatListConferenceView = [[ChatListConferenceView alloc] initWithFrame:CGRectZero];
-        __weak typeof(self) weakSelf = self;
-        _chatListConferenceView.onJoin = ^{
-            [weakSelf isaCloudOpenConference];
-        };
-        _chatListConferenceView.onHide = ^{
-            //isaCloud: the card is gone when the notification of the store comes back here
-            [IsaCloudConferenceBridge dismiss];
-        };
-        //isaCloud: the card is made when a room is shown: the expired rooms leave the keychain now (the change notification comes back here)
-        [IsaCloudConferenceBridge removeExpired];
-    }
-    if(showNews)
-        [_chatListNewsView updateWithUnread:[IsaCloudChangelog isUnread] preview:[IsaCloudChangelog previewText] date:[IsaCloudChangelog latestDate]];
+    [_chatListNewsView updateWithUnread:[IsaCloudChangelog isUnread] preview:[IsaCloudChangelog previewText] date:[IsaCloudChangelog latestDate]];
 
     CGFloat width = self.chatListTable.bounds.size.width;
-    CGFloat newsHeight = _accountJids != nil ? 86.0f : 72.0f;
-    CGFloat conferenceHeight = 0;
-    if(showConference)
-    {
-        //the card has no fixed height: it is the height its texts need for this width (it lays itself out by hand)
-        conferenceHeight = ceil([_chatListConferenceView sizeThatFits:CGSizeMake(width, CGFLOAT_MAX)].height);
-    }
-    CGFloat totalHeight = (showNews ? newsHeight : 0) + conferenceHeight;
-
-    if(_isaCloudHeaderContainer == nil)
-    {
-        _isaCloudHeaderContainer = [[UIView alloc] initWithFrame:CGRectZero];
-        _isaCloudHeaderContainer.backgroundColor = [UIColor clearColor];
-    }
-    NSMutableArray* cards = [NSMutableArray new];
-    if(showNews)
-        [cards addObject:_chatListNewsView];
-    if(showConference)
-        [cards addObject:_chatListConferenceView];
-    UIView* current = self.chatListTable.tableHeaderView;
-    BOOL changed = current != _isaCloudHeaderContainer || !CGSizeEqualToSize(_isaCloudHeaderContainer.frame.size, CGSizeMake(width, totalHeight)) || ![_isaCloudHeaderContainer.subviews isEqualToArray:cards];
+    CGFloat height = _accountJids != nil ? 86.0f : 72.0f;
+    BOOL changed = current != _chatListNewsView || _chatListNewsView.frame.size.width != width || _chatListNewsView.frame.size.height != height;
     if(!changed)
         return;
-    //the same view again is not laid out by UIKit: it is removed first when only its size or its cards changed
-    if(current == _isaCloudHeaderContainer)
+    //the same view again is not laid out by UIKit: it is removed first when only its size changed
+    if(current == _chatListNewsView)
         self.chatListTable.tableHeaderView = nil;
-    for(UIView* subview in [_isaCloudHeaderContainer.subviews copy])
-        [subview removeFromSuperview];
-    _isaCloudHeaderContainer.frame = CGRectMake(0, 0, width, totalHeight);
-    CGFloat y = 0;
-    if(showNews)
-    {
-        _chatListNewsView.frame = CGRectMake(0, y, width, newsHeight);
-        [_isaCloudHeaderContainer addSubview:_chatListNewsView];
-        y += newsHeight;
-    }
-    if(showConference)
-    {
-        _chatListConferenceView.frame = CGRectMake(0, y, width, conferenceHeight);
-        [_isaCloudHeaderContainer addSubview:_chatListConferenceView];
-    }
-    self.chatListTable.tableHeaderView = _isaCloudHeaderContainer;
+    _chatListNewsView.frame = CGRectMake(0, 0, width, height);
+    self.chatListTable.tableHeaderView = _chatListNewsView;
     [self.chatListTable reloadEmptyDataSet];
-}
-
-//isaCloud: the Join button opens the host link of the room in a Safari sheet. The link is a credential: it is not logged.
--(void) isaCloudOpenConference
-{
-    NSURL* url = [IsaCloudConferenceBridge activeHostURL];
-    //only https on the meet host is opened (the bridge gives nothing else, this checks it again)
-    if(url == nil || ![url.scheme isEqualToString:@"https"] || ![url.host isEqualToString:@"meet.isacloud.cc"])
-        return;
-    SFSafariViewController* safariView = [[SFSafariViewController alloc] initWithURL:url];
-    [self presentViewController:safariView animated:YES completion:nil];
 }
 
 //isaCloud: the row opens the news screen (it marks them as read there)
@@ -2376,7 +2188,7 @@ static NSMutableSet<NSNumber*>* _hiddenChatListAccountIDs;      //isaCloud: only
 -(BOOL) emptyDataSetShouldDisplay:(UIScrollView*) scrollView
 {
     //isaCloud: with the news item on top, the item is the first thing of the list: the empty state would cover it
-    if(_isaCloudHeaderContainer != nil && self.chatListTable.tableHeaderView == _isaCloudHeaderContainer)
+    if(_chatListNewsView != nil && self.chatListTable.tableHeaderView == _chatListNewsView)
         return NO;
     BOOL toreturn = (self.unpinnedContacts.count == 0 && self.pinnedContacts.count == 0) ? YES : NO;
     if(toreturn)

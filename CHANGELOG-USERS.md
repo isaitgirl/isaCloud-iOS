@@ -14,7 +14,6 @@ O que está neste arquivo é o que aparece para o usuário na tela de **Novidade
 
 ### Novidades
 - 🎥 Agora dá para criar uma vídeo conferência direto do chat: toque no clipe, escolha "Criar conferência" e mande o link para a turma!
-- 🚪 Sua sala fica sempre à mão: um cartão no topo das conversas leva você de volta com um toque em "Entrar".
 
 ## Build 122 · 21/11/2026
 

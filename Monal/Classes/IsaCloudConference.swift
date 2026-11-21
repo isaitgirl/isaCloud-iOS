@@ -310,24 +310,3 @@ enum IsaCloudConferenceStore {
         }
     }
 }
-
-/// isaCloud: what the list (Objective-C) uses of the conference card: the host link of the room the card shows, the dismissal and the
-/// change notification. The host link is only handed out when it is https on the meet host; it is never logged.
-@objcMembers class IsaCloudConferenceBridge: NSObject {
-    @objc static let changedNotification = IsaCloudConferenceStore.changedNotification
-
-    /// the host link of the room the card shows (nil when there is no card)
-    @objc static func activeHostURL() -> URL? {
-        return IsaCloudConferenceStore.activeHostRoom()?.hostURL
-    }
-
-    /// hides the card for the room it shows now
-    @objc static func dismiss() {
-        IsaCloudConferenceStore.dismiss()
-    }
-
-    /// removes the expired rooms from the keychain
-    @objc static func removeExpired() {
-        IsaCloudConferenceStore.removeExpired()
-    }
-}

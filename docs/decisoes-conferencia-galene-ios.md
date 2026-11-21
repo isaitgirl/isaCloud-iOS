@@ -13,7 +13,7 @@ Equivalente ao Android (`decisoes-conferencia-galene.md`); o contrato da API e o
   depois de uma quebra de linha). Toque duplo não cria duas salas.
 - Tocar em `https://meet.isacloud.cc/join/<id>` no balão abre o `hostURL` guardado (quem criou a sala neste
   aparelho) ou a página pública (`ExternalLinkViewModifier`).
-- Card **"Sua conferência está pronta"** no topo da lista (`ChatListConferenceView`), com **Entrar** e **x**.
+- Sem card na lista: o anfitrião entra tocando no próprio link do balão (ver "Card da lista retirado").
 
 ## Decisões
 
@@ -21,16 +21,10 @@ Equivalente ao Android (`decisoes-conferencia-galene.md`); o contrato da API e o
 - **`hostURL` é credencial e fica só no Keychain** (`IsaCloudConferenceStore`, serviço `IsaCloudMeet`,
   `AfterFirstUnlockThisDeviceOnly`, uma entrada por `roomID` com `hostURL`, `hostKey`, validade e `savedAt`).
   Nunca vai para o chat, log ou crash. Só abre se continuar https e no host `meet.isacloud.cc`.
-- **A dispensa do card** guarda só o `roomID` em UserDefaults (`isaCloudConferenceDismissedRoom`, lido com
-  `string(forKey:)`, sem `@defaultsDB`: ver o crash da chave sem valor). Nova conferência traz o card de volta.
-  Se a sala mais recente foi dispensada, o card não cai para uma mais antiga (como o Android).
-- **O card aparece mesmo com filtro ligado** (não é uma conversa da lista); some só na busca. Os filtros e as
-  contas ocultas continuam escondendo o card de Novidades.
-- **Layout manual do card.** O `tableHeaderView` é frame-based: com Auto Layout o card ficou com o conteúdo
-  fora do lugar (centrado na borda de cima) quando dividia o cabeçalho com o de Novidades. Hoje o card calcula
-  `sizeThatFits` e posiciona as peças em `layoutSubviews`.
-- **Botão do card = "Join conference" → "Entrar".** O "Join" do Monal é "Ingressar" (canais); sobrescrever mudaria
-  o app todo, então a chave é própria.
+- **Card da lista retirado (21/11/2026).** O card "Sua conferência está pronta" (`ChatListConferenceView`, com
+  Entrar e x) saiu por ora, a pedido da Isadora: o anfitrião já entra tocando no mesmo link enviado ao convidado.
+  Restou em `IsaCloudConferenceStore` a dispensa do card e a notificação de mudança, sem uso (ficam para uma
+  eventual volta; o histórico do card está no commit `ffb9c36d2`). Os textos do card saíram do override.
 - **Sem mexer no fork do ExyteChat.** O toque no balão chega ao `openURL` do app (`outerOpenURL` do `UIList`), que é
   o do `ExternalLinkViewModifier`. Testado no iPhone.
 - **Link estrito:** `https`, host `meet.isacloud.cc`, caminho exatamente `/join/<id>` (`[A-Za-z0-9_-]+`), sem
