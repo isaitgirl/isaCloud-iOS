@@ -403,3 +403,8 @@
 "Close poll" = "Encerrar enquete";
 "Close the poll?" = "Encerrar a enquete?";
 "Closing freezes the results for everyone, and it cannot be reopened." = "Encerrar congela o placar para todos, e não dá para reabrir.";
+
+/* isaCloud: vídeo conferência (menu de anexos, texto no compositor) */
+"Create conference" = "Criar conferência";
+"Access the video conference via the link: %@" = "Acesse a vídeo conferência pelo link: %@";
+"Could not create the conference. Please try again." = "Não foi possível criar a conferência. Tente novamente.";

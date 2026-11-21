@@ -242,6 +242,7 @@ struct ChatView: View {
     @State private var showCreatePoll = false
     @State private var pollToClose: MLMessage? = nil
     @State private var showClosePollDialog = false
+    @State private var creatingConference = false      //isaCloud: a room is being created; a second tap is ignored until it answers
     @State private var showFileImporter = false
     @State private var editSaveClosure: ((String) -> Void)?
     @State private var isTyping = false
@@ -1075,6 +1076,30 @@ struct ChatView: View {
         }
     }
 
+    /// isaCloud: creates a conference room at the meet-api, keeps the host link on this device and puts the public link in the
+    /// field (not sent: the person reviews and sends it). A failure shows the alert of this view.
+    private func createConferenceFromInputBar() {
+        guard !creatingConference else {
+            return
+        }
+        creatingConference = true
+        let hostAccount = account
+        Task {
+            defer {
+                creatingConference = false
+            }
+            do {
+                let room = try await IsaCloudConferenceApi.createRoom(hostName: IsaCloudConference.hostName(for: hostAccount))
+                IsaCloudConferenceStore.save(roomID: room.roomID, hostURL: room.hostURL, hostKey: room.hostKey, expiresAt: room.expiresAt)
+                let link = String(format: NSLocalizedString("Access the video conference via the link: %@", comment: "text put in the field when a video conference is created, with its public link"), room.roomURL.absoluteString)
+                let currentText = inputModel.text
+                inputModel.setText(currentText.isEmpty ? link : currentText + "\n" + link)
+            } catch {
+                alertPrompt = AlertPrompt(title: Text("Could not create the conference. Please try again."))
+            }
+        }
+    }
+
     /// isaCloud: the chat input bar (text, attachments, edit) rendered from inputModel
     private func makeInputBar() -> ChatInputBar {
         return ChatInputBar(
@@ -1095,6 +1120,7 @@ struct ChatView: View {
             //isaCloud: polls are offered in a group or channel whose room announces occupant-id (see PollViews.swift)
             onCreatePoll: { showCreatePoll = true },
             showsPollItem: contact.obj.isMuc && roomHasOccupantId(),
+            onCreateConference: createConferenceFromInputBar,
             onRemoveAttachment: { inputModel.removeAttachment(at: $0) },
             onSendRecording: { url in
                 sendRecording(url)

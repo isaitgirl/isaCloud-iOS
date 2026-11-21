@@ -15,6 +15,7 @@ O que está neste arquivo é o que aparece para o usuário na tela de **Novidade
 ### Novidades
 - 📊 Agora dá para criar enquetes nos grupos e canais e votar com um toque!
 - 🔒 Enquete sua? Encerre quando quiser, e o placar fica congelado para todos.
+- 🎥 Agora dá para criar uma vídeo conferência direto do chat: toque no clipe, escolha "Criar conferência" e mande o link para a turma!
 
 ## Build 122 · 21/11/2026
 

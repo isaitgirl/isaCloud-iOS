@@ -26,6 +26,8 @@ struct ChatInputBar: View {
     /// isaCloud: opens the sheet that creates a poll (PollViews.swift); the item is only offered in a group or channel with occupant-id
     var onCreatePoll: () -> Void = {}
     var showsPollItem: Bool = false
+    /// isaCloud: creates a video conference (IsaCloudConference.swift) and puts its link in the field
+    var onCreateConference: () -> Void
     var onRemoveAttachment: (Int) -> Void
     var onSendRecording: (URL) -> Void
     /// isaCloud: the nicks offered for "@" in a group or channel (none in a 1:1 chat)
@@ -155,6 +157,11 @@ struct ChatInputBar: View {
                 } label: {
                     Label("Poll", systemImage: "chart.bar")
                 }
+            }
+            Button {
+                onCreateConference()
+            } label: {
+                Label("Create conference", systemImage: "video.badge.plus")
             }
         } label: {
             Image(systemName: "paperclip")
