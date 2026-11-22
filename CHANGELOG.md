@@ -2,7 +2,9 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
-## Não lançado
+## 0.0.1 (build 126) — 22/11/2026
+
+Enviado ao TestFlight às 20:11 (enquetes: correções 2 a 5 de `docs/correcoes-enquetes-web-ios.md`, PR 87; C37, reação em canal sem occupant-id próprio, PR 88; testado no `.dev`).
 
 ### Corrigido
 - **C37: reagir num canal derrubava o app quando o occupant-id próprio estava vazio.** Numa sala com occupant-id, quando outra sessão do mesmo nick sai (ex.: Gajim, "Replaced by new connection"), a sala manda uma presença própria `type='unavailable'` com status 110 e sem `<occupant-id>`; o `MLMucProcessor` a trata como entrada na sala e gravava `nil` no occupant-id próprio. A reação seguinte nesse canal disparava o `MLAssert` de `DataLayer setReactions:...` (crash de 22/11/2026 12:08, `commteam@muc.xmpp.org`). Agora a presença sem o elemento não apaga o valor (só uma sala sem occupant-id limpa), e `sendReactions` não grava a cópia local quando não há chave: a reação já foi enviada e o reflexo da sala a grava com o occupant-id. Herdado do Monal (`upstream/develop` igual).

@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "build": 126,
+      "date": "22/11/2026",
+      "sections": [
+        {
+          "title": "Correções",
+          "items": [
+            "💖 Reagir nos canais ficou tranquilo de novo: nada de o app fechar no meio da reação.",
+            "📊 Enquete encerrada fica encerrada de vez, já com o placar final na própria enquete!",
+            "✨ Uma enquete, um cartão só: o resultado aparece na própria enquete, sem repetição no chat.",
+            "🕰️ Rolou o histórico para trás? As enquetes antigas já aparecem encerradas, com o placar certinho."
+          ]
+        }
+      ]
+    },
+    {
       "build": 125,
       "date": "21/11/2026",
       "sections": [
