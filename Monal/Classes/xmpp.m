@@ -4411,8 +4411,16 @@ static NSLock* isaCloudTimeoutsLock(void)
         }
         else
             jid = self.connectionProperties.identity.jid;
+        //isaCloud C37: in a channel our reactions are keyed by our occupant-id; without it (not known yet) setReactions asserts and the app
+        //crashed. The reaction was sent already: the room reflects it to us with our occupant-id and the reflection stores it, so only the
+        //local copy is skipped here
+        if(jid == nil && occupantId == nil)
+        {
+            DDLogWarn(@"isaCloud C37: own occupant-id of %@ unknown, not storing our reaction locally (the reflection of the room will)", message.chatContact.contactJid);
+            return;
+        }
         [[DataLayer sharedInstance] setReactions:reactions fromJid:jid orOccupantId:occupantId forHistoryId:message.messageDBId withDate:reactionDate andActualFrom:actualFrom];
-        
+
         DDLogInfo(@"Sending out kMonalUpdatedMessageNotice notification for historyId %@", message.messageDBId);
         [[MLNotificationQueue currentQueue] postNotificationName:kMonalUpdatedMessageNotice object:self userInfo:@{
             @"message": message,
