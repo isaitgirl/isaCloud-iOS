@@ -225,6 +225,21 @@ public enum PollRules {
         return closed.tally.allSatisfy { optionKeys.contains(key($0.emoji)) }
     }
 
+    //isaCloud: the closing comes from the creator of the poll: the participant jid in groups, else the occupant id, else the nick. A level is compared
+    //only when BOTH sides have it (the first level that both sides have decides); the nick only when both have some text
+    public static func sameCreator(pollParticipantJid: String?, pollOccupantId: String?, pollNick: String?, closingParticipantJid: String?, closingOccupantId: String?, closingNick: String?) -> Bool {
+        if let pollJid = pollParticipantJid, let closingJid = closingParticipantJid {
+            return (pollJid as NSString).isEqual(to: closingJid)
+        }
+        if let pollOccupant = pollOccupantId, let closingOccupant = closingOccupantId {
+            return (pollOccupant as NSString).isEqual(to: closingOccupant)
+        }
+        if let pollName = pollNick, !pollName.isEmpty, let closingName = closingNick, !closingName.isEmpty {
+            return (pollName as NSString).isEqual(to: closingName)
+        }
+        return false
+    }
+
     //isaCloud: a deadline in ISO 8601, with or without fractions of a second (JavaScript sends .000Z). nil if it is not a date
     public static func parseDeadline(_ text: String) -> Int64? {
         let withFractions = ISO8601DateFormatter()
@@ -420,6 +435,12 @@ public enum PollRules {
     @objc(fallbackBodyForClosedJSON:)
     public static func fallbackBody(forClosedJSON json: String) -> String? {
         return PollRules.decodeClosed(json).map { PollRules.closedFallbackBody($0) }
+    }
+
+    //isaCloud: YES when the closing comes from the creator of the poll (see PollRules.sameCreator). The closing side is first, the poll side after
+    @objc(isClosingFromParticipantJid:occupantId:nick:creatorOfPollWithParticipantJid:occupantId:nick:)
+    public static func isClosing(fromParticipantJid closingJid: String?, occupantId closingOccupantId: String?, nick closingNick: String?, creatorOfPollWithParticipantJid pollJid: String?, occupantId pollOccupantId: String?, nick pollNick: String?) -> Bool {
+        return PollRules.sameCreator(pollParticipantJid: pollJid, pollOccupantId: pollOccupantId, pollNick: pollNick, closingParticipantJid: closingJid, closingOccupantId: closingOccupantId, closingNick: closingNick)
     }
 
     //isaCloud: YES when the closing matches the poll: same title and every emoji of the tally is an option of the poll

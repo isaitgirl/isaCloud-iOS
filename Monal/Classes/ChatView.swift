@@ -665,14 +665,16 @@ struct ChatView: View {
         var knownIds = Set(messages.compactMap { $0.historyId })
         knownIds.formUnion(queuedNewMessages.map { $0.innerMessage.obj.messageDBId })
         let latest = DataLayer.sharedInstance().messages(forContact: contact.contactJid, forAccount: contact.accountID) as? [MLMessage] ?? []
-        let missed = latest.filter { !knownIds.contains($0.messageDBId) }
+        let missed = withoutRedundantPollClosings(latest.filter { !knownIds.contains($0.messageDBId) })
         if !missed.isEmpty {
             DDLogVerbose("Adding \(missed.count) messages that were saved while the chat view was not updating")
             enqueueNewMessages(missed.map { ChatViewMessage($0) })
         }
     }
 
-    private func loadHistory() {
+    /// isaCloud: the closings of polls that are drawn in the poll itself are not shown (see withoutRedundantPollClosings). The paging counts
+    /// the messages of the database, drawn or not: a full page of hidden closings goes on from its oldest message, or the backscroll would stop
+    private func loadHistory(before cursor: NSNumber? = nil) {
         guard !self.isLoadingMamHistory else {
             DDLogDebug("Not going to load more history because a backscrolling mam query is ongoing for this chat")
             // Don't allow concurrent backscrolling mam fetches.
@@ -682,19 +684,25 @@ struct ChatView: View {
             // inserted twice in the ChatView.
             return
         }
-        var beforeId: NSNumber? = nil
-        if !messages.isEmpty {
+        var beforeId: NSNumber? = cursor
+        if cursor == nil && !messages.isEmpty {
             //isaCloud: the oldest message that is saved (a message on its way has no history id); nil loads the newest ones
             beforeId = messages.first(where: { !$0.isPending })?.historyId
         }
-        let oldMessages: [ChatViewMessage] = (DataLayer.sharedInstance().messages(forContact:contact.contactJid, forAccount:contact.accountID, beforeMsgHistoryID:beforeId) as! [MLMessage]).map {ChatViewMessage($0)}
+        let dbMessages = DataLayer.sharedInstance().messages(forContact:contact.contactJid, forAccount:contact.accountID, beforeMsgHistoryID:beforeId) as! [MLMessage]
+        let oldMessages: [ChatViewMessage] = withoutRedundantPollClosings(dbMessages).map {ChatViewMessage($0)}
         //insert what we got from the db
         if !oldMessages.isEmpty {
             messages.insert(contentsOf: oldMessages, at:0)
         }
+        //isaCloud: a full page that shows nothing (only closings that are not drawn): go on from its oldest message
+        if oldMessages.isEmpty, dbMessages.count >= kMonalBackscrollingMsgCount, let oldestId = dbMessages.first?.messageDBId {
+            loadHistory(before: oldestId)
+            return
+        }
 
         // if we didn't get enough (or any) messages from the DB, try to get some from MAM
-        if oldMessages.count < kMonalBackscrollingMsgCount && !contact.hasReachedMamArchiveTop {
+        if dbMessages.count < kMonalBackscrollingMsgCount && !contact.hasReachedMamArchiveTop {
             guard let oldestStanzaId = self.findOldestStanzaId() else {
                 DDLogError("Couldn't find a stanzaId to perform a mam query with! (oldestStanzaId is nil)")
                 return
@@ -721,6 +729,19 @@ struct ChatView: View {
             .finally {
                 self.isLoadingMamHistory = false
             }
+        }
+    }
+
+    /// isaCloud: see PollCardRules.hidesClosing. A closing whose poll is in this chat is not drawn: the poll shows the tally (one card per poll).
+    /// A closing without its poll in the database (we joined later) stays, drawn as "final result"
+    private func withoutRedundantPollClosings(_ messages: [MLMessage]) -> [MLMessage] {
+        return messages.filter { mlMessage in
+            guard mlMessage.poll == nil, mlMessage.pollClosed != nil, mlMessage.isMuc,
+                  let pollId = mlMessage.pollClosed.flatMap({ PollRules.decodeClosed($0) })?.messageId else {
+                return true
+            }
+            let pollIsInChat = DataLayer.sharedInstance().historyId(ofPollMessageId: pollId, inChat: contact.contactJid, forAccount: contact.accountID) != nil
+            return !PollCardRules.hidesClosing(hasPoll: mlMessage.poll != nil, hasClosing: mlMessage.pollClosed != nil, pollIsInChat: pollIsInChat)
         }
     }
 
@@ -909,7 +930,7 @@ struct ChatView: View {
             DispatchQueue.main.async {
                 //(the list may have changed meanwhile: what is shown already is not inserted again, ExyteChat aborts on two messages with the same id)
                 let shownIds = Set(messages.compactMap { $0.historyId })
-                messages.insert(contentsOf: missing.filter { !shownIds.contains($0.messageDBId) }.map { ChatViewMessage($0) }, at: 0)
+                messages.insert(contentsOf: withoutRedundantPollClosings(missing).filter { !shownIds.contains($0.messageDBId) }.map { ChatViewMessage($0) }, at: 0)
                 scrollToSearchedMessage(target) //isaCloud: the link card has a fixed height (120 pt) in every state, so a row does not change size when its preview arrives: there is nothing to fetch before the scroll (the prefetch of the previews was removed, see the fork's LinkPreviewPrefetcher)
             }
         }
@@ -1215,7 +1236,8 @@ struct ChatView: View {
         guard let closing = MLXMPPManager.sharedInstance().closePollAndAddToHistory(pollMessage: pollMessage, voters: voters, isEncrypted: contact.isEncrypted) else {
             return
         }
-        messages.append(ChatViewMessage(closing))
+        //isaCloud: our own closing is not drawn when its poll is in this chat either (see withoutRedundantPollClosings)
+        messages.append(contentsOf: withoutRedundantPollClosings([closing]).map { ChatViewMessage($0) })
     }
 
     /// isaCloud: the poll created in the sheet, sent as a message of the group or channel
@@ -2483,7 +2505,11 @@ struct ChatView: View {
             if message.isEqual(self.contact.obj) {
                 // Don't insert based on delay timestamp because that would make it possible to fake history entries.
                 // Insert new messages in batches to work around https://github.com/exyte/Chat/issues/223
-                enqueueNewMessages([ChatViewMessage(message)])
+                //isaCloud: a closing whose poll is in this chat is not drawn (one card per poll); the refresh of the counter still runs below
+                let drawn = withoutRedundantPollClosings([message])
+                if !drawn.isEmpty {
+                    enqueueNewMessages(drawn.map { ChatViewMessage($0) })
+                }
             }
             ChatViewHelpers.refreshCounter(for: self.contact.obj)
         }
@@ -2538,6 +2564,15 @@ struct ChatView: View {
             guard isPollUpdate || isReactionOnPoll else {
                 return
             }
+            //isaCloud: a poll that was adopted may have a closing on the screen already (an older page of the history showed it before the poll came):
+            //it is redundant now, the poll shows the tally. Nothing is reassigned when there is nothing to remove. The poll may not be on the screen
+            if isPollUpdate, (notification.userInfo?["message"] as? MLMessage)?.chatContact == self.contact.obj {
+                let shownMessages = withoutRedundantPollClosings(messages.map { $0.innerMessage.obj })
+                if shownMessages.count < messages.count {
+                    let shownIds = Set(shownMessages.map { $0.messageDBId })
+                    messages.removeAll { !shownIds.contains($0.innerMessage.obj.messageDBId) }
+                }
+            }
             guard let updated = notification.userInfo?["message"] as? MLMessage,
                   updated.chatContact == self.contact.obj,
                   let index = messages.firstIndex(where: { $0.historyId == updated.messageDBId }) else {
@@ -2565,7 +2600,10 @@ struct ChatView: View {
             if let message = notification.userInfo?["message"] as? MLMessage {
                 //isaCloud: not a plain append: a refresh of the chat can have read this message from the database before the notice arrives,
                 //and ExyteChat aborts the app when two messages have the same id (crash of build 81 sharing a link into the app)
-                enqueueNewMessages([ChatViewMessage(message)])
+                let drawn = withoutRedundantPollClosings([message])
+                if !drawn.isEmpty {
+                    enqueueNewMessages(drawn.map { ChatViewMessage($0) })
+                }
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kMonalMucOwnAffiliationOrRoleChanged)).receive(on: RunLoop.main)) { notification in

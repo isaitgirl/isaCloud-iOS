@@ -939,8 +939,9 @@ static void isaCloudPingOrReconnect(xmpp* account, BOOL networkCameBack, BOOL le
     return [self sendMessageAndAddToHistory:fallbackBody havingType:kMessageTypeText toContact:contact isEncrypted:encrypted uploadInfo:nil quotedMessageId:nil pollJSON:pollJSON closedJSON:nil];
 }
 
-//isaCloud: see the header. The closing is built from the reactions the poll has now (voters: {reactions, nick?}), sent like any message, and only then
-//the poll is marked as closed in our database (closed-at), so that the chat shows it as closed and it takes no more votes
+//isaCloud: see the header. The closing is built from the reactions the poll has now (voters: {reactions, nick?}). The poll is marked as closed
+//(closed JSON and closed-at) in our database BEFORE the closing is sent, so the chat shows it as closed and it takes no more votes at once.
+//If the closing cannot be sent, the mark is undone
 -(MLMessage* _Nullable) closePollAndAddToHistory:(MLMessage*) pollMessage voters:(NSArray<NSDictionary*>*) voters isEncrypted:(BOOL) encrypted
 {
     MLAssert(pollMessage.messageDBId != nil, @"A poll to close must be in the database", (@{@"pollMessage": pollMessage}));
@@ -951,22 +952,31 @@ static void isaCloudPingOrReconnect(xmpp* account, BOOL networkCameBack, BOOL le
         DDLogError(@"Not closing the poll: %@ is not a valid poll", pollMessage.messageId);
         return nil;
     }
+    //isaCloud: the poll is closed in our database and in memory first, so it takes no more votes while the closing goes out
+    NSDate* closedAt = [NSDate date];
+    NSNumber* closedAtMillis = @((long long)([closedAt timeIntervalSince1970] * 1000));
+    [[DataLayer sharedInstance] setPollClosedJSON:closedJSON closedAt:closedAtMillis forPollMessageId:pollMessage.messageId inChat:pollMessage.buddyName forAccount:pollMessage.accountID];
+    pollMessage.pollClosed = closedJSON;
+    pollMessage.pollClosedAt = closedAt;
+
     MLMessage* closing = [self sendMessageAndAddToHistory:fallbackBody havingType:kMessageTypeText toContact:pollMessage.chatContact isEncrypted:encrypted uploadInfo:nil quotedMessageId:nil pollJSON:nil closedJSON:closedJSON];
-    if(closing != nil)
+    if(closing == nil)
     {
-        NSDate* closedAt = [NSDate date];
-        [[DataLayer sharedInstance] setPollClosedAt:@((long long)([closedAt timeIntervalSince1970] * 1000)) forHistoryId:pollMessage.messageDBId];
-        //isaCloud: the poll on screen takes its closed-at at once, and the chat draws its card again (ChatView, kMonalUpdatedMessageNotice with pollUpdate)
-        pollMessage.pollClosedAt = closedAt;
-        [[MLNotificationQueue currentQueue] postNotificationName:kMonalUpdatedMessageNotice object:pollMessage.chatContact.account userInfo:@{
-            @"message": pollMessage,
-            @"showAlert": @NO,
-            @"contact": pollMessage.chatContact,
-            @"LMCReplaced": @NO,
-            @"reactionsUpdate": @NO,
-            @"pollUpdate": @YES,
-        }];
+        //isaCloud: the closing was not sent, so the poll is open again
+        DDLogError(@"Closing of poll %@ could not be sent, reopening it", pollMessage.messageId);
+        [[DataLayer sharedInstance] setPollClosedJSON:nil closedAt:nil forPollMessageId:pollMessage.messageId inChat:pollMessage.buddyName forAccount:pollMessage.accountID];
+        pollMessage.pollClosed = nil;
+        pollMessage.pollClosedAt = nil;
     }
+    //isaCloud: the chat draws the poll again, closed or open (ChatView, kMonalUpdatedMessageNotice with pollUpdate)
+    [[MLNotificationQueue currentQueue] postNotificationName:kMonalUpdatedMessageNotice object:pollMessage.chatContact.account userInfo:@{
+        @"message": pollMessage,
+        @"showAlert": @NO,
+        @"contact": pollMessage.chatContact,
+        @"LMCReplaced": @NO,
+        @"reactionsUpdate": @NO,
+        @"pollUpdate": @YES,
+    }];
     return closing;
 }
 

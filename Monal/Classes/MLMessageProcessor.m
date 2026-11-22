@@ -32,7 +32,8 @@
 //isaCloud: helpers of the polls, defined below processMessage:
 @interface MLMessageProcessor (PollHelpers)
 +(BOOL) isTrueXMLBoolean:(NSString* _Nullable) value;
-+(void) processPollClosedNode:(MLXMLNode*) messageNode historyId:(NSNumber*) historyId inChat:(NSString*) chat forAccount:(xmpp*) account participantJid:(NSString* _Nullable) participantJid occupantId:(NSString* _Nullable) occupantId actualFrom:(NSString* _Nullable) actualFrom;
++(BOOL) processPollClosedNode:(MLXMLNode*) messageNode historyId:(NSNumber*) historyId inChat:(NSString*) chat forAccount:(xmpp*) account participantJid:(NSString* _Nullable) participantJid occupantId:(NSString* _Nullable) occupantId actualFrom:(NSString* _Nullable) actualFrom;
++(void) adoptEarlierPollClosingsForPollHistoryId:(NSNumber*) pollHistoryId messageId:(NSString*) messageId inChat:(NSString*) chat forAccount:(xmpp*) account;
 @end
 
 static NSMutableDictionary* _typingNotifications;
@@ -813,7 +814,11 @@ static NSMutableDictionary* _typingNotifications;
             {
                 NSString* pollJSON = [ISACloudPolls pollJSONFromFields:[MLMessageProcessor pollFieldsFromMessageNode:messageNode]];
                 if(pollJSON != nil)
+                {
                     [[DataLayer sharedInstance] setPollJSON:pollJSON forHistoryId:historyId];
+                    //isaCloud: a closing that came before its poll (older pages of the history, MAM) is already in the database: it is adopted now
+                    [MLMessageProcessor adoptEarlierPollClosingsForPollHistoryId:historyId messageId:messageId inChat:buddyName forAccount:account];
+                }
                 else
                     DDLogWarn(@"Ignoring poll %@ without a title or with less than two options", messageId);
             }
@@ -821,7 +826,16 @@ static NSMutableDictionary* _typingNotifications;
             //isaCloud: the closing of a poll (<poll-closed>) is kept with its message. The poll it closes is marked as closed only if the closing
             //comes from its creator and matches it (title and emojis), see processPollClosedNode:... below
             if(historyId != nil && possiblyUnknownContact.isMuc && [messageNode check:@"{urn:fluux:poll:0}poll-closed"])
-                [MLMessageProcessor processPollClosedNode:messageNode historyId:historyId inChat:buddyName forAccount:account participantJid:participantJid occupantId:occupantId actualFrom:actualFrom];
+            {
+                BOOL appliedToPoll = [MLMessageProcessor processPollClosedNode:messageNode historyId:historyId inChat:buddyName forAccount:account participantJid:participantJid occupantId:occupantId actualFrom:actualFrom];
+                //isaCloud: a closing received from others, applied to its poll (or a repeated one), is not kept as a message: the poll shows its tally, one card per poll, without a notification.
+                //Our own closing (inbound NO, reflected by the room) stays: xmpp.m reads its JSON by message id to send it again
+                if(appliedToPoll && inbound)
+                {
+                    [[DataLayer sharedInstance] deleteMessageHistoryLocally:historyId];
+                    historyId = nil;
+                }
+            }
 
             if(historyId != nil)
                 message = [MLMessage createMessageFromHistoryID:historyId];
@@ -1167,14 +1181,14 @@ static NSMutableDictionary* _typingNotifications;
 //isaCloud: the closing of a poll from a group or channel. The closing is kept with its message; the poll it closes gets its closed-at only when
 //(1) the poll is in this chat and not closed yet, (2) the closing comes from the creator of the poll, (3) title and emojis match the poll.
 //A closing that does not match is kept, but the poll stays open. The voters of the closing are NOT compared with the reactions (they are nicks)
-+(void) processPollClosedNode:(MLXMLNode*) messageNode historyId:(NSNumber*) historyId inChat:(NSString*) chat forAccount:(xmpp*) account participantJid:(NSString* _Nullable) participantJid occupantId:(NSString* _Nullable) occupantId actualFrom:(NSString* _Nullable) actualFrom
++(BOOL) processPollClosedNode:(MLXMLNode*) messageNode historyId:(NSNumber*) historyId inChat:(NSString*) chat forAccount:(xmpp*) account participantJid:(NSString* _Nullable) participantJid occupantId:(NSString* _Nullable) occupantId actualFrom:(NSString* _Nullable) actualFrom
 {
     NSDictionary* fields = [self pollClosedFieldsFromMessageNode:messageNode];
     NSString* closedJSON = [ISACloudPolls closedJSONFromFields:fields];
     if(closedJSON == nil)
     {
         DDLogWarn(@"Ignoring poll-closed without a message-id or a title in chat %@", chat);
-        return;
+        return NO;
     }
     [[DataLayer sharedInstance] setPollClosedJSON:closedJSON forHistoryId:historyId];
 
@@ -1183,41 +1197,37 @@ static NSMutableDictionary* _typingNotifications;
     if(pollHistoryId == nil)
     {
         DDLogInfo(@"Poll %@ closed in %@ is not in our database (yet), nothing to mark", fields[@"messageId"], chat);
-        return;
+        return NO;
     }
     MLMessage* poll = [MLMessage createMessageFromHistoryID:pollHistoryId];
-    if(poll.pollClosedAt != nil)
-    {
-        DDLogInfo(@"Poll %@ is already closed, keeping the first closing", fields[@"messageId"]);
-        return;
-    }
 
-    //the creator: the participant jid in groups, else the occupant id, else the nick
-    BOOL sameCreator = NO;
-    if(poll.participantJid != nil && participantJid != nil)
-        sameCreator = [poll.participantJid isEqualToString:participantJid];
-    else if(poll.occupantId != nil && occupantId != nil)
-        sameCreator = [poll.occupantId isEqualToString:occupantId];
-    else if(poll.actualFrom.length > 0 && actualFrom.length > 0)
-        sameCreator = [poll.actualFrom isEqualToString:actualFrom];
+    //the creator: the participant jid in groups, else the occupant id, else the nick (see PollRules.sameCreator)
+    BOOL sameCreator = [ISACloudPolls isClosingFromParticipantJid:participantJid occupantId:occupantId nick:actualFrom creatorOfPollWithParticipantJid:poll.participantJid occupantId:poll.occupantId nick:poll.actualFrom];
     if(!sameCreator)
     {
         DDLogWarn(@"Ignoring poll-closed for poll %@ from someone else than its creator", fields[@"messageId"]);
-        return;
+        return NO;
     }
     if(![ISACloudPolls isClosedJSON:closedJSON matchingPollJSON:poll.poll])
     {
         DDLogWarn(@"Ignoring poll-closed for poll %@: title or emojis do not match the poll", fields[@"messageId"]);
-        return;
+        return NO;
+    }
+    if(poll.pollClosedAt != nil)
+    {
+        DDLogInfo(@"Poll %@ is already closed, dropping the repeated closing", fields[@"messageId"]);
+        return YES;
     }
 
     NSDate* stamp = [messageNode findFirst:@"{urn:xmpp:delay}delay@stamp|datetime"];
     if(stamp == nil)
         stamp = [NSDate date];
-    [[DataLayer sharedInstance] setPollClosedAt:@((long long)([stamp timeIntervalSince1970] * 1000)) forHistoryId:pollHistoryId];
+    //isaCloud: the original (and its duplicates) keep the closed JSON too, so the tally shows in the poll itself
+    [[DataLayer sharedInstance] setPollClosedJSON:closedJSON closedAt:@((long long)([stamp timeIntervalSince1970] * 1000)) forPollMessageId:fields[@"messageId"] inChat:chat forAccount:account.accountID];
     DDLogInfo(@"Poll %@ in %@ closed by its creator", fields[@"messageId"], chat);
 
-    //isaCloud: the cached poll takes its closed-at at once, and the chat draws its card again (ChatView, kMonalUpdatedMessageNotice with pollUpdate)
+    //isaCloud: the cached poll takes its closed JSON and closed-at at once, and the chat draws its card again (ChatView, kMonalUpdatedMessageNotice with pollUpdate)
+    poll.pollClosed = closedJSON;
     poll.pollClosedAt = stamp;
     DDLogInfo(@"Sending out kMonalUpdatedMessageNotice notification for the closed poll %@", pollHistoryId);
     [[MLNotificationQueue currentQueue] postNotificationName:kMonalUpdatedMessageNotice object:account userInfo:@{
@@ -1228,5 +1238,78 @@ static NSMutableDictionary* _typingNotifications;
         @"reactionsUpdate": @NO,
         @"pollUpdate": @YES,
     }];
+    return YES;
+}
+
+//isaCloud: a poll that arrives after its closing (MAM pages the newer closing first, see processPollClosedNode:...). The closings of this poll
+//that are already in the database are checked now, as if they had come now: the oldest valid one closes the poll (when it is open), every valid
+//one of ours is kept, every valid one received is removed from the history (the poll shows the tally)
++(void) adoptEarlierPollClosingsForPollHistoryId:(NSNumber*) pollHistoryId messageId:(NSString*) messageId inChat:(NSString*) chat forAccount:(xmpp*) account
+{
+    NSArray<NSNumber*>* closingIds = [[DataLayer sharedInstance] pollClosingHistoryIdsForPollMessageId:messageId inChat:chat forAccount:account.accountID];
+    if(closingIds.count == 0)
+        return;
+    MLMessage* poll = [MLMessage createMessageFromHistoryID:pollHistoryId];
+    if(poll == nil || poll.poll == nil)
+        return;
+
+    BOOL adopted = NO;
+    for(NSNumber* closingId in closingIds)
+    {
+        MLMessage* closing = [MLMessage createMessageFromHistoryID:closingId];
+        if(closing == nil || closing.pollClosed == nil)
+            continue;
+        NSDictionary* closedFields = [ISACloudPolls closedFieldsFromJSON:closing.pollClosed];
+        if(closedFields == nil || ![messageId isEqualToString:closedFields[@"messageId"]])
+        {
+            DDLogWarn(@"Closing %@ in %@ is not a closing of poll %@, skipping it", closingId, chat, messageId);
+            continue;
+        }
+        if(![ISACloudPolls isClosingFromParticipantJid:closing.participantJid occupantId:closing.occupantId nick:closing.actualFrom creatorOfPollWithParticipantJid:poll.participantJid occupantId:poll.occupantId nick:poll.actualFrom])
+        {
+            DDLogWarn(@"Closing %@ for poll %@ is not from its creator, skipping it", closingId, messageId);
+            continue;
+        }
+        if(![ISACloudPolls isClosedJSON:closing.pollClosed matchingPollJSON:poll.poll])
+        {
+            DDLogWarn(@"Closing %@ for poll %@: title or emojis do not match the poll, skipping it", closingId, messageId);
+            continue;
+        }
+
+        //the first valid closing (the oldest, the list is sorted by time) closes the poll, when it is open
+        if(!adopted && poll.pollClosedAt == nil)
+        {
+            NSNumber* closedAtMillis = @((long long)([closing.timestamp timeIntervalSince1970] * 1000));
+            [[DataLayer sharedInstance] setPollClosedJSON:closing.pollClosed closedAt:closedAtMillis forPollMessageId:messageId inChat:chat forAccount:account.accountID];
+            poll.pollClosed = closing.pollClosed;
+            poll.pollClosedAt = closing.timestamp;
+            adopted = YES;
+            DDLogInfo(@"Poll %@ adopted the earlier closing %@", messageId, closingId);
+        }
+
+        //a closing received from others is not kept as a message (see processMessage:), ours stays for xmpp.m
+        if(closing.inbound)
+        {
+            [[DataLayer sharedInstance] deleteMessageHistoryLocally:closingId];
+            DDLogInfo(@"Sending out kMonalDeletedMessageNotice notification for historyId %@", closingId);
+            [[MLNotificationQueue currentQueue] postNotificationName:kMonalDeletedMessageNotice object:account userInfo:@{
+                @"historyId": closingId,
+                @"contact": poll.chatContact,
+            }];
+        }
+    }
+
+    if(adopted)
+    {
+        DDLogInfo(@"Sending out kMonalUpdatedMessageNotice notification for the closed poll %@", pollHistoryId);
+        [[MLNotificationQueue currentQueue] postNotificationName:kMonalUpdatedMessageNotice object:account userInfo:@{
+            @"message": poll,
+            @"showAlert": @NO,
+            @"contact": poll.chatContact,
+            @"LMCReplaced": @NO,
+            @"reactionsUpdate": @NO,
+            @"pollUpdate": @YES,
+        }];
+    }
 }
 @end

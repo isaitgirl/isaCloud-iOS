@@ -295,12 +295,19 @@ extern NSString* const kMessageTypeFiletransfer;
 -(void) setPollJSON:(NSString*) pollJSON forHistoryId:(NSNumber*) historyId;
 -(void) setPollClosedJSON:(NSString*) closedJSON forHistoryId:(NSNumber*) historyId;
 -(void) setPollClosedAt:(NSNumber*) closedAtMillis forHistoryId:(NSNumber*) historyId;
-//isaCloud: the poll JSON / closed JSON of our outbound message with this messageid (nil if it has none); used when sending it, resends too
+//isaCloud: sets the closed JSON and the closed-at of the poll message `messageId` in this chat, on the original and on its duplicates (every row with the poll JSON).
+//Pass nil for both to reopen it (used when sending the closing fails). Nothing happens if messageId, buddy or accountID is nil
+-(void) setPollClosedJSON:(NSString* _Nullable) closedJSON closedAt:(NSNumber* _Nullable) closedAtMillis forPollMessageId:(NSString*) messageId inChat:(NSString*) buddy forAccount:(NSNumber*) accountID;
+//isaCloud: the poll JSON / closed JSON of our outbound message with this messageid (nil if it has none); used when sending it, resends too.
+//The closed JSON is only returned for a message without poll JSON: the original poll keeps its tally too, but it must not carry the <poll-closed> when it is resent
 -(NSString* _Nullable) pollJSONForOutboundMessageId:(NSString*) messageId forAccount:(NSNumber*) accountID;
 -(NSString* _Nullable) pollClosedJSONForOutboundMessageId:(NSString*) messageId forAccount:(NSNumber*) accountID;
 //isaCloud: the history id of the poll message (one with a poll JSON) whose messageid is `messageId` in this chat (a group or channel); nil if unknown.
 //Only the client id (messageid) is matched: <poll-closed message-id=…> carries that one, not the stanza id
 -(NSNumber* _Nullable) historyIdOfPollMessageId:(NSString*) messageId inChat:(NSString*) buddy forAccount:(NSNumber*) accountID;
+//isaCloud: the history ids of the closings (rows with a closed JSON and no poll JSON) of the poll `messageId` in this chat, oldest first.
+//The JSON is matched by text, so the caller decodes each one and checks its messageId
+-(NSArray<NSNumber*>*) pollClosingHistoryIdsForPollMessageId:(NSString*) messageId inChat:(NSString*) buddy forAccount:(NSNumber*) accountID;
 -(NSDictionary*) messageDataForHistoryID:(NSNumber*) historyID;
 //isaCloud: like messageDataForHistoryID:, but nil instead of an assertion if the message does not exist (anymore), e.g. after removing its account
 -(NSDictionary* _Nullable) optionalMessageDataForHistoryID:(NSNumber*) historyID;
