@@ -13,6 +13,7 @@ O que está neste arquivo é o que aparece para o usuário na tela de **Novidade
 ## Próximo build
 
 ### Correções
+- 💖 Reagir nos canais ficou tranquilo de novo: nada de o app fechar no meio da reação.
 - 📊 Enquete encerrada fica encerrada de vez, já com o placar final na própria enquete!
 - ✨ Uma enquete, um cartão só: o resultado aparece na própria enquete, sem repetição no chat.
 - 🕰️ Rolou o histórico para trás? As enquetes antigas já aparecem encerradas, com o placar certinho.

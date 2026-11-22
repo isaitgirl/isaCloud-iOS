@@ -1177,11 +1177,19 @@ $$
                 
                 //update own occupant-id in buddylist
                 NSString* occupantId = nil;
+                BOOL roomHasOccupantId = NO;
                 @synchronized(_stateLockObject) {
-                    if([_roomFeatures[node.fromUser] containsObject:@"urn:xmpp:occupant-id:0"])
+                    roomHasOccupantId = [_roomFeatures[node.fromUser] containsObject:@"urn:xmpp:occupant-id:0"];
+                    if(roomHasOccupantId)
                         occupantId = [node findFirst:@"{urn:xmpp:occupant-id:0}occupant-id@id"];
                 }
-                [[DataLayer sharedInstance] updateOwnOccupantID:occupantId forMuc:node.fromUser onAccountID:_account.accountID];
+                //isaCloud C37: a room with occupant-id sends us a self-presence without it when another session of our nick leaves
+                //(type='unavailable', status 110, "Replaced by new connection"). That presence must not wipe our occupant-id: reacting in a
+                //channel without it crashed the app (MLAssert in DataLayer setReactions:...). Only a room without occupant-id clears it
+                if(occupantId != nil || !roomHasOccupantId)
+                    [[DataLayer sharedInstance] updateOwnOccupantID:occupantId forMuc:node.fromUser onAccountID:_account.accountID];
+                else
+                    DDLogWarn(@"isaCloud C37: self-presence of %@ without occupant-id, keeping the one we have", node.fromUser);
                 
                 DDLogDebug(@"Updating muc contact...");
                 [[MLNotificationQueue currentQueue] postNotificationName:kMonalContactRefresh object:_account userInfo:@{
