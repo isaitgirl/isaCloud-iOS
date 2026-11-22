@@ -90,6 +90,14 @@ struct PollCardRulesTests {
         #expect(PollCardRules.showsCard(isMuc: true, hasPoll: false, hasClosing: true) == true)
     }
 
+    @Test("a closing whose poll is in the chat is not drawn, its tally is in the poll")
+    func hidesClosingRules() {
+        #expect(PollCardRules.hidesClosing(hasPoll: false, hasClosing: true, pollIsInChat: true) == true)
+        #expect(PollCardRules.hidesClosing(hasPoll: false, hasClosing: true, pollIsInChat: false) == false)
+        #expect(PollCardRules.hidesClosing(hasPoll: true, hasClosing: true, pollIsInChat: true) == false)
+        #expect(PollCardRules.hidesClosing(hasPoll: false, hasClosing: false, pollIsInChat: true) == false)
+    }
+
     @Test("votes need a group or channel with a stanza id and occupant-id, and a message that is not on its way")
     func votesAllowedRules() {
         #expect(PollCardRules.votesAllowed(isMuc: true, hasStanzaId: true, roomHasOccupantId: true, isPending: false) == true)
@@ -213,6 +221,28 @@ struct PollCardRulesTests {
         let closing = PollClosedInfo(messageId: "m", title: "Almoço?", description: nil, tally: [PollTallyEntry(emoji: one, label: "Pizza", count: 0, voters: [])])
         let card = PollCardRules.card(poll: nil, closing: closing, endedAt: false, voters: [], ownReactions: [], votesAllowed: true)
         #expect(card?.footer == .finalResult(votes: nil))
+    }
+
+    @Test("the original of a closed poll shows its frozen tally with the footer 'closed', and takes no votes")
+    func closedOriginalWithTally() {
+        let closing = PollClosedInfo(
+            messageId: "m",
+            title: "Almoço?",
+            description: nil,
+            tally: [PollTallyEntry(emoji: one, label: "Pizza", count: 2, voters: ["Ana", "Bia"])]
+        )
+        let card = PollCardRules.card(poll: poll(), closing: closing, endedAt: true, voters: [], ownReactions: [one], votesAllowed: true)
+        #expect(card?.footer == .closed(votes: 2))
+        #expect(card?.rows.map { $0.isMine } == [true])
+        #expect(card?.rows.map { $0.count } == [2])
+        #expect(card?.isVotable == false)
+    }
+
+    @Test("a closing without its poll in our database keeps the footer 'final result'")
+    func closingOnlyKeepsFinalResult() {
+        let closing = PollClosedInfo(messageId: "m", title: "Almoço?", description: nil, tally: [PollTallyEntry(emoji: one, label: "Pizza", count: 1, voters: ["Ana"])])
+        let card = PollCardRules.card(poll: nil, closing: closing, endedAt: false, voters: [], ownReactions: [], votesAllowed: true)
+        #expect(card?.footer == .finalResult(votes: 1))
     }
 
     @Test("the voters of a closing are the biggest of the distinct nicks and the counts (the nicks may be unknown)")

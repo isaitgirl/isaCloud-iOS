@@ -2437,6 +2437,16 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
 }
 
 //isaCloud: see the header
+-(void) setPollClosedJSON:(NSString* _Nullable) closedJSON closedAt:(NSNumber* _Nullable) closedAtMillis forPollMessageId:(NSString*) messageId inChat:(NSString*) buddy forAccount:(NSNumber*) accountID
+{
+    if(messageId == nil || buddy == nil || accountID == nil)
+        return;
+    [self.db voidWriteTransaction:^{
+        [self.db executeNonQuery:@"UPDATE message_history SET isacloud_poll_closed=?, isacloud_poll_closed_at=? WHERE account_id=? AND buddy_name=? AND messageid=? AND isacloud_poll IS NOT NULL;" andArguments:@[nilWrapper(closedJSON), nilWrapper(closedAtMillis), accountID, buddy, messageId]];
+    }];
+}
+
+//isaCloud: see the header
 -(NSString* _Nullable) pollJSONForOutboundMessageId:(NSString*) messageId forAccount:(NSNumber*) accountID
 {
     if(messageId == nil || accountID == nil)
@@ -2453,7 +2463,7 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
     if(messageId == nil || accountID == nil)
         return nil;
     NSString* closedJSON = [self.db idReadTransaction:^{
-        return (NSString*)[self.db executeScalar:@"SELECT isacloud_poll_closed FROM message_history WHERE account_id=? AND messageid=? AND inbound=0 LIMIT 1;" andArguments:@[accountID, messageId]];
+        return (NSString*)[self.db executeScalar:@"SELECT isacloud_poll_closed FROM message_history WHERE account_id=? AND messageid=? AND inbound=0 AND isacloud_poll IS NULL LIMIT 1;" andArguments:@[accountID, messageId]];
     }];
     return [closedJSON isKindOfClass:[NSString class]] && closedJSON.length > 0 ? closedJSON : nil;
 }
@@ -2467,6 +2477,19 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
         return (NSNumber*)[self.db executeScalar:@"SELECT message_history_id FROM message_history WHERE account_id=? AND buddy_name=? AND messageid=? AND isacloud_poll IS NOT NULL ORDER BY message_history_id DESC LIMIT 1;" andArguments:@[accountID, buddy, messageId]];
     }];
     return [historyId isKindOfClass:[NSNumber class]] ? historyId : nil;
+}
+
+//isaCloud: see the header. The closed JSON is written by ISACloudPolls.closedJSONFromFields (no spaces, the keys in sorted order),
+//so the text `"messageId":"<id>"` is found in it. LIKE may match more (case, a quote in the id), the caller checks the decoded messageId
+-(NSArray<NSNumber*>*) pollClosingHistoryIdsForPollMessageId:(NSString*) messageId inChat:(NSString*) buddy forAccount:(NSNumber*) accountID
+{
+    if(messageId == nil || buddy == nil || accountID == nil)
+        return @[];
+    NSString* pattern = [NSString stringWithFormat:@"%%\"messageId\":\"%@\"%%", messageId];
+    NSArray* rows = [self.db idReadTransaction:^{
+        return [self.db executeScalarReader:@"SELECT message_history_id FROM message_history WHERE account_id=? AND buddy_name=? AND isacloud_poll IS NULL AND isacloud_poll_closed LIKE ? ORDER BY timestamp ASC, message_history_id ASC;" andArguments:@[accountID, buddy, pattern]];
+    }];
+    return [rows isKindOfClass:[NSArray class]] ? rows : @[];
 }
 
 -(MLMessage*) lastMessageForContact:(NSString*) contact forAccount:(NSNumber*) accountID

@@ -289,6 +289,46 @@ struct PollsTests {
         #expect((fields["options"] as? [[String: String]])?.count == 2)
     }
 
+    //MARK: creator of a closing
+
+    @Test("a closing with the same participant jid comes from the creator")
+    func testSameParticipantJidIsSameCreator() {
+        #expect(PollRules.sameCreator(pollParticipantJid: "ana@isacloud.im", pollOccupantId: nil, pollNick: nil,
+                                      closingParticipantJid: "ana@isacloud.im", closingOccupantId: nil, closingNick: nil) == true)
+    }
+
+    @Test("different participant jids are not the creator, even with the same nick")
+    func testDifferentParticipantJidIsNotSameCreator() {
+        #expect(PollRules.sameCreator(pollParticipantJid: "ana@isacloud.im", pollOccupantId: nil, pollNick: "Ana",
+                                      closingParticipantJid: "bia@isacloud.im", closingOccupantId: nil, closingNick: "Ana") == false)
+    }
+
+    @Test("without participant jids, the same occupant id is the creator")
+    func testSameOccupantIdIsSameCreator() {
+        #expect(PollRules.sameCreator(pollParticipantJid: nil, pollOccupantId: "occ-1", pollNick: nil,
+                                      closingParticipantJid: nil, closingOccupantId: "occ-1", closingNick: nil) == true)
+    }
+
+    @Test("without jids and occupant ids, the same nick is the creator")
+    func testSameNickIsSameCreator() {
+        #expect(PollRules.sameCreator(pollParticipantJid: nil, pollOccupantId: nil, pollNick: "Ana",
+                                      closingParticipantJid: nil, closingOccupantId: nil, closingNick: "Ana") == true)
+    }
+
+    @Test("nothing to compare is not the creator")
+    func testEmptyIsNotSameCreator() {
+        #expect(PollRules.sameCreator(pollParticipantJid: nil, pollOccupantId: nil, pollNick: nil,
+                                      closingParticipantJid: nil, closingOccupantId: nil, closingNick: nil) == false)
+        #expect(PollRules.sameCreator(pollParticipantJid: nil, pollOccupantId: nil, pollNick: "",
+                                      closingParticipantJid: nil, closingOccupantId: nil, closingNick: "") == false)
+    }
+
+    @Test("the Objective-C face of the creator check follows the same rules")
+    func testBridgeSameCreator() {
+        #expect(ISACloudPolls.isClosing(fromParticipantJid: "ana@isacloud.im", occupantId: nil, nick: nil,
+                                        creatorOfPollWithParticipantJid: "ana@isacloud.im", occupantId: nil, nick: nil) == true)
+    }
+
     @Test("the Objective-C face refuses a poll without two options and takes a valid one")
     func testBridgeValidation() {
         #expect(ISACloudPolls.pollJSON(fromFields: ["title": "x", "options": [["emoji": one, "label": "a"]]]) == nil)

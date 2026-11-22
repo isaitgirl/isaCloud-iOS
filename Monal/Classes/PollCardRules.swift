@@ -114,6 +114,12 @@ enum PollCardRules {
         return isMuc && (hasPoll || hasClosing)
     }
 
+    //isaCloud: a closing message whose poll is in this chat is not drawn: its tally is shown in the poll itself (one card per poll).
+    //A closing without its poll in our database (we joined later) is drawn as "final result"
+    static func hidesClosing(hasPoll: Bool, hasClosing: Bool, pollIsInChat: Bool) -> Bool {
+        return !hasPoll && hasClosing && pollIsInChat
+    }
+
     //isaCloud: a poll (or its closing) is not edited: the edit would change the fallback text and leave the <poll> out of date
     static func allowsEdit(hasPoll: Bool, hasClosing: Bool) -> Bool {
         return !hasPoll && !hasClosing
@@ -125,10 +131,11 @@ enum PollCardRules {
     }
 
     //isaCloud: the card of a poll, or of its closing (frozen, its tally as it was sent). The live tally counts the reactions of the voters
-    //(voters: each one with its reactions on the poll message). Own reactions are the reactions of the user. nil when there is nothing to draw
+    //(voters: each one with its reactions on the poll message). Own reactions are the reactions of the user. nil when there is nothing to draw.
+    //A poll with its closing is the original, closed: its card shows the frozen tally with the footer "closed" (not "final result")
     static func card(poll: PollDefinition?, closing: PollClosedInfo?, endedAt: Bool, voters: [PollVoter], ownReactions: [String], votesAllowed: Bool, now: Date = Date()) -> PollCardModel? {
         if let closing = closing {
-            return frozenCard(closing)
+            return frozenCard(closing, isOriginal: poll != nil, ownReactions: ownReactions)
         }
         guard let poll = poll else {
             return nil
@@ -180,17 +187,21 @@ enum PollCardRules {
         return max(nicks.count, biggest)
     }
 
-    private static func frozenCard(_ closing: PollClosedInfo) -> PollCardModel {
+    //isaCloud: isOriginal is YES for the poll message itself (closed by its creator), NO for the closing message (its own card)
+    //(on the original, the options the user voted for stay marked as theirs)
+    private static func frozenCard(_ closing: PollClosedInfo, isOriginal: Bool, ownReactions: [String]) -> PollCardModel {
         let total = closedTotal(closing)
+        let ownKeys = isOriginal ? Set(ownReactions.map { PollRules.key($0) }) : []
         let rows = closing.tally.map { entry in
-            PollCardRow(emoji: entry.emoji, label: entry.label, count: entry.count, fraction: share(of: entry.count, outOf: total), isMine: false, showsResults: true)
+            PollCardRow(emoji: entry.emoji, label: entry.label, count: entry.count, fraction: share(of: entry.count, outOf: total), isMine: ownKeys.contains(PollRules.key(entry.emoji)), showsResults: true)
         }
+        let footer: PollFooter = isOriginal ? .closed(votes: total > 0 ? total : nil) : .finalResult(votes: total > 0 ? total : nil)
         return PollCardModel(
             title: closing.title,
             description: closing.description,
             showsMultipleHint: false,
             rows: rows,
-            footer: .finalResult(votes: total > 0 ? total : nil),
+            footer: footer,
             isVotable: false
         )
     }
