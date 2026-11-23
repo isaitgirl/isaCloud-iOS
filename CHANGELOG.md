@@ -2,7 +2,9 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
-## Próximo build (não lançado)
+## 0.0.1 (build 129) — 23/11/2026
+
+Enviado ao TestFlight às 14:35 (brilho da original no pulo e citação sem vínculo com balão, PR 90 e PR 25 do fork; testado no `.dev`).
 
 ### Adicionado
 - **A mensagem de destino de um pulo brilha por um instante.** Depois do toque numa citação (ou de abrir a conversa por um resultado da busca), a linha da mensagem ganha uma faixa rosa (`isaCloudPink` a 25%) na largura toda, atrás do balão, quando a lista para nela (no fim de `scrollToSearchedMessage`, cerca de 0,7 s depois do toque, mesmo se a original já estava na tela): entra em 0,15 s, fica até 1,15 s e some em 0,8 s; sem animação com "Reduzir movimento". Cobre texto, foto, vídeo, GIF, figurinha e enquete, porque fica no `messageBuilder` do `ChatView.swift` (`JumpHighlightBand`, observando o `JumpHighlight`), sem mexer no fork; a linha "Lido até aqui" fica fora da faixa, e a abertura na primeira não lida não brilha. Um toque novo substitui o brilho anterior (contador `generation`). Igual ao que o Android e o Web já fazem.

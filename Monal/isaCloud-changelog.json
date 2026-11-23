@@ -1,6 +1,19 @@
 {
   "releases": [
     {
+      "build": 129,
+      "date": "23/11/2026",
+      "sections": [
+        {
+          "title": "Novidades",
+          "items": [
+            "✨ Tocou na citação? A mensagem original dá uma piscadinha para você achar na hora.",
+            "ℹ️ Citações que não levam à mensagem original ganham um iconezinho; um toque explica o porquê."
+          ]
+        }
+      ]
+    },
+    {
       "build": 128,
       "date": "23/11/2026",
       "sections": [
