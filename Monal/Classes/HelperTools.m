@@ -3571,6 +3571,7 @@ static char _isaCloudHangNames[ISA_HANG_MAX_THREADS][48];
             @"urn:xmpp:message-correct:0",
             @"urn:xmpp:reactions:0",
             @"urn:xmpp:fallback:0",
+            @"urn:xmpp:reply:0", //isaCloud: replies (XEP-0461), see ISACloudReply
         ] mutableCopy];
         if([[HelperTools defaultsDB] boolForKey: @"SendLastUserInteraction"])
             [featuresArray addObject:@"urn:xmpp:idle:1"];

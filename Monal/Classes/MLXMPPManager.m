@@ -892,7 +892,7 @@ static void isaCloudPingOrReconnect(xmpp* account, BOOL networkCameBack, BOOL le
         if([uploadInfo[@"isSticker"] boolValue])
             [[DataLayer sharedInstance] setStickerForHistoryId:messageDBId];
 
-        //isaCloud: the reply quotes a photo, a GIF or a sticker: its id is sent with the message (see xmpp sendMessage:)
+        //isaCloud: the reply quotes a message of any type: its id is sent with the message (see xmpp sendMessage:)
         if(quotedMessageId != nil)
             [[DataLayer sharedInstance] setQuotedMessageIdForHistoryId:messageDBId quotedId:quotedMessageId];
 

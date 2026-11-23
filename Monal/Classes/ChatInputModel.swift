@@ -58,7 +58,7 @@ struct ChatInputDraft: Equatable {
     let text: String
     let reply: ChatInputReply?
     let attachments: [ChatInputAttachment]
-    /// isaCloud: the id of the photo, GIF or sticker the text quotes (sent as urn:isacloud:quote:0), nil when it quotes none
+    /// isaCloud: the id of the message the text quotes, of any type (sent as urn:xmpp:reply:0; a photo, GIF or sticker also as urn:isacloud:quote:0), nil when it quotes none
     var quotedMessageId: String? = nil
 }
 
@@ -248,7 +248,8 @@ final class ChatInputModel: ObservableObject {
     }
 
     /// starts a reply by quoting a message: the quote line goes in front of the text, and the answer is written after it
-    /// isaCloud: `quotedMessageId` is the id of the quoted photo, GIF or sticker (nil for any other message): the reply then carries it
+    /// isaCloud: `quotedMessageId` is the id of the quoted message, of any type (nil when its id is unknown): the reply then carries it
+    /// (urn:xmpp:reply:0, see ISACloudReply), as long as the body still starts with the quote
     func quote(author: String?, text: String, quotedMessageId: String? = nil) {
         guard edit == nil else {
             return

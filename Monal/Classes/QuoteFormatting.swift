@@ -137,18 +137,36 @@ enum QuoteFormatting {
         return body.components(separatedBy: "\n").map { parse($0) }
     }
 
-    /// isaCloud: the id a reply sends to quote a message (element urn:isacloud:quote:0, see xmpp sendMessage:). Only a photo, a GIF or a
-    /// sticker is sent as a thumbnail; the id is the stanza id in groups and channels and the message id in one-to-one chats. Nil when the
-    /// quoted message is anything else, or when its id is not known (e.g. an own message not yet confirmed by the group).
-    static func quotedMessageId(isMedia: Bool, isMuc: Bool, messageId: String?, stanzaId: String?) -> String? {
-        guard isMedia else {
-            return nil
-        }
+    /// isaCloud: the id a reply sends to quote a message (element urn:xmpp:reply:0, see ReplyFormatting.swift). Any message has one: the
+    /// stanza id in groups and channels (the room gives it) and the message id in one-to-one chats, as docs/contrato-reply-xep0461.md
+    /// (section 2) says. Nil when the id is not known (e.g. an own message not yet confirmed by the group).
+    static func quotedMessageId(isMuc: Bool, messageId: String?, stanzaId: String?) -> String? {
         let id = isMuc ? stanzaId : messageId
         guard let id, !id.isEmpty else {
             return nil
         }
         return id
+    }
+
+    /// isaCloud: the end of the fallback of a reply (XEP-0428): the quote that starts the body, each of its lines with its line break.
+    /// The end is counted in Unicode code points, as XEP-0426 says (not in UTF-16, not in visible characters), and it is exclusive.
+    /// Nil when the body does not start with a quote, or when nothing follows the quote (docs/contrato-reply-xep0461.md, section 3).
+    static func replyFallbackEnd(body: String) -> Int? {
+        let lines = body.components(separatedBy: "\n")
+        var end = 0
+        var quoteLines = 0
+        for line in lines {
+            guard isQuoteLine(line) else {
+                break
+            }
+            end += line.unicodeScalars.count + 1
+            quoteLines += 1
+        }
+        //a line break has to follow the quote, so there must be a line after it
+        guard quoteLines > 0, quoteLines < lines.count else {
+            return nil
+        }
+        return end
     }
 }
 

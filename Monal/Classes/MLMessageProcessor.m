@@ -800,10 +800,15 @@ static NSMutableDictionary* _typingNotifications;
             if(historyId != nil && messageType == kMessageTypeFiletransfer && [messageNode check:@"{urn:xmpp:stickers:0}sticker"])
                 [[DataLayer sharedInstance] setStickerForHistoryId:historyId];
 
-            //isaCloud: a reply to a photo, a GIF or a sticker carries the id of the quoted message (element urn:isacloud:quote:0, see isacloud_quote_id)
-            if(historyId != nil && [messageNode check:@"{urn:isacloud:quote:0}isacloud-quote"])
+            //isaCloud: a reply carries the id of the message it quotes: XEP-0461 (element urn:xmpp:reply:0) wins, and the element of the older
+            //apps (urn:isacloud:quote:0, for photos, GIFs and stickers) is read when there is no reply (see isacloud_quote_id)
+            if(historyId != nil)
             {
-                NSString* quotedId = [messageNode findFirst:@"{urn:isacloud:quote:0}isacloud-quote@id"];
+                NSString* quotedId = nil;
+                if([messageNode check:@"{urn:xmpp:reply:0}reply"])
+                    quotedId = [messageNode findFirst:@"{urn:xmpp:reply:0}reply@id"];
+                if(quotedId == nil && [messageNode check:@"{urn:isacloud:quote:0}isacloud-quote"])
+                    quotedId = [messageNode findFirst:@"{urn:isacloud:quote:0}isacloud-quote@id"];
                 if(quotedId != nil && quotedId.length > 0)
                     [[DataLayer sharedInstance] setQuotedMessageIdForHistoryId:historyId quotedId:quotedId];
             }

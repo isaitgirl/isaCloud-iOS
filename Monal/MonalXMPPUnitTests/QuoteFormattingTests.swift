@@ -159,17 +159,37 @@ struct ChatMessageBatchingTests {
         #expect(result.shownDays.isEmpty && result.newDays.isEmpty)
     }
 
-    @Test("a reply quotes a photo, a GIF or a sticker by the stanza id in groups and by the message id in one-to-one chats")
+    @Test("a reply quotes any message by the stanza id in groups and by the message id in one-to-one chats")
     func quotedMessageId() {
-        #expect(QuoteFormatting.quotedMessageId(isMedia: true, isMuc: false, messageId: "m1", stanzaId: "s1") == "m1")
-        #expect(QuoteFormatting.quotedMessageId(isMedia: true, isMuc: true, messageId: "m1", stanzaId: "s1") == "s1")
+        #expect(QuoteFormatting.quotedMessageId(isMuc: false, messageId: "m1", stanzaId: "s1") == "m1")
+        #expect(QuoteFormatting.quotedMessageId(isMuc: true, messageId: "m1", stanzaId: "s1") == "s1")
     }
 
-    @Test("nothing is quoted by id when the quoted message is not a photo, a GIF or a sticker, or its id is unknown")
+    @Test("nothing is quoted by id when its id is unknown")
     func quotedMessageIdNone() {
-        #expect(QuoteFormatting.quotedMessageId(isMedia: false, isMuc: false, messageId: "m1", stanzaId: nil) == nil)
-        #expect(QuoteFormatting.quotedMessageId(isMedia: true, isMuc: true, messageId: "m1", stanzaId: nil) == nil)
-        #expect(QuoteFormatting.quotedMessageId(isMedia: true, isMuc: false, messageId: nil, stanzaId: "s1") == nil)
-        #expect(QuoteFormatting.quotedMessageId(isMedia: true, isMuc: false, messageId: "", stanzaId: nil) == nil)
+        #expect(QuoteFormatting.quotedMessageId(isMuc: true, messageId: "m1", stanzaId: nil) == nil)
+        #expect(QuoteFormatting.quotedMessageId(isMuc: false, messageId: nil, stanzaId: "s1") == nil)
+        #expect(QuoteFormatting.quotedMessageId(isMuc: false, messageId: "", stanzaId: nil) == nil)
+    }
+
+    @Test("the fallback of a reply ends after its quote and its line break, in code points")
+    func replyFallbackEnd() {
+        #expect(QuoteFormatting.replyFallbackEnd(body: "> Ana: oi\nTudo bem?") == 10)
+        #expect(QuoteFormatting.replyFallbackEnd(body: "> 📷 Foto\nLindo!") == 9)
+        #expect(QuoteFormatting.replyFallbackEnd(body: "> Ana: 🎞️ GIF\nKkk") == 14)
+        #expect(QuoteFormatting.replyFallbackEnd(body: "> João: ação\nOk") == 13)
+    }
+
+    @Test("every line of a quote that starts the body belongs to the fallback")
+    func replyFallbackEndSeveralLines() {
+        #expect(QuoteFormatting.replyFallbackEnd(body: "> Ana\n> Vamos?\nBoa ideia!") == 15)
+    }
+
+    @Test("a body without a quote at its start has no fallback, nor one with nothing after its quote")
+    func replyFallbackEndNone() {
+        //the quote was deleted from the start of the text, or it is in the middle of it
+        #expect(QuoteFormatting.replyFallbackEnd(body: "Só um texto\n> Ana: oi") == nil)
+        #expect(QuoteFormatting.replyFallbackEnd(body: "Só um texto") == nil)
+        #expect(QuoteFormatting.replyFallbackEnd(body: "> Ana: oi") == nil)
     }
 }

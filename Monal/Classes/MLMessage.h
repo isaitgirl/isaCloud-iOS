@@ -128,7 +128,7 @@ The of the message in the DB , should be int
 @property (nonatomic, assign) BOOL displayMarkerWanted;
 //isaCloud: the message is a sticker (XEP-0449 marker, column isacloud_sticker): it is shown without a bubble
 @property (nonatomic, assign) BOOL isSticker;
-//isaCloud: the id of the message this one quotes, when it quotes a photo, a GIF or a sticker (element urn:isacloud:quote:0, column isacloud_quote_id)
+//isaCloud: the id of the message this one replies to, whatever its type (element urn:xmpp:reply:0, or urn:isacloud:quote:0 for a photo, a GIF or a sticker; column isacloud_quote_id)
 @property (nonatomic, copy) NSString* _Nullable quotedMessageId;
 //isaCloud: a poll message (urn:fluux:poll:0, column isacloud_poll): the JSON of its definition, decoded by PollDefinition (Polls.swift). nil if it is not a poll
 @property (nonatomic, copy) NSString* _Nullable poll;
