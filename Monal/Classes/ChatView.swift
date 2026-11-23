@@ -267,6 +267,8 @@ struct ChatView: View {
     @State private var jumpScrollParams: ScrollToParams?
     //isaCloud: true from the moment a jump is known to come until it has settled (the previews are fetched and the list scrolls there)
     @State private var isSettlingJump = false
+    //isaCloud: the jump of a tap on a quote keeps the list in view (it only scrolls): hiding it there showed a blank chat for about a second
+    @State private var jumpKeepsListVisible = false
     //isaCloud: the first unread message when the chat opened: the "Read up to here" line is drawn above it. A reference, not a value:
     //the list of ExyteChat keeps the messageBuilder of its first render, and that closure must still see the id set later in onAppear
     @State private var readMarker = ReadMarker()
@@ -275,6 +277,8 @@ struct ChatView: View {
     @State private var listOffset = ListOffset()
     //isaCloud: the "Loading…" capsule over the list, shown only when the jump takes a moment (see startJumpSafetyTimers())
     @State private var showJumpHint = false
+    //isaCloud: the "Original message unavailable" notice, shown for quoteUnavailableDelay after a tap on a quote that has no message to jump to (see jumpToQuotedMessage())
+    @State private var showQuoteUnavailable = false
     /// a chat is only opened at a message if it takes at most this many messages to get there from the newest ones
     static let maxMessagesToJumpOver = 3000
     //isaCloud: a group or channel opens at its first unread message, but at most this many messages back from the newest one
@@ -290,6 +294,7 @@ struct ChatView: View {
     static let jumpHintDelay: Double = 1.2
     static let jumpHintWorkDelay: Double = 0.5
     static let jumpSafetyDelay: Double = 4.5 //the settling always ends here, even if the list never scrolls
+    static let quoteUnavailableDelay: Double = 2.5 //isaCloud: how long the "Original message unavailable" notice stays
 
     init(contact: ObservableKVOWrapper<MLContact>, jumpToHistoryId: NSNumber? = nil) {
         _jumpToHistoryId = State(wrappedValue: jumpToHistoryId)
@@ -899,26 +904,28 @@ struct ChatView: View {
 
     /// isaCloud: opens the chat at the message found by the search: loads from the database everything between that message and what is shown,
     /// then scrolls to it (the list loads older messages in blocks, from the newest; this closes the gap at once)
-    private func jumpToSearchedMessage() {
+    /// isaCloud: returns false when the jump is not going to happen (nothing to jump to, or too far back: the jump is over at once), true when it goes on
+    @discardableResult
+    private func jumpToSearchedMessage() -> Bool {
         guard let target = jumpToHistoryId else {
-            return
+            return false
         }
         jumpToHistoryId = nil
         startJumpSafetyTimers()
         let alreadyShown = messages.contains { $0.historyId == target }
         if alreadyShown {
             scrollToSearchedMessage(target)
-            return
+            return true
         }
         guard let oldestShown = messages.first(where: { !$0.isPending })?.historyId, target.intValue < oldestShown.intValue else {
             finishJump()
-            return
+            return false
         }
         showJumpHintNow() //isaCloud: the messages around the target are read from the database: real work before the scroll
         guard let missing = DataLayer.sharedInstance().messages(forContact: contact.contactJid, forAccount: contact.accountID, aroundMsgHistoryID: target, beforeMsgHistoryID: oldestShown, limit: UInt(ChatView.maxMessagesToJumpOver)) as? [MLMessage] else {
             DDLogWarn("Search: message \(target) is too far back (or gone) to open the chat there")
             finishJump()
-            return
+            return false
         }
         //isaCloud: the links of the loaded messages are found in the background first (the detector is slow), so the list does not
         //have to find them on the main thread when it compares the messages; the result is kept in LinkCache
@@ -932,6 +939,40 @@ struct ChatView: View {
                 let shownIds = Set(messages.compactMap { $0.historyId })
                 messages.insert(contentsOf: withoutRedundantPollClosings(missing).filter { !shownIds.contains($0.messageDBId) }.map { ChatViewMessage($0) }, at: 0)
                 scrollToSearchedMessage(target) //isaCloud: the link card has a fixed height (120 pt) in every state, so a row does not change size when its preview arrives: there is nothing to fetch before the scroll (the prefetch of the previews was removed, see the fork's LinkPreviewPrefetcher)
+            }
+        }
+        return true
+    }
+
+    /// isaCloud: a tap on the quote of a reply (the first quote of the message, see onQuoteTap): the message it quotes is found by its id, in this chat
+    /// (the same lookup as QuotedMediaPreview), and the chat jumps to it (jumpToSearchedMessage()). A quote without an id (an old text quote) does nothing.
+    /// If the message cannot be found, or it is too far back, a short notice says so.
+    private func jumpToQuotedMessage(_ mlMessage: MLMessage) {
+        guard let quotedId = mlMessage.quotedMessageId else {
+            return
+        }
+        //a retracted original counts as unavailable too (docs/contrato-reply-xep0461.md, section 4)
+        guard let historyId = DataLayer.sharedInstance().historyId(ofQuotedMessageId: quotedId, inChat: mlMessage.buddyName, forAccount: mlMessage.accountID),
+              let quoted = MLMessage.createMessage(fromHistoryID: historyId) as MLMessage?, !quoted.retracted else {
+            showQuoteUnavailableNotice()
+            return
+        }
+        jumpToHistoryId = historyId
+        jumpKeepsListVisible = true
+        isSettlingJump = true
+        if !jumpToSearchedMessage() {
+            showQuoteUnavailableNotice()
+        }
+    }
+
+    /// isaCloud: the notice "Original message unavailable" shows for a few seconds at the top of the chat (a capsule, like the "Loading…" hint)
+    private func showQuoteUnavailableNotice() {
+        withAnimation(.easeIn(duration: 0.15)) {
+            showQuoteUnavailable = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + ChatView.quoteUnavailableDelay) {
+            withAnimation(.easeOut(duration: 0.2)) {
+                showQuoteUnavailable = false
             }
         }
     }
@@ -969,6 +1010,7 @@ struct ChatView: View {
             isSettlingJump = false
             showJumpHint = false
         }
+        jumpKeepsListVisible = false
     }
 
     /// isaCloud: scrolls to a message already in the list (see jumpToSearchedMessage())
@@ -1833,6 +1875,10 @@ struct ChatView: View {
             }
             inputModel.quote(author: chatMessage.innerMessage.obj.isMuc ? chatMessage.innerMessage.obj.contactDisplayName : nil, text: text, quotedMessageId: chatMessage.quotableMessageId)
         })
+        //isaCloud: a tap on the quote (the first block of a reply) goes to the message it quotes (see jumpToQuotedMessage())
+        .onQuoteTap { message in
+            jumpToQuotedMessage((message as! ChatViewMessage).innerMessage.obj)
+        }
         .onMessageReaction(didReactTo: { message, reaction in
             let mlMessage = (message as! ChatViewMessage).innerMessage.obj
             switch reaction.type {
@@ -1896,7 +1942,7 @@ struct ChatView: View {
             inputModel.setText(inputModel.text + "\(ChatNameWithHats.nick(from: user.name)), ")
         }
         .linkPreviewsEnabled(chatViewDefaultsDB.showURLPreview)
-        .listHidden(isSettlingJump)      //isaCloud: the list fades out while a jump settles; the input bar and the "Loading…" hint stay (see JumpHint)
+        .listHidden(isSettlingJump && !jumpKeepsListVisible)      //isaCloud: the list fades out while a jump settles; the input bar and the "Loading…" hint stay (see JumpHint)
         //isaCloud: a zero-height strip between the list and the input bar; the typing bubble hangs above it, over the bottom of the list, so the list never changes height.
         //Attached here, among the ExyteChat modifiers that return ChatView (.chatTheme returns some View, so it comes after)
         .betweenListAndInputViewBuilder {
@@ -1952,6 +1998,13 @@ struct ChatView: View {
         .overlay(alignment: .top) {      //isaCloud: shown while a jump to a message settles (see startJumpSafetyTimers()); after the ExyteChat modifiers, which return ChatView
             if showJumpHint {
                 JumpHint()
+                    .padding(.top, 16)
+                    .transition(.opacity)
+            }
+        }
+        .overlay(alignment: .top) {      //isaCloud: the notice of a tap on a quote whose message is not there (see showQuoteUnavailableNotice())
+            if showQuoteUnavailable {
+                QuoteUnavailableHint()
                     .padding(.top, 16)
                     .transition(.opacity)
             }
@@ -3157,6 +3210,21 @@ private struct TypingBubble: View {
             .frame(width: dotSize, height: dotSize)
             .opacity(time == nil ? 0.6 : 0.35 + 0.65 * wave)
             .offset(y: -dotSize * 0.35 * wave)
+    }
+}
+
+//isaCloud: the notice of a tap on a quote whose message cannot be shown (same capsule as JumpHint, text only); it does not take taps
+private struct QuoteUnavailableHint: View {
+    var body: some View {
+        Text("Original message unavailable")
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(Color(uiColor: .systemBackground), in: Capsule())
+            .overlay(Capsule().strokeBorder(Color(uiColor: .separator), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
+            .allowsHitTesting(false)
     }
 }
 

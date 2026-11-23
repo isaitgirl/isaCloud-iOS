@@ -14,6 +14,7 @@ O que está neste arquivo é o que aparece para o usuário na tela de **Novidade
 
 ### Novidades
 - 💬 Suas respostas agora chegam certinhas também para quem usa outros apps de mensagem.
+- 👆 Toque na citação de uma resposta para ir direto à mensagem original.
 
 ## Build 127 · 23/11/2026
 
