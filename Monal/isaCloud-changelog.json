@@ -1,6 +1,19 @@
 {
   "releases": [
     {
+      "build": 128,
+      "date": "23/11/2026",
+      "sections": [
+        {
+          "title": "Novidades",
+          "items": [
+            "💬 Suas respostas agora chegam certinhas também para quem usa outros apps de mensagem.",
+            "👆 Toque na citação de uma resposta para ir direto à mensagem original."
+          ]
+        }
+      ]
+    },
+    {
       "build": 127,
       "date": "23/11/2026",
       "sections": [
