@@ -269,6 +269,11 @@ struct ChatView: View {
     @State private var isSettlingJump = false
     //isaCloud: the jump of a tap on a quote keeps the list in view (it only scrolls): hiding it there showed a blank chat for about a second
     @State private var jumpKeepsListVisible = false
+    //isaCloud: the message a jump goes to glows for a moment once the list stops there (a tap on a quote or a search result; not the opening at the
+    //first unread message, which has its own line). Set when the jump starts, used and cleared when it is over (see scrollToSearchedMessage())
+    @State private var flashAfterJump: NSNumber?
+    //isaCloud: which row glows (see JumpHighlightBand). A reference, like readMarker: the rows built by the first messageBuilder observe it
+    @State private var jumpHighlight = JumpHighlight()
     //isaCloud: the first unread message when the chat opened: the "Read up to here" line is drawn above it. A reference, not a value:
     //the list of ExyteChat keeps the messageBuilder of its first render, and that closure must still see the id set later in onAppear
     @State private var readMarker = ReadMarker()
@@ -278,7 +283,8 @@ struct ChatView: View {
     //isaCloud: the "Loading…" capsule over the list, shown only when the jump takes a moment (see startJumpSafetyTimers())
     @State private var showJumpHint = false
     //isaCloud: the "Original message unavailable" notice, shown for quoteUnavailableDelay after a tap on a quote that has no message to jump to (see jumpToQuotedMessage())
-    @State private var showQuoteUnavailable = false
+    @State private var quoteNotice: QuoteNotice?
+    @State private var quoteNoticeGeneration = 0      //isaCloud: a newer notice keeps its full time (the timer of an older one does not hide it)
     /// a chat is only opened at a message if it takes at most this many messages to get there from the newest ones
     static let maxMessagesToJumpOver = 3000
     //isaCloud: a group or channel opens at its first unread message, but at most this many messages back from the newest one
@@ -295,9 +301,11 @@ struct ChatView: View {
     static let jumpHintWorkDelay: Double = 0.5
     static let jumpSafetyDelay: Double = 4.5 //the settling always ends here, even if the list never scrolls
     static let quoteUnavailableDelay: Double = 2.5 //isaCloud: how long the "Original message unavailable" notice stays
+    static let jumpHighlightDuration: Double = 1.15 //isaCloud: the glow of the message a jump went to: 0.15 s in, held, then it fades out (see JumpHighlightBand)
 
     init(contact: ObservableKVOWrapper<MLContact>, jumpToHistoryId: NSNumber? = nil) {
         _jumpToHistoryId = State(wrappedValue: jumpToHistoryId)
+        _flashAfterJump = State(wrappedValue: jumpToHistoryId)      //isaCloud: the message found by the search glows once the chat is there
         _isSettlingJump = State(wrappedValue: jumpToHistoryId != nil)
         _contact = StateObject(wrappedValue:contact)
         _voipProcessor = StateObject(wrappedValue:ObservableKVOWrapper((UIApplication.shared.delegate as! MonalAppDelegate).voipProcessor!))
@@ -945,7 +953,8 @@ struct ChatView: View {
     }
 
     /// isaCloud: a tap on the quote of a reply (the first quote of the message, see onQuoteTap): the message it quotes is found by its id, in this chat
-    /// (the same lookup as QuotedMediaPreview), and the chat jumps to it (jumpToSearchedMessage()). A quote without an id (an old text quote) does nothing.
+    /// (the same lookup as QuotedMediaPreview), and the chat jumps to it (jumpToSearchedMessage()). A quote without an id (an old text quote, a reply
+    /// from an app without XEP-0461, or a quote typed by hand) does nothing here: it has the info icon, and its tap shows a balloon over it (see onQuoteTap's unlinkedHint).
     /// If the message cannot be found, or it is too far back, a short notice says so.
     private func jumpToQuotedMessage(_ mlMessage: MLMessage) {
         guard let quotedId = mlMessage.quotedMessageId else {
@@ -954,25 +963,30 @@ struct ChatView: View {
         //a retracted original counts as unavailable too (docs/contrato-reply-xep0461.md, section 4)
         guard let historyId = DataLayer.sharedInstance().historyId(ofQuotedMessageId: quotedId, inChat: mlMessage.buddyName, forAccount: mlMessage.accountID),
               let quoted = MLMessage.createMessage(fromHistoryID: historyId) as MLMessage?, !quoted.retracted else {
-            showQuoteUnavailableNotice()
+            showQuoteNotice(.unavailable)
             return
         }
         jumpToHistoryId = historyId
+        flashAfterJump = historyId      //isaCloud: the original glows once the list is there, even when it was already on screen
         jumpKeepsListVisible = true
         isSettlingJump = true
         if !jumpToSearchedMessage() {
-            showQuoteUnavailableNotice()
+            showQuoteNotice(.unavailable)
         }
     }
 
-    /// isaCloud: the notice "Original message unavailable" shows for a few seconds at the top of the chat (a capsule, like the "Loading…" hint)
-    private func showQuoteUnavailableNotice() {
+    /// isaCloud: the notice of a tap on a quote shows for a few seconds at the top of the chat (a capsule, like the "Loading…" hint)
+    private func showQuoteNotice(_ notice: QuoteNotice) {
+        quoteNoticeGeneration += 1
+        let generation = quoteNoticeGeneration
         withAnimation(.easeIn(duration: 0.15)) {
-            showQuoteUnavailable = true
+            quoteNotice = notice
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + ChatView.quoteUnavailableDelay) {
-            withAnimation(.easeOut(duration: 0.2)) {
-                showQuoteUnavailable = false
+            if quoteNoticeGeneration == generation {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    quoteNotice = nil
+                }
             }
         }
     }
@@ -1011,6 +1025,19 @@ struct ChatView: View {
             showJumpHint = false
         }
         jumpKeepsListVisible = false
+        flashAfterJump = nil
+    }
+
+    /// isaCloud: the row of this message glows for jumpHighlightDuration, then fades out (see JumpHighlightBand); a newer glow replaces it
+    private func flashMessage(_ historyId: NSNumber) {
+        jumpHighlight.generation += 1
+        let generation = jumpHighlight.generation
+        jumpHighlight.historyId = historyId
+        DispatchQueue.main.asyncAfter(deadline: .now() + ChatView.jumpHighlightDuration) {
+            if jumpHighlight.generation == generation {
+                jumpHighlight.historyId = nil
+            }
+        }
     }
 
     /// isaCloud: scrolls to a message already in the list (see jumpToSearchedMessage())
@@ -1034,6 +1061,10 @@ struct ChatView: View {
         }
         //the list has scrolled there for the last time: it settles jumpSettleDelay after the second scroll (~0.7 s in all)
         DispatchQueue.main.asyncAfter(deadline: .now() + ChatView.jumpSecondScrollDelay + ChatView.jumpSettleDelay) {
+            //isaCloud: the jump is there: the message glows, so the eye finds it among the others (finishJump() clears flashAfterJump)
+            if flashAfterJump == target {
+                flashMessage(target)
+            }
             finishJump()
         }
     }
@@ -1665,6 +1696,7 @@ struct ChatView: View {
                 if let marker = readMarker.historyId, (params.message as! ChatViewMessage).historyId == marker {
                     ReadMarkerLine()
                 }
+                Group {
                 //isaCloud: a sticker (XEP-0449 marker) is a still picture without a bubble, once its picture is downloaded (see Stickers.swift)
                 if (params.message as! ChatViewMessage).innerMessage.obj.isSticker,
                    let sticker = params.message.attachments.first(where: { $0.type == .image }) {
@@ -1712,6 +1744,9 @@ struct ChatView: View {
                 } else {
                     params.defaultMessageView()
                 }
+                }
+                //isaCloud: the glow of the message a jump went to, across the whole row behind the bubble (not behind the "Read up to here" line)
+                .background(JumpHighlightBand(highlight: jumpHighlight, historyId: (params.message as! ChatViewMessage).historyId))
             }
         }, inputViewBuilder: { _ in
             //isaCloud: the field where a new message is typed keeps the system text size (the chat text size is for the messages)
@@ -1876,7 +1911,10 @@ struct ChatView: View {
             inputModel.quote(author: chatMessage.innerMessage.obj.isMuc ? chatMessage.innerMessage.obj.contactDisplayName : nil, text: text, quotedMessageId: chatMessage.quotableMessageId)
         })
         //isaCloud: a tap on the quote (the first block of a reply) goes to the message it quotes (see jumpToQuotedMessage())
-        .onQuoteTap { message in
+        //isaCloud: a quote with no id of the original gets a small info icon; its tap shows, in a small balloon over the quote, why it does not jump
+        .onQuoteTap(isLinked: { message in
+            (message as! ChatViewMessage).innerMessage.obj.quotedMessageId != nil
+        }, unlinkedHint: NSLocalizedString("This quote is not linked to the original message", comment: "isaCloud: balloon over a quote that has no link to the message it quotes")) { message in
             jumpToQuotedMessage((message as! ChatViewMessage).innerMessage.obj)
         }
         .onMessageReaction(didReactTo: { message, reaction in
@@ -2002,9 +2040,9 @@ struct ChatView: View {
                     .transition(.opacity)
             }
         }
-        .overlay(alignment: .top) {      //isaCloud: the notice of a tap on a quote whose message is not there (see showQuoteUnavailableNotice())
-            if showQuoteUnavailable {
-                QuoteUnavailableHint()
+        .overlay(alignment: .top) {      //isaCloud: the notice of a tap on a quote whose message is not there (see showQuoteNotice())
+            if let quoteNotice {
+                QuoteNoticeHint(notice: quoteNotice)
                     .padding(.top, 16)
                     .transition(.opacity)
             }
@@ -3213,17 +3251,26 @@ private struct TypingBubble: View {
     }
 }
 
+//isaCloud: what a tap on a quote can say instead of jumping (see ChatView.showQuoteNotice()). A quote without a link explains itself in a balloon over it (onQuoteTap's unlinkedHint)
+enum QuoteNotice {
+    case unavailable    //linked, but the original is not in the database, was retracted or is too far back
+}
+
 //isaCloud: the notice of a tap on a quote whose message cannot be shown (same capsule as JumpHint, text only); it does not take taps
-private struct QuoteUnavailableHint: View {
+private struct QuoteNoticeHint: View {
+    let notice: QuoteNotice
+
     var body: some View {
         Text("Original message unavailable")
             .font(.footnote)
+            .multilineTextAlignment(.center)
             .foregroundStyle(.secondary)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .background(Color(uiColor: .systemBackground), in: Capsule())
             .overlay(Capsule().strokeBorder(Color(uiColor: .separator), lineWidth: 0.5))
             .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
+            .padding(.horizontal, 24)
             .allowsHitTesting(false)
     }
 }
@@ -3269,6 +3316,29 @@ private struct SolidEyeShape: Shape {
 /// isaCloud: where the "Read up to here" line goes (see ChatView.readMarker)
 final class ReadMarker {
     var historyId: NSNumber?
+}
+
+/// isaCloud: which message glows after a jump (see ChatView.flashMessage()); observed by the band of every row
+final class JumpHighlight: ObservableObject {
+    @Published var historyId: NSNumber?
+    var generation = 0
+}
+
+/// isaCloud: a pink band across the row of the message a jump went to: it comes in quickly and fades out slowly (no animation with Reduce Motion)
+struct JumpHighlightBand: View {
+    @ObservedObject var highlight: JumpHighlight
+    let historyId: NSNumber?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        let isOn = historyId != nil && highlight.historyId == historyId
+        Color("isaCloudPink")
+            .opacity(isOn ? 0.25 : 0)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .allowsHitTesting(false)
+            .animation(reduceMotion ? nil : .easeInOut(duration: isOn ? 0.15 : 0.8), value: isOn)
+            .accessibilityHidden(true)
+    }
 }
 
 /// isaCloud: the latest scroll offset of the chat list, kept by reference so that scrolling does not redraw the chat (see ChatView.listOffset).
