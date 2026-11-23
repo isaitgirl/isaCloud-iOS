@@ -2,6 +2,12 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## Próximo build (não lançado)
+
+### Adicionado
+- **A mensagem de destino de um pulo brilha por um instante.** Depois do toque numa citação (ou de abrir a conversa por um resultado da busca), a linha da mensagem ganha uma faixa rosa (`isaCloudPink` a 25%) na largura toda, atrás do balão, quando a lista para nela (no fim de `scrollToSearchedMessage`, cerca de 0,7 s depois do toque, mesmo se a original já estava na tela): entra em 0,15 s, fica até 1,15 s e some em 0,8 s; sem animação com "Reduzir movimento". Cobre texto, foto, vídeo, GIF, figurinha e enquete, porque fica no `messageBuilder` do `ChatView.swift` (`JumpHighlightBand`, observando o `JumpHighlight`), sem mexer no fork; a linha "Lido até aqui" fica fora da faixa, e a abertura na primeira não lida não brilha. Um toque novo substitui o brilho anterior (contador `generation`). Igual ao que o Android e o Web já fazem.
+- **Citação sem vínculo com a original ganha um ícone e um aviso.** Quando a mensagem começa com uma citação mas não tem o id da original (resposta de um app sem XEP-0461, resposta antiga ou citação digitada à mão), a primeira citação mostra um `info.circle` pequeno no canto, na cor da barra; tocar nela abre, por 3 s, um balão nativo (popover) preso à própria citação com "Esta citação não está ligada à mensagem original" (texto novo, com tradução pt-BR), em vez de não fazer nada (a cápsula no topo do chat ficava discreta demais). O fork do ExyteChat ganhou os parâmetros `isLinked` e `unlinkedHint` no `onQuoteTap` (branch `feat/citacao-sem-vinculo`); no app, o aviso "Mensagem original indisponível" virou `QuoteNotice`, e um aviso novo não é escondido pelo temporizador do anterior.
+
 ## 0.0.1 (build 128) — 23/11/2026
 
 Enviado ao TestFlight às 11:54 (reply XEP-0461, fases 1 e 2; testado no `.dev` e conferido no Gajim).
