@@ -282,9 +282,9 @@ extern NSString* const kMessageTypeFiletransfer;
 -(void) setStickerForHistoryId:(NSNumber*) historyId;
 //isaCloud: YES if the outbound message with this messageid (our own id, the one sent in the stanza) was sent as a sticker
 -(BOOL) isStickerMessageId:(NSString*) messageId forAccount:(NSNumber*) accountID;
-//isaCloud: stores the id of the message a reply quotes (see the isacloud_quote_id column, migration 6 of +migrateISACloudDB:)
+//isaCloud: stores the id of the message a reply quotes, of any type (see the isacloud_quote_id column, migration 6 of +migrateISACloudDB:)
 -(void) setQuotedMessageIdForHistoryId:(NSNumber*) historyId quotedId:(NSString*) quotedId;
-//isaCloud: the id of the message quoted by our outbound message with this messageid (nil when it quotes nothing); used when sending and resending it
+//isaCloud: the id of the message quoted by our outbound message with this messageid, of any type (nil when it quotes nothing); used when sending and resending it
 -(NSString* _Nullable) quotedMessageIdForOutboundMessageId:(NSString*) messageId forAccount:(NSNumber*) accountID;
 //isaCloud: the mime type of our outbound file message with this messageid (filetransfer_info), nil if unknown; the sticker's file is found in the cache with it (XEP-0449)
 -(NSString* _Nullable) mimeTypeOfOutboundFiletransferMessageId:(NSString*) messageId forAccount:(NSNumber*) accountID;

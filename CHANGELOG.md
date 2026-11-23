@@ -2,6 +2,11 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## Próximo build (não lançado)
+
+### Adicionado
+- **Resposta no padrão XEP-0461, fase 1 (só protocolo; a tela não muda).** Toda resposta com id conhecido leva `<reply xmlns='urn:xmpp:reply:0'>` (o `id` é o `messageid` em 1:1 e o `stanza-id` em grupo e canal; o `to` é o autor da original, achado no banco, e sai sem `to` quando a original não está lá) e o `<fallback xmlns='urn:xmpp:fallback:0'>`, quando o corpo começa com a citação. O `end` é contado em pontos de código (`QuoteFormatting.replyFallbackEnd`), nunca em UTF-16 nem em caracteres visíveis. Resposta a foto, GIF ou figurinha continua levando `<isacloud-quote>`, com o mesmo id. Com OMEMO, os elementos ficam fora da criptografia, como o `isacloud-quote`. Leitura: `<reply>` tem precedência sobre `isacloud-quote`, ao vivo, MAM e carbons. A coluna `isacloud_quote_id` passa a guardar o id da mensagem respondida de qualquer tipo (sem migração nova). O disco anuncia `urn:xmpp:reply:0`. Não muda a exibição: a citação continua em texto, com a miniatura de sempre. Contrato em `docs/contrato-reply-xep0461.md`; testes em `QuoteFormattingTests` (os 4 casos da tabela 3.1 e os de corpo sem citação ou com citação no meio); pontes em `ReplyFormatting.swift`.
+
 ## 0.0.1 (build 127) — 23/11/2026
 
 Enviado ao TestFlight às 10:12 (C38: extensão de notificação morta com `0xdead10cc` no fim do prazo e "New Message?" com o app principal rodando; compilado no simulador e instalado no `.dev`, que não recebe push: a validar no TestFlight).

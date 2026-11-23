@@ -118,7 +118,7 @@ NS_ASSUME_NONNULL_BEGIN
  It returns an MLMessage object (corresponding to the sent message) on success, and nil on failure.
  */
 -(MLMessage* _Nullable) sendMessageAndAddToHistory:(NSString*) message havingType:(NSString*) messageType toContact:(MLContact*) contact isEncrypted:(BOOL) encrypted uploadInfo:(NSDictionary* _Nullable) uploadInfo NS_SWIFT_NAME(sendMessageAndAddToHistory(message:havingType:toContact:isEncrypted:uploadInfo:));
-//isaCloud: the same, for a message that replies to (quotes) a photo, a GIF or a sticker: `quotedMessageId` is the id of that message (messageid in 1:1, stanzaid in groups and channels), see xmpp sendMessage:
+//isaCloud: the same, for a message that replies to (quotes) any message: `quotedMessageId` is the id of that message (messageid in 1:1, stanzaid in groups and channels), see xmpp sendMessage:
 -(MLMessage* _Nullable) sendMessageAndAddToHistory:(NSString*) message havingType:(NSString*) messageType toContact:(MLContact*) contact isEncrypted:(BOOL) encrypted uploadInfo:(NSDictionary* _Nullable) uploadInfo quotedMessageId:(NSString* _Nullable) quotedMessageId NS_SWIFT_NAME(sendMessageAndAddToHistory(message:havingType:toContact:isEncrypted:uploadInfo:quotedMessageId:));
 /**
  isaCloud: sends a poll (urn:fluux:poll:0) to a group or channel and returns the message (nil on failure). `pollJSON` is the JSON of the poll (PollDefinition,

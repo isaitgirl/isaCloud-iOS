@@ -4317,10 +4317,28 @@ static NSLock* isaCloudTimeoutsLock(void)
         }
     }
 
-    //isaCloud: a reply to a photo, a GIF or a sticker carries the id of the quoted message (urn:isacloud:quote:0). Only the id goes in the stanza,
-    //never content, file name or key. Stored with the message, so resends carry it too. The body keeps the quote as text for the other clients.
+    //isaCloud: a reply carries the id of the quoted message (XEP-0461, urn:xmpp:reply:0) with its fallback (XEP-0428) when the body starts with
+    //the quote; see ISACloudReply (ReplyFormatting.swift) and docs/contrato-reply-xep0461.md. Only ids and positions go in the stanza, never
+    //content. Stored with the message, so resends carry it too. The body keeps the quote as text for the other clients.
     NSString* quotedMessageId = messageId ? [[DataLayer sharedInstance] quotedMessageIdForOutboundMessageId:messageId forAccount:self.accountID] : nil;
-    if(quotedMessageId != nil)
+    NSNumber* replyFallbackEnd = quotedMessageId != nil ? [ISACloudReply fallbackEndForBody:message] : nil;
+    if(quotedMessageId != nil && replyFallbackEnd != nil)
+    {
+        NSMutableDictionary* replyAttributes = [NSMutableDictionary dictionaryWithObject:quotedMessageId forKey:@"id"];
+        NSString* replyTo = [ISACloudReply replyToForQuotedId:quotedMessageId inChat:contact.contactJid forAccount:self.accountID];
+        if(replyTo != nil)
+            [replyAttributes setObject:replyTo forKey:@"to"];
+        [messageNode addChildNode:[[MLXMLNode alloc] initWithElement:@"reply" andNamespace:@"urn:xmpp:reply:0" withAttributes:replyAttributes andChildren:@[] andData:nil]];
+        [messageNode addChildNode:[[MLXMLNode alloc] initWithElement:@"fallback" andNamespace:@"urn:xmpp:fallback:0" withAttributes:@{
+            @"for": @"urn:xmpp:reply:0",
+        } andChildren:@[[[MLXMLNode alloc] initWithElement:@"body" withAttributes:@{
+            @"start": @"0",
+            @"end": [replyFallbackEnd stringValue],
+        } andChildren:@[] andData:nil]] andData:nil]];
+    }
+    //isaCloud: a reply to a photo, a GIF or a sticker also carries the element urn:isacloud:quote:0 with the same id, for the apps that do not
+    //read urn:xmpp:reply:0 yet (until they do: docs/contrato-reply-xep0461.md, section 6)
+    if(quotedMessageId != nil && [ISACloudReply quotesThumbnailForQuotedId:quotedMessageId inChat:contact.contactJid forAccount:self.accountID])
     {
         MLXMLNode* quoteNode = [[MLXMLNode alloc] initWithElement:@"isacloud-quote" andNamespace:@"urn:isacloud:quote:0"];
         [quoteNode.attributes setObject:quotedMessageId forKey:@"id"];

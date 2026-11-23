@@ -2755,17 +2755,14 @@ class ChatViewMessage: ExyteChat.Message {
         }
         return QuoteFormatting.attachmentLabel(.file(name: (fileInfo.filename as String?) ?? ""))
     }
-    /// isaCloud: the id a reply sends when it quotes this message (element urn:isacloud:quote:0): only a photo, a GIF or a sticker,
-    /// and only with its id known (see QuoteFormatting.quotedMessageId). Nil for everything else: the quote is text only.
+    /// isaCloud: the id a reply sends when it quotes this message (element urn:xmpp:reply:0, see ReplyFormatting.swift): any message that is
+    /// not retracted and whose id is known (see QuoteFormatting.quotedMessageId). Nil otherwise: the quote is text only.
     var quotableMessageId: String? {
         let mlMessage = innerMessage.obj
-        guard !mlMessage.retracted, mlMessage.messageType == kMessageTypeFiletransfer, let fileInfo = fileInfo else {
+        guard !mlMessage.retracted else {
             return nil
         }
-        //isaCloud: the same nullable reads as replyQuoteText (see the crash of 29/10/2026)
-        let isGif = (fileInfo.mimeType as String?) == "image/gif"
-        let isMedia = mlMessage.isSticker || isGif || (fileInfo.isImage as Bool?) == true
-        return QuoteFormatting.quotedMessageId(isMedia: isMedia, isMuc: mlMessage.isMuc, messageId: mlMessage.messageId, stanzaId: mlMessage.stanzaId)
+        return QuoteFormatting.quotedMessageId(isMuc: mlMessage.isMuc, messageId: mlMessage.messageId, stanzaId: mlMessage.stanzaId)
     }
     /// isaCloud: the label line of a forwarded message, in bold (the text colour in our own bubbles)
     private func forwardLabelText(_ label: String) -> AttributedString {

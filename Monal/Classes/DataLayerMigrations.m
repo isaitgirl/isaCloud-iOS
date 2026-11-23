@@ -1299,9 +1299,9 @@
             [db executeNonQuery:@"ALTER TABLE message_history ADD COLUMN isacloud_sticker INTEGER NOT NULL DEFAULT 0;"];
     }];
 
-    //isaCloud: a reply that quotes a photo, a GIF or a sticker carries the id of the quoted message (element urn:isacloud:quote:0, see
-    //xmpp sendMessage: and MLMessageProcessor), so that the quote can show a thumbnail. Stored on the reply: inbound the id received,
-    //outbound the id to send with it (resends too). NULL when there is no such quote. Harmless to run again: the column is only added if it is missing.
+    //isaCloud: a reply carries the id of the message it quotes, of any type (element urn:xmpp:reply:0, or urn:isacloud:quote:0 for a photo, a GIF
+    //or a sticker, so that the quote can show a thumbnail; see xmpp sendMessage: and MLMessageProcessor). Stored on the reply: inbound the id
+    //received, outbound the id to send with it (resends too). NULL when there is no such quote. Harmless to run again: the column is only added if it is missing.
     [self updateISACloudDB:db toVersion:6 withBlock:^{
         if(![[db executeScalar:@"SELECT count(*) FROM pragma_table_info('message_history') WHERE name='isacloud_quote_id';"] boolValue])
             [db executeNonQuery:@"ALTER TABLE message_history ADD COLUMN isacloud_quote_id TEXT;"];

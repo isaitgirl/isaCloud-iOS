@@ -10,6 +10,11 @@ O que está neste arquivo é o que aparece para o usuário na tela de **Novidade
 - Nada de texto sério ou técnico: sem jargão (OMEMO, SASL, WAL, 0xdead10cc, background task, thread), sem número de crash (C20), sem "passamos a registrar…". Detalhe técnico fica no [CHANGELOG.md](CHANGELOG.md).
 - Se a correção for interna e a pessoa não percebe, escreva algo leve como "🛠️ Mais estabilidade por dentro, para o app ficar redondinho."
 
+## Próximo build
+
+### Novidades
+- 💬 Suas respostas agora chegam certinhas também para quem usa outros apps de mensagem.
+
 ## Build 127 · 23/11/2026
 
 ### Correções
