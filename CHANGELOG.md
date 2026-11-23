@@ -2,6 +2,14 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 127) — 23/11/2026
+
+Enviado ao TestFlight às 10:12 (C38: extensão de notificação morta com `0xdead10cc` no fim do prazo e "New Message?" com o app principal rodando; compilado no simulador e instalado no `.dev`, que não recebe push: a validar no TestFlight).
+
+### Corrigido
+- **C38: extensão de notificação morta com `0xdead10cc` e "New Message?" (23/11/2026 07:47:44, build 126).** A conta do xmpp.social.br ficou com a escrita no banco aberta esperando a confirmação de uma escrita na rede (`freezeSendQueue` dentro de `createTransaction`, `sendQueue` em `isaCloudWaitForWriteCompletion`), e no fim do prazo o `serviceExtensionTimeWillExpire` travou ao entregar o conteúdo, porque a fila do UserNotifications estava presa numa remoção de aviso de sync error. Agora: na extensão a espera da confirmação de escrita é de 5 s (15 s no app); a extensão não chama mais o `updateSyncErrors` (os avisos de sync error estão desligados, `ISACLOUD_SHOW_SYNC_ERROR_NOTIFICATIONS 0`, e o app principal continua removendo os antigos); e o `serviceExtensionTimeWillExpire` entrega o conteúdo noutra thread e espera no máximo 1 s antes do `_exit`, que solta banco e lock.
+- **"New Message?" com o app principal rodando (23/11/2026 08:08:33, sem crash).** Com o app acordado em segundo plano, a extensão alimentava o handler e dava `_exit` na própria fila XPC; um segundo push chegou 5 ms depois, ficou atrás dessa fila e morreu sem resposta. Agora, nesse caminho e no IPC `Monal.disconnectAll`, a extensão sai da fila XPC e só se encerra 0,5 s depois, se não chegou push novo; se chegou, alimenta também esse (app ainda rodando) ou trata como primeiro push (app saiu). Registro em `docs/analises-crashes.md` (C38).
+
 ## 0.0.1 (build 126) — 22/11/2026
 
 Enviado ao TestFlight às 20:11 (enquetes: correções 2 a 5 de `docs/correcoes-enquetes-web-ios.md`, PR 87; C37, reação em canal sem occupant-id próprio, PR 88; testado no `.dev`).

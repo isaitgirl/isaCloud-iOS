@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "build": 127,
+      "date": "23/11/2026",
+      "sections": [
+        {
+          "title": "Correções",
+          "items": [
+            "🔔 Notificações mais caprichadas: nada de aviso estranho de \"New Message?\" quando o app acorda para buscar mensagens."
+          ]
+        }
+      ]
+    },
+    {
       "build": 126,
       "date": "22/11/2026",
       "sections": [

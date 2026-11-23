@@ -2530,6 +2530,14 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
 
 +(void) updateSyncErrorsWithDeleteOnly:(BOOL) removeOnly andWaitForCompletion:(BOOL) waitForCompletion
 {
+    //isaCloud: C38, with the sync error notifications off the notification extension has nothing to post, and the removal calls
+    //to UserNotifications made at the end of the push deadline jammed the UserNotifications queue in C38 (the extension could not
+    //deliver the content). The main app keeps removing old sync error notifications, so this return only affects the extension.
+    if(!ISACLOUD_SHOW_SYNC_ERROR_NOTIFICATIONS && [self isAppExtension])
+    {
+        DDLogDebug(@"isaCloud C38: sync error notifications are off, skipping updateSyncErrors in the notification extension");
+        return;
+    }
     monal_void_block_t updateSyncErrors = ^{
         @synchronized(self) {
             NSMutableDictionary* syncErrorsDisplayed = [NSMutableDictionary dictionaryWithDictionary:[[HelperTools defaultsDB] objectForKey:@"syncErrorsDisplayed"]];

@@ -229,6 +229,31 @@ static void isaCloudTerminateAppex(void)
         ;
 }
 
+//isaCloud C38: called after the handlers were fed while the main app is running: kill the appex only once no push is pending anymore,
+//instead of inside the XPC queue of the push that is still being handled (a push arriving 5 ms later got stuck behind that queue)
+-(void) isaCloudScheduleKillAfterMainAppHandoff
+{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.5 * NSEC_PER_SEC), dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        if(![self checkForNewPushes])
+            [self killAppex];
+        else
+        {
+            DDLogInfo(@"isaCloud C38: push arrived while handing off to the main app, not killing the appex yet");
+            if([MLProcessLock checkRemoteRunning:@"MainApp"])
+            {
+                [self disconnectAndFeedAllWaitingHandlersWithoutKilling];
+                [self isaCloudScheduleKillAfterMainAppHandoff];
+            }
+            else
+            {
+                //main app is gone: handle the pending push like the first one (connect our accounts), see pushExpired
+                [self checkAndUpdateFirstPush:YES];
+                [self incomingPush:nil];
+            }
+        }
+    });
+}
+
 -(void) incomingPush:(void (^)(UNNotificationContent* _Nullable)) contentHandler
 {
     //we set the contentHandler to nil if the push was alreay handled but we want to retrigger the first push logic in here
@@ -259,8 +284,10 @@ static void isaCloudTerminateAppex(void)
             {
                 DDLogInfo(@"NOT connecting accounts, main app already running in foreground, terminating immediately instead");
                 [HelperTools flushLogsWithTimeout:0.1];
-                [self disconnectAndFeedAllWaitingHandlers];
-                [self killAppex];
+                //isaCloud C38: do not kill inside the XPC queue of this push (see isaCloudScheduleKillAfterMainAppHandoff)
+                [self disconnectAndFeedAllWaitingHandlersWithoutKilling];
+                [self isaCloudScheduleKillAfterMainAppHandoff];
+                return;
             }
             else
                 DDLogDebug(@"Main app not in foreground anymore, handling first push now");
@@ -375,8 +402,9 @@ static void isaCloudTerminateAppex(void)
     if([message[@"name"] isEqualToString:@"Monal.disconnectAll"])
     {
         DDLogInfo(@"Got disconnectAll IPC message");
-        [self disconnectAndFeedAllWaitingHandlers];
-        [self killAppex];
+        //isaCloud C38: do not kill inside the XPC queue of this message (see isaCloudScheduleKillAfterMainAppHandoff)
+        [self disconnectAndFeedAllWaitingHandlersWithoutKilling];
+        [self isaCloudScheduleKillAfterMainAppHandoff];
     }
     else if([message[@"name"] isEqualToString:@"Monal.connectIfNecessary"])
     {
@@ -631,9 +659,6 @@ static BOOL warnUnclean = NO;
 
 -(void) serviceExtensionTimeWillExpire
 {
-    @synchronized(handlers) {
-        DDLogError(@"notification handler expired, that should never happen!");
-        
 /*
 #ifdef DEBUG
         UNMutableNotificationContent* errorContent = [UNMutableNotificationContent new];
@@ -656,46 +681,59 @@ static BOOL warnUnclean = NO;
         //         but that's not different to us committing suicide like in the old code commented below
         usleep(1800000);
 */
-
+    //isaCloud C38: the feeding of the expired handlers now runs in a background queue, under the handlers lock, and this thread waits
+    //for it at most 1 s. Before, it ran here with the lock held: when the UserNotifications queue was blocked by another XPC call, the
+    //handler call never returned, isaCloudTerminateAppex() was never reached and iOS killed the appex holding the db and the process lock
+    //(0xdead10cc, 23/11/2026 07:47:44). The lock is taken inside the block, not while waiting for it.
+    dispatch_semaphore_t isaCloudFeedingDone = dispatch_semaphore_create(0);
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        @synchronized(handlers) {
+            DDLogError(@"notification handler expired, that should never happen!");
 #ifdef DEBUG
-        if([handlers count] > 0)
-        {
-            //we don't want two error notifications for the user
-            [NotificationService setAppexCleanShutdownStatus:YES];
-            
-            //we feed all handlers, these shouldn't be silenced already, because we wouldn't see this expiration
-            for(void (^_handler)(UNNotificationContent* _Nonnull) in handlers)
+            if([handlers count] > 0)
             {
-                DDLogError(@"Feeding handler with error notification: %@", _handler);
-                UNMutableNotificationContent* errorContent = [UNMutableNotificationContent new];
-                errorContent.title = NSLocalizedString(@"Unexpected appex expiration", @"");
-                errorContent.body = NSLocalizedString(@"This should never happen, please contact the developers and provide a logfile!", @"");
-                errorContent.sound = [UNNotificationSound defaultSound];
-                _handler(errorContent);
+                //we don't want two error notifications for the user
+                [NotificationService setAppexCleanShutdownStatus:YES];
+            
+                //we feed all handlers, these shouldn't be silenced already, because we wouldn't see this expiration
+                for(void (^_handler)(UNNotificationContent* _Nonnull) in handlers)
+                {
+                    DDLogError(@"Feeding handler with error notification: %@", _handler);
+                    UNMutableNotificationContent* errorContent = [UNMutableNotificationContent new];
+                    errorContent.title = NSLocalizedString(@"Unexpected appex expiration", @"");
+                    errorContent.body = NSLocalizedString(@"This should never happen, please contact the developers and provide a logfile!", @"");
+                    errorContent.sound = [UNNotificationSound defaultSound];
+                    _handler(errorContent);
+                }
             }
-        }
-        else
-            [NotificationService setAppexCleanShutdownStatus:NO];
+            else
+                [NotificationService setAppexCleanShutdownStatus:NO];
 #else
-        if([handlers count] > 0)
-        {
-            //we don't want two error notifications for the user
-            [NotificationService setAppexCleanShutdownStatus:YES];
-            
-            //we feed all handlers, these shouldn't be silenced already, because we wouldn't see this expiration
-            for(void (^_handler)(UNNotificationContent* _Nonnull) in handlers)
+            if([handlers count] > 0)
             {
-                DDLogError(@"Feeding handler with silent notification: %@", _handler);
-                //isaCloud: passive placeholder instead of empty content (removed on the next push or when the app opens)
-                _handler([HelperTools isaCloudPushPlaceholderContent]);
+                //we don't want two error notifications for the user
+                [NotificationService setAppexCleanShutdownStatus:YES];
+            
+                //we feed all handlers, these shouldn't be silenced already, because we wouldn't see this expiration
+                for(void (^_handler)(UNNotificationContent* _Nonnull) in handlers)
+                {
+                    DDLogError(@"Feeding handler with silent notification: %@", _handler);
+                    //isaCloud: passive placeholder instead of empty content (removed on the next push or when the app opens)
+                    _handler([HelperTools isaCloudPushPlaceholderContent]);
+                }
             }
-        }
-        else
-            [NotificationService setAppexCleanShutdownStatus:NO];
+            else
+                [NotificationService setAppexCleanShutdownStatus:NO];
 #endif
+        }
+        dispatch_semaphore_signal(isaCloudFeedingDone);
+    });
+    //isaCloud C38: if the feeding does not return in time we terminate anyway, the handlers are fed or we die either way
+    if(dispatch_semaphore_wait(isaCloudFeedingDone, dispatch_time(DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC)) != 0)
+        DDLogError(@"isaCloud C38: feeding the expired handlers did not return within 1 s, terminating anyway");
 
-        DDLogInfo(@"Committing suicide...");
-        isaCloudTerminateAppex();
+    DDLogInfo(@"Committing suicide...");
+    isaCloudTerminateAppex();
 
 /*
         //proxy to push singleton
@@ -705,7 +743,6 @@ static BOOL warnUnclean = NO;
         DDLogDebug(@"pushExpired proxy completed");
         [HelperTools flushLogsWithTimeout:0.1];
 */
-    }
 }
 
 @end

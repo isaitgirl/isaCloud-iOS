@@ -286,9 +286,13 @@
 //force-cancelled the connection, and the disconnect, the freeze and the release of the process lock waited behind it until iOS
 //suspended the app (0xdead10cc). Returning without the completion is safe: it still runs later (or never) and only touches
 //the condition, _writing and the stream events, which nobody waits for anymore.
+//isaCloud: C38, the notification extension has only ~25 s for the whole push and this wait runs with the database transaction open,
+//so there the first deadline is 5 s (15 s in the app). The force-cancel wait after it stays 2 s.
 static void isaCloudWaitForWriteCompletion(IsaCloudWriteCondition* condition, MLSharedStreamState* shared_state)
 {
-    NSDate* deadline = [NSDate dateWithTimeIntervalSinceNow:15.0];
+    //isaCloud: C38, shorter deadline in the notification extension (see above)
+    NSTimeInterval firstDeadline = [HelperTools isAppExtension] ? 5.0 : 15.0;
+    NSDate* deadline = [NSDate dateWithTimeIntervalSinceNow:firstDeadline];
     while(!condition.completed && !condition.abandoned)
         if(![condition waitUntilDate:deadline])
             break;
@@ -304,7 +308,8 @@ static void isaCloudWaitForWriteCompletion(IsaCloudWriteCondition* condition, ML
     @synchronized(shared_state) {
         connection = shared_state.connection;
     }
-    DDLogWarn(@"isaCloud C21: no write completion after 15 seconds, force-cancelling connection...");
+    //isaCloud: C38, log the real deadline (5 s in the extension, 15 s in the app)
+    DDLogWarn(@"isaCloud C21: no write completion after %.0f seconds, force-cancelling connection...", firstDeadline);
     nw_connection_force_cancel(connection);
     //the cancel completes all pending sends with an error: give that completion a short time, but never wait forever
     deadline = [NSDate dateWithTimeIntervalSinceNow:2.0];
