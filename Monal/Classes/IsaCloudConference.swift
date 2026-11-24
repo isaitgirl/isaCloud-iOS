@@ -3,11 +3,13 @@
 //  Monal
 //
 //  isaCloud: video conferences (Galene, through the meet-api at meet.isacloud.cc). The app asks the meet-api for a room and
-//  puts the room's public link in the chat. The host link (hostURL) is a credential: it is only kept in the keychain of this
-//  device, and is never logged or put in a message.
+//  puts the room's public link in the chat. The host link (hostURL) is a credential: it is never logged and never sent. It is
+//  kept in the keychain of this device and, since 24/11/2026, also in a local note in the notes to self of the account (only
+//  on this device, see IsaCloudConferenceNote).
 //
 
 import Foundation
+import UIKit
 import monalxmpp
 import SAMKeychain
 
@@ -307,6 +309,54 @@ enum IsaCloudConferenceStore {
             DispatchQueue.main.async {
                 NotificationCenter.default.post(name: changedNotification, object: nil)
             }
+        }
+    }
+}
+
+/// isaCloud: the local note with the host link of a new conference, in the notes to self of the account. It is only written to
+/// the database of this device: it is never sent, and neither its text nor the link is logged.
+enum IsaCloudConferenceNote {
+    /// writes one note for the room, as an unread incoming message (it counts and moves the notes to the top), without banner
+    /// and without sound; the account's notes are unarchived by the database, a muted chat stays muted
+    /// true only when the note was written
+    @discardableResult
+    static func addHostNote(room: IsaCloudConferenceRoom, account: xmpp) async -> Bool {
+        let ownJid = account.connectionProperties.identity.jid
+        guard !ownJid.isEmpty else {
+            return false
+        }
+        let accountID = account.accountID
+        let text = String(format: NSLocalizedString("This is the link to access your new conference:\n%@", comment: "local note in the notes to self when a video conference is created, with the host link"), room.hostURL.absoluteString)
+        let historyId: NSNumber? = await Task.detached(priority: .userInitiated) {
+            DataLayer.sharedInstance().isaCloudAddLocalUnreadNote(text, toSelfChat: ownJid, forAccount: accountID)
+        }.value
+        guard let historyId else {
+            return false
+        }
+        guard let message = MLMessage.createMessages(fromHistoryIDs: [historyId]).first else {
+            return false
+        }
+        let contact = MLContact.createContact(fromJid: ownJid, andAccountID: accountID)
+        //the same notice as a received message; showAlert is NO, so the notification manager shows nothing and plays no sound
+        MLNotificationQueue.current().post(
+            name: Notification.Name(kMonalNewMessageNotice),
+            object: account,
+            userInfo: [
+                "message": message,
+                "contact": contact,
+                "showAlert": false
+            ]
+        )
+        MLNotificationQueue.current().post(name: Notification.Name(kMonalUpdateUnread), object: nil)
+        return true
+    }
+
+    /// isaCloud: opens the notes to self of the account (its own chat), from the notice after a conference link is sent
+    static func openNotesToSelf(account: xmpp) {
+        let ownJid = account.connectionProperties.identity.jid
+        let contact = MLContact.createContact(fromJid: ownJid, andAccountID: account.accountID)
+        DispatchQueue.main.async {
+            (UIApplication.shared.delegate as? MonalAppDelegate)?.activeChats?.presentChat(with: contact)
         }
     }
 }

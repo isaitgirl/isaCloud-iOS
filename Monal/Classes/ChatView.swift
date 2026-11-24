@@ -243,6 +243,8 @@ struct ChatView: View {
     @State private var pollToClose: MLMessage? = nil
     @State private var showClosePollDialog = false
     @State private var creatingConference = false      //isaCloud: a room is being created; a second tap is ignored until it answers
+    //isaCloud: the public link of a conference whose host note was written here; once it is sent, a notice offers the notes to self
+    @State private var conferenceLinkAwaitingSend: String? = nil
     @State private var showFileImporter = false
     @State private var editSaveClosure: ((String) -> Void)?
     @State private var isTyping = false
@@ -1171,7 +1173,8 @@ struct ChatView: View {
     }
 
     /// isaCloud: creates a conference room at the meet-api, keeps the host link on this device and puts the public link in the
-    /// field (not sent: the person reviews and sends it). A failure shows the alert of this view.
+    /// field (not sent: the person reviews and sends it). It also writes a local note with the host link in the notes to self
+    /// of the account (only on this device, unread, never sent). A failure shows the alert of this view.
     private func createConferenceFromInputBar() {
         guard !creatingConference else {
             return
@@ -1185,9 +1188,14 @@ struct ChatView: View {
             do {
                 let room = try await IsaCloudConferenceApi.createRoom(hostName: IsaCloudConference.hostName(for: hostAccount))
                 IsaCloudConferenceStore.save(roomID: room.roomID, hostURL: room.hostURL, hostKey: room.hostKey, expiresAt: room.expiresAt)
+                let noteWritten = await IsaCloudConferenceNote.addHostNote(room: room, account: hostAccount)
                 let link = String(format: NSLocalizedString("Access the video conference via the link: %@", comment: "text put in the field when a video conference is created, with its public link"), room.roomURL.absoluteString)
                 let currentText = inputModel.text
                 inputModel.setText(currentText.isEmpty ? link : currentText + "\n" + link)
+                //isaCloud: the notice after sending points to the note, unless this chat is the notes to self already
+                if noteWritten && !contact.obj.isSelf {
+                    conferenceLinkAwaitingSend = room.roomURL.absoluteString
+                }
             } catch {
                 alertPrompt = AlertPrompt(title: Text("Could not create the conference. Please try again."))
             }
@@ -1392,6 +1400,12 @@ struct ChatView: View {
         }
         if !draft.text.isEmpty {
             sendTextAtOnce(draft.text, quotedMessageId: draft.quotedMessageId, plain: plain)
+            //isaCloud: the conference link is sent: a notice for 5 seconds, with a button to the notes to self (once per room)
+            if let pending = conferenceLinkAwaitingSend, draft.text.contains(pending) {
+                conferenceLinkAwaitingSend = nil
+                let ownAccount = account
+                inputModel.showNotice(NSLocalizedString("Host link sent to yourself!", comment: "notice after the conference link is sent; the host link is in the notes to self"), duration: 5, actionTitle: NSLocalizedString("See", comment: "button of the notice after the conference link is sent: opens the notes to self"), action: { IsaCloudConferenceNote.openNotesToSelf(account: ownAccount) })
+            }
         }
         sendChatState(isTyping: false)
         // Clear the draft to show the newly sent message in active chats

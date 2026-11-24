@@ -74,7 +74,8 @@ struct ChatInputBar: View {
             if model.isUploading || model.preparing != nil {
                 SendingHint(preparing: model.preparing).dynamicTypeSize(sendingHintTypeSize)
             } else if let notice = model.notice {
-                SendingHint(notice: notice, isError: model.noticeIsError).dynamicTypeSize(sendingHintTypeSize)
+                SendingHint(notice: notice, isError: model.noticeIsError, actionTitle: model.noticeActionTitle, onAction: { model.runNoticeAction() })
+                    .dynamicTypeSize(sendingHintTypeSize)
                     .transition(.opacity)
             }
         }
@@ -443,12 +444,25 @@ struct ChatInputBar: View {
 private struct SendingHint: View {
     /// how far above the top of the bar the capsule floats (its height plus a gap), scaled with the text size
     @ScaledMetric private var lift: CGFloat = 38
+    /// isaCloud: the gap between the bottom of the notice with a button and the top of the bar (that notice may take more lines,
+    /// so it is placed by its bottom and grows upwards, never over the input)
+    @ScaledMetric private var actionGap: CGFloat = 10
     /// isaCloud: a short notice (ChatInputModel.showNotice) instead of "Sending...": a check mark in place of the spinner
     var notice: String? = nil
     /// isaCloud: the notice is a failure: an exclamation mark and red text, and it may take two lines on a narrow screen
     var isError: Bool = false
+    /// isaCloud: a button at the end of the notice (its title), and what it does; the notice then takes taps
+    var actionTitle: String? = nil
+    var onAction: (() -> Void)? = nil
     /// isaCloud: a photo is being resized before the upload: "Preparing photo" (or "Preparing N of M") in place of "Sending..."
     var preparing: ChatInputPreparing? = nil
+
+    private var hasAction: Bool { notice != nil && !isError && actionTitle != nil }
+
+    /// isaCloud: a capsule; the notice with a button may take two lines, so it is a rounded rectangle
+    private var shape: AnyShape {
+        hasAction ? AnyShape(RoundedRectangle(cornerRadius: 18, style: .continuous)) : AnyShape(Capsule())
+    }
 
     var body: some View {
         HStack(spacing: 8) {
@@ -462,12 +476,28 @@ private struct SendingHint: View {
                         .foregroundStyle(Color(uiColor: .systemRed))
                         .fixedSize(horizontal: false, vertical: true)
                 } else {
+                    //isaCloud: a notice with a button is bigger (a larger font, darker text, more padding) so it is easy to read and to tap
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .font(hasAction ? .body : .footnote)
+                        .foregroundStyle(hasAction ? Color("isaCloudPink") : .secondary)
                     Text(notice)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .font(hasAction ? .subheadline : .footnote)
+                        .foregroundStyle(hasAction ? .primary : .secondary)
+                        //isaCloud: the notice with a button wraps to more lines instead of being cut with "..."
+                        .fixedSize(horizontal: false, vertical: hasAction)
+                        .multilineTextAlignment(.leading)
+                    if let actionTitle {
+                        Button(action: { onAction?() }) {
+                            Text(actionTitle)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color("isaCloudPink"))
+                                .fixedSize()    //isaCloud: "Ver" never shrinks; the notice text wraps instead
+                                .padding(.vertical, 4)
+                                .padding(.leading, 8)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             } else {
                 ProgressView()
@@ -487,12 +517,16 @@ private struct SendingHint: View {
                 }
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(Color(uiColor: .systemBackground), in: Capsule())
-        .overlay(Capsule().strokeBorder(Color(uiColor: .separator), lineWidth: 0.5))
-        .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
-        .offset(y: -lift)
-        .allowsHitTesting(false)
+        .padding(.horizontal, hasAction ? 18 : 12)
+        .padding(.vertical, hasAction ? 10 : 6)
+        .background(Color(uiColor: .systemBackground), in: shape)
+        .overlay(shape.stroke(Color(uiColor: .separator), lineWidth: 0.5))
+        .shadow(color: .black.opacity(hasAction ? 0.18 : 0.12), radius: hasAction ? 10 : 6, y: 2)
+        //isaCloud: the notice with a button keeps a margin from the screen edges, and its bottom sits above the bar
+        .padding(.horizontal, hasAction ? 16 : 0)
+        .alignmentGuide(.top) { d in hasAction ? d[.bottom] + actionGap : d[.top] }
+        .offset(y: hasAction ? 0 : -lift)
+        //isaCloud: a notice with a button takes taps; the others let the taps go through to the chat as before
+        .allowsHitTesting(actionTitle != nil)
     }
 }

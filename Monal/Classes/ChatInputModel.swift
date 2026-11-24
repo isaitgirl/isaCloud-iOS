@@ -79,6 +79,9 @@ final class ChatInputModel: ObservableObject {
     @Published private(set) var notice: String?
     /// isaCloud: the notice is an error (shown in red with an exclamation mark)
     @Published private(set) var noticeIsError = false
+    /// isaCloud: the title of a button at the end of the notice (nil when it has none), and what the button does
+    @Published private(set) var noticeActionTitle: String?
+    private(set) var noticeAction: (() -> Void)?
     private var noticeToken = 0
     @Published private(set) var reply: ChatInputReply?
     /// isaCloud: the photo, GIF or sticker being quoted in the text (see quote), and the quote line it came with: the id is sent only
@@ -229,12 +232,15 @@ final class ChatInputModel: ObservableObject {
 
     /// isaCloud: shows `text` above the input for `duration` seconds (a newer notice replaces an older one and gets its full time);
     /// `isError` shows it in red as a failure
-    func showNotice(_ text: String, duration: TimeInterval = 2, isError: Bool = false) {
+    /// isaCloud: `actionTitle` and `action` add a button at the end of the notice (runNoticeAction runs it and hides the notice)
+    func showNotice(_ text: String, duration: TimeInterval = 2, isError: Bool = false, actionTitle: String? = nil, action: (() -> Void)? = nil) {
         noticeToken += 1
         let token = noticeToken
         withAnimation(.easeIn(duration: 0.15)) {
             notice = text
             noticeIsError = isError
+            noticeActionTitle = actionTitle
+            noticeAction = action
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
             guard let self, self.noticeToken == token else {
@@ -243,8 +249,23 @@ final class ChatInputModel: ObservableObject {
             withAnimation(.easeOut(duration: 0.2)) {
                 self.notice = nil
                 self.noticeIsError = false
+                self.noticeActionTitle = nil
+                self.noticeAction = nil
             }
         }
+    }
+
+    /// isaCloud: the button of the notice: the notice goes away at once, then the action runs
+    func runNoticeAction() {
+        let action = noticeAction
+        noticeToken += 1
+        withAnimation(.easeOut(duration: 0.2)) {
+            notice = nil
+            noticeIsError = false
+            noticeActionTitle = nil
+            noticeAction = nil
+        }
+        action?()
     }
 
     /// starts a reply by quoting a message: the quote line goes in front of the text, and the answer is written after it
