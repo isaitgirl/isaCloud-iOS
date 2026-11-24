@@ -167,6 +167,27 @@ extern NSString* const kMessageTypeFiletransfer;
 -(NSInteger) mamCatchupDaysForMuc:(NSString*) room andAccount:(NSNumber*) accountID;
 -(void) setMamCatchupDays:(NSInteger) days forMuc:(NSString*) room andAccount:(NSNumber*) accountID;
 
+//isaCloud muc-light: raw per room setting of a light channel: nil = automatic, @1 = forced on, @0 = forced off (migration 10 of +migrateISACloudDB:)
+-(NSNumber* _Nullable) mucLightSettingForMuc:(NSString*) room andAccount:(NSNumber*) accountID;
+//isaCloud muc-light: sets the raw per room setting, nil = automatic
+-(void) setMucLightSetting:(NSNumber* _Nullable) value forMuc:(NSString*) room andAccount:(NSNumber*) accountID;
+//isaCloud muc-light: effective value: an explicit setting wins, automatic means YES only for a room of type channel
+-(BOOL) isMucLight:(NSString*) room forAccount:(NSNumber*) accountID;
+//isaCloud muc-light: start of the current gap (the app was inactive with light rooms since then), nil if there is no gap
+-(NSDate* _Nullable) mucLightGapStartForAccount:(NSNumber*) accountID;
+//isaCloud muc-light: sets the start of the gap, nil clears it
+-(void) setMucLightGapStart:(NSDate* _Nullable) date forAccount:(NSNumber*) accountID;
+//isaCloud muc-light: starts a gap now, unless there already is one (keeps the older start)
+//isaCloud muc-light: the highest history id of this chat, nil if it has no messages
+-(NSNumber* _Nullable) maxHistoryIdForContact:(NSString*) buddy forAccount:(NSNumber*) accountID;
+/**
+ isaCloud muc-light: after a gap fill from the archive, moves the live messages of this chat that arrived during the gap (ids <= h0 with a
+ timestamp >= gapStart, later than some message fetched by the fill) to new history ids at the end, in timestamp order.
+ Copies every column (isaCloud ones too), moves filetransfer_info and reactions, updates the search index and deletes the old rows.
+ All in ONE write transaction. Returns an array of @[oldHistoryId, newHistoryId] pairs, oldest first (empty if nothing had to move).
+ */
+-(NSArray<NSArray<NSNumber*>*>*) isaCloudMoveLiveMessagesAfterGapFillInChat:(NSString*) buddy forAccount:(NSNumber*) accountID gapStart:(NSDate*) gapStart maxHistoryIdBeforeFill:(NSNumber*) h0;
+
 /**
  Calls with YES if contact  has already been added to the database for this account
  */
