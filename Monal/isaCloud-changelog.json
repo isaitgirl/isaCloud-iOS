@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "build": 130,
+      "date": "24/11/2026",
+      "sections": [
+        {
+          "title": "Novidades",
+          "items": [
+            "🎥 Criou uma conferência? O link de anfitrião fica guardadinho nas suas notas, e um toque em \"Ver\" te leva direto até ele!"
+          ]
+        }
+      ]
+    },
+    {
       "build": 129,
       "date": "23/11/2026",
       "sections": [
