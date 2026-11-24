@@ -1349,6 +1349,19 @@
             [db executeNonQuery:@"ALTER TABLE message_history ADD COLUMN isacloud_poll_closed_at INTEGER;"];
     }];
 
+    //isaCloud muc-light: light channels (see DataLayer, mucLightSettingForMuc:andAccount:). isacloud_muc_light on the room: NULL = automatic
+    //(a channel is light, a group is not), 1 = forced on, 0 = forced off. isacloud_muc_light_gap_start on the account: the epoch seconds
+    //when the app went inactive with light rooms, i.e. the start of the gap to fill from the archive when it becomes active (NULL = no gap).
+    //Harmless to run again: each column is only added if it is missing.
+    [self updateISACloudDB:db toVersion:10 withBlock:^{
+        // isaCloud muc-light: column of the per room setting
+        if(![[db executeScalar:@"SELECT count(*) FROM pragma_table_info('buddylist') WHERE name='isacloud_muc_light';"] boolValue])
+            [db executeNonQuery:@"ALTER TABLE buddylist ADD COLUMN isacloud_muc_light INTEGER DEFAULT NULL;"];
+        // isaCloud muc-light: column of the gap start per account
+        if(![[db executeScalar:@"SELECT count(*) FROM pragma_table_info('account') WHERE name='isacloud_muc_light_gap_start';"] boolValue])
+            [db executeNonQuery:@"ALTER TABLE account ADD COLUMN isacloud_muc_light_gap_start REAL DEFAULT NULL;"];
+    }];
+
     //...and at every start it indexes what the hooks of the DataLayer did not see (messages written by an older build, for example)
     [MLMessageSearch catchUpIndexInDatabase:db];
 }

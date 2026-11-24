@@ -268,6 +268,12 @@ typedef void (^monal_iq_handler_t)(XMPPIQ* _Nullable);
 -(void) fetchAvatarVisibilityWithCompletion:(monal_id_block_t) completion;
 -(void) publishStatusMessage:(NSString*) message;
 -(void) delayIncomingMessageStanzasForArchiveJid:(NSString*) archiveJid;
+//isaCloud muc-light: sends the list of light channels to the server (only if it advertises urn:xmpp:isacloud:muc-light:0). Coalesced: at most once a second.
+-(void) isaCloudSendMucLightEnable;
+//isaCloud muc-light: fills the gap of the light channels from their archive (main app, active, bound, gap set). Safe to call at any time.
+-(void) isaCloudFillMucLightGapsIfNeeded;
+//isaCloud muc-light: asks the server what it deferred of the light channels (logs only)
+-(void) isaCloudQueryDeferredMucLight;
 
 +(NSMutableDictionary*) invalidateState:(NSDictionary* _Nullable) dic;
 -(void) updateIqHandlerTimeouts;

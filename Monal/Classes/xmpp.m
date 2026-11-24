@@ -101,6 +101,7 @@ static NSRegularExpression* fastTokenRemovalRegex;
     //does not reset at disconnect
     BOOL _loggedInOnce;
     BOOL _isCSIActive;
+    BOOL _isaCloudMucLightEnablePending;     //isaCloud muc-light: an enable list is waiting for its one second (memory only)
     
     //internal handlers and flags
     monal_void_block_t _pingDelayTimer;
@@ -2668,6 +2669,11 @@ static NSLock* isaCloudTimeoutsLock(void)
             //publish new csi and last active state (but only do so when not in an extension
             //because the last active state does not change when inside an extension)
             [self sendCurrentCSIState];
+            
+            //isaCloud muc-light: the app usually becomes active while it is still reconnecting (setClientActive skips the fill then):
+            //the resume is the moment to fill the gap of the light channels and to ask the server what it deferred
+            [self isaCloudFillMucLightGapsIfNeeded];
+            [self isaCloudQueryDeferredMucLight];
             if(![HelperTools isAppExtension])
             {
                 DDLogVerbose(@"Not in extension --> sending out presence after resume");
@@ -5562,6 +5568,10 @@ static NSLock* isaCloudTimeoutsLock(void)
         self->_isCSIActive = YES;
         [self sendCurrentCSIState];
         
+        //isaCloud muc-light: fill the gap of the light channels (main app only) and ask the server what it deferred
+        [self isaCloudFillMucLightGapsIfNeeded];
+        [self isaCloudQueryDeferredMucLight];
+        
         //to make sure this date is newer than the old saved one (even if we now falsely "tag" the beginning of our interaction, not the end)
         //if everything works out as it should and the app does not get killed, we will "tag" the end of our interaction as soon as the app is backgrounded
         self.lastInteractionDate = [NSDate date];
@@ -5620,8 +5630,89 @@ static NSLock* isaCloudTimeoutsLock(void)
         if(self->_isCSIActive)
             csiNode = [[MLXMLNode alloc] initWithElement:@"active" andNamespace:@"urn:xmpp:csi:0"];
         else
+        {
             csiNode = [[MLXMLNode alloc] initWithElement:@"inactive" andNamespace:@"urn:xmpp:csi:0"];
+            //isaCloud muc-light: the server defers the light channels from now on, so a gap to fill starts now (see isaCloudNoteClientInactive)
+            if([self.connectionProperties.accountDiscoFeatures containsObject:@"urn:xmpp:isacloud:muc-light:0"])
+                [self.mucProcessor isaCloudNoteClientInactive];
+        }
         [self send:csiNode];
+    }];
+}
+
+#pragma mark isaCloud muc-light (light channels, see docs/analise-canal-leve.md)
+
+//isaCloud muc-light: the namespace of the server extension (the server advertises it in the disco#info of the account)
+#define kIsaCloudMucLightNS @"urn:xmpp:isacloud:muc-light:0"
+
+//isaCloud muc-light: see xmpp.h
+-(void) isaCloudSendMucLightEnable
+{
+    [self dispatchAsyncOnReceiveQueue:^{
+        //coalesce: many triggers in a row send the list once, one second after the first of them
+        if(self->_isaCloudMucLightEnablePending)
+            return;
+        self->_isaCloudMucLightEnablePending = YES;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+            [self dispatchAsyncOnReceiveQueue:^{
+                self->_isaCloudMucLightEnablePending = NO;
+                //only a bound account with the feature gets the list
+                if(self.accountState < kStateBound || ![self.connectionProperties.accountDiscoFeatures containsObject:kIsaCloudMucLightNS])
+                    return;
+                NSMutableArray<MLXMLNode*>* roomNodes = [NSMutableArray new];
+                NSArray<NSString*>* rooms = [self.mucProcessor isaCloudMucLightRoomsWithMam];
+                for(NSString* room in rooms)
+                    [roomNodes addObject:[[MLXMLNode alloc] initWithElement:@"room" withAttributes:@{@"jid": room} andChildren:@[] andData:nil]];
+                //the whole list every time: an empty list switches the light mode off for this session
+                XMPPIQ* iq = [[XMPPIQ alloc] initWithType:kiqSetType];
+                [iq addChildNode:[[MLXMLNode alloc] initWithElement:@"enable" andNamespace:kIsaCloudMucLightNS withAttributes:@{} andChildren:roomNodes andData:nil]];
+                DDLogInfo(@"isaCloud muc-light: enable sent with %lu room(s)", (unsigned long)[rooms count]);
+                [self sendIq:iq withResponseHandler:^(XMPPIQ* result __unused) {
+                } andErrorHandler:^(XMPPIQ* error) {
+                    DDLogError(@"isaCloud muc-light: enable got an error: %@", [error findFirst:@"error"]);
+                }];
+            }];
+        });
+    }];
+}
+
+//isaCloud muc-light: see xmpp.h
+-(void) isaCloudFillMucLightGapsIfNeeded
+{
+    [self dispatchAsyncOnReceiveQueue:^{
+        //the extension never fetches: it is inactive and short lived
+        if([HelperTools isAppExtension] || !self->_isCSIActive || self.accountState < kStateBound)
+        {
+            DDLogVerbose(@"isaCloud muc-light: not filling now (extension %@, active %@, state %ld)", bool2str([HelperTools isAppExtension]), bool2str(self->_isCSIActive), (long)self.accountState);
+            return;
+        }
+        if(![self.connectionProperties.accountDiscoFeatures containsObject:kIsaCloudMucLightNS])
+            return;
+        NSDate* gapStart = [[DataLayer sharedInstance] mucLightGapStartForAccount:self.accountID];
+        if(gapStart == nil)
+        {
+            DDLogInfo(@"isaCloud muc-light: no gap to fill on account %@", self.accountID);
+            return;
+        }
+        DDLogInfo(@"isaCloud muc-light: filling the gap of account %@ since %@", self.accountID, gapStart);
+        [self.mucProcessor isaCloudFillMucLightGapsSince:gapStart];
+    }];
+}
+
+//isaCloud muc-light: see xmpp.h
+-(void) isaCloudQueryDeferredMucLight
+{
+    [self dispatchAsyncOnReceiveQueue:^{
+        if(self.accountState < kStateBound || ![self.connectionProperties.accountDiscoFeatures containsObject:kIsaCloudMucLightNS])
+            return;
+        XMPPIQ* iq = [[XMPPIQ alloc] initWithType:kiqGetType];
+        [iq addChildNode:[[MLXMLNode alloc] initWithElement:@"deferred" andNamespace:kIsaCloudMucLightNS]];
+        [self sendIq:iq withResponseHandler:^(XMPPIQ* result) {
+            for(MLXMLNode* room in [result find:@"{urn:xmpp:isacloud:muc-light:0}deferred/room"])
+                DDLogInfo(@"isaCloud muc-light: server deferred %@ message(s) of %@ since %@", room.attributes[@"count"], room.attributes[@"jid"], room.attributes[@"since"]);
+        } andErrorHandler:^(XMPPIQ* error) {
+            DDLogError(@"isaCloud muc-light: deferred query got an error: %@", [error findFirst:@"error"]);
+        }];
     }];
 }
 

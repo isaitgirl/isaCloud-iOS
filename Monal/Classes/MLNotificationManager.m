@@ -57,6 +57,7 @@ typedef NS_ENUM(NSUInteger, MLNotificationState) {
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleNewMessage:) name:kMonalUpdatedMessageNotice object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleFiletransferUpdate:) name:kMonalMessageFiletransferUpdateNotice object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleDeletedMessage:) name:kMonalDeletedMessageNotice object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleMessagesMoved:) name:kIsaCloudMessagesMovedNotice object:nil];     //isaCloud muc-light
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleDisplayedMessages:) name:kMonalDisplayedMessagesNotice object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleXMPPError:) name:kXMPPError object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleContactRefresh:) name:kMonalContactRefresh object:nil];
@@ -433,6 +434,23 @@ typedef NS_ENUM(NSUInteger, MLNotificationState) {
     //update app badge
     [[MLNotificationQueue currentQueue] postNotificationName:kMonalUpdateUnread object:nil];
     
+}
+
+//isaCloud muc-light: the messages of a light channel got new history ids after a gap fill; their delivered banners are dropped, the
+//message keeps the same message id, so the banner of the new row is the one to remove (a banner can not be shown again for them)
+-(void) handleMessagesMoved:(NSNotification*) notification
+{
+    UNUserNotificationCenter* center = [UNUserNotificationCenter currentNotificationCenter];
+    for(NSNumber* historyId in notification.userInfo[@"newIds"])
+    {
+        MLMessage* message = [MLMessage createMessageFromHistoryID:historyId];
+        if(message == nil || [message.messageType isEqualToString:kMessageTypeStatus])
+            continue;
+        NSString* idval = [self identifierWithMessage:message];
+        DDLogVerbose(@"notification manager got moved message: %@", message.messageId);
+        [center removePendingNotificationRequestsWithIdentifiers:@[idval]];
+        [center removeDeliveredNotificationsWithIdentifiers:@[idval]];
+    }
 }
 
 -(void) handleDeletedMessage:(NSNotification*) notification

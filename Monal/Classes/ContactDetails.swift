@@ -47,6 +47,7 @@ struct ContactDetails: View {
     @State private var contactTimeZone: TimeZone? = nil     //isaCloud: contact's local time (XEP-0202)
     @State private var mucPersonCount = 0                   //isaCloud: members of a group / participants of a channel, shown next to the list button
     @State private var mamCatchupDays = 2                   //isaCloud: history window of public channels on connect (0 = all)
+    @State private var mucLight = false                     //isaCloud muc-light: this room is a light channel (effective value, see DataLayer isMucLight)
     var delegate: SheetDismisserProtocol?
     private var account: xmpp
 
@@ -100,6 +101,12 @@ struct ContactDetails: View {
 
     //isaCloud: history window of a public channel (7 days by default)
     private func loadMamCatchupDays() {
+        //isaCloud muc-light: the effective value of the light channel setting, shown by the toggle of any group or channel
+        if contact.isMuc {
+            let lightRoom: String = contact.obj.contactJid
+            let lightAccountID: NSNumber = contact.obj.accountID
+            mucLight = DataLayer.sharedInstance().isMucLight(lightRoom, forAccount: lightAccountID)
+        }
         guard contact.isMuc && contact.obj.mucType == kMucTypeChannel else {
             return
         }
@@ -668,6 +675,26 @@ struct ContactDetails: View {
                         DataLayer.sharedInstance().setMamCatchupDays(newDays, forMuc: contact.obj.contactJid, andAccount: contact.obj.accountID)
                     }
                     Text("Public channels only download the messages of this period when you connect. \"All\" downloads the whole history the server keeps, which can be slow on busy channels. A change applies the next time the app reconnects to the channel.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+
+                //isaCloud muc-light: a light channel only gets its mentions in the background, the rest is fetched when the app opens
+                if contact.obj.isMuc {
+                    Toggle(isOn: Binding(
+                        get: { mucLight },
+                        set: { newValue in
+                            //written only when the person changes it: an untouched room keeps its automatic setting
+                            mucLight = newValue
+                            let lightRoom: String = contact.obj.contactJid
+                            let lightAccountID: NSNumber = contact.obj.accountID
+                            DataLayer.sharedInstance().setMucLightSetting(NSNumber(value: newValue), forMuc: lightRoom, andAccount: lightAccountID)
+                            NotificationCenter.default.post(name: NSNotification.Name(kIsaCloudMucLightChanged), object: nil, userInfo: ["accountID": lightAccountID, "contact": contact.obj])
+                        }
+                    )) {
+                        Text("Light channel")
+                    }
+                    Text("In the background, only mentions arrive from a light channel; the rest is downloaded when you open the app. Saves battery on busy channels.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }

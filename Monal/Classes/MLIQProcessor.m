@@ -585,6 +585,8 @@ $$class_handler(handleAccountDiscoInfo, $$ID(xmpp*, account), $$ID(XMPPIQ*, iqNo
     
     NSSet* features = [NSSet setWithArray:[iqNode find:@"{http://jabber.org/protocol/disco#info}query/feature@var"]];
     account.connectionProperties.accountDiscoFeatures = features;
+    //isaCloud muc-light: the server knows about light channels now (no-op without the feature)
+    [account isaCloudSendMucLightEnable];
     
     if(
         [iqNode check:@"{http://jabber.org/protocol/disco#info}query/identity<category=pubsub><type=pep>"] &&       //xep-0163 support

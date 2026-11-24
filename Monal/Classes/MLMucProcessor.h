@@ -89,6 +89,14 @@ NS_ASSUME_NONNULL_BEGIN
 //isaCloud: used by the pubsub processor to list a room without joining it
 -(void) sendDiscoQueryFor:(NSString*) roomJid withJoin:(BOOL) join andBookmarksUpdate:(BOOL) updateBookmarks andMucName:(NSString* _Nullable) mucName;
 -(NSSet*) getRoomFeaturesForMuc:(NSString*) room;
+//isaCloud muc-light: YES if the room advertised urn:xmpp:mam:2 in its disco#info (known after the join)
+-(BOOL) roomSupportsMam:(NSString*) room;
+//isaCloud muc-light: the rooms of this account that are light channels and have an archive (what the server gets in the enable list)
+-(NSArray<NSString*>*) isaCloudMucLightRoomsWithMam;
+//isaCloud muc-light: fills the gap of every joined light room since gapStart from its archive (all rooms in parallel, each one paged), and ends the gap when all are done
+-(void) isaCloudFillMucLightGapsSince:(NSDate*) gapStart;
+//isaCloud muc-light: the app sent csi inactive: opens the gap, or remembers the moment if one is already open (a fill may be running)
+-(void) isaCloudNoteClientInactive;
 
 @end
 
