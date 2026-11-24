@@ -9,4 +9,7 @@
 /* isaCloud: video conferences (ChatInputBar, ChatView, IsaCloudConference) */
 "Create conference" = "Create conference";
 "Access the video conference via the link: %@" = "Access the video conference via the link: %@";
+"Host link sent to yourself!" = "Host link sent to yourself!";
+"See" = "See";
+"This is the link to access your new conference:\n%@" = "This is the link to access your new conference:\n%@";
 "Could not create the conference. Please try again." = "Could not create the conference. Please try again.";

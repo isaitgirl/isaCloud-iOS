@@ -20,7 +20,24 @@ Equivalente ao Android (`decisoes-conferencia-galene.md`); o contrato da API e o
 - **Sem toast "Entrar".** Pedido da Isadora: o atalho é só o card da lista (como no Android) e o link no chat.
 - **`hostURL` é credencial e fica só no Keychain** (`IsaCloudConferenceStore`, serviço `IsaCloudMeet`,
   `AfterFirstUnlockThisDeviceOnly`, uma entrada por `roomID` com `hostURL`, `hostKey`, validade e `savedAt`).
-  Nunca vai para o chat, log ou crash. Só abre se continuar https e no host `meet.isacloud.cc`.
+  Nunca vai para o servidor, log ou crash. Só abre se continuar https e no host `meet.isacloud.cc`.
+  **Exceção desde 24/11/2026:** vai na nota local das notas para mim mesmo (abaixo), que fica só no banco deste aparelho.
+- **Nota local com o link de anfitrião (24/11/2026, pedido da Isadora).** Ao criar a sala, o app grava nas notas para
+  mim mesmo da conta do chat "Este é o link para acessar sua nova conferência:" e o `hostURL`. Decisões:
+  - criada junto com a sala, mesmo que o link do campo não seja enviado (uma por sala);
+  - **só neste aparelho**: o `hostURL` é credencial e não pode ficar no arquivo do servidor (MAM) nem chegar a
+    outros aparelhos. Por isso não vai por XMPP;
+  - gravada como **recebida e não lida** (`inbound=1`, `unread=1`): o app só conta como não lida mensagem recebida,
+    e uma nota enviada à própria conta voltaria como "de mim". Conta na lista, nos selos e no ícone, e sobe as
+    notas para o topo;
+  - notas arquivadas são desarquivadas; **silenciadas continuam sem contar** (escolha da Isadora);
+  - sem banner nem som; o texto não vai para o log (só o id da linha);
+  - tocar no `hostURL` da nota abre o link direto (não é `/join/<id>`, então não passa pelo desvio do Keychain).
+  - **Risco aceito:** a nota pode ser copiada ou encaminhada como qualquer mensagem, e a chave vai junto.
+  - **Aviso depois do envio:** quando a mensagem com o link de convidado da sala recém-criada é enviada, aparece
+    por 5 s o aviso "Link de anfitrião enviado para você mesmo!" com "Ver" em rosa, que abre as notas para mim
+    mesmo. Uma vez por sala (só a sala criada nesta conversa). Não aparece se a sala foi criada dentro das próprias
+    notas.
 - **Card da lista retirado (21/11/2026).** O card "Sua conferência está pronta" (`ChatListConferenceView`, com
   Entrar e x) saiu por ora, a pedido da Isadora: o anfitrião já entra tocando no mesmo link enviado ao convidado.
   Restou em `IsaCloudConferenceStore` a dispensa do card e a notificação de mudança, sem uso (ficam para uma

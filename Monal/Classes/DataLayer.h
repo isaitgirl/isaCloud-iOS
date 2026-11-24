@@ -331,6 +331,12 @@ extern NSString* const kMessageTypeFiletransfer;
 -(BOOL) isActiveBuddy:(NSString*) buddyname forAccount:(NSNumber*) accountID;
 -(BOOL) updateActiveBuddy:(NSString*) buddyname setTime:(NSString*)timestamp forAccount:(NSNumber*) accountID;
 
+#pragma mark isaCloud: local note to self
+//isaCloud: a note only on this device, in the notes to self of the account, stored as an unread incoming message so it counts
+//like any unread chat and moves the notes to the top of the list. Never sent. The text is not logged (it can hold the host link
+//of a video conference, a credential).
+-(NSNumber* _Nullable) isaCloudAddLocalUnreadNote:(NSString*) text toSelfChat:(NSString*) ownJid forAccount:(NSNumber*) accountID;
+
 #pragma mark isaCloud: archived state
 //isaCloud: archived chats stay in buddylist and activechats (pinned and lastMessageTime survive) and only leave the lists; see migration 7 of +migrateISACloudDB:
 -(BOOL) isArchivedBuddy:(NSString*) buddy forAccount:(NSNumber*) accountID;

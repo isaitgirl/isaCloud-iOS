@@ -326,12 +326,14 @@ typedef NS_ENUM(NSUInteger, MLNotificationState) {
     if([message.messageType isEqualToString:kMessageTypeStatus])
         return;
     
-    DDLogVerbose(@"notification manager should show notification for: %@", message.messageText);
+    //isaCloud: showAlert is checked before the text is logged: the local note with the host link of a conference
+    //(IsaCloudConferenceNote) comes with showAlert NO, and its text must not reach the log
     if(!showAlert)
     {
         DDLogDebug(@"not showing notification: showAlert is NO");
         return;
     }
+    DDLogVerbose(@"notification manager should show notification for: %@", message.messageText);
     
     //isaCloud: an archived chat is totally silent, mentions included (no exception for mentions)
     if([[DataLayer sharedInstance] isArchivedBuddy:message.buddyName forAccount:message.accountID])

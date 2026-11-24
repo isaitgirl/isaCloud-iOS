@@ -2,6 +2,11 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## Não lançado
+
+### Adicionado
+- **Nota local com o link de anfitrião ao criar uma conferência.** Ao criar a sala pelo clipe, o app grava nas notas para mim mesmo da conta, só neste aparelho, "Este é o link para acessar sua nova conferência:" e o `hostURL`. A nota é criada junto com a sala, mesmo que o link do campo não seja enviado. É gravada como mensagem recebida e não lida (`DataLayer isaCloudAddLocalUnreadNote:toSelfChat:forAccount:`, `inbound=1`, `unread=1`), então conta na lista, nos selos e no ícone e sobe as notas para o topo. Notas arquivadas são desarquivadas (`addActiveBuddies`), e silenciadas continuam sem contar. Nunca vai pelo XMPP, porque o `hostURL` é credencial, e o texto não entra no log. Aviso de mensagem nova sem banner (`showAlert` falso). O `MLNotificationManager` agora confere o `showAlert` antes de registrar o texto da mensagem no log. Quando a mensagem com o link de convidado é enviada, um aviso acima da caixa de texto diz "Link de anfitrião enviado para você mesmo!" por 5 s, com "Ver" em rosa que abre as notas para mim mesmo (`ChatInputModel.showNotice` com `actionTitle`/`action`). Uma vez por sala, e não aparece se a sala foi criada nas próprias notas.
+
 ## 0.0.1 (build 129) — 23/11/2026
 
 Enviado ao TestFlight às 14:35 (brilho da original no pulo e citação sem vínculo com balão, PR 90 e PR 25 do fork; testado no `.dev`).

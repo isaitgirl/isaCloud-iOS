@@ -2734,6 +2734,42 @@ static NSNumber* isacloudNowMillis(void)
     return;
 }
 
+#pragma mark isaCloud: local note to self
+
+//isaCloud: a note only on this device, in the notes to self of the account, stored as an unread incoming message so it counts
+//like any unread chat and moves the notes to the top of the list. Never sent. The text is not logged (it can hold the host link
+//of a video conference, a credential).
+-(NSNumber* _Nullable) isaCloudAddLocalUnreadNote:(NSString*) text toSelfChat:(NSString*) ownJid forAccount:(NSNumber*) accountID
+{
+    if(!text || !ownJid || accountID == nil)
+        return nil;
+
+    return [self.db idWriteTransaction:^{
+        //the notes to self are a 1:1 chat (Muc=0): this also unarchives them, like an incoming message does
+        [self addActiveBuddies:ownJid forAccount:accountID];
+
+        NSString* dateString = [dbFormatter stringFromDate:[NSDate date]];
+        //same columns as addMessageToChatBuddy:, without the historyId branch
+        NSString* query = @"insert into message_history (account_id, buddy_name, inbound, timestamp, message, actual_from, unread, sent, displayMarkerWanted, messageid, messageType, encrypted, stanzaid, participant_jid, occupant_id) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+        NSArray* params = @[accountID, ownJid, @YES, dateString, text, ownJid, @YES, @YES, @NO, [[NSUUID UUID] UUIDString], kMessageTypeText, @NO, @"", nilWrapper(nil), nilWrapper(nil)];
+        BOOL success = [self.db executeNonQuery:query andArguments:params];
+        if(!success)
+        {
+            DDLogError(@"isaCloud: could not add the local unread note to the notes to self of account %@", accountID);
+            return (NSNumber*)nil;
+        }
+        NSNumber* historyId = [self.db lastInsertId];
+        [MLMessageSearch indexNewMessageWithHistoryId:historyId inDatabase:self.db];
+
+        //update autodecrement value (only strictly monotonically decreasing)
+        [self.db executeNonQuery:@"UPDATE flags SET value=MIN(?,  (SELECT CAST(value as INTEGER) FROM flags WHERE name='autodecrement~message_history')) WHERE name='autodecrement~message_history';" andArguments:@[historyId]];
+
+        [self updateActiveBuddy:ownJid setTime:dateString forAccount:accountID];
+        DDLogInfo(@"isaCloud: local unread note %@ added to the notes to self of account %@", historyId, accountID);
+        return historyId;
+    }];
+}
+
 #pragma mark isaCloud: archived state
 
 -(BOOL) isArchivedBuddy:(NSString*) buddy forAccount:(NSNumber*) accountID

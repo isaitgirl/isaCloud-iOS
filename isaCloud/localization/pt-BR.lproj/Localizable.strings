@@ -409,4 +409,7 @@
 /* isaCloud: vídeo conferência (menu de anexos, texto no compositor) */
 "Create conference" = "Criar conferência";
 "Access the video conference via the link: %@" = "Acesse a vídeo conferência pelo link: %@";
+"Host link sent to yourself!" = "Link de anfitrião enviado para você mesmo!";
+"See" = "Ver";
+"This is the link to access your new conference:\n%@" = "Este é o link para acessar sua nova conferência:\n%@";
 "Could not create the conference. Please try again." = "Não foi possível criar a conferência. Tente novamente.";
