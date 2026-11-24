@@ -766,12 +766,18 @@ struct ExternalLinkViewModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .environment(\.openURL, OpenURLAction { url in
-                //isaCloud: a conference link of a room this device created opens the host link (the room is run by its host); without one, the public link goes on below
-                if let roomID = IsaCloudConference.roomID(from: url), let hostURL = IsaCloudConferenceStore.hostURL(forRoomID: roomID) {
-                    if HelperTools.defaultsDB().bool(forKey:"useInlineSafari") {
-                        urlToOpen = hostURL
+                //isaCloud: any isaCloud Meet link follows its own setting (isaCloudMeetOpenExternally), not useInlineSafari. A public link
+                //of a room this device created opens the host link instead (the room is run by its host); the host link itself (from the
+                //local note) opens as it is. In the external browser the user can switch back to the chat during the call.
+                if IsaCloudConference.isMeetURL(url) {
+                    var target = url
+                    if let roomID = IsaCloudConference.roomID(from: url), let hostURL = IsaCloudConferenceStore.hostURL(forRoomID: roomID) {
+                        target = hostURL
+                    }
+                    if HelperTools.defaultsDB().bool(forKey:"isaCloudMeetOpenExternally") {
+                        UIApplication.shared.open(target)
                     } else {
-                        UIApplication.shared.open(hostURL)
+                        urlToOpen = target
                     }
                     return .handled
                 }

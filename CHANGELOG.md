@@ -2,6 +2,11 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## Em breve (próxima versão)
+
+### Adicionado
+- **Opção "Abrir isaCloud Meet" (No app / No navegador).** Em Configurações › Interface, abaixo de "Abrir URLs no Safari integrado"; chave `isaCloudMeetOpenExternally` (padrão SIM, em `MLXMPPManager`). Todo link `https://meet.isacloud.cc` (o `/join/<id>` com desvio para o `hostURL` do Keychain e o `hostURL` da nota local) segue essa opção no `ExternalLinkViewModifier`, não mais o `useInlineSafari`. No navegador (`UIApplication.shared.open`) dá para alternar às mensagens durante a chamada; o fechamento automático da aba depende do `window.close()` no `galene.js` (servidor). Testado nos simuladores iOS 18.6 (XR) e iOS 27: a opção aparece com o padrão No navegador, a troca é gravada, No app abre o SFSafariViewController e No navegador abre o Safari (com o "◀ isaCloud" para voltar). Falta o teste no iPhone (microfone com o Safari em segundo plano).
+
 ## 0.0.1 (build 130) — 24/11/2026
 
 Enviado ao TestFlight às 14:05 (nota local com o link de anfitrião ao criar uma conferência e aviso com "Ver", PR 91; testado no `.dev`).

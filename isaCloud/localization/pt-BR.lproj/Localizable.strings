@@ -413,3 +413,9 @@
 "See" = "Ver";
 "This is the link to access your new conference:\n%@" = "Este é o link para acessar sua nova conferência:\n%@";
 "Could not create the conference. Please try again." = "Não foi possível criar a conferência. Tente novamente.";
+
+/* isaCloud: isaCloud Meet opening setting */
+"Open isaCloud Meet" = "Abrir isaCloud Meet";
+"In the app" = "No app";
+"In the browser" = "No navegador";
+"In the browser, you can switch back to your messages during the call. In the app, the call stays in full screen and ends when you close it." = "No navegador, você pode voltar às mensagens durante a chamada. No app, a chamada fica em tela cheia e termina quando você fecha.";
