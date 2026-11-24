@@ -1117,3 +1117,13 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - **Pulo com a lista visível:** o pulo da busca esconde a lista enquanto rola (na abertura da conversa isso evita ver a rolagem em duas etapas); no toque na citação isso deixava a conversa em branco por cerca de 1 s, e a Isadora não gostou. Por isso `jumpKeepsListVisible` mantém a lista à vista só nesse pulo.
 - **Servidor:** conferido no código do Prosody que o `mod_mam` e o `mod_muc_mam` guardam o stanza inteiro (só os chatstates saem), então `<reply>`, `<fallback>` e `isacloud-quote` voltam pelo MAM.
 - **Link dentro da citação:** no iOS a citação é texto simples, sem link clicável (o Android tem). A Isadora disse que não precisa.
+
+## Canal leve e CSI ativo na abertura a frio (24/11/2026, build 131)
+- **Decisão:** canais grandes passam a funcionar por "pull", como os Canais do WhatsApp e o Telegram. Com o app inativo, o servidor deixa de entregar as mensagens comuns dos canais leves, e o app busca o intervalo no MAM ao voltar. É uma extensão nossa (`urn:xmpp:isacloud:muc-light:0`, pedida por sessão), então outros clientes e servidores não mudam. Análise e contrato em `docs/analise-canal-leve.md`.
+- **Ordem das mensagens:** o Monal ordena pelo `message_history_id`, então as menções recebidas ao vivo no intervalo são reinseridas depois das buscadas (`isaCloudMoveLiveMessagesAfterGapFillInChat:`), levando junto arquivos, reações e o índice de busca. As respostas não quebram, porque o vínculo é o id da mensagem.
+- **Para o merge com o Monal:** a lógica fica em blocos `isaCloud muc-light` em `xmpp.m`, `MLMucProcessor.m`, `DataLayer.m`, `MLIQProcessor.m` e `ChatView.swift`, e na migração isaCloud 10. Arquivos do Monal mexidos:
+  - `sendCurrentCSIState`, que abre o intervalo;
+  - o fim da retomada em `xmpp.m`, que dispara a busca;
+  - `nowForegroundedAtLaunch` em `MLXMPPManager.m`.
+- **Abertura a frio:** o atalho `nowForegroundedAtLaunch` (builds 6-9 e 98) só trocava as flags, e as contas nascidas durante o `didFinishLaunching` (estado "background") ficavam com CSI inativo durante todo o primeiro uso. Agora ele chama `setClientActive` em cada conta: só despacha para a fila de recebimento, sem esperar por ela, então não traz de volta o travamento que o atalho evitava. O Monal original chama `nowForegrounded` inteiro, que faz o mesmo e mais.
+

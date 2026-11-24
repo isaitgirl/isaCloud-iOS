@@ -2,7 +2,9 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
-## Próximo build (não lançado)
+## 0.0.1 (build 131) — 24/11/2026
+
+Enviado ao TestFlight às 16:44 (canal leve, fase A, PR 92, e a opção "Abrir isaCloud Meet", PR 93; o canal leve foi testado no `.dev` e a opção do Meet nos simuladores).
 
 ### Adicionado
 - **Canal leve (fase A do app; servidor com a extensão `urn:xmpp:isacloud:muc-light:0` no `mod_csi_battery_saver`).** Com o app inativo, o servidor deixa de mandar ao celular as mensagens comuns dos canais leves (só chegam menções e mensagens da própria sala); quando o app volta a ficar ativo, ele busca o intervalo no MAM de cada canal leve. Canal é leve por padrão e grupo não; o interruptor "Canal leve" nos detalhes de qualquer sala troca isso (coluna `buddylist.isacloud_muc_light`, migração isaCloud 10, que também cria `account.isacloud_muc_light_gap_start`). A lista de salas leves com MAM vai ao servidor num `enable` (coalescido em 1 s) depois do disco da conta, de cada entrada em sala, da troca do interruptor e da saída de uma sala. O início do intervalo é gravado no `csi inactive`; se o app fica inativo de novo durante a busca, o fim da busca abre um intervalo novo a partir desse momento, em vez de apagar. Salas que não entram logo depois de uma sessão nova (2 min) não seguram o intervalo para sempre. Depois da busca, as mensagens ao vivo recebidas durante o intervalo (as menções) vão para o fim, com ids novos (`isaCloudMoveLiveMessagesAfterGapFillInChat:`: arquivos, reações e índice de busca acompanham; respostas não quebram, porque o vínculo é o id da mensagem), para a ordem ficar certa; o chat aberto troca as linhas e os banners dessas menções saem da central. Apps sem a extensão (Web, Android, outros) não mudam nada. Análise em `docs/analise-canal-leve.md`.
