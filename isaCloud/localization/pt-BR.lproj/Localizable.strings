@@ -415,3 +415,9 @@
 "Could not create the conference. Please try again." = "Não foi possível criar a conferência. Tente novamente.";
 "Light channel" = "Canal leve";
 "In the background, only mentions arrive from a light channel; the rest is downloaded when you open the app. Saves battery on busy channels." = "Em segundo plano, um canal leve só entrega as menções; o resto é baixado quando você abre o app. Economiza bateria em canais movimentados.";
+
+/* isaCloud: isaCloud Meet opening setting */
+"Open isaCloud Meet" = "Abrir isaCloud Meet";
+"In the app" = "No app";
+"In the browser" = "No navegador";
+"In the browser, you can switch back to your messages during the call. In the app, the call stays in full screen and ends when you close it." = "No navegador, você pode voltar às mensagens durante a chamada. No app, a chamada fica em tela cheia e termina quando você fecha.";

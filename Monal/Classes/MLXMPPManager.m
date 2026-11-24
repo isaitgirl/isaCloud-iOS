@@ -211,7 +211,10 @@ static void isaCloudPingOrReconnect(xmpp* account, BOOL networkCameBack, BOOL le
         [self upgradeBoolUserSettingsIfUnset:@"useInlineSafari" toDefault:NO];
     else
         [self upgradeBoolUserSettingsIfUnset:@"useInlineSafari" toDefault:YES];
-    
+
+    //isaCloud: isaCloud Meet links open in the external browser by default (the user can switch back to the chat during the call)
+    [self upgradeBoolUserSettingsIfUnset:@"isaCloudMeetOpenExternally" toDefault:YES];
+
     //isaCloud: skip the onboarding cards (welcome, features, privacy settings) and go straight to the WelcomeLogIn view
     [self upgradeBoolUserSettingsIfUnset:@"hasCompletedOnboarding" toDefault:YES];
     

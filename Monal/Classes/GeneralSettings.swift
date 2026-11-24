@@ -93,7 +93,10 @@ class GeneralSettingsDefaultsDB: ObservableObject {
     
     @defaultsDB("useInlineSafari")
     var useInlineSafari: Bool
-    
+
+    @defaultsDB("isaCloudMeetOpenExternally")
+    var isaCloudMeetOpenExternally: Bool
+
     @defaultsDB("webrtcAllowP2P")
     var webrtcAllowP2P: Bool
     
@@ -328,6 +331,16 @@ struct UserInterfaceSettings: View {
                 SettingsToggle(isOn: $generalSettingsDefaultsDB.useInlineSafari) {
                     Text("Open URLs inline in Safari")
                     Text("When disabled, URLs will opened in your default browser (that might not be Safari).")
+                }
+                //isaCloud: how isaCloud Meet (conference) links open; the other links keep following useInlineSafari
+                VStack(alignment: .leading) {
+                    Picker("Open isaCloud Meet", selection: $generalSettingsDefaultsDB.isaCloudMeetOpenExternally) {
+                        Text("In the app").tag(false)
+                        Text("In the browser").tag(true)
+                    }
+                    Text("In the browser, you can switch back to your messages during the call. In the app, the call stays in full screen and ends when you close it.")
+                        .foregroundColor(Color(UIColor.secondaryLabel))
+                        .font(.footnote)
                 }
             }
             

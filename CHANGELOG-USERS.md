@@ -14,6 +14,7 @@ O que está neste arquivo é o que aparece para o usuário na tela de **Novidade
 
 ### Novidades
 - 🪶 Chegou o canal leve: com o app fechado, os canais movimentados só te avisam quando alguém te menciona, e o resto aparece certinho quando você abre o app. Mais bateria e mais sossego!
+- 🎥 Agora você escolhe onde abrir o isaCloud Meet: no app ou no navegador, para dar uma espiadinha nas mensagens durante a chamada!
 
 ### Correções
 - ⚡ Abriu o app? As conversas dos canais chegam na hora, já desde a primeira abertura.
