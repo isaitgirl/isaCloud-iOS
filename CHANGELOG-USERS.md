@@ -10,6 +10,14 @@ O que está neste arquivo é o que aparece para o usuário na tela de **Novidade
 - Nada de texto sério ou técnico: sem jargão (OMEMO, SASL, WAL, 0xdead10cc, background task, thread), sem número de crash (C20), sem "passamos a registrar…". Detalhe técnico fica no [CHANGELOG.md](CHANGELOG.md).
 - Se a correção for interna e a pessoa não percebe, escreva algo leve como "🛠️ Mais estabilidade por dentro, para o app ficar redondinho."
 
+## Próximo build
+
+### Novidades
+- 🪶 Chegou o canal leve: com o app fechado, os canais movimentados só te avisam quando alguém te menciona, e o resto aparece certinho quando você abre o app. Mais bateria e mais sossego!
+
+### Correções
+- ⚡ Abriu o app? As conversas dos canais chegam na hora, já desde a primeira abertura.
+
 ## Build 130 · 24/11/2026
 
 ### Novidades

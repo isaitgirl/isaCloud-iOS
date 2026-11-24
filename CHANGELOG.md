@@ -2,6 +2,14 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## Próximo build (não lançado)
+
+### Adicionado
+- **Canal leve (fase A do app; servidor com a extensão `urn:xmpp:isacloud:muc-light:0` no `mod_csi_battery_saver`).** Com o app inativo, o servidor deixa de mandar ao celular as mensagens comuns dos canais leves (só chegam menções e mensagens da própria sala); quando o app volta a ficar ativo, ele busca o intervalo no MAM de cada canal leve. Canal é leve por padrão e grupo não; o interruptor "Canal leve" nos detalhes de qualquer sala troca isso (coluna `buddylist.isacloud_muc_light`, migração isaCloud 10, que também cria `account.isacloud_muc_light_gap_start`). A lista de salas leves com MAM vai ao servidor num `enable` (coalescido em 1 s) depois do disco da conta, de cada entrada em sala, da troca do interruptor e da saída de uma sala. O início do intervalo é gravado no `csi inactive`; se o app fica inativo de novo durante a busca, o fim da busca abre um intervalo novo a partir desse momento, em vez de apagar. Salas que não entram logo depois de uma sessão nova (2 min) não seguram o intervalo para sempre. Depois da busca, as mensagens ao vivo recebidas durante o intervalo (as menções) vão para o fim, com ids novos (`isaCloudMoveLiveMessagesAfterGapFillInChat:`: arquivos, reações e índice de busca acompanham; respostas não quebram, porque o vínculo é o id da mensagem), para a ordem ficar certa; o chat aberto troca as linhas e os banners dessas menções saem da central. Apps sem a extensão (Web, Android, outros) não mudam nada. Análise em `docs/analise-canal-leve.md`.
+
+### Corrigido
+- **Abertura a frio deixava o app "inativo" para o servidor.** Na abertura a frio o estado do app é "background" durante o `didFinishLaunching`, então as contas nasciam com CSI inativo, e o atalho `nowForegroundedAtLaunch` (builds 6-9 e 98) só trocava as flags: o servidor tratava o app como inativo durante todo o primeiro uso, até ir para o fundo e voltar (com o canal leve, os canais ficariam parados com o app aberto). Agora o atalho também chama `setClientActive` em cada conta, que só despacha para a fila de recebimento, sem esperar por ela. A busca do intervalo do canal leve roda também no fim da retomada (smacks resume), porque o app costuma ficar ativo antes de a conexão voltar.
+
 ## 0.0.1 (build 130) — 24/11/2026
 
 Enviado ao TestFlight às 14:05 (nota local com o link de anfitrião ao criar uma conferência e aviso com "Ver", PR 91; testado no `.dev`).

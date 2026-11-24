@@ -2728,6 +2728,17 @@ struct ChatView: View {
                 voiceRequests = DataLayer.sharedInstance().getVoiceRequests(forRoom:contact.obj) as! [[String: AnyObject]]
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kIsaCloudMessagesMovedNotice)).receive(on: RunLoop.main)) { notification in
+            //isaCloud muc-light: after a gap fill the live messages of a light channel have new rows: the old ones leave the list, the new ones come in as missed messages
+            guard let movedContact = notification.userInfo?["contact"] as? MLContact else {
+                unreachable("Notification without contact")
+            }
+            if movedContact.isEqual(self.contact.obj) {
+                let oldIds = (notification.userInfo?["oldIds"] as? [NSNumber]) ?? []
+                self.messages.removeAll { message in oldIds.contains { $0 == message.historyId } }
+                loadMissedMessages()
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kMonalContactHistoryCleared)).receive(on: RunLoop.main)) { notification in
             DDLogVerbose("ChatView got history cleared notice \(String(describing:notification.userInfo))")
             guard let contact = notification.userInfo?["contact"] as? MLContact else {

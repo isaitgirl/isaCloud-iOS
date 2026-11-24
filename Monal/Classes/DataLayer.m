@@ -1688,6 +1688,89 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
     }];
 }
 
+//isaCloud muc-light: see DataLayer.h
+-(NSNumber* _Nullable) mucLightSettingForMuc:(NSString*) room andAccount:(NSNumber*) accountID
+{
+    return [self.db idReadTransaction:^{
+        return [self.db executeScalar:@"SELECT isacloud_muc_light FROM buddylist WHERE account_id=? AND buddy_name=?;" andArguments:@[accountID, room]];
+    }];
+}
+
+-(void) setMucLightSetting:(NSNumber* _Nullable) value forMuc:(NSString*) room andAccount:(NSNumber*) accountID
+{
+    [self.db voidWriteTransaction:^{
+        [self.db executeNonQuery:@"UPDATE buddylist SET isacloud_muc_light=? WHERE account_id=? AND buddy_name=?;" andArguments:@[nilWrapper(value), accountID, room]];
+    }];
+}
+
+-(BOOL) isMucLight:(NSString*) room forAccount:(NSNumber*) accountID
+{
+    NSNumber* setting = [self mucLightSettingForMuc:room andAccount:accountID];
+    if(setting != nil)
+        return [setting boolValue];
+    return [[self getMucTypeOfRoom:room andAccount:accountID] isEqualToString:kMucTypeChannel];
+}
+
+-(NSDate* _Nullable) mucLightGapStartForAccount:(NSNumber*) accountID
+{
+    NSNumber* start = [self.db idReadTransaction:^{
+        return [self.db executeScalar:@"SELECT isacloud_muc_light_gap_start FROM account WHERE account_id=?;" andArguments:@[accountID]];
+    }];
+    return start != nil ? [NSDate dateWithTimeIntervalSince1970:[start doubleValue]] : nil;
+}
+
+-(void) setMucLightGapStart:(NSDate* _Nullable) date forAccount:(NSNumber*) accountID
+{
+    [self.db voidWriteTransaction:^{
+        [self.db executeNonQuery:@"UPDATE account SET isacloud_muc_light_gap_start=? WHERE account_id=?;" andArguments:@[date ? @([date timeIntervalSince1970]) : [NSNull null], accountID]];
+    }];
+}
+
+-(NSNumber* _Nullable) maxHistoryIdForContact:(NSString*) buddy forAccount:(NSNumber*) accountID
+{
+    return [self.db idReadTransaction:^{
+        return [self.db executeScalar:@"SELECT MAX(message_history_id) FROM message_history WHERE account_id=? AND buddy_name=?;" andArguments:@[accountID, buddy]];
+    }];
+}
+
+//isaCloud muc-light: see DataLayer.h
+-(NSArray<NSArray<NSNumber*>*>*) isaCloudMoveLiveMessagesAfterGapFillInChat:(NSString*) buddy forAccount:(NSNumber*) accountID gapStart:(NSDate*) gapStart maxHistoryIdBeforeFill:(NSNumber*) h0
+{
+    return [self.db idWriteTransaction:^{
+        NSMutableArray<NSArray<NSNumber*>*>* moved = [NSMutableArray new];
+        NSString* gapString = [dbFormatter stringFromDate:gapStart];
+        //live messages of the gap that sit before messages fetched from the archive (they came in by push, e.g. mentions)
+        NSArray<NSNumber*>* oldIds = [self.db executeScalarReader:@"SELECT M.message_history_id FROM message_history AS M WHERE M.account_id=? AND M.buddy_name=? AND M.message_history_id<=? AND M.timestamp>=? AND EXISTS(\
+            SELECT 1 FROM message_history AS N WHERE N.account_id=M.account_id AND N.buddy_name=M.buddy_name AND N.message_history_id>? AND N.timestamp<M.timestamp\
+        ) ORDER BY M.timestamp ASC, M.message_history_id ASC;" andArguments:@[accountID, buddy, h0, gapString, h0]];
+        if([oldIds count] == 0)
+            return moved;
+        //every column but the id, read from the table itself so that isaCloud columns are always copied
+        NSArray<NSString*>* names = [self.db executeScalarReader:@"SELECT name FROM pragma_table_info('message_history') WHERE name!='message_history_id';"];
+        NSMutableArray<NSString*>* quoted = [NSMutableArray new];
+        for(NSString* name in names)
+            [quoted addObject:[NSString stringWithFormat:@"\"%@\"", name]];
+        NSString* columns = [quoted componentsJoinedByString:@", "];
+        for(NSNumber* oldId in oldIds)
+        {
+            //the copy gets a new id at the end (the AUTOINCREMENT one)
+            [self.db executeNonQuery:[NSString stringWithFormat:@"INSERT INTO message_history (%@) SELECT %@ FROM message_history WHERE message_history_id=?;", columns, columns] andArguments:@[oldId]];
+            NSNumber* newId = [self.db lastInsertId];
+            //the trigger of filetransfers already made an empty filetransfer_info for the copy: it has to go before the old one takes its place
+            [self.db executeNonQuery:@"DELETE FROM filetransfer_info WHERE message_history_id=?;" andArguments:@[newId]];
+            //dependents move before the old row is deleted (its foreign keys are ON DELETE CASCADE)
+            [self.db executeNonQuery:@"UPDATE filetransfer_info SET message_history_id=? WHERE message_history_id=?;" andArguments:@[newId, oldId]];
+            [self.db executeNonQuery:@"UPDATE reactions SET message_history_id=? WHERE message_history_id=?;" andArguments:@[newId, oldId]];
+            //search index: rowid is the history id, the old one goes (while its row still exists), the new one comes in
+            [MLMessageSearch removeFromIndexMessagesWhere:@"message_history_id=?" arguments:@[oldId] inDatabase:self.db];     //isaCloud: search index
+            [MLMessageSearch indexNewMessageWithHistoryId:newId inDatabase:self.db];     //isaCloud: search index
+            [self.db executeNonQuery:@"DELETE FROM message_history WHERE message_history_id=?;" andArguments:@[oldId]];
+            [moved addObject:@[oldId, newId]];
+        }
+        return moved;
+    }];
+}
+
 #pragma mark message Commands
 
 -(NSDictionary*) messageDataForHistoryID:(NSNumber*) historyID

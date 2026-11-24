@@ -575,6 +575,12 @@ static void isaCloudPingOrReconnect(xmpp* account, BOOL networkCameBack, BOOL le
     DDLogInfo(@"App now foregrounded (launch), only updating flags...");
     _isBackgrounded = NO;
     _isNotInFocus = NO;
+
+    //isaCloud: the app state is "background" during didFinishLaunching, so the accounts created there start with csi inactive,
+    //and only the flags changed here: the server kept treating the app as inactive for the whole first foreground (no live channel messages
+    //with the light channels, see docs/analise-canal-leve.md). setClientActive only dispatches async to the receive queue: it does not wait for it.
+    for(xmpp* xmppAccount in [self connectedXMPP])
+        [xmppAccount setClientActive];
 }
 
 -(void) nowForegrounded

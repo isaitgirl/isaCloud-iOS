@@ -168,6 +168,10 @@ static inline NSString* _Nonnull LocalizationNotNeeded(NSString* _Nonnull s)
 #define kMonalSentMessageNotice @"kMonalSentMessageNotice"
 #define kMonalMessageFiletransferUpdateNotice @"kMonalMessageFiletransferUpdateNotice"
 #define kMonalAccountDiscoDone @"kMonalAccountDiscoDone"
+//isaCloud muc-light: the light channel setting of a room was changed in the details (userInfo: accountID, contact)
+#define kIsaCloudMucLightChanged @"kIsaCloudMucLightChanged"
+//isaCloud muc-light: live messages of a light channel were moved to new history ids after a gap fill (userInfo: contact, oldIds, newIds)
+#define kIsaCloudMessagesMovedNotice @"kIsaCloudMessagesMovedNotice"
 
 #define kMonalNewPresenceNotice @"kMonalNewPresenceNotice"
 #define kMonalLastInteractionUpdatedNotice @"kMonalLastInteractionUpdatedNotice"
