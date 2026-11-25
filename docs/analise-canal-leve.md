@@ -196,3 +196,4 @@ O arquivo do módulo no servidor foi conferido: 515 linhas, o mesmo hash do repo
 - **Busca ao abrir (12:27):** uma por conta, em 6 s. Vieram 152 mensagens no ia, 74 no guiaxmpp, 68 no support e 67 no conversations, sem nenhuma movida.
 - **Métrica no fim:** 370 remotas e 213 locais no xmpp.social.br; 364 locais e 14 remotas no isacloud.im.
 - **Pendente no repo `isacloud-custom-plugins`:** commit da reinstalação do filtro ao carregar. O arquivo já está no ar.
+- **No app:** a correção da busca repetida (PR 94) foi para o TestFlight no **build 132** (25/11/2026, 12:42), junto com a bolinha de atualização (PR 95). Próximo passo: a noite do 132.

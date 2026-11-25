@@ -1,6 +1,24 @@
 {
   "releases": [
     {
+      "build": 132,
+      "date": "25/11/2026",
+      "sections": [
+        {
+          "title": "Novidades",
+          "items": [
+            "🩷 Uma bolinha rosa pulsa ao lado de \"Conversas\" enquanto o app busca as novidades. Quando ela some, está tudo em dia!"
+          ]
+        },
+        {
+          "title": "Correções",
+          "items": [
+            "🔕 Canais leves ainda mais quietinhos: o celular só acorda quando alguém fala com você."
+          ]
+        }
+      ]
+    },
+    {
       "build": 131,
       "date": "24/11/2026",
       "sections": [

@@ -2,7 +2,9 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
-## Próximo build
+## 0.0.1 (build 132) — 25/11/2026
+
+Enviado ao TestFlight às 12:42 (bolinha de atualização no título, PR 95, testada nos simuladores; correções do canal leve, PR 94 e servidor, testadas no `.dev`).
 
 ### Adicionado
 - **Bolinha de atualização no título "Conversas".**

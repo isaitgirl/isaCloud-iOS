@@ -1127,6 +1127,13 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
   - `nowForegroundedAtLaunch` em `MLXMPPManager.m`.
 - **Abertura a frio:** o atalho `nowForegroundedAtLaunch` (builds 6-9 e 98) só trocava as flags, e as contas nascidas durante o `didFinishLaunching` (estado "background") ficavam com CSI inativo durante todo o primeiro uso. Agora ele chama `setClientActive` em cada conta: só despacha para a fila de recebimento, sem esperar por ela, então não traz de volta o travamento que o atalho evitava. O Monal original chama `nowForegrounded` inteiro, que faz o mesmo e mais.
 
+## Canal leve: correções da primeira noite (25/11/2026, build 132)
+- **Marcadores não acordam o aparelho (servidor):** a sala leve tem regra própria (`is_light_important`). Só passam assunto, convite mediado, mensagem cifrada e menção no corpo (usuário ou apelido na sala). O `<markable/>` (XEP-0333), que o Conversations e o Gajim põem em toda mensagem de canal, não conta mais. Na noite de 24→25/11 ele fez vazar 57 de 57 mensagens.
+- **Só mensagem com corpo conta:** marcadores e digitação sem corpo são descartados sem entrar no `deferred` nem na métrica.
+- **Reload rearma o filtro (servidor):** o `module.unload` tira o filtro de todas as sessões. Por isso, ao carregar, o módulo chama `client_inactive` em cada sessão com `session.state == "inactive"`. **Regra:** depois de mandar o arquivo ao servidor, conferir o sha256 antes do reload. Em 25/11 o servidor rodou código velho duas vezes: primeiro faltou o reload, depois o arquivo.
+- **Uma busca por lacuna (app):** o inativo durante a lacuna só é lembrado se uma busca já começou. Sem busca, o início da lacuna no banco já cobre esse momento, e isso evita a segunda busca redundante.
+- **Teste no `.dev` (25/11, 11:49 a 12:29):** nenhuma mensagem de canal leve vazou (o detector viu 1.022 presenças retidas), nenhuma retomada foi recusada e houve uma busca só ao abrir, em cerca de 6 s.
+
 ## Bolinha de atualização no título (25/11/2026)
 
 **Problema:** com o canal leve, ao abrir o app as mensagens dos canais chegam de 2 a 6 s depois. Desde 04/11 o spinner só significa "não conecta" (ver "Spinner só quando não conecta"), então nada avisava que o app estava atualizando.
