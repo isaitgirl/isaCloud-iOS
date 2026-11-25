@@ -95,7 +95,7 @@ NS_ASSUME_NONNULL_BEGIN
 -(NSArray<NSString*>*) isaCloudMucLightRoomsWithMam;
 //isaCloud muc-light: fills the gap of every joined light room since gapStart from its archive (all rooms in parallel, each one paged), and ends the gap when all are done
 -(void) isaCloudFillMucLightGapsSince:(NSDate*) gapStart;
-//isaCloud muc-light: the app sent csi inactive: opens the gap, or remembers the moment if one is already open (a fill may be running)
+//isaCloud muc-light: the app sent csi inactive: opens the gap, or remembers the moment if a fill already started in the open gap (otherwise the gap start covers it)
 -(void) isaCloudNoteClientInactive;
 
 @end

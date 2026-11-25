@@ -2958,13 +2958,19 @@ $$
         DDLogInfo(@"isaCloud muc-light: inactive, gap of account %@ starts now", _account.accountID);
         return;
     }
-    //a gap is open (maybe a fill is running): its start is kept, and the first inactive since then is remembered,
-    //so the end of the fill keeps a gap from this moment instead of clearing it (see isaCloudEndMucLightGap)
+    //a gap is open: its start is kept. The moment is only remembered if a fill already started in this gap (a room was sent or finished),
+    //so the end of that fill keeps a gap from here instead of clearing it (see isaCloudEndMucLightGap).
+    //Without a fill running (e.g. a background wake-up), the gap start in the database already covers this moment, so nothing is remembered.
+    BOOL fillStarted = NO;
     @synchronized(_stateLockObject) {
-        if(_isaCloudInactiveDuringGap == nil)
+        fillStarted = [_isaCloudGapStartedRooms count] > 0 || [_isaCloudGapDoneRooms count] > 0;
+        if(fillStarted && _isaCloudInactiveDuringGap == nil)
             _isaCloudInactiveDuringGap = [NSDate date];
     }
-    DDLogInfo(@"isaCloud muc-light: inactive with a gap already open on account %@, remembered for the end of the fill", _account.accountID);
+    if(fillStarted)
+        DDLogInfo(@"isaCloud muc-light: inactive with a gap already open on account %@, remembered for the end of the fill", _account.accountID);
+    else
+        DDLogInfo(@"isaCloud muc-light: inactive with a gap already open on account %@ and no fill running, the gap start covers it", _account.accountID);
 }
 
 //isaCloud muc-light: the gap is filled for all light channels: the start is cleared (or moved to an inactive that happened during the fill), and the memory of this gap too

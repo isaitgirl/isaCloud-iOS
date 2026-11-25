@@ -2,6 +2,15 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## Próximo build
+
+### Corrigido
+- **Canal leve: um despertar em segundo plano com a lacuna aberta não dispara mais uma segunda busca.** `isaCloudNoteClientInactive` só guarda o momento do inativo (`_isaCloudInactiveDuringGap`) quando uma busca já começou na lacuna (`_isaCloudGapStartedRooms` ou `_isaCloudGapDoneRooms` não vazios); sem busca, o início da lacuna no banco já cobre o momento. Antes, o fim da próxima busca abria uma lacuna nova desde esse despertar (visto no log de produção: às 08:16 uma segunda busca desde 04:22). Log novo: "inactive with a gap already open ... and no fill running, the gap start covers it".
+- **Servidor: o `<markable/>` (XEP-0333) não torna mais importante a mensagem comum de canal leve.**
+  - **Antes:** Conversations e Gajim põem o marcador em toda mensagem de canal, e o `is_important` o considerava antes da regra de `groupchat`. Essas mensagens escapavam do descarte e acordavam o aparelho por push: 57 de 57 das que vazaram na noite de 24→25/11.
+  - **Agora:** a sala leve tem regra própria (`is_light_important`). Só passam assunto, convite, mensagem cifrada e menção. Marcadores e digitação sem corpo são descartados sem contar.
+  - Mudança no `mod_csi_battery_saver`, no repo `isacloud-custom-plugins`.
+
 ## 0.0.1 (build 131) — 24/11/2026
 
 Enviado ao TestFlight às 16:44 (canal leve, fase A, PR 92, e a opção "Abrir isaCloud Meet", PR 93; o canal leve foi testado no `.dev` e a opção do Meet nos simuladores).
