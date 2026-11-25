@@ -1151,3 +1151,8 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - **Decisão:** a condição deixou de ser invariante. `setFiletransferInfoForHistoryId:` registra `isaCloud C39` e retorna; o retorno do HEAD relê a mensagem do banco (o objeto lido antes do pedido não vê a mudança). PR 96.
 - **Não repetir:** conferir `retracted`/`deletedLocally` num `MLMessage` capturado antes de uma espera de rede; reler do banco no retorno.
 
+## Sessão retomada com a descoberta pela metade (25/11/2026, build 134)
+- **Contexto:** depois do restart do Prosody, a conta `im.isacloud.cc` ficou com `accountDiscoDone=0` e sem `uploadServer`. Toda retomada XEP-0198 herdava esse estado, porque a retomada não repete o disco: o pedido de slot saía sem `to` e voltava `service-unavailable`, e o PubSub/OMEMO da conta também ficava desligado. Só desativar e reativar a conta resolvia.
+- **Decisão:** antes de pedir a retomada, o app principal descarta a sessão salva cujo disco não terminou e abre uma nova (`isaCloudDropResumeIfDiscoIncomplete`). Foi preferido a repetir o disco dentro da sessão retomada porque `handleAccountDiscoInfo` também dispara o catchup do MAM e mexe no `inCatchup`. Uma vez por conta e processo, para não perder a retomada de vez num servidor cujo disco sempre falhe. A extensão não muda: ela não envia arquivos e tem pouco tempo.
+- **Não repetir:** confiar que uma sessão retomada tem as capacidades do servidor; o estado salvo pode ter sido gravado entre o bind e as respostas do disco.
+

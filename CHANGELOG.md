@@ -2,6 +2,16 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 134) — 25/11/2026
+
+Enviado ao TestFlight às 16:27 (branch `fix/descoberta-incompleta-na-retomada`; boot de 60 s nos dois simuladores e `.dev` no iPhone antes do envio; o caso real não se reproduz sob demanda).
+
+### Corrigido
+- **Foto sem envio numa sessão retomada cuja descoberta de serviços não terminou.**
+  - **Sintoma (log de produção de 25/11, conta `im.isacloud.cc`):** o pedido de slot do HTTP Upload saía sem `to` e o Prosody respondia `service-unavailable`. O estado da conta estava com `accountDiscoDone=0`, `supportsHttpUpload=0` e `supportsPubSub=0` em todas as retomadas; só desativar e reativar a conta resolvia.
+  - **Causa provável:** o restart do Prosody (13.0.8, ~14h) obrigou uma sessão nova; o app foi congelado antes de processar o disco, e o servidor aceitou retomar essa sessão nas vezes seguintes. A retomada reaproveita o estado salvo e nunca repete o disco.
+  - **Correção:** `isaCloudDropResumeIfDiscoIncomplete` (em `xmpp.m`), chamado antes do `<resume>` inline do SASL2 e do legado. No app principal, se a sessão salva tem `streamID` e `accountDiscoDone=NO`, zera o `streamID` e abre sessão nova; as mensagens sem ack são reenviadas depois do `<enabled>`. Uma vez por conta e processo; a extensão não muda. Log: "whose disco never finished ... binding a new session instead of resuming".
+
 ## 0.0.1 (build 133) — 25/11/2026
 
 Enviado ao TestFlight às 13:32 (C39, PR 96, branch `fix/c39-mimetype-arquivo-retratado`; boot de 60 s nos dois simuladores e `.dev` no iPhone antes do envio).
