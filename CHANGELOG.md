@@ -2,6 +2,13 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 133) — em teste no .dev (25/11/2026)
+
+Branch `fix/c39-mimetype-arquivo-retratado`, em teste no `.dev`.
+
+### Corrigido
+- **Arquivo apagado ou retratado durante a checagem de tipo e tamanho (C39): o `MLAssert` virou aviso e retorno.** `setFiletransferInfoForHistoryId:` não grava mais tipo e tamanho quando a mensagem já não é arquivo, e a resposta do HEAD relê a mensagem do banco antes de gravar.
+
 ## 0.0.1 (build 132) — 25/11/2026
 
 Enviado ao TestFlight às 12:42 (bolinha de atualização no título, PR 95, testada nos simuladores; correções do canal leve, PR 94 e servidor, testadas no `.dev`).

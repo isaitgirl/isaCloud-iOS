@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "build": 133,
+      "date": "25/11/2026",
+      "sections": [
+        {
+          "title": "Correções",
+          "items": [
+            "🛠️ Mais estabilidade quando um arquivo é apagado logo depois de chegar."
+          ]
+        }
+      ]
+    },
+    {
       "build": 132,
       "date": "25/11/2026",
       "sections": [

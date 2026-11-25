@@ -2084,7 +2084,12 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
     __block MLMessage* updatedMessage = nil;
     [self.db voidWriteTransaction:^{
         MLMessage* message = [MLMessage createMessageFromHistoryID:historyId];
-        MLAssert([message.messageType isEqualToString:kMessageTypeFiletransfer], @"Can't set mimeType and size of a message that isn't a file transfer!", @{@"historyId": historyId});
+        //isaCloud: C39, the message can be retracted or changed while the HEAD request runs, so this is not an invariant violation anymore
+        if(message == nil || message.retracted || message.deletedLocally || ![message.messageType isEqualToString:kMessageTypeFiletransfer])
+        {
+            DDLogWarn(@"isaCloud C39: not setting mimeType/size for history id %@: message is gone, retracted, deleted or not a file transfer anymore (type=%@)", historyId, message.messageType);
+            return;
+        }
         DDLogVerbose(@"Setting mime type '%@' and size %@ for history id %@", mimeType, size, historyId);
         NSString* query = @"UPDATE filetransfer_info SET mime_type=?, size=? WHERE message_history_id=?;";
         [self.db executeNonQuery:query andArguments:@[mimeType, size, historyId]];
