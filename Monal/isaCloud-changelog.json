@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "build": 134,
+      "date": "25/11/2026",
+      "sections": [
+        {
+          "title": "Correções",
+          "items": [
+            "📸 Fotos voltam a sair na hora, mesmo logo depois de uma manutenção no servidor."
+          ]
+        }
+      ]
+    },
+    {
       "build": 133,
       "date": "25/11/2026",
       "sections": [

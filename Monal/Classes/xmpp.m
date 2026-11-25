@@ -116,6 +116,8 @@ static NSRegularExpression* fastTokenRemovalRegex;
     BOOL _catchupDone;
     //isaCloud: throttled state saves during catchup (see isaCloudPersistStateThrottled)
     NSObject* _isaCloudPersistLock;
+    //isaCloud: a resumed session never repeats disco, so a session whose disco did not finish is dropped once per process (one xmpp object per account, see isaCloudDropResumeIfDiscoIncomplete)
+    BOOL _isaCloudDroppedResumeForDisco;
     CFAbsoluteTime _isaCloudLastPersist;
     BOOL _isaCloudPersistPending;
     BOOL _isaCloudPersistTimerScheduled;
@@ -3622,6 +3624,7 @@ static NSLock* isaCloudTimeoutsLock(void)
             if(![[HelperTools defaultsDB] boolForKey:@"preventLeaksBeforeAuth"])
             {
                 @synchronized(self->_stateLockObject) {
+                    [self isaCloudDropResumeIfDiscoIncomplete];
                     if(supportsInlinedSmacks)
                         self.connectionProperties.supportsSM3 = YES;
                     if(supportsInlinedSmacks && self.streamID)
@@ -3951,6 +3954,7 @@ static NSLock* isaCloudTimeoutsLock(void)
     if(!self.smacksResumeInlined)
     {
         @synchronized(_stateLockObject) {
+            [self isaCloudDropResumeIfDiscoIncomplete];
             //test if smacks is supported and allows resume
             if(self.connectionProperties.supportsSM3 && self.streamID)
             {
@@ -3970,6 +3974,22 @@ static NSLock* isaCloudTimeoutsLock(void)
         //legacy bind
         [self bindResource:self.connectionProperties.identity.resource];
     }
+}
+
+//isaCloud: a resumed smacks session keeps the disco results of the session it resumes and never queries disco again.
+//If that session was bound but its disco did not finish (for example the app was frozen right after a server restart),
+//every later resume inherits supportsHTTPUpload=NO, uploadServer=nil and supportsPubSub=NO: photo uploads are sent
+//without a 'to' and fail with service-unavailable until the account is disabled and enabled again.
+//In the main app, drop such a session and bind a new one (unacked messages are resent after <enabled>, see resendUnackedMessageStanzasOnly).
+//Only once per process and account, so a server whose account disco always fails does not lose resumption for good.
+//Must be called with _stateLockObject held.
+-(void) isaCloudDropResumeIfDiscoIncomplete
+{
+    if([HelperTools isAppExtension] || self.streamID == nil || self.connectionProperties.accountDiscoDone || _isaCloudDroppedResumeForDisco)
+        return;
+    _isaCloudDroppedResumeForDisco = YES;
+    DDLogWarn(@"isaCloud: account %@ has a resumable session (%@) whose disco never finished (supportsHTTPUpload=%@, supportsPubSub=%@), binding a new session instead of resuming", self.accountID, self.streamID, bool2str(self.connectionProperties.supportsHTTPUpload), bool2str(self.connectionProperties.supportsPubSub));
+    self.streamID = nil;
 }
 
 -(BOOL) handleSasl2SuccessOrContinue:(MLXMLNode*) parsedStanza
