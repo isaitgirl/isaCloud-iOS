@@ -238,9 +238,11 @@ static BOOL _isaCloudStoreStateAfterUnfreeze = NO;
 
         NSURLSession* session = [HelperTools createEphemeralURLSession];
         [[session dataTaskWithRequest:request completionHandler:^(NSData* _Nullable data __unused, NSURLResponse* _Nullable response, NSError* _Nullable error) {
-            if(msg.retracted || msg.deletedLocally)
+            //isaCloud: C39, reread the message: the object read before the request does not see changes made while it ran
+            MLMessage* currentMsg = [MLMessage createMessageFromHistoryID:historyId];
+            if(currentMsg == nil || currentMsg.retracted || currentMsg.deletedLocally || ![currentMsg.messageType isEqualToString:kMessageTypeFiletransfer])
             {
-                DDLogDebug(@"Ignoring mimeType/size check results because the corresponding message was retracted or deleted while fetching the headers. historyId = %@", historyId);
+                DDLogDebug(@"Ignoring mimeType/size check results because the corresponding message was retracted, deleted or is no longer a file transfer while fetching the headers. historyId = %@", historyId);
                 [self markAsComplete:historyId];
                 return;
             }
