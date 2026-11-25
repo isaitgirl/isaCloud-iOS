@@ -127,6 +127,44 @@ Feita por executores e revisada; compila no simulador. Não testada no aparelho.
     - no conversations, 7 mensagens novas e 1 mensagem ao vivo movida para a ordem certa.
   - **Falta:** a noite no TestFlight, com push de menção, bateria e crash de manhã.
 
+## Primeira noite no TestFlight (build 131, 24→25/11/2026)
+
+Conta isadora@xmpp.social.br (id 47 no app de produção), 14 canais leves. Fonte: log longo `isacloud-log-longo-131-20261125-0837` e a métrica do servidor às 9h de 25/11.
+
+- **Sem crash:** nenhum relatório de crash. O app foi suspenso limpo às 21:23 (lock liberado), o iOS o encerrou de madrugada, e ele abriu a frio às 03:56.
+- **Pushes:** 33 entre 17:32 e 08:12, só 7 entre 21h e 8h. A extensão iniciou 1 vez entre 22h e 7h.
+- **Buscas:** cada abertura buscou os 14 canais em 2 a 6 s. Por exemplo, 516 mensagens novas às 19:42, 165 às 03:56 e 875 às 08:16, sem duplicar.
+- **Servidor:** 366 mensagens descartadas no xmpp.social.br (230 de salas remotas, 136 locais) desde o reload.
+- **Furo no servidor: `<markable/>`.**
+  - **O que acontece:** o `is_important` dá "importante" a toda mensagem com o namespace `urn:xmpp:chat-markers:0`, e esse teste vem antes da regra de `groupchat`. O `<markable/>` é só um pedido de recibo, mas Conversations, Gajim e outros o põem em mensagens comuns de canal.
+  - **Efeito:** essas mensagens não são descartadas. Elas esvaziam a fila e acordam o aparelho por push.
+  - **Medido:** as 57 mensagens de canal leve que chegaram enfileiradas com o app inativo tinham `markable`. Foram 34 no guiaxmpp, 11 no gajim, 10 no conversations e 2 no commteam. Na amostra do MAM, 84% das mensagens do gajim e 71% das do commteam têm `markable`.
+  - **Correção proposta:** nas salas leves, decidir a importância por uma regra própria de canal, que ignora `markable` e marcadores: assunto, convite, menção (usuário ou apelido) e mensagem cifrada. O resto é descartado e contado.
+- **Busca repetida no app.**
+  - **O que acontece:** o `isaCloudNoteClientInactive` guarda o "inativo durante a lacuna" mesmo quando nenhuma busca está rodando. Isso acontece, por exemplo, quando o app acorda em segundo plano com a lacuna aberta.
+  - **Efeito:** no fim da busca seguinte, o app busca de novo a partir dessa hora. Às 08:16 houve uma segunda busca desde as 04:22. Não duplica nada, mas repete consultas ao MAM.
+  - **Correção proposta:** só guardar se a busca já começou em alguma sala (`_isaCloudGapStartedRooms` ou `_isaCloudGapDoneRooms` não vazios). Antes disso, o início da lacuna já cobre o momento.
+- **Pequeno:** 3 consultas `deferred` voltaram com erro (`(null)`), ao acordar em segundo plano. Não afetam a busca, que usa o MAM.
+
+## Teste das correções no `.dev` (25/11/2026, 9h35 às 10h52)
+
+As três contas foram usadas: 1 = poli@isacloud.im, 2 = poli2@isacloud.im e 5 = isadora@xmpp.social.br, esta com 14 canais leves.
+
+- **App, busca repetida: corrigida.**
+  - Nos 7 despertares em segundo plano, as três contas registraram "no fill running, the gap start covers it".
+  - Ao abrir às 10:51, cada conta fez uma única busca desde 09:37. Vieram 568 mensagens no development, 54 no guiaxmpp e 40 no conversations, em uns 25 s.
+- **"enable/deferred got an error: (null)" não é erro.**
+  - O app congela antes de a resposta chegar e o tratador expira.
+  - O servidor respondeu depois: às 10:16:58, "enable answered (result) after 494628 ms".
+- **Servidor: o reload não tinha sido feito.** O log do Prosody não tem "Unloading module" nem "Successfully loaded module". As 6 mensagens com `markable` que ainda passaram vêm do código antigo, então o teste do markable fica para depois do reload.
+- **Retomadas recusadas na conta 5 do `.dev`.**
+  - **O que aconteceu:** 4 retomadas seguidas recusadas a partir das 10:16, com "Too many unacked stanzas remaining".
+  - **A primeira:** a sessão entrou nos 14 canais grandes às 9h35, no meio da tarde europeia. Com o código antigo, cada mensagem com `markable` esvazia a fila do CSI na fila do smacks.
+  - **Depois, um ciclo:** cada despertar abre sessão nova e entra de novo nos canais. A presença 110 libera a lista de ocupantes de cada sala e enche a fila outra vez.
+  - **Em produção:** o app não teve nenhuma recusa à noite (142 retomadas).
+  - **O que acompanhar:** se o ciclo continua depois do reload com o código novo. Se continuar, a próxima peça é não liberar a lista de ocupantes de sala leve no 110 enquanto o app está inativo.
+- **Risco do reload, corrigido antes de fazê-lo.** O `module.unload` tirava o filtro de todas as sessões, e o reload só o recolocava no próximo `<inactive/>`. Agora o módulo o reinstala ao carregar nas sessões com `session.state == "inactive"`. Teste em `scratchpad/csi-test/test_rearm.lua`: 6 ok, mais os 36 do canal leve e os 12 da compactação.
+
 ## Custo estimado
 
 - **Servidor:** ~150–200 linhas de Lua no `mod_csi_battery_saver`: o `enable` e o `deferred` por IQ, o descarte no `session.send` que já existe e a métrica. Dá para testar com o mesmo harness de 20/11 (`scratchpad/csi-test/test_csi.lua`).
@@ -148,3 +186,13 @@ Feita por executores e revisada; compila no simulador. Não testada no aparelho.
 - `mod_cloud_notify.lua` (trunk): o push para sessão hibernada sai do `smacks-hibernation-stanza-queued`.
 - `mod_csi.lua`: o estado fica em `session.state`.
 - `mod_csi_battery_saver.lua` (o nosso, com a compactação de 20/11): o `filter_muc` decide menção pelo usuário ou pelo apelido na sala (`track_muc_joins`).
+
+## Teste com o código novo no servidor (25/11/2026, 11:49 às 12:29)
+
+O arquivo do módulo no servidor foi conferido: 515 linhas, o mesmo hash do repo e o `is_light_important`. No reload das 11:49:35, o filtro voltou em 264 sessões inativas: 142 no isacloud.im, 76 no xmpp.social.br e 31 no voz.social.br, entre outras.
+
+- **Nenhuma mensagem de canal leve passou** com o app inativo nas 3 contas do `.dev`: nem com corpo, nem `markable`, nem `displayed`. O detector continua achando as 1.022 presenças que o servidor segurou, então não é falha dele.
+- **Retomadas:** a xmpp.social.br retomou a sessão nos 4 despertares, sem nenhuma recusa por "Too many unacked".
+- **Busca ao abrir (12:27):** uma por conta, em 6 s. Vieram 152 mensagens no ia, 74 no guiaxmpp, 68 no support e 67 no conversations, sem nenhuma movida.
+- **Métrica no fim:** 370 remotas e 213 locais no xmpp.social.br; 364 locais e 14 remotas no isacloud.im.
+- **Pendente no repo `isacloud-custom-plugins`:** commit da reinstalação do filtro ao carregar. O arquivo já está no ar.
