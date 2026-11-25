@@ -1145,3 +1145,9 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - **Acessibilidade:** com "Reduzir movimento" ela fica parada, e o VoiceOver lê "Conversas, atualizando".
 
 **Como desfazer:** apagar a chamada a `isaCloudCatchupDotTick:` no `handleSpinner` do `MonalAppDelegate.m`, e o título volta a ser o texto do storyboard se o `isaCloudSetupTitleView` sair do `viewDidLoad` da `ActiveChatsViewController`.
+
+## Arquivo que deixa de ser arquivo durante o HEAD (C39, 25/11/2026, build 133)
+- **Contexto:** `+[MLFiletransfer checkMimeTypeAndSizeForHistoryID:]` faz um HEAD do arquivo e, no retorno, grava tipo e tamanho com `-[DataLayer setFiletransferInfoForHistoryId:withMimeType:andSize:]`, que tinha um `MLAssert` exigindo `messageType` de arquivo. Uma retratação (`messageType=text, retracted=1`) ou troca de tipo no meio do HEAD derrubava o app (SIGABRT no build 127, iPhone17,1).
+- **Decisão:** a condição deixou de ser invariante. `setFiletransferInfoForHistoryId:` registra `isaCloud C39` e retorna; o retorno do HEAD relê a mensagem do banco (o objeto lido antes do pedido não vê a mudança). PR 96.
+- **Não repetir:** conferir `retracted`/`deletedLocally` num `MLMessage` capturado antes de uma espera de rede; reler do banco no retorno.
+
