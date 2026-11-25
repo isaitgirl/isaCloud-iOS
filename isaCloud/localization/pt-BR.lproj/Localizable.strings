@@ -421,3 +421,6 @@
 "In the app" = "No app";
 "In the browser" = "No navegador";
 "In the browser, you can switch back to your messages during the call. In the app, the call stays in full screen and ends when you close it." = "No navegador, você pode voltar às mensagens durante a chamada. No app, a chamada fica em tela cheia e termina quando você fecha.";
+
+/* isaCloud: "updating" dot after the title of the chats list (accessibility) */
+"updating" = "atualizando";

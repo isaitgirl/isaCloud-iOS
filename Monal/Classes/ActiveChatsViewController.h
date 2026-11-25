@@ -31,6 +31,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, strong) UIActivityIndicatorView* spinner;
 //isaCloud: the sync indicator bar item is only in the bar while syncing (an empty bar item shows as an empty circle on iOS 26+)
 -(void) setSyncIndicatorVisible:(BOOL) visible;
+//isaCloud: the small pulsing pink dot after the "Chats" title while the accounts connect or catch up (see MonalAppDelegate isaCloudCatchupDotTick:)
+-(void) setCatchupDotVisible:(BOOL) visible;
 @property (atomic, strong) SizeClassWrapper* sizeClass;
 @property (atomic, readonly) chatViewController* _Nullable currentChatView;
 

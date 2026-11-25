@@ -2,6 +2,16 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## Próximo build
+
+### Adicionado
+- **Bolinha de atualização no título "Conversas".**
+  - **O que é:** uma bolinha rosa pequena, pulsando, logo depois do título, em posição de sobrescrito. Ela aparece enquanto alguma conta ativa conecta ou faz o catchup, e isso inclui a busca dos canais leves: `xmpp.isaCloudCatchingUp` é `kStateBound` com `!_catchupDone` ou `inCatchup` não vazio.
+  - **Sem piscar:** só aparece se isso durar 0,5 s e, depois de aparecer, fica pelo menos 0,8 s (`isaCloudCatchupDotTick:` no `MonalAppDelegate`, chamado pelo `handleSpinner` e por um timer de 0,25 s só enquanto ela é necessária).
+  - **Spinner:** o de "não conecta" (5 s) a substitui.
+  - **Acessibilidade:** com "Reduzir movimento" ela fica parada, e o VoiceOver lê "Conversas, atualizando".
+  - **O título:** vira um `titleView` do tamanho do texto, com a bolinha fora dele, então não sai do centro.
+
 ## 0.0.1 (build 131) — 24/11/2026
 
 Enviado ao TestFlight às 16:44 (canal leve, fase A, PR 92, e a opção "Abrir isaCloud Meet", PR 93; o canal leve foi testado no `.dev` e a opção do Meet nos simuladores).

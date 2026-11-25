@@ -388,6 +388,17 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
 
 @end
 
+//isaCloud: the title view only has the size of the title, so the title stays centered when the dot comes and goes (the dot is outside of it)
+@interface IsaCloudChatsTitleView : UIView
+@property (nonatomic, strong) UILabel* label;
+@end
+@implementation IsaCloudChatsTitleView
+-(CGSize) intrinsicContentSize
+{
+    return self.label.bounds.size;
+}
+@end
+
 @interface ActiveChatsViewController() <UISearchResultsUpdating, UISearchControllerDelegate> {
     int _startedOrientation;
     double _portraitTop;
@@ -399,6 +410,9 @@ typedef void (^view_queue_block_t)(PMKResolver _Nonnull);
     NSMutableArray* _blockQueue;
     ChatListFilterBar* _chatListFilterBar;      //isaCloud: chips under the search bar
     ChatListNewsView* _chatListNewsView;        //isaCloud: "isaCloud news" on top of the list (the table header), made when first needed
+    UIView* _isaCloudTitleView;                 //isaCloud: the "Chats" title with the "updating" dot (see isaCloudSetupTitleView)
+    UIView* _isaCloudCatchupDot;                //isaCloud: the pulsing pink dot after the title
+    BOOL _isaCloudCatchupDotVisible;
     dispatch_semaphore_t _blockQueueSemaphore;
 }
 @property (atomic, strong) NSMutableArray* unpinnedContacts;
@@ -693,6 +707,90 @@ static NSMutableSet<NSNumber*>* _hiddenChatListAccountIDs;      //isaCloud: only
         [self.spinner stopAnimating];
 }
 
+#pragma mark - isaCloud: bolinha de atualização
+
+//isaCloud: the "Chats" title as a plain label that looks like the system title, plus the "updating" dot, small and up like a superscript
+-(void) isaCloudSetupTitleView
+{
+    NSString* title = self.navigationItem.title ?: NSLocalizedString(@"Chats", @"");
+    NSDictionary* attributes = self.navigationController.navigationBar.standardAppearance.titleTextAttributes;
+    IsaCloudChatsTitleView* titleView = [IsaCloudChatsTitleView new];
+    UILabel* label = [UILabel new];
+    label.text = title;
+    label.font = attributes[NSFontAttributeName] ?: [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold];
+    label.textColor = attributes[NSForegroundColorAttributeName] ?: [UIColor labelColor];
+    [label sizeToFit];
+    titleView.label = label;
+    titleView.frame = label.bounds;
+    titleView.clipsToBounds = NO;
+    [titleView addSubview:label];
+    
+    CGFloat size = 7;
+    //top of the dot at the top of the capital letters
+    CGFloat capTop = label.font.ascender - label.font.capHeight + (label.bounds.size.height - label.font.lineHeight) / 2;
+    UIView* dot = [[UIView alloc] initWithFrame:CGRectMake(label.bounds.size.width + 3, MAX(0, capTop - 1), size, size)];
+    dot.backgroundColor = [UIColor colorNamed:@"isaCloudPink"];
+    dot.layer.cornerRadius = size / 2;
+    dot.hidden = YES;
+    dot.alpha = 0;
+    dot.userInteractionEnabled = NO;
+    [titleView addSubview:dot];
+    
+    titleView.isAccessibilityElement = YES;
+    titleView.accessibilityTraits = UIAccessibilityTraitHeader;
+    titleView.accessibilityLabel = title;
+    _isaCloudTitleView = titleView;
+    _isaCloudCatchupDot = dot;
+    self.navigationItem.titleView = titleView;
+}
+
+-(void) setCatchupDotVisible:(BOOL) visible
+{
+    if(_isaCloudCatchupDot == nil || _isaCloudCatchupDotVisible == visible)
+        return;
+    _isaCloudCatchupDotVisible = visible;
+    UIView* dot = _isaCloudCatchupDot;
+    NSString* title = self.navigationItem.title ?: NSLocalizedString(@"Chats", @"");
+    _isaCloudTitleView.accessibilityLabel = visible ? [NSString stringWithFormat:@"%@, %@", title, NSLocalizedString(@"updating", @"isaCloud: accessibility, added to the title of the chats list while the chats are being updated")] : title;
+    if(visible)
+    {
+        dot.hidden = NO;
+        [dot.layer removeAllAnimations];
+        [UIView animateWithDuration:0.2 animations:^{
+            dot.alpha = 1;
+        }];
+        //with "Reduce Motion" the dot stays still
+        if(!UIAccessibilityIsReduceMotionEnabled())
+        {
+            CABasicAnimation* fade = [CABasicAnimation animationWithKeyPath:@"opacity"];
+            fade.fromValue = @1.0;
+            fade.toValue = @0.3;
+            CABasicAnimation* shrink = [CABasicAnimation animationWithKeyPath:@"transform.scale"];
+            shrink.fromValue = @1.0;
+            shrink.toValue = @0.7;
+            CAAnimationGroup* pulse = [CAAnimationGroup animation];
+            pulse.animations = @[fade, shrink];
+            pulse.duration = 0.8;
+            pulse.autoreverses = YES;
+            pulse.repeatCount = HUGE_VALF;
+            pulse.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+            pulse.removedOnCompletion = NO;
+            [dot.layer addAnimation:pulse forKey:@"isaCloudPulse"];
+        }
+    }
+    else
+    {
+        [UIView animateWithDuration:0.25 animations:^{
+            dot.alpha = 0;
+        } completion:^(BOOL finished) {
+            if(self->_isaCloudCatchupDotVisible)
+                return;     //shown again meanwhile
+            [dot.layer removeAllAnimations];
+            dot.hidden = YES;
+        }];
+    }
+}
+
 //isaCloud: the badge of the contacts button counts the pending invites too
 -(void) isaCloudPendingInvitesUpdated
 {
@@ -741,6 +839,7 @@ static NSMutableSet<NSNumber*>* _hiddenChatListAccountIDs;      //isaCloud: only
     
     self.spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleMedium];
     self.spinner.hidesWhenStopped = YES;
+    [self isaCloudSetupTitleView];      //isaCloud: before appDelegate.activeChats is set (it sets the dot)
     
     self.view.backgroundColor = [UIColor lightGrayColor];
     self.view.autoresizingMask = UIViewAutoresizingFlexibleHeight|UIViewAutoresizingFlexibleWidth;

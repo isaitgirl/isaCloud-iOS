@@ -1127,3 +1127,14 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
   - `nowForegroundedAtLaunch` em `MLXMPPManager.m`.
 - **Abertura a frio:** o atalho `nowForegroundedAtLaunch` (builds 6-9 e 98) só trocava as flags, e as contas nascidas durante o `didFinishLaunching` (estado "background") ficavam com CSI inativo durante todo o primeiro uso. Agora ele chama `setClientActive` em cada conta: só despacha para a fila de recebimento, sem esperar por ela, então não traz de volta o travamento que o atalho evitava. O Monal original chama `nowForegrounded` inteiro, que faz o mesmo e mais.
 
+## Bolinha de atualização no título (25/11/2026)
+
+**Problema:** com o canal leve, ao abrir o app as mensagens dos canais chegam de 2 a 6 s depois. Desde 04/11 o spinner só significa "não conecta" (ver "Spinner só quando não conecta"), então nada avisava que o app estava atualizando.
+
+**Decisão (da Isadora):** uma bolinha rosa pulsante, discreta, sobrescrita depois do título "Conversas", em vez de voltar com o spinner.
+- **Quando aparece:** enquanto alguma conta ativa conecta ou faz o catchup (smacks, MAM e a busca dos canais leves).
+- **Tempos:** só aparece depois de 0,5 s e fica no mínimo 0,8 s, para não piscar.
+- **Junto com o spinner:** o spinner de "não conecta" a substitui.
+- **Acessibilidade:** com "Reduzir movimento" ela fica parada, e o VoiceOver lê "Conversas, atualizando".
+
+**Como desfazer:** apagar a chamada a `isaCloudCatchupDotTick:` no `handleSpinner` do `MonalAppDelegate.m`, e o título volta a ser o texto do storyboard se o `isaCloudSetupTitleView` sair do `viewDidLoad` da `ActiveChatsViewController`.

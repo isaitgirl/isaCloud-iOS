@@ -547,6 +547,12 @@ static NSLock* isaCloudTimeoutsLock(void)
     }
 }
 
+//isaCloud: see xmpp.h (best effort read from the main thread, like the idle check reads these from any thread)
+-(BOOL) isaCloudCatchingUp
+{
+    return self.accountState >= kStateBound && (!_catchupDone || [self.inCatchup count] > 0);
+}
+
 -(BOOL) idle
 {
     BOOL retval = NO;

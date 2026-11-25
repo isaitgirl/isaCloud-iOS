@@ -70,6 +70,8 @@ typedef void (^monal_iq_handler_t)(XMPPIQ* _Nullable);
 @interface xmpp : NSObject <NSStreamDelegate>
 
 @property (nonatomic, readonly) BOOL idle;
+//isaCloud: connected and still catching up (smacks replay or mam catchup, including the gap fill of light channels); read on the main thread for the "updating" dot
+@property (nonatomic, readonly) BOOL isaCloudCatchingUp;
 @property (nonatomic, readonly) BOOL parseQueueFrozen;
 
 @property (nonatomic, strong) MLXMPPConnection* connectionProperties;
