@@ -12,6 +12,9 @@ O que está neste arquivo é o que aparece para o usuário na tela de **Novidade
 
 ## Próximo build
 
+### Novidades
+- 🩷 Uma bolinha rosa pulsa ao lado de "Conversas" enquanto o app busca as novidades. Quando ela some, está tudo em dia!
+
 ### Correções
 - 🔕 Canais leves ainda mais quietinhos: o celular só acorda quando alguém fala com você.
 

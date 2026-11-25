@@ -4,6 +4,14 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## Próximo build
 
+### Adicionado
+- **Bolinha de atualização no título "Conversas".**
+  - **O que é:** uma bolinha rosa pequena, pulsando, logo depois do título, em posição de sobrescrito. Ela aparece enquanto alguma conta ativa conecta ou faz o catchup, e isso inclui a busca dos canais leves: `xmpp.isaCloudCatchingUp` é `kStateBound` com `!_catchupDone` ou `inCatchup` não vazio.
+  - **Sem piscar:** só aparece se isso durar 0,5 s e, depois de aparecer, fica pelo menos 0,8 s (`isaCloudCatchupDotTick:` no `MonalAppDelegate`, chamado pelo `handleSpinner` e por um timer de 0,25 s só enquanto ela é necessária).
+  - **Spinner:** o de "não conecta" (5 s) a substitui.
+  - **Acessibilidade:** com "Reduzir movimento" ela fica parada, e o VoiceOver lê "Conversas, atualizando".
+  - **O título:** vira um `titleView` do tamanho do texto, com a bolinha fora dele, então não sai do centro.
+
 ### Corrigido
 - **Canal leve: um despertar em segundo plano com a lacuna aberta não dispara mais uma segunda busca.** `isaCloudNoteClientInactive` só guarda o momento do inativo (`_isaCloudInactiveDuringGap`) quando uma busca já começou na lacuna (`_isaCloudGapStartedRooms` ou `_isaCloudGapDoneRooms` não vazios); sem busca, o início da lacuna no banco já cobre o momento. Antes, o fim da próxima busca abria uma lacuna nova desde esse despertar (visto no log de produção: às 08:16 uma segunda busca desde 04:22). Log novo: "inactive with a gap already open ... and no fill running, the gap start covers it".
 - **Servidor: o `<markable/>` (XEP-0333) não torna mais importante a mensagem comum de canal leve.**

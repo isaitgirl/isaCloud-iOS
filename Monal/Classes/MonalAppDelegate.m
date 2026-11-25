@@ -56,6 +56,11 @@
 //(ActiveChatsViewController.m uses the same switch for the accessibility label)
 #define ISACLOUD_SYNC_INDICATOR_ONLY_WHEN_CONNECTING 1
 #define ISACLOUD_SYNC_INDICATOR_DELAY                5.0
+//isaCloud: the pulsing dot after the "Chats" title means "updating": some active account is connecting or catching up (the light channels too).
+//It shows only if that lasts ISACLOUD_CATCHUP_DOT_DELAY seconds and then stays at least ISACLOUD_CATCHUP_DOT_MIN_SHOWN seconds (no flicker);
+//the "cannot connect" spinner replaces it. See docs/decisoes.md ("Bolinha de atualização").
+#define ISACLOUD_CATCHUP_DOT_DELAY                   0.5
+#define ISACLOUD_CATCHUP_DOT_MIN_SHOWN               0.8
 
 //the normal graceful timeout when putting the app into the background
 #define GRACEFUL_TIMEOUT                    20.0
@@ -93,6 +98,9 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
     NotificationBannerQueue* _bannerQueue;
     NSTimer* _isaCloudSpinnerTimer;     //isaCloud: pending 5 s timer before showing the "not connecting" spinner (main thread only)
     BOOL _isaCloudSpinnerShown;         //isaCloud: last state set on the chats toolbar spinner by the isaCloud rule (main thread only)
+    NSTimer* _isaCloudCatchupDotTimer;      //isaCloud: re-checks the "updating" dot while it is wanted or shown (main thread only)
+    NSDate* _isaCloudCatchupDotWantedSince; //isaCloud: since when the accounts are connecting or catching up (nil: they are not)
+    NSDate* _isaCloudCatchupDotShownAt;     //isaCloud: when the dot appeared (nil: hidden)
 }
 
 //these all need to be atomic to not fall into an "asm load -> arc free -> use-after-free pointer usage" race condition
@@ -624,6 +632,7 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
 {
     DDLogDebug(@"Active chats did load...");
     _activeChats = (ActiveChatsViewController*)activeChats;
+    [_activeChats setCatchupDotVisible:_isaCloudCatchupDotShownAt != nil];     //isaCloud: the list may come after the dot was decided
     [self openChatOfContact:self.contactToOpen withCompletion:self.completionToCall];
 }
 
@@ -1240,7 +1249,10 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
     
     [self updateUnread];
     if(ISACLOUD_SYNC_INDICATOR_ONLY_WHEN_CONNECTING)
+    {
         [self isaCloudCancelSpinnerTimerAndHide];     //isaCloud: no spinner in the background
+        [self isaCloudHideCatchupDot];                //isaCloud: and no "updating" dot
+    }
 #if TARGET_OS_MACCATALYST
     if(NSProcessInfo.processInfo.isLowPowerModeEnabled)
     {
@@ -1452,6 +1464,64 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
     //show the spinner only if an account is still not connected after the delay
     _isaCloudSpinnerShown = [self isaCloudAnyAccountNotConnected];
     [self.activeChats setSyncIndicatorVisible:_isaCloudSpinnerShown];
+    [self isaCloudCatchupDotTick:nil];      //isaCloud: the spinner replaces the "updating" dot
+}
+
+//isaCloud: true if the app is in the foreground and some active account is connecting or catching up (the light channels too)
+-(BOOL) isaCloudAnyAccountUpdating
+{
+    if([UIApplication sharedApplication].applicationState != UIApplicationStateActive)
+        return NO;
+    for(xmpp* account in [[MLXMPPManager sharedInstance] connectedXMPP])
+    {
+        if(account.accountState < kStateBound || account.isaCloudCatchingUp)
+            return YES;
+    }
+    return NO;
+}
+
+//isaCloud: main thread only. Decides the "updating" dot after the "Chats" title (see ISACLOUD_CATCHUP_DOT_DELAY):
+//called by handleSpinner (account state, idle, connectivity, became active) and, while the dot is wanted or shown, by a short timer,
+//because the end of a catchup does not always change the idle state (unacked stanzas can keep an account non-idle)
+-(void) isaCloudCatchupDotTick:(NSTimer* _Nullable) timer
+{
+    NSDate* now = [NSDate date];
+    BOOL wanted = !_isaCloudSpinnerShown && [self isaCloudAnyAccountUpdating];
+    if(!wanted)
+        _isaCloudCatchupDotWantedSince = nil;
+    else if(_isaCloudCatchupDotWantedSince == nil)
+        _isaCloudCatchupDotWantedSince = now;
+    if(_isaCloudCatchupDotShownAt == nil && wanted && [now timeIntervalSinceDate:_isaCloudCatchupDotWantedSince] >= ISACLOUD_CATCHUP_DOT_DELAY)
+    {
+        _isaCloudCatchupDotShownAt = now;
+        [self.activeChats setCatchupDotVisible:YES];
+    }
+    else if(_isaCloudCatchupDotShownAt != nil && !wanted && ([now timeIntervalSinceDate:_isaCloudCatchupDotShownAt] >= ISACLOUD_CATCHUP_DOT_MIN_SHOWN || _isaCloudSpinnerShown))
+    {
+        _isaCloudCatchupDotShownAt = nil;
+        [self.activeChats setCatchupDotVisible:NO];
+    }
+    BOOL pending = wanted || _isaCloudCatchupDotShownAt != nil;
+    if(pending && _isaCloudCatchupDotTimer == nil)
+        _isaCloudCatchupDotTimer = [NSTimer scheduledTimerWithTimeInterval:0.25 target:self selector:@selector(isaCloudCatchupDotTick:) userInfo:nil repeats:YES];
+    else if(!pending && _isaCloudCatchupDotTimer != nil)
+    {
+        [_isaCloudCatchupDotTimer invalidate];
+        _isaCloudCatchupDotTimer = nil;
+    }
+}
+
+//isaCloud: main thread only, hides the "updating" dot at once (the app leaves the foreground)
+-(void) isaCloudHideCatchupDot
+{
+    [_isaCloudCatchupDotTimer invalidate];
+    _isaCloudCatchupDotTimer = nil;
+    _isaCloudCatchupDotWantedSince = nil;
+    if(_isaCloudCatchupDotShownAt != nil)
+    {
+        _isaCloudCatchupDotShownAt = nil;
+        [self.activeChats setCatchupDotVisible:NO];
+    }
 }
 
 -(void) handleSpinner
@@ -1466,6 +1536,8 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
                 [self isaCloudCancelSpinnerTimerAndHide];
             else if(!self->_isaCloudSpinnerShown && self->_isaCloudSpinnerTimer == nil)
                 self->_isaCloudSpinnerTimer = [NSTimer scheduledTimerWithTimeInterval:ISACLOUD_SYNC_INDICATOR_DELAY target:self selector:@selector(isaCloudSpinnerTimerFired:) userInfo:nil repeats:NO];
+            //isaCloud: the "updating" dot follows the same events (with the original Monal spinner it is not used: that spinner already shows the catchup)
+            [self isaCloudCatchupDotTick:nil];
         }
         else
             [self.activeChats setSyncIndicatorVisible:!([[MLXMPPManager sharedInstance] allAccountsIdle] && [MLFiletransfer isIdle])];
