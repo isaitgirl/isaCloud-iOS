@@ -50,9 +50,11 @@
     NSMutableArray* _remoteAvatarQueue;             //isaCloud: waiting requests (dictionaries owner, jid, hash)
     NSDate* _lastPing;
     NSMutableSet* _noUpdateBookmarks;
-    NSMutableSet* _isaCloudGapStartedRooms;     //isaCloud muc-light: light rooms whose gap fill was sent in the current gap (memory only)
-    NSMutableSet* _isaCloudGapDoneRooms;        //isaCloud muc-light: light rooms whose gap fill finished in the current gap (memory only)
-    NSDate* _isaCloudInactiveDuringGap;         //isaCloud muc-light: first inactive while a gap was open: the end of the fill keeps a gap from here (memory only)
+    NSMutableDictionary<NSString*, NSDate*>* _isaCloudRoomGapSince;             //isaCloud muc-light: light room --> since when it may miss messages (memory only, the oldest one is kept in the database)
+    NSMutableDictionary<NSString*, NSDictionary*>* _isaCloudRoomFillInFlight;   //isaCloud muc-light: light room --> @{since, h0, sent} of the archive query in flight (memory only)
+    NSMutableSet<NSString*>* _isaCloudRoomFillFailed;                           //isaCloud muc-light: light rooms whose last gap fill failed or that did not join in time (memory only)
+    BOOL _isaCloudGapLoaded;                    //isaCloud muc-light: the gap start of the database was copied to the rooms in this session (memory only)
+    NSDate* _isaCloudLastInactive;              //isaCloud muc-light: the last time the app was inactive: a query sent before it may have died (memory only)
     NSDate* _isaCloudSessionStart;              //isaCloud muc-light: bind of the current session (not a resume): rooms not joined shortly after it still block the end of the gap
     //these won't be persisted because it is only for the ui
     NSMutableDictionary* _uiHandler;
@@ -114,8 +116,11 @@ static NSString* const kIsaCloudGuideRoom = @"guiaxmpp@conference.isacloud.cc";
     _uiHandler = [NSMutableDictionary new];
     _lastPing = [NSDate date];
     _noUpdateBookmarks = [NSMutableSet new];
-    _isaCloudGapStartedRooms = [NSMutableSet new];
-    _isaCloudGapDoneRooms = [NSMutableSet new];
+    _isaCloudRoomGapSince = [NSMutableDictionary new];
+    _isaCloudRoomFillInFlight = [NSMutableDictionary new];
+    _isaCloudRoomFillFailed = [NSMutableSet new];
+    _isaCloudGapLoaded = NO;
+    _isaCloudLastInactive = nil;
     _isaCloudSessionStart = [NSDate date];
     _shouldFetchBookmarks = NO;
     _smacksResumption = YES;
@@ -205,8 +210,11 @@ static NSString* const kIsaCloudGuideRoom = @"guiaxmpp@conference.isacloud.cc";
             _changingNick = [NSMutableDictionary new];
             _nickBookmarkPending = [NSMutableSet new];
             _keepBookmarkPending = [NSMutableSet new];
-            _isaCloudGapStartedRooms = [NSMutableSet new];     //isaCloud muc-light: a new connection fills the gap again (the gap start is in the database)
-            _isaCloudGapDoneRooms = [NSMutableSet new];
+            _isaCloudRoomGapSince = [NSMutableDictionary new];     //isaCloud muc-light: a new connection fills the gap again (the gap start is in the database)
+            _isaCloudRoomFillInFlight = [NSMutableDictionary new];
+            _isaCloudRoomFillFailed = [NSMutableSet new];
+            _isaCloudGapLoaded = NO;
+            _isaCloudLastInactive = nil;
             _isaCloudSessionStart = [NSDate date];
             
             //make sure all idle timers get invalidated properly
@@ -2405,6 +2413,22 @@ $$
 
 //isaCloud muc-light: one page of the gap fill of a light channel (same RSM paging and errors as handleCatchup, plus the gap to move the live messages in)
 $$instance_handler(handleGapFill, account.mucProcessor, $$ID(xmpp*, account), $$ID(XMPPIQ*, iqNode), $$ID(NSString*, room), $$ID(NSDate*, gapStart), $$ID(NSNumber*, h0), $$BOOL(secondTry))
+    //an answer that is not the one of the query in flight of this room (sent again after an inactive, or of a gap that ended) is ignored
+    BOOL stale = NO;
+    BOOL noFillInFlight = NO;
+    @synchronized(_stateLockObject) {
+        NSDictionary* fill = _isaCloudRoomFillInFlight[room];
+        noFillInFlight = (fill == nil);
+        stale = noFillInFlight || ![fill[@"since"] isEqualToDate:gapStart] || ![fill[@"h0"] isEqualToNumber:h0];
+    }
+    if(stale)
+    {
+        DDLogInfo(@"isaCloud muc-light: stale gap fill answer of %@ ignored", room);
+        //the room is not waited for by any other query: its archive is finished for the message queue
+        if(noFillInFlight)
+            [account mamFinishedFor:room];
+        return;
+    }
     if([iqNode check:@"/<type=error>"])
     {
         DDLogWarn(@"isaCloud muc-light: gap fill query of %@ returned error: %@", room, [iqNode findFirst:@"error"]);
@@ -2419,11 +2443,16 @@ $$instance_handler(handleGapFill, account.mucProcessor, $$ID(xmpp*, account), $$
         {
             //isaCloud: a background sync problem the person can do nothing about: only the log (no banner, no notification)
             [HelperTools postQuietError:[NSString stringWithFormat:NSLocalizedString(@"Failed to query for new messages for Group/Channel (catchup) %@", @""), room] withNode:iqNode andAccount:account];
-            //the gap fill of this room is tried again the next time the app becomes active
+            //the gap of this room is kept, so its fill is tried again the next time the app becomes active (it does not hold the gap of the account)
             @synchronized(_stateLockObject) {
-                [_isaCloudGapStartedRooms removeObject:room];
+                NSDate* current = _isaCloudRoomGapSince[room];
+                if(current == nil || [gapStart compare:current] == NSOrderedAscending)
+                    _isaCloudRoomGapSince[room] = gapStart;
+                [_isaCloudRoomFillInFlight removeObjectForKey:room];
+                [_isaCloudRoomFillFailed addObject:room];
             }
             [account mamFinishedFor:room];
+            [self isaCloudSyncMucLightGapStart];
         }
         return;
     }
@@ -2459,12 +2488,11 @@ $$instance_handler(handleGapFill, account.mucProcessor, $$ID(xmpp*, account), $$
         }];
     }
     @synchronized(_stateLockObject) {
-        [_isaCloudGapStartedRooms removeObject:room];
-        [_isaCloudGapDoneRooms addObject:room];
+        [_isaCloudRoomFillInFlight removeObjectForKey:room];
+        [_isaCloudRoomFillFailed removeObject:room];
     }
     [account mamFinishedFor:room];
-    //the last room of the gap ends it
-    [self isaCloudFillMucLightGapsSince:gapStart];
+    [self isaCloudSyncMucLightGapStart];
 $$
 
 #pragma mark avatars of people who are not our contacts
@@ -2894,111 +2922,201 @@ $$
     [_account isaCloudSendMucLightEnable];
 }
 
-//isaCloud muc-light: see MLMucProcessor.h
--(void) isaCloudFillMucLightGapsSince:(NSDate*) gapStart
+//isaCloud muc-light: the light rooms of this account (the rooms that can have a gap, see isaCloudFillMucLightGaps)
+-(NSArray<NSString*>*) isaCloudMucLightRoomsForGap
 {
-    //all light channels by their setting: the archive is only known after the join, and right after a new session no room is joined yet
     NSMutableArray<NSString*>* rooms = [NSMutableArray new];
     for(NSString* room in [[DataLayer sharedInstance] listMucsForAccount:_account.accountID])
         if([[DataLayer sharedInstance] isMucLight:room forAccount:_account.accountID])
             [rooms addObject:room];
-    //no light channel left: nothing to fill, the gap is over
-    if([rooms count] == 0)
+    return rooms;
+}
+
+//isaCloud muc-light: once per session, the gap start of the database is copied to every light room of the list that has no gap of its own
+-(void) isaCloudLoadMucLightGapStart:(NSArray<NSString*>*) rooms
+{
+    BOOL loaded = NO;
+    @synchronized(_stateLockObject) {
+        loaded = _isaCloudGapLoaded;
+    }
+    if(loaded)
+        return;
+    NSDate* stored = [[DataLayer sharedInstance] mucLightGapStartForAccount:_account.accountID];
+    @synchronized(_stateLockObject) {
+        if(_isaCloudGapLoaded)
+            return;
+        _isaCloudGapLoaded = YES;
+        if(stored != nil)
+            for(NSString* room in rooms)
+                if(_isaCloudRoomGapSince[room] == nil && _isaCloudRoomFillInFlight[room] == nil)
+                    _isaCloudRoomGapSince[room] = stored;
+    }
+    if(stored != nil)
+        DDLogInfo(@"isaCloud muc-light: gap start of account %@ since %@ loaded for the light rooms", _account.accountID, stored);
+}
+
+//isaCloud muc-light: the database keeps the oldest moment of the gap of this account, only to survive the end of the process.
+//The rooms that failed do not hold it: if they stay out of reach, the normal catchup of the join covers them.
+-(void) isaCloudSyncMucLightGapStart
+{
+    NSDate* next = nil;
+    @synchronized(_stateLockObject) {
+        for(NSString* room in _isaCloudRoomGapSince)
+        {
+            if([_isaCloudRoomFillFailed containsObject:room])
+                continue;
+            NSDate* since = _isaCloudRoomGapSince[room];
+            if(next == nil || [since compare:next] == NSOrderedAscending)
+                next = since;
+        }
+        for(NSString* room in _isaCloudRoomFillInFlight)
+        {
+            if([_isaCloudRoomFillFailed containsObject:room])
+                continue;
+            NSDate* since = _isaCloudRoomFillInFlight[room][@"since"];
+            if(next == nil || [since compare:next] == NSOrderedAscending)
+                next = since;
+        }
+    }
+    NSDate* stored = [[DataLayer sharedInstance] mucLightGapStartForAccount:_account.accountID];
+    //only a change is written
+    if((next == nil && stored == nil) || (next != nil && stored != nil && [next isEqualToDate:stored]))
+        return;
+    [[DataLayer sharedInstance] setMucLightGapStart:next forAccount:_account.accountID];
+    if(next == nil)
+        DDLogInfo(@"isaCloud muc-light: gap of account %@ is filled, clearing it", _account.accountID);
+    else
+        DDLogInfo(@"isaCloud muc-light: gap of account %@ starts at %@", _account.accountID, next);
+}
+
+//isaCloud muc-light: see MLMucProcessor.h
+-(void) isaCloudFillMucLightGaps
+{
+    NSArray<NSString*>* rooms = [self isaCloudMucLightRoomsForGap];
+    [self isaCloudLoadMucLightGapStart:rooms];
+    NSDate* sessionStart;
+    NSDate* lastInactive;
+    NSDate* earliest = nil;
+    @synchronized(_stateLockObject) {
+        sessionStart = _isaCloudSessionStart;
+        lastInactive = _isaCloudLastInactive;
+        //rooms that are no longer light channels do not hold a gap
+        for(NSString* room in [_isaCloudRoomGapSince allKeys])
+            if(![rooms containsObject:room])
+                [_isaCloudRoomGapSince removeObjectForKey:room];
+        //a query sent before the last inactive may have died with the freeze of the app: it is sent again
+        for(NSString* room in [_isaCloudRoomFillInFlight allKeys])
+        {
+            NSDictionary* fill = _isaCloudRoomFillInFlight[room];
+            if(lastInactive != nil && [fill[@"sent"] compare:lastInactive] == NSOrderedAscending)
+            {
+                [_isaCloudRoomFillInFlight removeObjectForKey:room];
+                NSDate* since = fill[@"since"];
+                NSDate* current = _isaCloudRoomGapSince[room];
+                if(current == nil || [since compare:current] == NSOrderedAscending)
+                    _isaCloudRoomGapSince[room] = since;
+                DDLogInfo(@"isaCloud muc-light: fill of %@ sent before the last inactive, sending again", room);
+            }
+        }
+        for(NSString* room in _isaCloudRoomGapSince)
+            if(earliest == nil || [_isaCloudRoomGapSince[room] compare:earliest] == NSOrderedAscending)
+                earliest = _isaCloudRoomGapSince[room];
+        for(NSString* room in _isaCloudRoomFillInFlight)
+        {
+            NSDate* since = _isaCloudRoomFillInFlight[room][@"since"];
+            if(earliest == nil || [since compare:earliest] == NSOrderedAscending)
+                earliest = since;
+        }
+    }
+    if(earliest == nil)
     {
-        [self isaCloudEndMucLightGap];
+        DDLogInfo(@"no gap to fill on account %@", _account.accountID);
+        [self isaCloudSyncMucLightGapStart];
         return;
     }
-    BOOL allDone = YES;
+    DDLogInfo(@"isaCloud muc-light: filling the gap of account %@ since %@", _account.accountID, earliest);
     for(NSString* room in rooms)
     {
         if(![self isJoined:room])
         {
             //a room that is joining, or not joined yet shortly after a new session, is filled when it joins (see the join of the room)
-            //a room that never joins (gone, error, kept in the list) does not hold the gap open forever: the server only defers rooms with an archive we joined
-            NSDate* sessionStart;
-            @synchronized(_stateLockObject) {
-                sessionStart = _isaCloudSessionStart;
-            }
-            if([self isJoining:room] || (sessionStart != nil && [[NSDate date] timeIntervalSinceDate:sessionStart] < 120))
-                allDone = NO;
+            //a room that never joins (gone, error, kept in the list) does not hold the gap: it is tried again when it is active and joined
+            BOOL waiting = [self isJoining:room] || (sessionStart != nil && [[NSDate date] timeIntervalSinceDate:sessionStart] < 120);
+            if(!waiting)
+                @synchronized(_stateLockObject) {
+                    [_isaCloudRoomFillFailed addObject:room];
+                }
             continue;
         }
         //a joined room without an archive is not in the list of the server: nothing was deferred, nothing to fill
         if(![self roomSupportsMam:room])
-            continue;
-        BOOL start = NO;
-        @synchronized(_stateLockObject) {
-            if(![_isaCloudGapDoneRooms containsObject:room])
-            {
-                if(![_isaCloudGapStartedRooms containsObject:room])
-                {
-                    [_isaCloudGapStartedRooms addObject:room];
-                    start = YES;
-                }
-                allDone = NO;
+        {
+            @synchronized(_stateLockObject) {
+                [_isaCloudRoomGapSince removeObjectForKey:room];
+                [_isaCloudRoomFillFailed removeObject:room];
             }
+            continue;
         }
-        if(start)
-            [self isaCloudStartGapFillOfRoom:room since:gapStart];
+        NSDate* since;
+        BOOL inFlight;
+        @synchronized(_stateLockObject) {
+            since = _isaCloudRoomGapSince[room];
+            inFlight = _isaCloudRoomFillInFlight[room] != nil;
+        }
+        if(since == nil || inFlight)
+            continue;
+        NSNumber* h0 = [[DataLayer sharedInstance] maxHistoryIdForContact:room forAccount:_account.accountID];
+        if(h0 == nil)
+            h0 = @0;
+        @synchronized(_stateLockObject) {
+            [_isaCloudRoomGapSince removeObjectForKey:room];
+            [_isaCloudRoomFillFailed removeObject:room];
+            _isaCloudRoomFillInFlight[room] = @{@"since": since, @"h0": h0, @"sent": [NSDate date]};
+        }
+        [self isaCloudStartGapFillOfRoom:room since:since h0:h0];
     }
-    if(allDone)
-        [self isaCloudEndMucLightGap];
+    [self isaCloudSyncMucLightGapStart];
 }
 
 //isaCloud muc-light: see MLMucProcessor.h
 -(void) isaCloudNoteClientInactive
 {
-    //no gap open: the server defers from now on, so the gap starts now
-    if([[DataLayer sharedInstance] mucLightGapStartForAccount:_account.accountID] == nil)
-    {
-        [[DataLayer sharedInstance] setMucLightGapStart:[NSDate date] forAccount:_account.accountID];
-        @synchronized(_stateLockObject) {
-            _isaCloudInactiveDuringGap = nil;
-        }
-        DDLogInfo(@"isaCloud muc-light: inactive, gap of account %@ starts now", _account.accountID);
-        return;
-    }
-    //a gap is open: its start is kept. The moment is only remembered if a fill already started in this gap (a room was sent or finished),
-    //so the end of that fill keeps a gap from here instead of clearing it (see isaCloudEndMucLightGap).
-    //Without a fill running (e.g. a background wake-up), the gap start in the database already covers this moment, so nothing is remembered.
-    BOOL fillStarted = NO;
+    NSArray<NSString*>* rooms = [self isaCloudMucLightRoomsForGap];
+    //the start of the database comes first, so this moment does not replace an older start
+    [self isaCloudLoadMucLightGapStart:rooms];
+    NSDate* now = [NSDate date];
+    NSUInteger marked = 0;
     @synchronized(_stateLockObject) {
-        fillStarted = [_isaCloudGapStartedRooms count] > 0 || [_isaCloudGapDoneRooms count] > 0;
-        if(fillStarted && _isaCloudInactiveDuringGap == nil)
-            _isaCloudInactiveDuringGap = [NSDate date];
+        _isaCloudLastInactive = now;
+        //a room with a gap keeps its older moment; a query in flight covers only up to its answer, so its room is marked too
+        for(NSString* room in rooms)
+            if(_isaCloudRoomGapSince[room] == nil)
+            {
+                _isaCloudRoomGapSince[room] = now;
+                marked++;
+            }
     }
-    if(fillStarted)
-        DDLogInfo(@"isaCloud muc-light: inactive with a gap already open on account %@, remembered for the end of the fill", _account.accountID);
-    else
-        DDLogInfo(@"isaCloud muc-light: inactive with a gap already open on account %@ and no fill running, the gap start covers it", _account.accountID);
+    DDLogInfo(@"isaCloud muc-light: inactive on account %@, %lu room(s) marked since %@", _account.accountID, (unsigned long)marked, now);
+    [self isaCloudSyncMucLightGapStart];
 }
 
-//isaCloud muc-light: the gap is filled for all light channels: the start is cleared (or moved to an inactive that happened during the fill), and the memory of this gap too
--(void) isaCloudEndMucLightGap
+//isaCloud muc-light: see MLMucProcessor.h
+-(BOOL) isaCloudServerDeferredRoom:(NSString*) room since:(NSDate*) since
 {
-    NSDate* next;
+    if(![[DataLayer sharedInstance] isMucLight:room forAccount:_account.accountID])
+        return NO;
     @synchronized(_stateLockObject) {
-        next = _isaCloudInactiveDuringGap;
-        _isaCloudInactiveDuringGap = nil;
-        _isaCloudGapStartedRooms = [NSMutableSet new];
-        _isaCloudGapDoneRooms = [NSMutableSet new];
+        if(_isaCloudRoomFillInFlight[room] != nil || _isaCloudRoomGapSince[room] != nil)
+            return NO;
+        _isaCloudRoomGapSince[room] = since;
     }
-    if(next == nil)
-        DDLogInfo(@"isaCloud muc-light: gap of account %@ is filled, clearing it", _account.accountID);
-    else
-        DDLogInfo(@"isaCloud muc-light: gap of account %@ is filled, but the app was inactive again since %@: a new gap starts there", _account.accountID, next);
-    [[DataLayer sharedInstance] setMucLightGapStart:next forAccount:_account.accountID];
-    //the new gap is filled now if the app is active again (otherwise when it becomes active)
-    if(next != nil)
-        [_account isaCloudFillMucLightGapsIfNeeded];
+    DDLogInfo(@"isaCloud muc-light: server deferred messages of %@ since %@ the app did not know, filling it", room, since);
+    return YES;
 }
 
-//isaCloud muc-light: the archive of one light channel since the gap start (a minute earlier, for clock differences), paged like the catchup
--(void) isaCloudStartGapFillOfRoom:(NSString*) room since:(NSDate*) gapStart
+//isaCloud muc-light: one archive query of a light channel since the gap start (a minute earlier, for clock differences), paged like the catchup
+-(void) isaCloudStartGapFillOfRoom:(NSString*) room since:(NSDate*) gapStart h0:(NSNumber*) h0
 {
-    NSNumber* h0 = [[DataLayer sharedInstance] maxHistoryIdForContact:room forAccount:_account.accountID];
-    if(h0 == nil)
-        h0 = @0;
     //live groupchat messages of the room are queued while we fill, they are replayed after the fill (see mamFinishedFor:)
     [_account delayIncomingMessageStanzasForArchiveJid:room];
     XMPPIQ* mamQuery = [[XMPPIQ alloc] initWithType:kiqSetType to:room];
