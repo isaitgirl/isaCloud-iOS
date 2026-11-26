@@ -197,3 +197,19 @@ O arquivo do módulo no servidor foi conferido: 515 linhas, o mesmo hash do repo
 - **Métrica no fim:** 370 remotas e 213 locais no xmpp.social.br; 364 locais e 14 remotas no isacloud.im.
 - **Pendente no repo `isacloud-custom-plugins`:** commit da reinstalação do filtro ao carregar. O arquivo já está no ar.
 - **No app:** a correção da busca repetida (PR 94) foi para o TestFlight no **build 132** (25/11/2026, 12:42), junto com a bolinha de atualização (PR 95). Próximo passo: a noite do 132.
+
+## Busca incompleta ao abrir (26/11/2026, build 134)
+- **Sintoma:** depois de mais de 1 h no escritório, a abertura das 10:07 terminou o catchup em 6 s, mas o Gajim mostrava mensagens que faltavam. Ao encerrar e reabrir o app (10:10), a busca levou cerca de 1 min e trouxe 167 mensagens no guiaxmpp, 80 no conversations, 63 no rede-soberania-digital, 55 no prosody e 52 no gajim.
+- **Causa (no app, não no servidor):** a lacuna da conta xmpp.social.br abriu às 23:15 de 25/11 e nunca fechou.
+  - A `support@conference.monocles.eu` não respondia (`remote-server-timeout`).
+  - A consulta dessa sala enviada às 08:40 se perdeu quando o app congelou, às 08:41, e a sala ficou "em andamento" para sempre.
+  - As outras salas, marcadas como buscadas às 08:40, não foram buscadas de novo às 10:07.
+  - O servidor guardou e avisou tudo: `deferred` com 11 no guiaxmpp, 10 no conversations e 4 no prosody.
+- **Correção:** lacuna por sala (ver `docs/decisoes.md`, "Canal leve: lacuna por sala"). Branch `fix/canal-leve-lacuna-por-sala`.
+- **Como conferir no log:**
+  - `inactive on account N, M room(s) marked since …`;
+  - `fill of … sent before the last inactive, sending again`;
+  - `stale gap fill answer of … ignored`;
+  - `server deferred messages of … the app did not know, filling it` (a rede de segurança agiu, o que indica outro furo);
+  - `gap of account N is filled, clearing it`.
+

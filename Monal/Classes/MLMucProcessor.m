@@ -53,6 +53,7 @@
     NSMutableDictionary<NSString*, NSDate*>* _isaCloudRoomGapSince;             //isaCloud muc-light: light room --> since when it may miss messages (memory only, the oldest one is kept in the database)
     NSMutableDictionary<NSString*, NSDictionary*>* _isaCloudRoomFillInFlight;   //isaCloud muc-light: light room --> @{since, h0, sent} of the archive query in flight (memory only)
     NSMutableSet<NSString*>* _isaCloudRoomFillFailed;                           //isaCloud muc-light: light rooms whose last gap fill failed or that did not join in time (memory only)
+    NSMutableDictionary<NSString*, NSDate*>* _isaCloudRoomFillFailedAt;         //isaCloud muc-light: light room --> when its last gap fill failed: tried again only after the next inactive (memory only)
     BOOL _isaCloudGapLoaded;                    //isaCloud muc-light: the gap start of the database was copied to the rooms in this session (memory only)
     NSDate* _isaCloudLastInactive;              //isaCloud muc-light: the last time the app was inactive: a query sent before it may have died (memory only)
     NSDate* _isaCloudSessionStart;              //isaCloud muc-light: bind of the current session (not a resume): rooms not joined shortly after it still block the end of the gap
@@ -119,6 +120,7 @@ static NSString* const kIsaCloudGuideRoom = @"guiaxmpp@conference.isacloud.cc";
     _isaCloudRoomGapSince = [NSMutableDictionary new];
     _isaCloudRoomFillInFlight = [NSMutableDictionary new];
     _isaCloudRoomFillFailed = [NSMutableSet new];
+    _isaCloudRoomFillFailedAt = [NSMutableDictionary new];
     _isaCloudGapLoaded = NO;
     _isaCloudLastInactive = nil;
     _isaCloudSessionStart = [NSDate date];
@@ -213,10 +215,11 @@ static NSString* const kIsaCloudGuideRoom = @"guiaxmpp@conference.isacloud.cc";
             _isaCloudRoomGapSince = [NSMutableDictionary new];     //isaCloud muc-light: a new connection fills the gap again (the gap start is in the database)
             _isaCloudRoomFillInFlight = [NSMutableDictionary new];
             _isaCloudRoomFillFailed = [NSMutableSet new];
+            _isaCloudRoomFillFailedAt = [NSMutableDictionary new];
             _isaCloudGapLoaded = NO;
             _isaCloudLastInactive = nil;
             _isaCloudSessionStart = [NSDate date];
-            
+
             //make sure all idle timers get invalidated properly
             NSDictionary* joiningCopy = [_joining copy];
             for(NSString* room in joiningCopy)
@@ -2450,6 +2453,7 @@ $$instance_handler(handleGapFill, account.mucProcessor, $$ID(xmpp*, account), $$
                     _isaCloudRoomGapSince[room] = gapStart;
                 [_isaCloudRoomFillInFlight removeObjectForKey:room];
                 [_isaCloudRoomFillFailed addObject:room];
+                _isaCloudRoomFillFailedAt[room] = [NSDate date];
             }
             [account mamFinishedFor:room];
             [self isaCloudSyncMucLightGapStart];
@@ -3030,7 +3034,7 @@ $$
     }
     if(earliest == nil)
     {
-        DDLogInfo(@"no gap to fill on account %@", _account.accountID);
+        DDLogInfo(@"isaCloud muc-light: no gap to fill on account %@", _account.accountID);
         [self isaCloudSyncMucLightGapStart];
         return;
     }
@@ -3059,11 +3063,15 @@ $$
         }
         NSDate* since;
         BOOL inFlight;
+        BOOL failedSinceInactive;
         @synchronized(_stateLockObject) {
             since = _isaCloudRoomGapSince[room];
             inFlight = _isaCloudRoomFillInFlight[room] != nil;
+            //a room whose fill failed after the last inactive (e.g. its server is out of reach) waits for the next activation, not every call of the fill
+            NSDate* failedAt = _isaCloudRoomFillFailedAt[room];
+            failedSinceInactive = failedAt != nil && (lastInactive == nil || [failedAt compare:lastInactive] == NSOrderedDescending);
         }
-        if(since == nil || inFlight)
+        if(since == nil || inFlight || failedSinceInactive)
             continue;
         NSNumber* h0 = [[DataLayer sharedInstance] maxHistoryIdForContact:room forAccount:_account.accountID];
         if(h0 == nil)
