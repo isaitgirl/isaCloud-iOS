@@ -2,7 +2,9 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
-## Próximo build
+## 0.0.1 (build 135) — 26/11/2026
+
+Enviado ao TestFlight às 16:27 (PR 98; testado no `.dev` em 26/11, 10:31 → 11:53, abrindo sem encerrar: 26 salas buscadas em ~10 s com a `conversejs.org` fora do ar).
 
 ### Corrigido
 - **Canal leve: a busca ao abrir não deixa mais canais para trás quando uma sala não responde.**

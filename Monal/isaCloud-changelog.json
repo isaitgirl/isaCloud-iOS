@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "build": 135,
+      "date": "26/11/2026",
+      "sections": [
+        {
+          "title": "Correções",
+          "items": [
+            "🧲 Abriu o app? Todos os canais leves chegam completinhos, mesmo quando algum canal de fora está fora do ar."
+          ]
+        }
+      ]
+    },
+    {
       "build": 134,
       "date": "25/11/2026",
       "sections": [
