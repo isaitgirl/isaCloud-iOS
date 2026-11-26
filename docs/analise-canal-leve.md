@@ -210,6 +210,12 @@ O arquivo do módulo no servidor foi conferido: 515 linhas, o mesmo hash do repo
   - `inactive on account N, M room(s) marked since …`;
   - `fill of … sent before the last inactive, sending again`;
   - `stale gap fill answer of … ignored`;
-  - `server deferred messages of … the app did not know, filling it` (a rede de segurança agiu, o que indica outro furo);
+  - `server deferred messages of … the app did not know, filling it` (a rede de segurança agiu; ver o teste abaixo antes de concluir que há outro furo);
   - `gap of account N is filled, clearing it`.
+- **Teste no `.dev` (26/11/2026, 10:31 → 11:53, sem encerrar o app):** passou.
+  - Ao ir para o fundo: 14 salas marcadas na conta 5 e 12 na conta 1. Os inativos seguintes marcaram 0, porque as salas já tinham data.
+  - Ao abrir, às 11:53: as 26 salas foram buscadas em cerca de 10 s, por exemplo ia (490), guiaxmpp (476 + 226), rede-soberania-digital (346) e ladainha (279).
+  - Conta 1: `gap of account 1 is filled, clearing it` às 11:53:13.
+  - Conta 5: a `discuss@conference.conversejs.org` não respondia (`remote-server-timeout`) e segurou só a data da conta no banco. As outras 13 salas foram buscadas normalmente, que era o objetivo. O log acabou antes dos 120 s em que essa sala vira "falhou".
+  - **Rede de segurança redundante:** a resposta do `deferred` chegou 7 a 10 s depois do pedido, com a fila de parse cheia, quando as salas já tinham sido buscadas. O app buscou de novo guiaxmpp, rede-soberania-digital, ia e ladainha, e cada busca trouxe 0 mensagens. É inofensivo; custa poucas consultas MAM a mais.
 
