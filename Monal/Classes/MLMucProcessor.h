@@ -93,10 +93,12 @@ NS_ASSUME_NONNULL_BEGIN
 -(BOOL) roomSupportsMam:(NSString*) room;
 //isaCloud muc-light: the rooms of this account that are light channels and have an archive (what the server gets in the enable list)
 -(NSArray<NSString*>*) isaCloudMucLightRoomsWithMam;
-//isaCloud muc-light: fills the gap of every joined light room since gapStart from its archive (all rooms in parallel, each one paged), and ends the gap when all are done
--(void) isaCloudFillMucLightGapsSince:(NSDate*) gapStart;
-//isaCloud muc-light: the app sent csi inactive: opens the gap, or remembers the moment if a fill already started in the open gap (otherwise the gap start covers it)
+//isaCloud muc-light: fills the gap of every light room from its archive (each room with its own gap, all in parallel, each one paged). Asks only for the rooms that are joined and have an archive; the others wait for their join or are tried again on the next activation. Safe to call at any time.
+-(void) isaCloudFillMucLightGaps;
+//isaCloud muc-light: the app sent csi inactive: every light room without a gap of its own gets the moment as its gap start (a room with a gap keeps the older one)
 -(void) isaCloudNoteClientInactive;
+//isaCloud muc-light: the server deferred messages of a light room since this moment: the room gets a gap, YES if it was marked (not if it is in a fill or has a gap already)
+-(BOOL) isaCloudServerDeferredRoom:(NSString*) room since:(NSDate*) since;
 
 @end
 

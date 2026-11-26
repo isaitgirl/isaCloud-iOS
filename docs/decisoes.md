@@ -1156,3 +1156,12 @@ O app mede a abertura só até a lista de conversas aparecer (cerca de 0,5 s, em
 - **Decisão:** antes de pedir a retomada, o app principal descarta a sessão salva cujo disco não terminou e abre uma nova (`isaCloudDropResumeIfDiscoIncomplete`). Foi preferido a repetir o disco dentro da sessão retomada porque `handleAccountDiscoInfo` também dispara o catchup do MAM e mexe no `inCatchup`. Uma vez por conta e processo, para não perder a retomada de vez num servidor cujo disco sempre falhe. A extensão não muda: ela não envia arquivos e tem pouco tempo.
 - **Não repetir:** confiar que uma sessão retomada tem as capacidades do servidor; o estado salvo pode ter sido gravado entre o bind e as respostas do disco.
 
+## Canal leve: lacuna por sala (26/11/2026)
+- **Problema:** a lacuna era por conta. Uma sala sem resposta (servidor remoto fora do ar, ou consulta perdida quando o app congelou) deixava a lacuna aberta, e as salas já buscadas não eram buscadas de novo até o app ser encerrado. Log e números em `docs/analise-canal-leve.md`, seção "Busca incompleta ao abrir".
+- **Decisão:** cada canal leve tem a própria lacuna, só em memória. O banco guarda a data mais antiga pendente, para sobreviver ao fim do processo.
+  - Todo inativo marca as salas ainda sem lacuna, também as que estão com busca em andamento.
+  - Uma consulta enviada antes do último inativo conta como perdida e é reenviada. A resposta velha é reconhecida pelo `since` e pelo `h0` e ignorada.
+  - Uma sala que falha não segura a lacuna das outras e só é tentada de novo depois do próximo inativo. Se continuar fora do ar, o catchup normal do Monal no join cobre o que faltar.
+  - A contagem `deferred` do servidor marca a sala que o app não sabia que tinha lacuna.
+- **Não repetir:** estado de "já buscada" que vale até o processo morrer. Toda marca de busca precisa ser refeita a cada inativo.
+

@@ -2,6 +2,13 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## Próximo build
+
+### Corrigido
+- **Canal leve: a busca ao abrir não deixa mais canais para trás quando uma sala não responde.**
+  - **Antes:** a lacuna era por conta. Uma sala inacessível (`support@conference.monocles.eu`, `remote-server-timeout`, e uma consulta perdida quando o app congelou) deixava a lacuna da conta aberta, e as outras salas, já marcadas como buscadas, não eram buscadas de novo enquanto o processo vivesse. Em 26/11 a abertura das 10:07 não trouxe nada (o servidor tinha guardado 11 no guiaxmpp, 10 no conversations, 4 no prosody); só ao matar o app vieram 167, 80, 63, 55 e 52 mensagens.
+  - **Agora:** cada sala tem a própria lacuna (`_isaCloudRoomGapSince`), marcada a cada inativo, inclusive com busca em voo. Uma consulta enviada antes do último inativo é reenviada, e a resposta velha é ignorada (confere `since` e `h0`). Sala que falha não segura as outras e só é tentada de novo depois do próximo inativo. O banco guarda só a data mais antiga pendente (`isaCloudSyncMucLightGapStart`). A contagem do servidor (`deferred`) também dispara a busca de uma sala que o app não sabia que precisava buscar.
+
 ## 0.0.1 (build 134) — 25/11/2026
 
 Enviado ao TestFlight às 16:27 (branch `fix/descoberta-incompleta-na-retomada`; boot de 60 s nos dois simuladores e `.dev` no iPhone antes do envio; o caso real não se reproduz sob demanda).

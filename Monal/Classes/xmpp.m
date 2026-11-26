@@ -5714,14 +5714,8 @@ static NSLock* isaCloudTimeoutsLock(void)
         }
         if(![self.connectionProperties.accountDiscoFeatures containsObject:kIsaCloudMucLightNS])
             return;
-        NSDate* gapStart = [[DataLayer sharedInstance] mucLightGapStartForAccount:self.accountID];
-        if(gapStart == nil)
-        {
-            DDLogInfo(@"isaCloud muc-light: no gap to fill on account %@", self.accountID);
-            return;
-        }
-        DDLogInfo(@"isaCloud muc-light: filling the gap of account %@ since %@", self.accountID, gapStart);
-        [self.mucProcessor isaCloudFillMucLightGapsSince:gapStart];
+        //the gap of each room is decided by the mucProcessor (it logs when there is nothing to fill)
+        [self.mucProcessor isaCloudFillMucLightGaps];
     }];
 }
 
@@ -5734,8 +5728,19 @@ static NSLock* isaCloudTimeoutsLock(void)
         XMPPIQ* iq = [[XMPPIQ alloc] initWithType:kiqGetType];
         [iq addChildNode:[[MLXMLNode alloc] initWithElement:@"deferred" andNamespace:kIsaCloudMucLightNS]];
         [self sendIq:iq withResponseHandler:^(XMPPIQ* result) {
+            BOOL marked = NO;
             for(MLXMLNode* room in [result find:@"{urn:xmpp:isacloud:muc-light:0}deferred/room"])
+            {
                 DDLogInfo(@"isaCloud muc-light: server deferred %@ message(s) of %@ since %@", room.attributes[@"count"], room.attributes[@"jid"], room.attributes[@"since"]);
+                //a room the app does not know a gap of (e.g. the start was lost): the server tells since when it has messages for us
+                if(room.attributes[@"jid"] == nil || room.attributes[@"since"] == nil || [room.attributes[@"count"] integerValue] <= 0)
+                    continue;
+                NSDate* since = [HelperTools parseDateTimeString:room.attributes[@"since"]];
+                if(since != nil && [self.mucProcessor isaCloudServerDeferredRoom:room.attributes[@"jid"] since:since])
+                    marked = YES;
+            }
+            if(marked)
+                [self isaCloudFillMucLightGapsIfNeeded];
         } andErrorHandler:^(XMPPIQ* error) {
             DDLogError(@"isaCloud muc-light: deferred query got an error: %@", [error findFirst:@"error"]);
         }];
