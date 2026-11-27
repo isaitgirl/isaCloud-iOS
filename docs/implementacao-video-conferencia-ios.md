@@ -1,7 +1,7 @@
 # Vídeo conferência no isaCloud iOS — guia de implementação
 
 Data: 21/11/2026. Público: agente/dev que vai implementar a feature no
-`isaCloud-iOS` (fork do Monal, `/home/isadora/projects/swift/isaCloud-iOS`, branch `isaCloud`).
+`isaCloud-iOS` (fork do Monal, `~/projects/isaCloud/isaCloud-iOS`, branch `isaCloud`).
 
 O servidor e o app Android já estão prontos e em produção. Este documento descreve **o que o
 iOS precisa fazer**, o contrato da API e onde mexer no código.

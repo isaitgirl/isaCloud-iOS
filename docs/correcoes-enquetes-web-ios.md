@@ -3,7 +3,7 @@
 > O Android levou quatro correções de estabilidade nas enquetes (`urn:fluux:poll:0`) depois do
 > problema de duplicação observado nas releases 74–78. Este documento lista a regra de cada uma,
 > o estado atual no **Web** (`~/projects/js/isaCloud-Web`, fork do Converse.js) e no **iOS**
-> (`~/projects/swift/isaCloud-iOS`, fork do Monal), e onde mexer em cada um.
+> (`~/projects/isaCloud/isaCloud-iOS`, fork do Monal), e onde mexer em cada um.
 >
 > Contexto do Android: `docs/analise-enquete-fluux.md`, `docs/decisoes-enquetes-fluux.md` §13/§14,
 > `docs/regressoes.md` (entradas de enquete) e a branch `fix/enquetes-duplicacao-mam`.

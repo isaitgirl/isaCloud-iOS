@@ -1,7 +1,7 @@
 # Implementação de enquetes no isaCloud iOS (handoff)
 
 > Instruções para quem for implementar `urn:fluux:poll:0` no app iOS
-> (`~/projects/swift/isaCloud-iOS`, fork do Monal). O Android já tem a v1 pronta; este
+> (`~/projects/isaCloud/isaCloud-iOS`, fork do Monal). O Android já tem a v1 pronta; este
 > documento descreve o protocolo, o que já existe no iOS, o que falta e as decisões que
 > **não podem divergir**, para os dois apps conversarem entre si e com o Fluux.
 >
