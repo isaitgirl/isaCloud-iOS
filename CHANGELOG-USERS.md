@@ -14,6 +14,10 @@ O que está neste arquivo é o que aparece para o usuário na tela de **Novidade
 
 ### Correções
 - 🧭 As conversas dos canais voltam na ordem certa depois de ficar um tempo fora, e a lista mostra a mensagem mais recente.
+- 🧹 Tchau, notificação vazia! Agora só fica na tela o que é mensagem de verdade.
+
+### Melhorias
+- 🛠️ Por dentro, ganhamos um jeito novo de testar as notificações antes de elas chegarem até você. Tudo para o app ficar redondinho!
 
 ## Build 135 · 26/11/2026
 

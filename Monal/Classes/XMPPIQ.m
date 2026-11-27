@@ -72,7 +72,12 @@ NSString* const kiqErrorType = @"error";
 #if TARGET_OS_MACCATALYST
     [pushModule appendString:@"monalProdCatalyst"];
 #else
-    [pushModule appendString:@"monalProdiOS"];
+    //isaCloud: the .dev build (bundle id br.com.isacloud.messenger.dev, app group group.<bundle id>) has its own APNs topic,
+    //so fpush needs a module with that topic and the .dev certificate: isaCloudDeviOS(-sandbox), see the fpush README
+    if([kAppGroup hasSuffix:@".dev"])
+        [pushModule appendString:@"isaCloudDeviOS"];
+    else
+        [pushModule appendString:@"monalProdiOS"];
 #endif
 #endif
 

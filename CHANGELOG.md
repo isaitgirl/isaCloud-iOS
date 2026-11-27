@@ -4,12 +4,22 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ## Próximo build
 
-Ainda não enviado ao TestFlight: branch `fix/canal-leve-ordem-apos-busca`, a ser mesclada na `isaCloud`.
+Ainda não enviado ao TestFlight.
 
 ### Corrigido
 - **Canal leve: a conversa volta na ordem certa depois da busca, e a lista mostra a última mensagem de verdade.**
   - **Antes:** a busca da lacuna trazia mensagens do arquivo com ids novos, e as menções que tinham chegado ao vivo durante a lacuna eram movidas para o fim. Quando a menção chegava antes de mensagens buscadas de horário posterior, a conversa ficava fora de ordem. Em 27/11, numa sala de canal leve, duas mensagens ao vivo (14:52 e 14:55) ficaram depois de mensagens de 15:13 e 15:14, e a prévia da lista mostrava 14:55 em vez de 15:16.
   - **Agora:** a reordenação pega o trecho inteiro desde a primeira mensagem ao vivo da lacuna (`isaCloudMoveLiveMessagesAfterGapFillInChat:`): as mensagens buscadas a partir desse horário são copiadas junto e entram em ordem de horário. As mensagens buscadas mais antigas que isso ficam onde estão. Os banners removidos são só os das mensagens que chegaram ao vivo (`liveNewIds`), então as mensagens do arquivo continuam avisando. Depois de mover, a lista de conversas relê a prévia (`kMonalContactRefresh`). Log: "gap fill of … : N messages, M moved", com N = mensagens da sala com id maior que a abertura da busca.
+- **Notificação vazia ("isaCloud" sem texto) não fica mais pendurada até abrir o app.**
+  - **Antes:** sem push filtering, a extensão entrega um placeholder passivo a cada push. Ele só era apagado no push seguinte (que entregava outro) ou quando o app abria. Medido em 27/11/2026: ficava de 1 a 96 min, ao lado da mensagem de verdade e, em cerca de 18 de 49 execuções, sozinho, porque a mensagem tinha sido lida em outro aparelho durante a execução.
+  - **Agora:** `PushSingleton killAppex` chama `HelperTools removeIsaCloudPushPlaceholdersBeforeExitWithTimeout:0.3` antes do `_exit`, já depois do `disconnectAll`: lista as notificações entregues, apaga as marcadas com `isaCloudPushPlaceholder` e espera (no máximo 300 ms no total) a central de notificações responder. Log: "removed N push placeholder notification(s) before exit", "no push placeholder to remove before exit" ou "no answer from the notification center". Análise em `docs/analise-notificacao-pela-propria-mensagem.md` (alternativa B).
+
+### Técnico
+- **Push no `isaCloud.dev` (27/11/2026).** O `.dev` passa a receber push de verdade e a rodar a extensão de notificação, para testar mudanças nela sem ir ao TestFlight.
+  - `isaCloud/dev-entitlements/Monal.ios.entitlements`: `aps-environment = development`.
+  - `XMPPIQ setPushEnableWithNode:onAppserver:`: quando o `kAppGroup` termina em `.dev`, o `pushModule` é `isaCloudDeviOS` (mais `-sandbox`), não `monalProdiOS`. O `.dev` tem tópico APNs próprio (`br.com.isacloud.messenger.dev`).
+  - Servidor (srv-01, 27/11 15:10): módulo `isaCloudDeviOS-sandbox` no fpush, com o certificado "APNs SSL (Sandbox)" do App ID `.dev` (válido até 27/12/2027). Ver o README do fpush.
+  - Se o `.dev` e o app de produção estiverem logados na mesma conta, os dois recebem o push.
 
 ## 0.0.1 (build 135) — 26/11/2026
 

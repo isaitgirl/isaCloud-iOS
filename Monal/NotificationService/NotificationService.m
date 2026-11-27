@@ -148,7 +148,11 @@ static void isaCloudTerminateAppex(void)
     [[NSNotificationCenter defaultCenter] postNotificationName:kMonalWillBeFreezed object:nil];
     
     [NotificationService setAppexCleanShutdownStatus:YES];
-    
+
+    //isaCloud: remove the passive placeholder(s) this process handed to its contentHandlers, so no empty notification is left behind
+    //(see HelperTools removeIsaCloudPushPlaceholdersBeforeExitWithTimeout:); bounded to 300 ms, the appex exits anyway
+    [HelperTools removeIsaCloudPushPlaceholdersBeforeExitWithTimeout:0.3];
+
     DDLogInfo(@"Now killing appex process, goodbye...");
     isaCloudTerminateAppex();
 }

@@ -21,7 +21,7 @@ Complementa `docs/publicacao-testflight.md` (enviar ao TestFlight) e `docs/troub
 Quando só uma frente mexe no repositório:
 
 ```bash
-cd ~/projects/swift/isaCloud-iOS
+cd ~/projects/isaCloud/isaCloud-iOS
 git fetch origin
 git switch isaCloud && git merge --ff-only origin/isaCloud
 git switch -c fix/nome-da-correcao
@@ -31,10 +31,10 @@ Se já houver alterações sem commit de outra frente no checkout, **não troque
 
 ## 3. Criar uma branch em uma worktree separada
 
-Uma worktree é outra pasta com outra branch do mesmo repositório. Convenção: `~/projects/swift/isaCloud-iOS-<assunto>`.
+Uma worktree é outra pasta com outra branch do mesmo repositório. Convenção: `~/projects/isaCloud/isaCloud-iOS-<assunto>`.
 
 ```bash
-cd ~/projects/swift/isaCloud-iOS
+cd ~/projects/isaCloud/isaCloud-iOS
 git fetch origin
 git worktree add -b fix/nome-da-correcao ../isaCloud-iOS-nome-da-correcao origin/isaCloud
 cd ../isaCloud-iOS-nome-da-correcao
@@ -44,8 +44,8 @@ git submodule update --init --recursive
 A worktree nasce só com o que está no Git. O build precisa de arquivos que o Git ignora; sem eles ele falha (veja a seção 5). **Copie do checkout principal** (cópias com `cp -Rc` são clones do APFS: rápidas e sem gastar disco até mudarem):
 
 ```bash
-SRC=~/projects/swift/isaCloud-iOS
-DST=~/projects/swift/isaCloud-iOS-nome-da-correcao
+SRC=~/projects/isaCloud/isaCloud-iOS
+DST=~/projects/isaCloud/isaCloud-iOS-nome-da-correcao
 cp -Rc $SRC/Monal/Pods                    $DST/Monal/Pods
 cp -Rc $SRC/rust/LibMonalRustSwiftBridge  $DST/rust/LibMonalRustSwiftBridge
 cp -Rc $SRC/rust/target                   $DST/rust/target
@@ -66,7 +66,7 @@ Copie **só** a chave do Giphy de `isaCloud/local`; o resto (notas, patches, `.c
 Os scripts usam o repositório onde estão (`REPO_ROOT`), então rode-os **de dentro da worktree**:
 
 ```bash
-cd ~/projects/swift/isaCloud-iOS-nome-da-correcao
+cd ~/projects/isaCloud/isaCloud-iOS-nome-da-correcao
 scripts/isacloud-dev-device.sh <TEAM_ID> <UDID_DO_IPHONE>
 ```
 
@@ -80,7 +80,7 @@ scripts/isacloud-dev-device.sh <TEAM_ID> <UDID_DO_IPHONE>
 Só depois de mesclar (e com a confirmação da Isadora para apagar a branch):
 
 ```bash
-cd ~/projects/swift/isaCloud-iOS
+cd ~/projects/isaCloud/isaCloud-iOS
 git worktree remove --force ../isaCloud-iOS-nome-da-correcao   # --force: a pasta tem submódulos e arquivos copiados
 git branch -d fix/nome-da-correcao
 git push origin --delete fix/nome-da-correcao
@@ -127,7 +127,7 @@ strings -a build/isaCloud-AppStore.xcarchive/Products/Applications/*.app/Framewo
 - Arquivo novo de código entra no `project.pbxproj` com um PBXBuildFile, um PBXFileReference, a entrada no grupo e a entrada em Sources do alvo, no estilo dos vizinhos (IDs `A1C0FFEE…` do isaCloud). Confira com `plutil -lint Monal/Monal.xcodeproj/project.pbxproj`.
 
 ### Assinatura, iPhone e instalação
-- O `.dev` assina com o time pago (automático) e usa `isaCloud/dev-entitlements/` (sem push, sem notificações de comunicação, sem aumento de memória). O Team ID está em `isaCloud/local/NOTAS-LOCAIS.md`.
+- O `.dev` assina com o time pago (automático) e usa `isaCloud/dev-entitlements/` (com push sandbox desde 27/11/2026, pelo módulo `isaCloudDeviOS-sandbox` do fpush; sem notificações de comunicação, sem aumento de memória). O Team ID está em `isaCloud/local/NOTAS-LOCAIS.md`.
 - O iPhone às vezes aparece como **"unavailable"**: destravar o aparelho, mantê-lo conectado e repetir (`xcrun devicectl list devices`).
 - `error: the following command failed with exit code 0 but produced no further output` no fim do log do script é inofensivo. O que vale é o `EXIT=0` e a linha `Launched application with br.com.isacloud.messenger.dev`.
 - Simulador **com** assinatura: sem entitlements o app aborta ao abrir (`Container URL should never be nil!`). Para rodar no simulador, use assinatura ad-hoc (`CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER=`) e um DerivedData limpo ao trocar de destino (senão: erro de PCH desatualizado).

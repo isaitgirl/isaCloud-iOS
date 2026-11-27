@@ -193,6 +193,7 @@ NSDictionary* _Nullable dictionaryComprehension(NSDictionary* _Nullable dict, id
 //isaCloud: placeholder for pushes while we don't have the push filtering entitlement
 +(UNMutableNotificationContent*) isaCloudPushPlaceholderContent;
 +(void) removeIsaCloudPushPlaceholdersAfter:(double) delay;
++(void) removeIsaCloudPushPlaceholdersBeforeExitWithTimeout:(double) timeout;
 +(void) updateSyncErrorsWithDeleteOnly:(BOOL) removeOnly andWaitForCompletion:(BOOL) waitForCompletion;
 
 +(BOOL) isInBackground;

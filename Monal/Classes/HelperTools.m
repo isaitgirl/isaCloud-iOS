@@ -2498,6 +2498,55 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
 #endif
 }
 
+//isaCloud: called by the appex right before it exits (PushSingleton killAppex), after the last contentHandler was fed and all
+//accounts were disconnected (their state is already saved). The passive placeholder handed to the contentHandler(s) would otherwise
+//stay in Notification Center until the next push or until the app opens (measured on 27/11/2026: 1 to 96 minutes, also next to
+//real message notifications and alone when the message was read on another device meanwhile). The wait is bounded: the appex
+//exits anyway, so a busy notification center queue (see C38) can not keep it alive.
++(void) removeIsaCloudPushPlaceholdersBeforeExitWithTimeout:(double) timeout
+{
+#if !ISACLOUD_HAS_PUSH_FILTERING
+    UNUserNotificationCenter* center = [UNUserNotificationCenter currentNotificationCenter];
+    NSDate* start = [NSDate date];
+    NSMutableArray<NSString*>* ids = [NSMutableArray new];
+    dispatch_semaphore_t listed = dispatch_semaphore_create(0);
+    [center getDeliveredNotificationsWithCompletionHandler:^(NSArray<UNNotification*>* notifications) {
+        @synchronized(ids) {
+            for(UNNotification* notification in notifications)
+                if([notification.request.content.userInfo[kIsaCloudPushPlaceholder] boolValue])
+                    [ids addObject:notification.request.identifier];
+        }
+        dispatch_semaphore_signal(listed);
+    }];
+    if(dispatch_semaphore_wait(listed, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(timeout * NSEC_PER_SEC))) != 0)
+    {
+        DDLogWarn(@"isaCloud: push placeholder cleanup before exit: no answer from the notification center in %.0f ms, exiting anyway", [[NSDate date] timeIntervalSinceDate:start] * 1000.0);
+        return;
+    }
+    NSArray<NSString*>* found;
+    @synchronized(ids) {
+        found = [ids copy];
+    }
+    if(found.count == 0)
+    {
+        DDLogInfo(@"isaCloud: no push placeholder to remove before exit (%.0f ms)", [[NSDate date] timeIntervalSinceDate:start] * 1000.0);
+        return;
+    }
+    [center removeDeliveredNotificationsWithIdentifiers:found];
+    //the removal is sent asynchronously: ask for the delivered list once more and wait (bounded) for the answer, so the
+    //process does not exit before the removal was handed to the system
+    double left = timeout - [[NSDate date] timeIntervalSinceDate:start];
+    if(left < 0.05)
+        left = 0.05;
+    dispatch_semaphore_t confirmed = dispatch_semaphore_create(0);
+    [center getDeliveredNotificationsWithCompletionHandler:^(NSArray<UNNotification*>* notifications) {
+        dispatch_semaphore_signal(confirmed);
+    }];
+    BOOL answered = dispatch_semaphore_wait(confirmed, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(left * NSEC_PER_SEC))) == 0;
+    DDLogInfo(@"isaCloud: removed %lu push placeholder notification(s) before exit in %.0f ms%@", (unsigned long)found.count, [[NSDate date] timeIntervalSinceDate:start] * 1000.0, answered ? @"" : @" (no confirmation)");
+#endif
+}
+
 +(void) removePendingSyncErrorNotifications
 {
     NSMutableDictionary* syncErrorsDisplayed = [NSMutableDictionary dictionaryWithDictionary:[[HelperTools defaultsDB] objectForKey:@"syncErrorsDisplayed"]];

@@ -10,7 +10,8 @@
 #
 # The .dev variant uses the bundle id br.com.isacloud.messenger.dev (app group and keychain follow it), so it never
 # blocks the real bundle id, and the entitlements in isaCloud/dev-entitlements/ (with the app group group.<bundle id>, so the app and its
-# extensions share their data, but without aps-environment (no APNs push; the notifications seen in the .dev are local ones), communication
+# extensions share their data, and aps-environment=development since 27/11/2026: APNs sandbox push through the fpush module
+# isaCloudDeviOS-sandbox, so the notification extension runs in the .dev too; but without communication
 # notifications and the increased memory limit, which this variant does not ask for). A free Apple ID would expire after 7 days and could not
 # use the app group; with the paid team the profile lasts a year (security cms -D -i <app>/embedded.mobileprovision shows it).
 
