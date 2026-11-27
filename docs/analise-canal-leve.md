@@ -219,3 +219,17 @@ O arquivo do módulo no servidor foi conferido: 515 linhas, o mesmo hash do repo
   - Conta 5: a `discuss@conference.conversejs.org` não respondia (`remote-server-timeout`) e segurou só a data da conta no banco. As outras 13 salas foram buscadas normalmente, que era o objetivo. O log acabou antes dos 120 s em que essa sala vira "falhou".
   - **Rede de segurança redundante:** a resposta do `deferred` chegou 7 a 10 s depois do pedido, com a fila de parse cheia, quando as salas já tinham sido buscadas. O app buscou de novo guiaxmpp, rede-soberania-digital, ia e ladainha, e cada busca trouxe 0 mensagens. É inofensivo; custa poucas consultas MAM a mais.
 
+## 27/11/2026: ordem depois da busca
+- **Sintoma (produção, um canal leve):** o app ficou inativo desde 13:44. Duas mensagens ao vivo de outra pessoa chegaram na lacuna (14:52 por push, id 162330, e 14:55, id 162336). Ao abrir às 15:41, a busca trouxe 48 mensagens do arquivo (13:51 a 15:16), com ids acima de h0 = 162336.
+  - `isaCloudMoveLiveMessagesAfterGapFillInChat:` moveu as duas para o fim, com ids novos, depois das buscadas de 15:13 e 15:14. A conversa ficou fora de ordem.
+  - A prévia da lista usa `MAX(message_history_id)` (`lastMessageForContact`), então mostrava 14:55 em vez de 15:16.
+  - Os banners também saíam para todas as linhas movidas, inclusive as buscadas do arquivo.
+- **Causa:** a função só reordenava as mensagens ao vivo e as jogava para o fim, sem olhar as buscadas que tinham horário posterior.
+- **Correção:**
+  - L_out são as ao vivo da lacuna (como antes). T é o menor horário de L_out.
+  - S = L_out mais as mensagens da sala com id > h0 e horário >= T. Todas as de S são copiadas, na ordem (horário, id), na mesma transação. Resultado: [linhas antigas] [buscadas antes de T] [S em ordem de horário].
+  - O retorno traz todos os pares movidos. Os banners saem só de `liveNewIds` (pares com oldId <= h0). Quem não recebe `liveNewIds` usa `newIds`.
+  - Depois de mover, a notificação `kMonalContactRefresh` faz a lista reler a prévia. A `ActiveChatsViewController` recarrega a linha, e a célula chama `lastMessageForContact` de novo, que lê o MAX do banco.
+  - O log passou a contar as linhas da sala com id > h0 (`isaCloudCountOfMessagesForContact:`), antes do movimento, em vez de h1 - h0.
+- **Como conferir no log:** `gap fill of … since …: N messages, M moved`, com N igual ao número de mensagens buscadas da sala.
+

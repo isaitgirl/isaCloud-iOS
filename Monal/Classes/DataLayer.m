@@ -1733,6 +1733,13 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
     }];
 }
 
+-(NSNumber* _Nullable) isaCloudCountOfMessagesForContact:(NSString*) buddy forAccount:(NSNumber*) accountID afterHistoryId:(NSNumber*) h0
+{
+    return [self.db idReadTransaction:^{
+        return [self.db executeScalar:@"SELECT COUNT(*) FROM message_history WHERE account_id=? AND buddy_name=? AND message_history_id>?;" andArguments:@[accountID, buddy, h0]];
+    }];
+}
+
 //isaCloud muc-light: see DataLayer.h
 -(NSArray<NSArray<NSNumber*>*>*) isaCloudMoveLiveMessagesAfterGapFillInChat:(NSString*) buddy forAccount:(NSNumber*) accountID gapStart:(NSDate*) gapStart maxHistoryIdBeforeFill:(NSNumber*) h0
 {
@@ -1740,9 +1747,18 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
         NSMutableArray<NSArray<NSNumber*>*>* moved = [NSMutableArray new];
         NSString* gapString = [dbFormatter stringFromDate:gapStart];
         //live messages of the gap that sit before messages fetched from the archive (they came in by push, e.g. mentions)
-        NSArray<NSNumber*>* oldIds = [self.db executeScalarReader:@"SELECT M.message_history_id FROM message_history AS M WHERE M.account_id=? AND M.buddy_name=? AND M.message_history_id<=? AND M.timestamp>=? AND EXISTS(\
+        NSString* liveOfGap = @"M.account_id=? AND M.buddy_name=? AND M.message_history_id<=? AND M.timestamp>=? AND EXISTS(\
             SELECT 1 FROM message_history AS N WHERE N.account_id=M.account_id AND N.buddy_name=M.buddy_name AND N.message_history_id>? AND N.timestamp<M.timestamp\
-        ) ORDER BY M.timestamp ASC, M.message_history_id ASC;" andArguments:@[accountID, buddy, h0, gapString, h0]];
+        )";
+        NSArray* liveArguments = @[accountID, buddy, h0, gapString, h0];
+        //the earliest of those live messages: from this time on, the whole chat is put back in time order
+        NSString* firstTime = [self.db executeScalar:[NSString stringWithFormat:@"SELECT MIN(M.timestamp) FROM message_history AS M WHERE %@;", liveOfGap] andArguments:liveArguments];
+        if(firstTime == nil)
+            return moved;
+        //the live messages of the gap plus every message of the chat from firstTime on that was fetched (id > h0), in time order
+        NSMutableArray* arguments = [NSMutableArray arrayWithObjects:accountID, buddy, firstTime, h0, nil];
+        [arguments addObjectsFromArray:liveArguments];
+        NSArray<NSNumber*>* oldIds = [self.db executeScalarReader:[NSString stringWithFormat:@"SELECT M.message_history_id FROM message_history AS M WHERE M.account_id=? AND M.buddy_name=? AND M.timestamp>=? AND (M.message_history_id>? OR (%@)) ORDER BY M.timestamp ASC, M.message_history_id ASC;", liveOfGap] andArguments:arguments];
         if([oldIds count] == 0)
             return moved;
         //every column but the id, read from the table itself so that isaCloud columns are always copied
@@ -1753,7 +1769,7 @@ static NSMutableDictionary<NSString*, NSDictionary*>* _remoteAvatarCache;
         NSString* columns = [quoted componentsJoinedByString:@", "];
         for(NSNumber* oldId in oldIds)
         {
-            //the copy gets a new id at the end (the AUTOINCREMENT one)
+            //the copy gets a new id at the end (the AUTOINCREMENT one), so the copies keep the time order of the loop
             [self.db executeNonQuery:[NSString stringWithFormat:@"INSERT INTO message_history (%@) SELECT %@ FROM message_history WHERE message_history_id=?;", columns, columns] andArguments:@[oldId]];
             NSNumber* newId = [self.db lastInsertId];
             //the trigger of filetransfers already made an empty filetransfer_info for the copy: it has to go before the old one takes its place

@@ -2,6 +2,15 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## Próximo build
+
+Ainda não enviado ao TestFlight: branch `fix/canal-leve-ordem-apos-busca`, a ser mesclada na `isaCloud`.
+
+### Corrigido
+- **Canal leve: a conversa volta na ordem certa depois da busca, e a lista mostra a última mensagem de verdade.**
+  - **Antes:** a busca da lacuna trazia mensagens do arquivo com ids novos, e as menções que tinham chegado ao vivo durante a lacuna eram movidas para o fim. Quando a menção chegava antes de mensagens buscadas de horário posterior, a conversa ficava fora de ordem. Em 27/11, numa sala de canal leve, duas mensagens ao vivo (14:52 e 14:55) ficaram depois de mensagens de 15:13 e 15:14, e a prévia da lista mostrava 14:55 em vez de 15:16.
+  - **Agora:** a reordenação pega o trecho inteiro desde a primeira mensagem ao vivo da lacuna (`isaCloudMoveLiveMessagesAfterGapFillInChat:`): as mensagens buscadas a partir desse horário são copiadas junto e entram em ordem de horário. As mensagens buscadas mais antigas que isso ficam onde estão. Os banners removidos são só os das mensagens que chegaram ao vivo (`liveNewIds`), então as mensagens do arquivo continuam avisando. Depois de mover, a lista de conversas relê a prévia (`kMonalContactRefresh`). Log: "gap fill of … : N messages, M moved", com N = mensagens da sala com id maior que a abertura da busca.
+
 ## 0.0.1 (build 135) — 26/11/2026
 
 Enviado ao TestFlight às 16:27 (PR 98; testado no `.dev` em 26/11, 10:31 → 11:53, abrindo sem encerrar: 26 salas buscadas em ~10 s com a `conversejs.org` fora do ar).

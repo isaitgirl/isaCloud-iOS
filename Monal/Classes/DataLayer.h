@@ -181,10 +181,19 @@ extern NSString* const kMessageTypeFiletransfer;
 //isaCloud muc-light: the highest history id of this chat, nil if it has no messages
 -(NSNumber* _Nullable) maxHistoryIdForContact:(NSString*) buddy forAccount:(NSNumber*) accountID;
 /**
- isaCloud muc-light: after a gap fill from the archive, moves the live messages of this chat that arrived during the gap (ids <= h0 with a
- timestamp >= gapStart, later than some message fetched by the fill) to new history ids at the end, in timestamp order.
- Copies every column (isaCloud ones too), moves filetransfer_info and reactions, updates the search index and deletes the old rows.
- All in ONE write transaction. Returns an array of @[oldHistoryId, newHistoryId] pairs, oldest first (empty if nothing had to move).
+ isaCloud muc-light: number of messages of this chat with a history id > h0 (the ones a gap fill fetched). Only for the log.
+ */
+-(NSNumber* _Nullable) isaCloudCountOfMessagesForContact:(NSString*) buddy forAccount:(NSNumber*) accountID afterHistoryId:(NSNumber*) h0;
+
+/**
+ isaCloud muc-light: after a gap fill from the archive, puts the chat back in time order. L_out = the live messages of this chat that arrived
+ during the gap (ids <= h0 with a timestamp >= gapStart, later than some message fetched by the fill). If there are none, nothing moves.
+ Otherwise T = the oldest timestamp of L_out, and S = L_out plus every message of this chat with id > h0 and timestamp >= T (the fetched
+ ones). Every row of S is copied to a new history id at the end, in (timestamp, message_history_id) order, so the result is
+ [old rows] [fetched rows older than T] [S in time order]. Copies every column (isaCloud ones too), moves filetransfer_info and reactions,
+ updates the search index and deletes the old rows. All in ONE write transaction.
+ Returns an array of @[oldHistoryId, newHistoryId] pairs for ALL moved rows, in the order they were copied (empty if nothing had to move).
+ The rows that came in live are the pairs with oldHistoryId <= h0; the caller knows h0.
  */
 -(NSArray<NSArray<NSNumber*>*>*) isaCloudMoveLiveMessagesAfterGapFillInChat:(NSString*) buddy forAccount:(NSNumber*) accountID gapStart:(NSDate*) gapStart maxHistoryIdBeforeFill:(NSNumber*) h0;
 

@@ -438,10 +438,12 @@ typedef NS_ENUM(NSUInteger, MLNotificationState) {
 
 //isaCloud muc-light: the messages of a light channel got new history ids after a gap fill; their delivered banners are dropped, the
 //message keeps the same message id, so the banner of the new row is the one to remove (a banner can not be shown again for them)
+//only the live ones (liveNewIds) lose their banners: the messages fetched from the archive keep them (older builds send newIds only)
 -(void) handleMessagesMoved:(NSNotification*) notification
 {
     UNUserNotificationCenter* center = [UNUserNotificationCenter currentNotificationCenter];
-    for(NSNumber* historyId in notification.userInfo[@"newIds"])
+    NSArray<NSNumber*>* historyIds = notification.userInfo[@"liveNewIds"] ?: notification.userInfo[@"newIds"];
+    for(NSNumber* historyId in historyIds)
     {
         MLMessage* message = [MLMessage createMessageFromHistoryID:historyId];
         if(message == nil || [message.messageType isEqualToString:kMessageTypeStatus])
