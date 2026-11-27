@@ -1,6 +1,25 @@
 {
   "releases": [
     {
+      "build": 136,
+      "date": "27/11/2026",
+      "sections": [
+        {
+          "title": "Correções",
+          "items": [
+            "🧭 As conversas dos canais voltam na ordem certa depois de ficar um tempo fora, e a lista mostra a mensagem mais recente.",
+            "🧹 Tchau, notificação vazia! Agora só fica na tela o que é mensagem de verdade."
+          ]
+        },
+        {
+          "title": "Melhorias",
+          "items": [
+            "🛠️ Por dentro, ganhamos um jeito novo de testar as notificações antes de elas chegarem até você. Tudo para o app ficar redondinho!"
+          ]
+        }
+      ]
+    },
+    {
       "build": 135,
       "date": "26/11/2026",
       "sections": [
