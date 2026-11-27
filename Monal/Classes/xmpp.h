@@ -144,6 +144,18 @@ typedef void (^monal_iq_handler_t)(XMPPIQ* _Nullable);
 -(void) sendChatState:(BOOL) isTyping toContact:(nonnull MLContact*) contact;
 -(void) sendReactions:(NSOrderedSet*) reactions forMessage:(MLMessage*) message;
 
+//isaCloud: scheduled messages (namespace urn:isacloud:schedule:0, docs/analise-mensagem-agendada.md). The server keeps the message until `date`
+//and sends it itself; the text is kept here too, to show it and to put it in the history when its copy comes back (see MLMessageProcessor)
+//YES when the server of the account announces the feature (the disco#info of the account's domain)
+-(BOOL) supportsScheduledMessages;
+//schedules a text message to a 1:1 chat; the completion gets the id of the server (nil on error) and the text to show
+-(void) scheduleMessage:(NSString*) text toContact:(MLContact*) contact isEncrypted:(BOOL) encrypt at:(NSDate*) date messageId:(NSString*) messageId withCompletion:(void (^)(NSString* _Nullable serverId, NSString* _Nullable errorText)) completion;
+//asks the server for the messages still pending (to the contact, or all when contact is nil); the local copies that the server does not have anymore are deleted
+//each item is a dictionary with the keys serverId, at (NSDate) and to (the bare jid)
+-(void) listScheduledFor:(MLContact* _Nullable) contact withCompletion:(void (^)(NSArray<NSDictionary*>* _Nullable items, NSString* _Nullable errorText)) completion;
+//cancels a pending scheduled message by its server id; the local copy is deleted when the server accepts it
+-(void) cancelScheduledWithServerId:(NSString*) serverId withCompletion:(void (^)(NSString* _Nullable errorText)) completion;
+
 /**
  crafts a  ping and sends it
  */

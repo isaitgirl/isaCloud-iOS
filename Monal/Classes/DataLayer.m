@@ -3586,6 +3586,94 @@ static NSNumber* isacloudNowMillis(void)
     }];
 }
 
+#pragma mark isaCloud: scheduled messages (table isacloud_scheduled_message, migration 11 of +migrateISACloudDB:)
+
+//isaCloud: posted on the main queue, the observers read the table again
+static void isaCloudPostScheduledMessagesUpdated(void)
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [[NSNotificationCenter defaultCenter] postNotificationName:kMonalIsaCloudScheduledMessagesUpdated object:nil];
+    });
+}
+
+-(NSArray<NSDictionary*>*) scheduledMessagesForAccount:(NSNumber*) accountID buddy:(NSString* _Nullable) buddy
+{
+    if(accountID == nil)
+        return @[];
+    return [self.db idReadTransaction:^{
+        if(buddy != nil)
+            return (id)[self.db executeReader:@"SELECT * FROM isacloud_scheduled_message WHERE account_id=? AND buddy_name=? ORDER BY scheduled_at ASC;" andArguments:@[accountID, buddy]];
+        return (id)[self.db executeReader:@"SELECT * FROM isacloud_scheduled_message WHERE account_id=? ORDER BY scheduled_at ASC;" andArguments:@[accountID]];
+    }];
+}
+
+-(NSDictionary* _Nullable) scheduledMessageForMessageId:(NSString*) messageId account:(NSNumber*) accountID buddy:(NSString*) buddy
+{
+    if(!messageId || accountID == nil || !buddy)
+        return nil;
+    return [self.db idReadTransaction:^{
+        NSArray* rows = [self.db executeReader:@"SELECT * FROM isacloud_scheduled_message WHERE account_id=? AND message_id=? AND buddy_name=?;" andArguments:@[accountID, messageId, buddy]];
+        return (id)(rows.count > 0 ? rows.firstObject : nil);
+    }];
+}
+
+-(void) addScheduledMessageForAccount:(NSNumber*) accountID buddy:(NSString*) buddy messageId:(NSString*) messageId serverId:(NSString*) serverId body:(NSString*) body encrypted:(BOOL) encrypted scheduledAt:(NSDate*) scheduledAt
+{
+    if(accountID == nil || !buddy || !messageId || !serverId || !body || !scheduledAt)
+        return;
+    [self.db voidWriteTransaction:^{
+        [self.db executeNonQuery:@"INSERT INTO isacloud_scheduled_message (account_id, message_id, server_id, buddy_name, body, encrypted, scheduled_at, created_at) VALUES(?, ?, ?, ?, ?, ?, ?, ?) \
+            ON CONFLICT(account_id, message_id) DO UPDATE SET server_id=excluded.server_id, body=excluded.body, encrypted=excluded.encrypted, scheduled_at=excluded.scheduled_at;"
+            andArguments:@[accountID, messageId, serverId, buddy, body, [NSNumber numberWithBool:encrypted], [NSNumber numberWithLongLong:(long long)scheduledAt.timeIntervalSince1970], [NSNumber numberWithLongLong:(long long)[NSDate date].timeIntervalSince1970]]];
+    }];
+    isaCloudPostScheduledMessagesUpdated();
+}
+
+-(void) deleteScheduledMessageWithServerId:(NSString*) serverId forAccount:(NSNumber*) accountID
+{
+    if(!serverId || accountID == nil)
+        return;
+    [self.db voidWriteTransaction:^{
+        [self.db executeNonQuery:@"DELETE FROM isacloud_scheduled_message WHERE account_id=? AND server_id=?;" andArguments:@[accountID, serverId]];
+    }];
+    isaCloudPostScheduledMessagesUpdated();
+}
+
+-(void) deleteScheduledMessageWithMessageId:(NSString*) messageId forAccount:(NSNumber*) accountID
+{
+    if(!messageId || accountID == nil)
+        return;
+    [self.db voidWriteTransaction:^{
+        [self.db executeNonQuery:@"DELETE FROM isacloud_scheduled_message WHERE account_id=? AND message_id=?;" andArguments:@[accountID, messageId]];
+    }];
+    isaCloudPostScheduledMessagesUpdated();
+}
+
+-(void) deleteScheduledMessagesForAccount:(NSNumber*) accountID buddy:(NSString* _Nullable) buddy notOnServer:(NSArray<NSString*>*) serverIds
+{
+    if(accountID == nil)
+        return;
+    NSTimeInterval now = [NSDate date].timeIntervalSince1970;
+    NSMutableArray<NSString*>* stale = [NSMutableArray new];
+    for(NSDictionary* row in [self scheduledMessagesForAccount:accountID buddy:buddy])
+    {
+        //isaCloud: a copy whose message the server already sent stays until its echo comes (carbon or the MAM catch-up, maybe days later
+        //when the phone was off): without it, the OMEMO echo of this device would be dropped and the message would be missing here. Only
+        //copies 7 days past their time are given up
+        if([serverIds containsObject:row[@"server_id"]] || [row[@"scheduled_at"] doubleValue] > now - 7 * 86400)
+            continue;
+        [stale addObject:row[@"server_id"]];
+    }
+    if(stale.count == 0)
+        return;
+    DDLogInfo(@"Removing %lu scheduled message copies the server does not have anymore", (unsigned long)stale.count);
+    [self.db voidWriteTransaction:^{
+        for(NSString* serverId in stale)
+            [self.db executeNonQuery:@"DELETE FROM isacloud_scheduled_message WHERE account_id=? AND server_id=?;" andArguments:@[accountID, serverId]];
+    }];
+    isaCloudPostScheduledMessagesUpdated();
+}
+
 #pragma mark isaCloud: full text search in the messages (index: MLMessageSearch)
 
 //the history ids of the messages having every word of the query (each word as a prefix, no matter accents or case), newest first

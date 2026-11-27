@@ -1362,6 +1362,23 @@
             [db executeNonQuery:@"ALTER TABLE account ADD COLUMN isacloud_muc_light_gap_start REAL DEFAULT NULL;"];
     }];
 
+    //isaCloud: scheduled messages (docs/analise-mensagem-agendada.md, section 4). The server sends a scheduled message later and its copy comes back
+    //as our own: the text is not on the server, so the app keeps it here until that copy is in the history. One row per account and message id, with
+    //no foreign key (the Monal tables are not touched). scheduled_at and created_at are epoch seconds. Harmless to run again: CREATE TABLE IF NOT EXISTS.
+    [self updateISACloudDB:db toVersion:11 withBlock:^{
+        [db executeNonQuery:@"CREATE TABLE IF NOT EXISTS isacloud_scheduled_message ( \
+            account_id INTEGER NOT NULL, \
+            message_id TEXT NOT NULL, \
+            server_id TEXT NOT NULL, \
+            buddy_name TEXT NOT NULL, \
+            body TEXT NOT NULL, \
+            encrypted INTEGER NOT NULL DEFAULT 0, \
+            scheduled_at INTEGER NOT NULL, \
+            created_at INTEGER NOT NULL, \
+            PRIMARY KEY(account_id, message_id) \
+        );"];
+    }];
+
     //...and at every start it indexes what the hooks of the DataLayer did not see (messages written by an older build, for example)
     [MLMessageSearch catchUpIndexInDatabase:db];
 }

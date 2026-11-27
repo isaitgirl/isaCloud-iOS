@@ -219,6 +219,7 @@
 		845EFFBE2918723D00C1E03E /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = C1E4654624EE517000CA5AAF /* Localizable.strings */; };
 		846DF27C2937FAA600AAB9C0 /* ChatPlaceholder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 846DF27B2937FAA600AAB9C0 /* ChatPlaceholder.swift */; };
 		847311232C893D2600739CC6 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 847311222C893D2600739CC6 /* ChatView.swift */; };
+		A1C0FFEE0000000000002001 /* ScheduledMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0FFEE0000000000002002 /* ScheduledMessages.swift */; };
 		84774DF52D1A935000B15E51 /* ExyteChat in Frameworks */ = {isa = PBXBuildFile; productRef = 84774DF42D1A935000B15E51 /* ExyteChat */; };
 		84774DFB2D1A956400B15E51 /* ExyteChat in Frameworks */ = {isa = PBXBuildFile; productRef = 84774DFA2D1A956400B15E51 /* ExyteChat */; };
 		848227912C4A6194003CCA33 /* MLPlaceholderViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 848227902C4A6194003CCA33 /* MLPlaceholderViewController.m */; };
@@ -807,6 +808,7 @@
 		C10490482612ED2F0054AC9E /* MLEmoji.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLEmoji.swift; sourceTree = "<group>"; };
 		C10490E22612F3D00054AC9E /* MLCrypto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLCrypto.swift; sourceTree = "<group>"; };
 		A1C0FFEE0000000000001002 /* Polls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Polls.swift; sourceTree = "<group>"; };
+		A1C0FFEE0000000000002002 /* ScheduledMessages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledMessages.swift; sourceTree = "<group>"; };
 		A1C0FFEE0000000000001004 /* ReplyFormatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplyFormatting.swift; sourceTree = "<group>"; };
 		C10490EA2612F3E00054AC9E /* EncryptedPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EncryptedPayload.swift; sourceTree = "<group>"; };
 		C1049186261301530054AC9E /* MonalXMPPUnitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MonalXMPPUnitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -1350,6 +1352,7 @@
 				C1850E6625F37EC0003D506A /* Monal Tests-Bridging-Header.h */,
 				C10490E22612F3D00054AC9E /* MLCrypto.swift */,
 				A1C0FFEE0000000000001002 /* Polls.swift */,
+				A1C0FFEE0000000000002002 /* ScheduledMessages.swift */,
 				A1C0FFEE0000000000001004 /* ReplyFormatting.swift */,
 				C10490EA2612F3E00054AC9E /* EncryptedPayload.swift */,
 				848904A8289C82C30097E19C /* SCRAM.m */,
@@ -2492,6 +2495,7 @@
 				20D3611C2C10E12500E46587 /* BoardingCards.swift in Sources */,
 				84558DBF2DF04C3100F8357F /* OneClickRegistration.swift in Sources */,
 				847311232C893D2600739CC6 /* ChatView.swift in Sources */,
+				A1C0FFEE0000000000002001 /* ScheduledMessages.swift in Sources */,
 				3D06A515281FFCC000DDAE90 /* NotificationDebugging.swift in Sources */,
 				845D636B2AD4AEDA0066EFFB /* MediaViewer.swift in Sources */,
 				2636C43F177BD58C001CA71F /* XMPPEdit.m in Sources */,

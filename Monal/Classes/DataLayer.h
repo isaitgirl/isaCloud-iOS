@@ -367,6 +367,19 @@ extern NSString* const kMessageTypeFiletransfer;
 //of a video conference, a credential).
 -(NSNumber* _Nullable) isaCloudAddLocalUnreadNote:(NSString*) text toSelfChat:(NSString*) ownJid forAccount:(NSNumber*) accountID;
 
+#pragma mark isaCloud: scheduled messages (table isacloud_scheduled_message, migration 11 of +migrateISACloudDB:)
+//isaCloud: our copy of the scheduled messages (the text is not on the server, see docs/analise-mensagem-agendada.md, section 4). The methods that change
+//the table post kMonalIsaCloudScheduledMessagesUpdated. The dictionaries have the columns of the table as keys (scheduled_at is epoch seconds)
+//the rows of one account, of one chat (buddy nil = all the chats), oldest schedule first
+-(NSArray<NSDictionary*>*) scheduledMessagesForAccount:(NSNumber*) accountID buddy:(NSString* _Nullable) buddy;
+//the row of one message of one chat (nil if there is none)
+-(NSDictionary* _Nullable) scheduledMessageForMessageId:(NSString*) messageId account:(NSNumber*) accountID buddy:(NSString*) buddy;
+-(void) addScheduledMessageForAccount:(NSNumber*) accountID buddy:(NSString*) buddy messageId:(NSString*) messageId serverId:(NSString*) serverId body:(NSString*) body encrypted:(BOOL) encrypted scheduledAt:(NSDate*) scheduledAt;
+-(void) deleteScheduledMessageWithServerId:(NSString*) serverId forAccount:(NSNumber*) accountID;
+-(void) deleteScheduledMessageWithMessageId:(NSString*) messageId forAccount:(NSNumber*) accountID;
+//removes the copies of the chat (or of all chats) that are not in serverIds and whose time has already passed
+-(void) deleteScheduledMessagesForAccount:(NSNumber*) accountID buddy:(NSString* _Nullable) buddy notOnServer:(NSArray<NSString*>*) serverIds;
+
 #pragma mark isaCloud: archived state
 //isaCloud: archived chats stay in buddylist and activechats (pinned and lastMessageTime survive) and only leave the lists; see migration 7 of +migrateISACloudDB:
 -(BOOL) isArchivedBuddy:(NSString*) buddy forAccount:(NSNumber*) accountID;

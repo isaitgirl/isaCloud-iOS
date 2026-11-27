@@ -227,6 +227,9 @@ struct ChatView: View {
     @State private var showCameraPermissionAlert = false
     //isaCloud: the alert for a gallery video that the server limit does not allow (the text is the alert title)
     @State private var serverLimitAlertMessage: String? = nil
+    //isaCloud: the messages of this chat waiting on the server (ScheduledMessages.swift) and the alert of a scheduling or cancel the server refused
+    @State private var scheduledRows: [ScheduledMessageRow] = []
+    @State private var scheduledAlertMessage: String? = nil
     //isaCloud: the GIF picker is an item sheet: the mode (plain GIF, or "With GIF" from the sticker sheet with the Sticker switch on) travels with the
     //presentation itself. A separate flag read only inside the sheet content was not tracked by the chat's body, so the first opening saw the old value.
     private enum GifPickerMode: Int, Identifiable {
@@ -1228,7 +1231,12 @@ struct ChatView: View {
                 sendRecording(url)
             },
             mentionCandidates: mentionNicks,
-            sendingHintTypeSize: ChatTextSize.dynamicTypeSize(system: dynamicTypeSize, step: chatViewDefaultsDB.chatTextSizeStep)       //isaCloud: the "sending" capsule follows the chat text size
+            sendingHintTypeSize: ChatTextSize.dynamicTypeSize(system: dynamicTypeSize, step: chatViewDefaultsDB.chatTextSizeStep),       //isaCloud: the "sending" capsule follows the chat text size
+            //isaCloud: scheduled messages (see ScheduledMessages.swift): the actions are below, next to the send
+            scheduleAvailable: canScheduleHere(),
+            onSchedule: scheduleFromInputBar,       //isaCloud: a date from the input bar (its menu or its date picker)
+            scheduledRows: scheduledRows,
+            onCancelScheduled: cancelScheduledFromSheet
         )
     }
 
@@ -1468,6 +1476,84 @@ struct ChatView: View {
             return
         }
         messages.append(ChatViewMessage(newMLMessage))
+    }
+
+    /// isaCloud: scheduled messages (ScheduledMessages.swift, docs/analise-mensagem-agendada.md): offered in a 1:1 chat whose server announces
+    /// the feature, and only while the account is connected (scheduling and cancelling need the answer of the server)
+    private func canScheduleHere() -> Bool {
+        return !contact.obj.isMuc && account.supportsScheduledMessages() && account.accountState.rawValue >= xmppState.stateBound.rawValue
+    }
+
+    /// isaCloud: schedules the text of the field for a time. The field is cleared only when the server has the message, as in a send
+    private func scheduleFromInputBar(_ date: Date) {
+        let text = inputModel.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else {
+            return
+        }
+        if isWaitingForAcceptance() {
+            askToSendWithoutEncryption { scheduleText(text, at: date, plain: true) }
+            return
+        }
+        scheduleText(text, at: date, plain: false)
+    }
+
+    private func scheduleText(_ text: String, at date: Date, plain: Bool) {
+        let messageId = UUID().uuidString
+        let encrypted = contact.isEncrypted && !plain
+        account.scheduleMessage(text, to: contact.obj, isEncrypted: encrypted, at: date, messageId: messageId) { _, errorText in
+            DispatchQueue.main.async {
+                if let errorText {
+                    scheduledAlertMessage = errorText
+                    return
+                }
+                //the field is cleared only while it still has the text that was scheduled (the person may have written on meanwhile)
+                if inputModel.text.trimmingCharacters(in: .whitespacesAndNewlines) == text {
+                    _ = inputModel.send()
+                }
+                reloadScheduled()
+            }
+        }
+    }
+
+    /// isaCloud: reads the messages waiting in this chat. The local copies (with their text) show at once; the list of the server then
+    /// decides which ones still wait (and brings the ones scheduled from another device, without text)
+    private func reloadScheduled() {
+        let localRows = (DataLayer.sharedInstance().scheduledMessages(forAccount: account.accountID, buddy: contact.contactJid) as? [[AnyHashable: Any]] ?? [])
+            .compactMap(ScheduledMessages.row(fromLocalCopy:))
+        //a copy past its time is already sent (it waits for its echo, see MLMessageProcessor): not shown as waiting
+        scheduledRows = localRows.filter { $0.scheduledAt > Date() }
+        guard canScheduleHere() else {
+            return
+        }
+        account.listScheduled(for: contact.obj) { items, _ in
+            DispatchQueue.main.async {
+                guard let items else {
+                    return
+                }
+                let bodies = Dictionary(localRows.map { ($0.serverId, $0.body) }, uniquingKeysWith: { first, _ in first })
+                scheduledRows = items.compactMap { item -> ScheduledMessageRow? in
+                    guard let serverId = item["serverId"] as? String, let at = item["at"] as? Date else {
+                        return nil
+                    }
+                    return ScheduledMessageRow(serverId: serverId, scheduledAt: at, body: bodies[serverId] ?? nil)
+                }
+                .sorted { $0.scheduledAt < $1.scheduledAt }
+            }
+        }
+    }
+
+    /// isaCloud: cancels a message of the list. Its text goes back to the field when the field is empty
+    private func cancelScheduledFromSheet(_ row: ScheduledMessageRow) {
+        account.cancelScheduled(withServerId: row.serverId) { errorText in
+            DispatchQueue.main.async {
+                if let errorText {
+                    scheduledAlertMessage = errorText
+                } else if let body = row.body, inputModel.text.isEmpty {
+                    inputModel.setText(body)
+                }
+                reloadScheduled()
+            }
+        }
     }
 
     /// isaCloud: saves an edit of a sent message through the closure given by the message menu
@@ -2174,6 +2260,12 @@ struct ChatView: View {
         } message: {
             Text(NSLocalizedString("Monal is not allowed to access the camera", comment: "Camera permissions missing warning"))
         }
+        //isaCloud: a scheduling or a cancel the server refused (ScheduledMessages.swift): one OK button, the message is the title
+        .alert(scheduledAlertMessage ?? "", isPresented: Binding(get: { scheduledAlertMessage != nil }, set: { if !$0 { scheduledAlertMessage = nil } })) {
+            Button("OK", role: .cancel) {
+                scheduledAlertMessage = nil
+            }
+        }
         //isaCloud: one OK button; the message is the title, so the alert has no body text
         .alert(serverLimitAlertMessage ?? "", isPresented: Binding(get: { serverLimitAlertMessage != nil }, set: { if !$0 { serverLimitAlertMessage = nil } })) {
             Button("OK", role: .cancel) {
@@ -2512,7 +2604,12 @@ struct ChatView: View {
         .canContainExternalLinks()
         .addLoadingOverlay(overlay)
         .navigationBarTitleDisplayMode(.inline)
+        //isaCloud: the messages scheduled in this chat change when one is sent, cancelled or scheduled (see DataLayer)
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name(kMonalIsaCloudScheduledMessagesUpdated))) { _ in
+            reloadScheduled()
+        }
         .onAppear {
+            reloadScheduled()       //isaCloud: scheduled messages of this chat (see ScheduledMessages.swift)
             //isaCloud: opened at the first unread message of a group or channel; must be read before refreshCounter marks everything as read
             if jumpToHistoryId == nil, contact.obj.isMuc, let firstUnread = DataLayer.sharedInstance().firstUnreadHistoryId(forBuddy: contact.contactJid, forAccount: contact.accountID, maxMessages: UInt(ChatView.maxUnreadMessagesToOpenAt)) {
                 jumpToHistoryId = firstUnread
