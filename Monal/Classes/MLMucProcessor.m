@@ -2470,25 +2470,34 @@ $$instance_handler(handleGapFill, account.mucProcessor, $$ID(xmpp*, account), $$
         return;
     }
     //last page: the fetched messages are in the database now, the live ones of the gap move after them
-    NSNumber* h1 = [[DataLayer sharedInstance] maxHistoryIdForContact:room forAccount:account.accountID];
+    //the messages of this chat fetched by the fill (id > h0), counted before the moves: the moves keep them above h0
+    NSNumber* fetched = [[DataLayer sharedInstance] isaCloudCountOfMessagesForContact:room forAccount:account.accountID afterHistoryId:h0];
     NSArray<NSArray<NSNumber*>*>* moved = [[DataLayer sharedInstance] isaCloudMoveLiveMessagesAfterGapFillInChat:room forAccount:account.accountID gapStart:gapStart maxHistoryIdBeforeFill:h0];
-    //the count is approximate: ids are read before the moves take new ones
-    NSInteger fetched = MAX(0, [h1 integerValue] - [h0 integerValue]);
-    DDLogInfo(@"isaCloud muc-light: gap fill of %@ since %@: %ld messages, %lu moved", room, gapStart, (long)fetched, (unsigned long)[moved count]);
+    DDLogInfo(@"isaCloud muc-light: gap fill of %@ since %@: %@ messages, %lu moved", room, gapStart, fetched, (unsigned long)[moved count]);
     if([moved count] > 0)
     {
+        MLContact* contact = [MLContact createContactFromJid:room andAccountID:account.accountID];
         NSMutableArray<NSNumber*>* oldIds = [NSMutableArray new];
         NSMutableArray<NSNumber*>* newIds = [NSMutableArray new];
+        NSMutableArray<NSNumber*>* liveNewIds = [NSMutableArray new];
         for(NSArray<NSNumber*>* pair in moved)
         {
             [oldIds addObject:pair[0]];
             [newIds addObject:pair[1]];
+            //only the live ones (they came in during the gap, e.g. mentions) lose their banners; the fetched ones keep theirs
+            if([pair[0] compare:h0] != NSOrderedDescending)
+                [liveNewIds addObject:pair[1]];
         }
-        //the open chat drops the old rows and shows the new ones; the banners of the moved messages are dropped (see MLNotificationManager)
+        //the open chat drops the old rows and shows the new ones; the banners of the live moved messages are dropped (see MLNotificationManager)
         [[MLNotificationQueue currentQueue] postNotificationName:kIsaCloudMessagesMovedNotice object:account userInfo:@{
-            @"contact": [MLContact createContactFromJid:room andAccountID:account.accountID],
+            @"contact": contact,
             @"oldIds": oldIds,
             @"newIds": newIds,
+            @"liveNewIds": liveNewIds,
+        }];
+        //the list of chats shows the last message of the chat, which may have changed: it reads it again from the database
+        [[MLNotificationQueue currentQueue] postNotificationName:kMonalContactRefresh object:account userInfo:@{
+            @"contact": contact,
         }];
     }
     @synchronized(_stateLockObject) {
