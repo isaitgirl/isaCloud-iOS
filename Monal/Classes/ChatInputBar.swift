@@ -34,9 +34,19 @@ struct ChatInputBar: View {
     var mentionCandidates: () -> [String] = { [] }
     /// isaCloud: the text size of the chat (see ChatTextSize), used by the floating "sending" capsule; the field keeps the system size
     var sendingHintTypeSize: DynamicTypeSize = .large
+    /// isaCloud: scheduled messages (ScheduledMessages.swift): the menu of the send button and the strip above the field. Only in a 1:1 chat
+    /// whose server has the feature, and only while connected (the answer of the server is needed)
+    var scheduleAvailable: Bool = false
+    /// isaCloud: schedules the text of the field for a time (the chat clears the field when the server has it)
+    var onSchedule: (Date) -> Void = { _ in }
+    /// isaCloud: the messages of this chat still waiting on the server (the strip and its list)
+    var scheduledRows: [ScheduledMessageRow] = []
+    var onCancelScheduled: (ScheduledMessageRow) -> Void = { _ in }
     @State private var pressStart: Date?
     @State private var showNoClipboardImage = false
     @State private var showMicrophoneDenied = false
+    @State private var showScheduledList = false
+    @State private var showScheduleDatePicker = false
 
     private var textBinding: Binding<String> {
         Binding(get: { model.text }, set: { model.setText($0) })
@@ -53,6 +63,9 @@ struct ChatInputBar: View {
             if model.recording == nil {
                 mentionSuggestions
             }
+            if model.recording == nil && !scheduledRows.isEmpty {
+                scheduledStrip
+            }
             HStack(alignment: .bottom, spacing: 8) {
                 if model.edit == nil && model.recording == nil {
                     attachMenu
@@ -68,6 +81,12 @@ struct ChatInputBar: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
         .background(.bar)
+        .sheet(isPresented: $showScheduledList) {
+            ScheduledMessagesSheet(rows: scheduledRows, onCancel: onCancelScheduled)
+        }
+        .sheet(isPresented: $showScheduleDatePicker) {
+            ScheduleDatePickerSheet(onSchedule: onSchedule)
+        }
         //isaCloud: the "sending" hint floats above the bar, so the chat does not move up and down while a file goes out
         .overlay(alignment: .top) {
             //isaCloud: a video being checked (before any attachment exists) shows the hint too
@@ -320,14 +339,7 @@ struct ChatInputBar: View {
             }
             switch model.trailingAction {
             case .send:
-                Button(action: onSend) {
-                    Image(systemName: "arrow.up")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(IsaCloudBubbleColors.mineText)
-                        .frame(width: 40, height: 40)
-                        .background(IsaCloudBubbleColors.mine, in: Circle())
-                }
-                .accessibilityLabel("arrowSend")
+                sendButton
             case .saveEdit:
                 Button(action: onSaveEdit) {
                     Image(systemName: "checkmark")
@@ -341,6 +353,87 @@ struct ChatInputBar: View {
                 EmptyView()
             }
         }
+    }
+
+    /// isaCloud: the send button. Long press opens the schedule menu, only when the text can be scheduled (see canSchedule); the button is the same either way.
+    /// A Menu with primaryAction, not .contextMenu: the context menu lifted the button as a preview and moved it (and the menu) to the top third of
+    /// the chat (seen on the .dev, 27/11/2026). The Menu opens anchored at the button and a tap still sends
+    @ViewBuilder
+    private var sendButton: some View {
+        if canSchedule {
+            Menu {
+                Button {
+                    onSchedule(Date().addingTimeInterval(5 * 60))
+                } label: {
+                    Label("In 5 minutes", systemImage: "clock")
+                }
+                Button {
+                    onSchedule(Date().addingTimeInterval(30 * 60))
+                } label: {
+                    Label("In 30 minutes", systemImage: "clock")
+                }
+                Button {
+                    onSchedule(Date().addingTimeInterval(60 * 60))
+                } label: {
+                    Label("In 1 hour", systemImage: "clock")
+                }
+                Button {
+                    showScheduleDatePicker = true
+                } label: {
+                    Label("Choose date and time…", systemImage: "calendar")
+                }
+            } label: {
+                sendButtonImage
+            } primaryAction: {
+                onSend()
+            }
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .accessibilityLabel("arrowSend")
+        } else {
+            Button(action: onSend) {
+                sendButtonImage
+            }
+            .accessibilityLabel("arrowSend")
+        }
+    }
+
+    private var sendButtonImage: some View {
+        Image(systemName: "arrow.up")
+            .font(.system(size: 18, weight: .bold))
+            .foregroundStyle(IsaCloudBubbleColors.mineText)
+            .frame(width: 40, height: 40)
+            .background(IsaCloudBubbleColors.mine, in: Circle())
+    }
+
+    /// isaCloud: a text can be scheduled: the chat allows it, the field has text and nothing else is going out with it (no attachment, reply or edit)
+    private var canSchedule: Bool {
+        scheduleAvailable && model.edit == nil && model.reply == nil && model.attachments.isEmpty
+            && !model.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// isaCloud: "N scheduled messages · HH:MM" above the field (the earliest time); a tap opens the list
+    private var scheduledStrip: some View {
+        let earliest = scheduledRows.map(\.scheduledAt).min() ?? Date()
+        let time = ScheduledMessages.timeText(earliest)
+        let text = scheduledRows.count == 1
+            ? String(format: NSLocalizedString("%d scheduled message · %@", comment: "strip above the field when one message is scheduled in this chat: the count and the time of the earliest"), scheduledRows.count, time)
+            : String(format: NSLocalizedString("%d scheduled messages · %@", comment: "strip above the field when more messages are scheduled in this chat: the count and the time of the earliest"), scheduledRows.count, time)
+        return Button {
+            showScheduledList = true
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "clock")
+                Text(text)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.footnote)
+            }
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 12)
+        }
+        .buttonStyle(.plain)
     }
 
     private var clearTextButton: some View {

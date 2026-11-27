@@ -424,3 +424,22 @@
 
 /* isaCloud: "updating" dot after the title of the chats list (accessibility) */
 "updating" = "atualizando";
+
+/* isaCloud: scheduled messages (ScheduledMessages.swift, ChatInputBar.swift, ChatView.swift) */
+"In 5 minutes" = "Em 5 minutos";
+"In 30 minutes" = "Em 30 minutos";
+"In 1 hour" = "Em 1 hora";
+"Choose date and time…" = "Escolher data e hora…";
+"Date and time" = "Data e hora";
+"Schedule" = "Agendar";
+"%d scheduled message · %@" = "%d mensagem agendada · %@";
+"%d scheduled messages · %@" = "%d mensagens agendadas · %@";
+"Scheduled messages" = "Mensagens agendadas";
+"Scheduled on another device" = "Agendada em outro aparelho";
+"Cancel sending" = "Cancelar envio";
+"The server did not answer. Try again." = "O servidor não respondeu. Tente de novo.";
+"The message could not be scheduled." = "Não foi possível agendar a mensagem.";
+"You already have the maximum number of scheduled messages." = "Você já tem o número máximo de mensagens agendadas.";
+"This message can't be scheduled for that time. Choose a time within the next 72 hours." = "Não é possível agendar a mensagem para esse horário. Escolha um horário nas próximas 72 horas.";
+"This message was already sent or cancelled." = "Esta mensagem já foi enviada ou cancelada.";
+"The server could not schedule the message. Try again later." = "O servidor não conseguiu agendar a mensagem. Tente de novo mais tarde.";

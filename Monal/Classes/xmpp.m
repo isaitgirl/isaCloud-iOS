@@ -4410,6 +4410,133 @@ static NSLock* isaCloudTimeoutsLock(void)
     [self send:messageNode];
 }
 
+#pragma mark isaCloud: scheduled messages (urn:isacloud:schedule:0, docs/analise-mensagem-agendada.md)
+
+-(BOOL) supportsScheduledMessages
+{
+    return [self.connectionProperties.serverDiscoFeatures containsObject:@"urn:isacloud:schedule:0"];
+}
+
+//the message node of a scheduled text: the fields of a text sent now (OMEMO when encrypted, receipts, chat markers, store hint). It is built here,
+//so the normal send path (sendMessage: above, with replies, polls and stickers) is not changed
+-(XMPPMessage*) scheduledMessageNodeForText:(NSString*) text toContact:(MLContact*) contact isEncrypted:(BOOL) encrypt messageId:(NSString*) messageId
+{
+    XMPPMessage* messageNode = [[XMPPMessage alloc] initToContact:contact];
+    messageNode.id = messageId;
+    [messageNode.attributes setObject:kMessageChatType forKey:@"type"];
+#ifndef DISABLE_OMEMO
+    if(encrypt)
+    {
+        //same order as sendMessage: the database first, then the signal lock (see the note there)
+        [[DataLayer sharedInstance] createTransaction:^{
+            [self.omemo encryptMessage:messageNode withMessage:text toContact:contact.contactJid];
+        }];
+        [self addEME:@"eu.siacs.conversations.axolotl" withName:@"OMEMO" toMessageNode:messageNode];
+    }
+    else
+#endif
+        [messageNode setBody:text];
+    [messageNode addChildNode:[[MLXMLNode alloc] initWithElement:@"request" andNamespace:@"urn:xmpp:receipts"]];
+    [messageNode addChildNode:[[MLXMLNode alloc] initWithElement:@"markable" andNamespace:@"urn:xmpp:chat-markers:0"]];
+    [messageNode setStoreHint];
+    return messageNode;
+}
+
+//the text shown for an error of a scheduling, cancel or list request (the server codes of docs/analise-mensagem-agendada.md, section 2.2)
+-(NSString*) scheduledErrorTextFor:(XMPPIQ* _Nullable) error
+{
+    if(error == nil)
+        return NSLocalizedString(@"The server did not answer. Try again.", @"error of a scheduled message: no answer from the server");
+    if([error check:@"error/{urn:ietf:params:xml:ns:xmpp-stanzas}resource-constraint"])
+        return NSLocalizedString(@"You already have the maximum number of scheduled messages.", @"error of a scheduled message: the account has too many pending messages");
+    if([error check:@"error/{urn:ietf:params:xml:ns:xmpp-stanzas}not-acceptable"])
+        return NSLocalizedString(@"This message can't be scheduled for that time. Choose a time within the next 72 hours.", @"error of a scheduled message: the time is too far away or in the past");
+    if([error check:@"error/{urn:ietf:params:xml:ns:xmpp-stanzas}item-not-found"])
+        return NSLocalizedString(@"This message was already sent or cancelled.", @"error of cancelling a scheduled message: the server does not have it anymore");
+    return NSLocalizedString(@"The server could not schedule the message. Try again later.", @"error of a scheduled message: any other error");
+}
+
+-(void) scheduleMessage:(NSString*) text toContact:(MLContact*) contact isEncrypted:(BOOL) encrypt at:(NSDate*) date messageId:(NSString*) messageId withCompletion:(void (^)(NSString* _Nullable serverId, NSString* _Nullable errorText)) completion
+{
+    //only one to one chats with text (channels and groups are not part of this phase)
+    if(contact == nil || contact.isMuc || text.length == 0 || messageId == nil || date == nil)
+    {
+        completion(nil, NSLocalizedString(@"The message could not be scheduled.", @"error of a scheduled message: the request is not valid"));
+        return;
+    }
+    DDLogInfo(@"Scheduling message %@ to %@ for %@", messageId, contact.contactJid, [HelperTools generateDateTimeString:date]);
+    MLXMLNode* forwarded = [[MLXMLNode alloc] initWithElement:@"forwarded" andNamespace:@"urn:xmpp:forward:0" withAttributes:@{} andChildren:@[[self scheduledMessageNodeForText:text toContact:contact isEncrypted:encrypt messageId:messageId]] andData:nil];
+    MLXMLNode* schedule = [[MLXMLNode alloc] initWithElement:@"schedule" andNamespace:@"urn:isacloud:schedule:0" withAttributes:@{
+        @"at": [HelperTools generateDateTimeString:date],
+    } andChildren:@[forwarded] andData:nil];
+    XMPPIQ* iq = [[XMPPIQ alloc] initWithType:kiqSetType];
+    [iq addChildNode:schedule];
+    [self sendIq:iq withResponseHandler:^(XMPPIQ* result) {
+        NSString* serverId = [result findFirst:@"{urn:isacloud:schedule:0}scheduled@id"];
+        if(serverId == nil)
+        {
+            completion(nil, NSLocalizedString(@"The server could not schedule the message. Try again later.", @"error of a scheduled message: any other error"));
+            return;
+        }
+        //the copy kept here is what the echo of the server is put into the history with (see MLMessageProcessor)
+        [[DataLayer sharedInstance] addScheduledMessageForAccount:self.accountID buddy:contact.contactJid messageId:messageId serverId:serverId body:text encrypted:encrypt scheduledAt:date];
+        completion(serverId, nil);
+    } andErrorHandler:^(XMPPIQ* error) {
+        completion(nil, [self scheduledErrorTextFor:error]);
+    }];
+}
+
+-(void) listScheduledFor:(MLContact* _Nullable) contact withCompletion:(void (^)(NSArray<NSDictionary*>* _Nullable items, NSString* _Nullable errorText)) completion
+{
+    MLXMLNode* list = [[MLXMLNode alloc] initWithElement:@"list" andNamespace:@"urn:isacloud:schedule:0"];
+    if(contact != nil)
+        [list.attributes setObject:contact.contactJid forKey:@"with"];
+    XMPPIQ* iq = [[XMPPIQ alloc] initWithType:kiqGetType];
+    [iq addChildNode:list];
+    [self sendIq:iq withResponseHandler:^(XMPPIQ* result) {
+        NSMutableArray<NSDictionary*>* items = [NSMutableArray new];
+        NSMutableArray<NSString*>* serverIds = [NSMutableArray new];
+        for(MLXMLNode* item in [result find:@"{urn:isacloud:schedule:0}list/{urn:isacloud:schedule:0}item"])
+        {
+            NSString* serverId = item.attributes[@"id"];
+            NSDate* at = [HelperTools parseDateTimeString:item.attributes[@"at"]];
+            if(serverId == nil || at == nil)
+                continue;
+            NSMutableDictionary* entry = [NSMutableDictionary dictionaryWithDictionary:@{@"serverId": serverId, @"at": at}];
+            if(item.attributes[@"to"] != nil)
+                entry[@"to"] = item.attributes[@"to"];
+            if(item.attributes[@"message-id"] != nil)
+                entry[@"messageId"] = item.attributes[@"message-id"];
+            [items addObject:entry];
+            [serverIds addObject:serverId];
+        }
+        //the local copies the server does not have anymore stay until their echo is in the history; only the ones long past are given up (DataLayer)
+        [[DataLayer sharedInstance] deleteScheduledMessagesForAccount:self.accountID buddy:contact.contactJid notOnServer:serverIds];
+        completion(items, nil);
+    } andErrorHandler:^(XMPPIQ* error) {
+        completion(nil, [self scheduledErrorTextFor:error]);
+    }];
+}
+
+-(void) cancelScheduledWithServerId:(NSString*) serverId withCompletion:(void (^)(NSString* _Nullable errorText)) completion
+{
+    if(serverId == nil)
+    {
+        completion(NSLocalizedString(@"This message was already sent or cancelled.", @"error of cancelling a scheduled message: the server does not have it anymore"));
+        return;
+    }
+    XMPPIQ* iq = [[XMPPIQ alloc] initWithType:kiqSetType];
+    [iq addChildNode:[[MLXMLNode alloc] initWithElement:@"cancel" andNamespace:@"urn:isacloud:schedule:0" withAttributes:@{
+        @"id": serverId,
+    } andChildren:@[] andData:nil]];
+    [self sendIq:iq withResponseHandler:^(XMPPIQ* result __unused) {
+        [[DataLayer sharedInstance] deleteScheduledMessageWithServerId:serverId forAccount:self.accountID];
+        completion(nil);
+    } andErrorHandler:^(XMPPIQ* error) {
+        completion([self scheduledErrorTextFor:error]);
+    }];
+}
+
 -(void) sendChatState:(BOOL) isTyping toContact:(nonnull MLContact*) contact
 {
     if(self.accountState < kStateInitStarted)

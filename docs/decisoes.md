@@ -5,6 +5,15 @@ Registro do **porquê** das escolhas feitas no fork: decisões de produto, de c�
 - O que está feito, em andamento ou pendente, com datas e resultados de teste, fica no `ROADMAP.md` (toda decisão daqui tem uma linha lá). O histórico de cada build fica no `CHANGELOG.md`.
 - Dados sensíveis ficam em `isaCloud/local/NOTAS-LOCAIS.md`, nunca aqui.
 
+## Mensagem agendada (27/11/2026)
+
+- **Onde:** o agendamento fica no servidor (`mod_isacloud_schedule` em `isacloud-custom-plugins`, namespace `urn:isacloud:schedule:0`) e os apps só oferecem a interface. Só nos apps a entrega não seria confiável: o iOS não garante horário em segundo plano e a mensagem ficaria presa ao aparelho que agendou.
+- **Escopo:** só conversas 1:1. Grupos privados ficam para uma decisão futura; canais estão fora.
+- **Prazo máximo:** 72 h (bem menor que a validade dos anexos e do histórico).
+- **Horário que o destinatário vê:** o marcado para a entrega, não o momento em que a mensagem foi escrita. Atraso do servidor leva `<delay>` com o horário marcado.
+- **Eco no aparelho que agendou:** o Monal descarta a cópia OMEMO do próprio aparelho, então o iOS guarda o texto numa tabela local e põe a mensagem no histórico quando o eco chega.
+- Detalhes: `docs/analise-mensagem-agendada.md`; guia para os outros apps: `docs/guia-mensagem-agendada-android-web.md`.
+
 ## Lista de contatos sem animação ao abrir (12/11/2026)
 
 - **O que era:** ao tocar no botão de contatos, a lista abria com a animação padrão do iOS (o popover vira folha no iPhone e, no iOS 26+, cresce a partir do botão). Não havia timer nem fade nosso; o único atraso proposital em `ContactsView.swift` é o de 0,25 s do menu "+", para o popover do menu sumir antes de abrir a próxima tela.

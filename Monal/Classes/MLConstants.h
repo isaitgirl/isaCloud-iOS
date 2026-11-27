@@ -214,6 +214,8 @@ static inline NSString* _Nonnull LocalizationNotNeeded(NSString* _Nonnull s)
 #define kMonalMucVoiceRequestsUpdated @"kMonalMucVoiceRequestsUpdated"
 //isaCloud: the pending group and channel invites changed (saved, accepted, declined or removed); no userInfo, read them again from the DataLayer
 #define kMonalIsaCloudPendingInvitesUpdated @"kMonalIsaCloudPendingInvitesUpdated"
+//isaCloud: the scheduled messages changed (scheduled, cancelled, sent and put in the history, or removed); no userInfo, read them again from the DataLayer
+#define kMonalIsaCloudScheduledMessagesUpdated @"kMonalIsaCloudScheduledMessagesUpdated"
 
 #define kMucTypeGroup @"group"
 #define kMucTypeChannel @"channel"

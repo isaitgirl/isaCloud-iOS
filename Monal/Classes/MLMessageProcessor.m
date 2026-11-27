@@ -512,7 +512,51 @@ static NSMutableDictionary* _typingNotifications;
     if([messageNode check:@"{eu.siacs.conversations.axolotl}encrypted/header@sid|uint"])
         sentByOwnOmemoDevice = ((NSNumber*)[messageNode findFirst:@"{eu.siacs.conversations.axolotl}encrypted/header@sid|uint"]).unsignedIntValue == [account.omemo getDeviceId].unsignedIntValue;
 #endif
-    
+
+    //isaCloud: our own scheduled message comes back (carbon or MAM) when the server sends it: it goes into the history with the text kept here, dated
+    //at the scheduled time, and its row is removed. The copy is OMEMO-encrypted for our other devices only, so the rule below would drop it anyway
+    //(docs/analise-mensagem-agendada.md, section 4). Only 1:1 chats; a message without a row takes the normal way
+    if(!isMLhistory && !inbound && !possiblyUnknownContact.isMuc && messageId != nil)
+    {
+        NSDictionary* scheduled = [[DataLayer sharedInstance] scheduledMessageForMessageId:messageId account:account.accountID buddy:buddyName];
+        if(scheduled != nil)
+        {
+            DDLogInfo(@"Got the copy of our scheduled message %@ to %@, putting it in the history", messageId, buddyName);
+            NSDate* scheduledAt = [NSDate dateWithTimeIntervalSince1970:[scheduled[@"scheduled_at"] doubleValue]];
+            NSNumber* scheduledHistoryId = [[DataLayer sharedInstance]
+                addMessageToChatBuddy:buddyName
+                withInboundDir:NO
+                forAccount:account.accountID
+                withBody:[scheduled[@"body"] copy]
+                actuallyfrom:account.connectionProperties.identity.jid
+                occupantId:nil
+                participantJid:nil
+                sent:YES
+                unread:NO
+                messageId:messageId
+                serverMessageId:stanzaid
+                messageType:kMessageTypeText
+                andOverrideDate:scheduledAt
+                encrypted:[scheduled[@"encrypted"] boolValue]
+                displayMarkerWanted:NO
+                usingHistoryId:nil
+                checkForDuplicates:YES
+            ];
+            [[DataLayer sharedInstance] deleteScheduledMessageWithMessageId:messageId forAccount:account.accountID];
+            if(scheduledHistoryId == nil)
+                return nil;
+            MLMessage* scheduledMessage = [MLMessage createMessageFromHistoryID:scheduledHistoryId];
+            [[DataLayer sharedInstance] addActiveBuddies:buddyName forAccount:account.accountID];
+            //the same notice a message sent from another device gives: no alert, already read
+            [[MLNotificationQueue currentQueue] postNotificationName:kMonalNewMessageNotice object:account userInfo:@{
+                @"message": scheduledMessage,
+                @"showAlert": @NO,
+                @"contact": possiblyUnknownContact,
+            }];
+            return scheduledMessage;
+        }
+    }
+
     //handle fallback body of incoming reactions
     //(only ignore the fallback body, if it covers the whole body, else ignore the reaction and show the body as normal message)
     BOOL isReaction = [messageNode check:@"{urn:xmpp:reactions:0}reactions"];
