@@ -2,6 +2,18 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## 0.0.1 (build 137) — 27/11/2026
+
+Enviado ao TestFlight às 19:55 e instalado no `.dev` do iPhone (PR 100; testado no `.dev` em 27/11: com OMEMO, sem OMEMO, cancelamento e posição do menu).
+
+### Novo
+- **Mensagem agendada (1:1, até 72 h).**
+  - Toque longo no botão de enviar (`Menu` com ação principal em `ChatInputBar.swift`, ancorado no botão; o `.contextMenu` levantava o botão para o terço superior da tela): "Em 5 minutos", "Em 30 minutos", "Em 1 hora" e "Escolher data e hora…". Só em conversa 1:1, com texto, sem anexo, resposta ou edição, conectado e com o servidor anunciando `urn:isacloud:schedule:0` (`-[xmpp supportsScheduledMessages]`).
+  - O servidor guarda e entrega (`mod_isacloud_schedule`, no `isacloud-custom-plugins`, ativo na srv-01 em isacloud.im, xmpp.social.br e voz.social.br). O app monta a mensagem como num envio (OMEMO cifrado na hora de agendar) e a manda dentro de um IQ `<schedule at><forwarded>`; também `list` e `cancel`.
+  - O texto fica numa tabela local (`isacloud_scheduled_message`, migração 11 do isaCloud). Quando o eco chega (carbon `sent` ou MAM), `MLMessageProcessor` põe a mensagem no histórico com o texto guardado e a data do horário marcado, antes do descarte da cópia OMEMO do próprio aparelho. A cópia local só é descartada 7 dias depois do horário, para o eco que vem pelo catch-up do MAM.
+  - Faixa acima do campo ("N mensagens agendadas · HH:MM") e lista com "Cancelar envio" (`ScheduledMessages.swift`).
+  - Análise e protocolo em `docs/analise-mensagem-agendada.md`; instruções para Android e Web em `docs/guia-mensagem-agendada-android-web.md`.
+
 ## 0.0.1 (build 136) — 27/11/2026
 
 Enviado ao TestFlight às 16:15 (PR 99 e a limpeza da notificação vazia; as duas correções testadas no `.dev` em 27/11, a da notificação vazia com o `.dev` já recebendo push).

@@ -1,6 +1,19 @@
 {
   "releases": [
     {
+      "build": 137,
+      "date": "27/11/2026",
+      "sections": [
+        {
+          "title": "Novidades",
+          "items": [
+            "⏰ Agora dá para agendar mensagens! Segure o botão de enviar e escolha daqui a 5 minutos, 30 minutos, 1 hora ou o dia e a hora que quiser (até 3 dias). A mensagem sai na hora certinha, mesmo com o app fechado.",
+            "🗓️ As mensagens agendadas ficam numa faixinha acima do campo de texto: é só tocar para ver todas e cancelar o envio, se mudar de ideia."
+          ]
+        }
+      ]
+    },
+    {
       "build": 136,
       "date": "27/11/2026",
       "sections": [

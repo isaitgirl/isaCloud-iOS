@@ -10,6 +10,12 @@ O que está neste arquivo é o que aparece para o usuário na tela de **Novidade
 - Nada de texto sério ou técnico: sem jargão (OMEMO, SASL, WAL, 0xdead10cc, background task, thread), sem número de crash (C20), sem "passamos a registrar…". Detalhe técnico fica no [CHANGELOG.md](CHANGELOG.md).
 - Se a correção for interna e a pessoa não percebe, escreva algo leve como "🛠️ Mais estabilidade por dentro, para o app ficar redondinho."
 
+## Build 137 · 27/11/2026
+
+### Novidades
+- ⏰ Agora dá para agendar mensagens! Segure o botão de enviar e escolha daqui a 5 minutos, 30 minutos, 1 hora ou o dia e a hora que quiser (até 3 dias). A mensagem sai na hora certinha, mesmo com o app fechado.
+- 🗓️ As mensagens agendadas ficam numa faixinha acima do campo de texto: é só tocar para ver todas e cancelar o envio, se mudar de ideia.
+
 ## Build 136 · 27/11/2026
 
 ### Correções
