@@ -246,8 +246,11 @@ static void isaCloudTerminateAppex(void)
     UNMutableNotificationContent* content = [UNMutableNotificationContent new];
     content.title = contact.contactDisplayName ?: messageNode.fromUser;
     content.body = [appBundle localizedStringForKey:bodyKey value:bodyKey table:nil];
-    content.sound = [UNNotificationSound defaultSound];
-    content.interruptionLevel = UNNotificationInterruptionLevelActive;      //no time-sensitive/critical: the app has no entitlement for them
+    NSString* ringName = [self isaCloudCallRingSoundName];
+    content.sound = ringName != nil ? [UNNotificationSound soundNamed:ringName] : [UNNotificationSound defaultSound];
+    //time-sensitive breaks through Focus/Do Not Disturb (entitlement com.apple.developer.usernotifications.time-sensitive, no
+    //Apple approval needed); critical alerts would need one, so they are not used
+    content.interruptionLevel = UNNotificationInterruptionLevelTimeSensitive;
     content.threadIdentifier = messageNode.fromUser;
     content.userInfo = @{@"isaCloudIncomingCallPayload": payload};          //NOT kIsaCloudPushPlaceholder, that one is removed in killAppex
 
@@ -258,6 +261,66 @@ static void isaCloudTerminateAppex(void)
         DDLogError(@"isaCloud call fallback: could not post notification %@: %@", identifier, error);
     else
         DDLogInfo(@"isaCloud call fallback: local notification %@ posted", identifier);
+}
+
+//isaCloud: ~28 s ring for the call notification (iOS plays up to 30 s of a custom notification sound). It is synthesized here
+//(a two-note bell, repeated), so there is no third-party audio file to license and nothing to add to the Xcode project, and
+//written once to <app group>/Library/Sounds, one of the places UNNotificationSound looks in. Bump the file name to change the sound.
+//Returns nil (caller falls back to the default sound) if the file can not be written.
+-(NSString* _Nullable) isaCloudCallRingSoundName
+{
+    NSString* name = @"isacloud-ring-v1.wav";
+    NSURL* container = [[NSFileManager defaultManager] containerURLForSecurityApplicationGroupIdentifier:kAppGroup];
+    if(container == nil)
+        return nil;
+    NSURL* soundsDir = [container URLByAppendingPathComponent:@"Library/Sounds" isDirectory:YES];
+    NSURL* fileURL = [soundsDir URLByAppendingPathComponent:name];
+    if([[NSFileManager defaultManager] fileExistsAtPath:fileURL.path])
+        return name;
+
+    const uint32_t rate = 22050;
+    const double total = 28.0, cycle = 2.5, noteGap = 0.35;
+    const double notes[2] = {784.0, 659.25};        //G5, then E5
+    const uint32_t count = (uint32_t)(rate * total);
+    NSMutableData* pcm = [NSMutableData dataWithLength:count * sizeof(int16_t)];
+    int16_t* samples = pcm.mutableBytes;
+    for(uint32_t i = 0; i < count; i++)
+    {
+        double t = fmod((double)i / rate, cycle);
+        double value = 0;
+        for(int n = 0; n < 2; n++)
+        {
+            double nt = t - n * noteGap;
+            if(nt < 0 || nt > 1.2)
+                continue;
+            double attack = nt < 0.005 ? nt / 0.005 : 1.0;
+            value += attack * (sin(2 * M_PI * notes[n] * nt) * exp(-nt * 4.0) + 0.3 * sin(4 * M_PI * notes[n] * nt) * exp(-nt * 7.0));
+        }
+        samples[i] = (int16_t)(fmax(-1.0, fmin(1.0, value * 0.45)) * 32767);
+    }
+
+    //RIFF/WAVE header for 16-bit mono linear PCM
+    NSMutableData* wav = [NSMutableData new];
+    uint32_t dataSize = (uint32_t)pcm.length, riffSize = 36 + dataSize, fmtSize = 16, byteRate = rate * 2;
+    uint16_t format = 1, channels = 1, blockAlign = 2, bits = 16;
+    [wav appendBytes:"RIFF" length:4]; [wav appendBytes:&riffSize length:4]; [wav appendBytes:"WAVE" length:4];
+    [wav appendBytes:"fmt " length:4]; [wav appendBytes:&fmtSize length:4]; [wav appendBytes:&format length:2];
+    [wav appendBytes:&channels length:2]; [wav appendBytes:&rate length:4]; [wav appendBytes:&byteRate length:4];
+    [wav appendBytes:&blockAlign length:2]; [wav appendBytes:&bits length:2];
+    [wav appendBytes:"data" length:4]; [wav appendBytes:&dataSize length:4];
+    [wav appendData:pcm];
+
+    NSError* error = nil;
+    [[NSFileManager defaultManager] createDirectoryAtURL:soundsDir withIntermediateDirectories:YES attributes:nil error:&error];
+    if(error == nil)
+        [wav writeToURL:fileURL options:NSDataWritingAtomic error:&error];
+    if(error != nil)
+    {
+        DDLogError(@"isaCloud call fallback: could not write ring sound: %@", error);
+        return nil;
+    }
+    DDLogInfo(@"isaCloud call fallback: ring sound written (%lu bytes)", (unsigned long)wav.length);
+    return name;
 }
 
 -(void) disconnectAndFeedAllWaitingHandlers

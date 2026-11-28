@@ -13,7 +13,7 @@ O que está neste arquivo é o que aparece para o usuário na tela de **Novidade
 ## Próximo build
 
 ### Correções
-- 📞 Ligação chegando com o app fechado agora aparece como aviso no iPhone: é só tocar para atender.
+- 📞 Ligação chegando com o app fechado agora toca no iPhone, até no Não Perturbe: é só tocar no aviso para atender.
 
 ## Build 137 · 27/11/2026
 

@@ -11,6 +11,9 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
   - Tocar na notificação (`MonalAppDelegate`, `didReceiveNotificationResponse:`) decodifica o payload, ignora propostas com mais de 60 s (carimbo `delay` ou data da notificação), posta `kMonalIncomingVoipCall` no `MLNotificationQueue` (o `MLVoIPProcessor` faz o desempate e mostra a tela de chamada) e chama `incomingWakeupWithCompletionHandler:`.
   - Ao remover a chamada recebida (`MLVoIPProcessor removeCall:`), a notificação entregue `isaCloud-call-<jmiid>` é removida.
   - Textos novos: "Incoming audio call" e "Incoming video call" (pt-BR no override do isaCloud). A extensão lê o texto do bundle do app, porque o merge das traduções do isaCloud só roda no target do app.
+  - **Fura o Não Perturbe:** nível `timeSensitive`, com a entitlement `com.apple.developer.usernotifications.time-sensitive` só no app (`Monal/Monal.ios.entitlements` e `isaCloud/dev-entitlements/Monal.ios.entitlements`). No target da extensão a assinatura recusa a entitlement ("not found and could not be included in profile"), mas o aviso postado pela extensão vale como do app (testado no `.dev` em 28/11: saiu com som com o Não Perturbe ligado).
+  - **Toque de ~28 s no lugar do bip:** `isaCloudCallRingSoundName` gera um sino de duas notas (G5 e E5, a cada 2,5 s) em WAV PCM de 16 bits e o grava uma vez em `<app group>/Library/Sounds/isacloud-ring-v1.wav`, um dos lugares onde o `UNNotificationSound` procura. Sem arquivo de áudio de terceiros e sem mexer no `project.pbxproj`. Se a gravação falhar, usa o som padrão.
+  - O banner continua sumindo em alguns segundos, a não ser que a pessoa escolha "Persistente" nos ajustes de notificação do app (o app não consegue forçar).
 
 ## 0.0.1 (build 137) — 27/11/2026
 
