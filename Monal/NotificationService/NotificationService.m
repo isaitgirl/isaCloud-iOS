@@ -236,12 +236,16 @@ static void isaCloudTerminateAppex(void)
     if(proposeID == nil)
         proposeID = [[NSUUID UUID] UUIDString];
 
+    //the isaCloud translations are merged only into the app bundle (scripts/isacloud-merge-localizations.sh runs in the Monal target),
+    //so look the text up there: <app>.app/PlugIns/NotificationService.appex -> <app>.app
+    NSBundle* appBundle = [NSBundle bundleWithURL:[[[[NSBundle mainBundle] bundleURL] URLByDeletingLastPathComponent] URLByDeletingLastPathComponent]];
+    if(appBundle == nil)
+        appBundle = [NSBundle mainBundle];
+    NSString* bodyKey = isVideo ? @"Incoming video call" : @"Incoming audio call";
+
     UNMutableNotificationContent* content = [UNMutableNotificationContent new];
     content.title = contact.contactDisplayName ?: messageNode.fromUser;
-    if(isVideo)
-        content.body = NSLocalizedString(@"Incoming video call", @"");
-    else
-        content.body = NSLocalizedString(@"Incoming audio call", @"");
+    content.body = [appBundle localizedStringForKey:bodyKey value:bodyKey table:nil];
     content.sound = [UNNotificationSound defaultSound];
     content.interruptionLevel = UNNotificationInterruptionLevelActive;      //no time-sensitive/critical: the app has no entitlement for them
     content.threadIdentifier = messageNode.fromUser;

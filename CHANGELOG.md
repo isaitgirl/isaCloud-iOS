@@ -6,11 +6,11 @@ Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que fa
 
 ### Corrigido
 - **Chamada recebida com o app em segundo plano: aviso local quando o CallKit recusa a chamada.**
-  - **Antes:** `reportNewIncomingVoIPPushPayload` falhava com `Error Domain=com.apple.CallKit.error.notificationserviceextension Code=2` (o app não tem a entitlement de push filtering, ainda não liberada pela Apple). O iPhone não tocava e a pessoa não ficava sabendo da ligação. Diagnóstico de 28/11/2026 (chamada de teste no `.dev`; contas e nomes ficam nas notas locais).
+  - **Antes:** `reportNewIncomingVoIPPushPayload` falhava com `Error Domain=com.apple.CallKit.error.notificationserviceextension Code=2` (o app não tem a entitlement de push filtering, ainda não liberada pela Apple). O iPhone não tocava e a pessoa não ficava sabendo da ligação. Diagnóstico de 28/11/2026, com uma chamada de teste do Android para uma conta aberta no Gajim, no Android, no iOS (build 137, produção) e no Monal do macOS: o servidor entregou o convite a todos, o Android tocou e o iOS caiu nesse erro. O mesmo erro aparece no log de 27/11.
   - **Agora:** `NotificationService` (`handleIncomingVoipCall:`), no erro do completion e antes do `killAppex`, posta uma notificação local `isaCloud-call-<proposeID>` (título com o nome do contato, corpo "Chamada de áudio/vídeo recebida", som padrão, nível `active`, `userInfo` com `isaCloudIncomingCallPayload`). Método `isaCloudPostCallFallbackForMessage:accountID:payload:`; a postagem é síncrona (`postUserNotificationRequest:`, com timeout de 1 s), então sai antes do `killAppex`.
   - Tocar na notificação (`MonalAppDelegate`, `didReceiveNotificationResponse:`) decodifica o payload, ignora propostas com mais de 60 s (carimbo `delay` ou data da notificação), posta `kMonalIncomingVoipCall` no `MLNotificationQueue` (o `MLVoIPProcessor` faz o desempate e mostra a tela de chamada) e chama `incomingWakeupWithCompletionHandler:`.
   - Ao remover a chamada recebida (`MLVoIPProcessor removeCall:`), a notificação entregue `isaCloud-call-<jmiid>` é removida.
-  - Textos novos: "Incoming audio call" e "Incoming video call" (pt-BR no override do isaCloud).
+  - Textos novos: "Incoming audio call" e "Incoming video call" (pt-BR no override do isaCloud). A extensão lê o texto do bundle do app, porque o merge das traduções do isaCloud só roda no target do app.
 
 ## 0.0.1 (build 137) — 27/11/2026
 
