@@ -254,13 +254,27 @@ static void isaCloudTerminateAppex(void)
     content.threadIdentifier = messageNode.fromUser;
     content.userInfo = @{@"isaCloudIncomingCallPayload": payload};          //NOT kIsaCloudPushPlaceholder, that one is removed in killAppex
 
-    NSString* identifier = [NSString stringWithFormat:@"isaCloud-call-%@", proposeID];
-    UNNotificationRequest* request = [UNNotificationRequest requestWithIdentifier:identifier content:content trigger:nil];
-    NSError* error = [HelperTools postUserNotificationRequest:request];
-    if(error)
-        DDLogError(@"isaCloud call fallback: could not post notification %@: %@", identifier, error);
-    else
-        DDLogInfo(@"isaCloud call fallback: local notification %@ posted", identifier);
+    //the first notification now, then kIsaCloudCallRepeatCount repeats every kIsaCloudCallRepeatInterval seconds: iOS cuts the sound
+    //when a temporary banner goes away (a few seconds), and the user should not have to switch the banner style to "persistent".
+    //Repeats that would ring after kIsaCloudCallMaxRingSeconds (counted from the propose) are not scheduled. They are removed when
+    //the call ends (HelperTools isaCloudRemoveCallNotificationsForJmiid:, from the appex on retract/reject/accept/proceed/finish,
+    //from the mainapp on tap and when the call is removed).
+    NSDate* proposeDate = [messageNode findFirst:@"{urn:xmpp:delay}delay@stamp|datetime"];
+    double age = proposeDate != nil ? MAX(0.0, [[NSDate date] timeIntervalSinceDate:proposeDate]) : 0.0;
+    NSArray<NSString*>* identifiers = [HelperTools isaCloudCallNotificationIdentifiersForJmiid:proposeID];
+    for(NSUInteger k = 0; k < identifiers.count; k++)
+    {
+        double delay = (double)k * kIsaCloudCallRepeatInterval;
+        if(k > 0 && age + delay > kIsaCloudCallMaxRingSeconds)
+            break;
+        UNNotificationTrigger* trigger = k == 0 ? nil : [UNTimeIntervalNotificationTrigger triggerWithTimeInterval:delay repeats:NO];
+        UNNotificationRequest* request = [UNNotificationRequest requestWithIdentifier:identifiers[k] content:content trigger:trigger];
+        NSError* error = [HelperTools postUserNotificationRequest:request];
+        if(error)
+            DDLogError(@"isaCloud call fallback: could not post notification %@: %@", identifiers[k], error);
+        else
+            DDLogInfo(@"isaCloud call fallback: local notification %@ posted (in %.0f s)", identifiers[k], delay);
+    }
 }
 
 //isaCloud: ~28 s ring for the call notification (iOS plays up to 30 s of a custom notification sound). It is synthesized here

@@ -862,6 +862,11 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
         }
 
         DDLogInfo(@"isaCloud call fallback: notification tapped, handing incoming call to MLVoIPProcessor");
+        //the call screen takes over: no more repeats of the notification
+        NSString* tappedJmiid = [callMessage findFirst:@"{urn:xmpp:jingle-message:0}propose@id"];
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            [HelperTools isaCloudRemoveCallNotificationsForJmiid:tappedJmiid];
+        });
         //same path as a call received in the mainapp: MLVoIPProcessor does the tie breaking and shows the call screen
         [[MLNotificationQueue currentQueue] postNotificationName:kMonalIncomingVoipCall object:nil userInfo:callInfo];
         //make sure our accounts connect so the call can be answered

@@ -2498,6 +2498,38 @@ static void notification_center_logging(CFNotificationCenterRef center, void* ob
 #endif
 }
 
+//isaCloud: identifiers of the local "incoming call" notification of a call: the first one and its repeats (see
+//isaCloudPostCallFallbackForMessage: in NotificationService.m, which schedules kIsaCloudCallRepeatCount repeats)
++(NSArray<NSString*>*) isaCloudCallNotificationIdentifiersForJmiid:(NSString*) jmiid
+{
+    NSString* base = [NSString stringWithFormat:@"isaCloud-call-%@", jmiid];
+    NSMutableArray<NSString*>* ids = [NSMutableArray arrayWithObject:base];
+    for(int k = 1; k <= kIsaCloudCallRepeatCount; k++)
+        [ids addObject:[NSString stringWithFormat:@"%@-r%d", base, k]];
+    return ids;
+}
+
+//isaCloud: the call was answered, refused or cancelled (here or on another device): stop the repeats and clear the notification.
+//The removal is asynchronous, so wait (bounded to 300 ms) for the notification center to answer once more before returning: the
+//appex may exit right after this.
++(void) isaCloudRemoveCallNotificationsForJmiid:(NSString*) jmiid
+{
+    if(jmiid == nil)
+        return;
+    NSArray<NSString*>* ids = [self isaCloudCallNotificationIdentifiersForJmiid:jmiid];
+    UNUserNotificationCenter* center = [UNUserNotificationCenter currentNotificationCenter];
+    [center removePendingNotificationRequestsWithIdentifiers:ids];
+    [center removeDeliveredNotificationsWithIdentifiers:ids];
+    dispatch_semaphore_t answered = dispatch_semaphore_create(0);
+    [center getPendingNotificationRequestsWithCompletionHandler:^(NSArray<UNNotificationRequest*>* requests __unused) {
+        dispatch_semaphore_signal(answered);
+    }];
+    if(dispatch_semaphore_wait(answered, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC))) != 0)
+        DDLogWarn(@"isaCloud call fallback: no answer from the notification center while removing the notifications of call %@", jmiid);
+    else
+        DDLogInfo(@"isaCloud call fallback: notifications of call %@ removed", jmiid);
+}
+
 //isaCloud: called by the appex right before it exits (PushSingleton killAppex), after the last contentHandler was fed and all
 //accounts were disconnected (their state is already saved). The passive placeholder handed to the contentHandler(s) would otherwise
 //stay in Notification Center until the next push or until the app opens (measured on 27/11/2026: 1 to 96 minutes, also next to
