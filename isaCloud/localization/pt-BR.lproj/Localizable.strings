@@ -443,3 +443,7 @@
 "This message can't be scheduled for that time. Choose a time within the next 72 hours." = "Não é possível agendar a mensagem para esse horário. Escolha um horário nas próximas 72 horas.";
 "This message was already sent or cancelled." = "Esta mensagem já foi enviada ou cancelada.";
 "The server could not schedule the message. Try again later." = "O servidor não conseguiu agendar a mensagem. Tente de novo mais tarde.";
+
+/* NotificationService.m: aviso local de chamada recebida quando o CallKit recusa a chamada */
+"Incoming audio call" = "Chamada de áudio recebida";
+"Incoming video call" = "Chamada de vídeo recebida";

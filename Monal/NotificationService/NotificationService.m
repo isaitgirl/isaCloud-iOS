@@ -15,6 +15,8 @@
 #import "MLNotificationManager.h"
 #import <monalxmpp/MLFileTransfer.h>
 #import <monalxmpp/xmpp.h>
+#import <monalxmpp/XMPPMessage.h>
+#import <monalxmpp/MLContact.h>
 #import <unistd.h>
 
 @import CallKit;
@@ -199,9 +201,16 @@ static void isaCloudTerminateAppex(void)
         
             DDLogInfo(@"Dispatching voip call to mainapp...");
             NSString* payload = [HelperTools encodeBase64WithData:[HelperTools serializeObject:notification.userInfo]];
+            //isaCloud: captured here, the completion handler below needs them for the local notification fallback
+            XMPPMessage* callMessageNode = notification.userInfo[@"messageNode"];
+            NSNumber* callAccountID = notification.userInfo[@"accountID"];
             [CXProvider reportNewIncomingVoIPPushPayload:@{@"base64Payload": payload} completion:^(NSError* _Nullable error) {
                 if(error != nil)
+                {
                     DDLogError(@"Got error for reportNewIncomingVoIPPushPayload: %@", error);
+                    //isaCloud: CallKit refused the call (e.g. missing push filtering entitlement), so the user would never hear about it
+                    [self isaCloudPostCallFallbackForMessage:callMessageNode accountID:callAccountID payload:payload];
+                }
                 else
                     DDLogInfo(@"Successfully called reportNewIncomingVoIPPushPayload");
                 [self killAppex];
@@ -210,6 +219,41 @@ static void isaCloudTerminateAppex(void)
     }
     else
         DDLogError(@"shouldProvideVoip returned NO, ignoring incoming call!");
+}
+
+//isaCloud: local notification for an incoming call that CallKit did not show. Tapping it is handled in MonalAppDelegate
+//(userInfo key isaCloudIncomingCallPayload). This is a synchronous post: HelperTools postUserNotificationRequest: waits for the result.
+-(void) isaCloudPostCallFallbackForMessage:(XMPPMessage*) messageNode accountID:(NSNumber*) accountID payload:(NSString*) payload
+{
+    if(messageNode == nil || payload == nil)
+    {
+        DDLogError(@"isaCloud call fallback: missing call data, no notification posted");
+        return;
+    }
+    MLContact* contact = [MLContact createContactFromJid:messageNode.fromUser andAccountID:accountID];
+    BOOL isVideo = [messageNode check:@"{urn:xmpp:jingle-message:0}propose/{urn:xmpp:jingle:apps:rtp:1}description<media=video>"];
+    NSString* proposeID = [messageNode findFirst:@"{urn:xmpp:jingle-message:0}propose@id"];
+    if(proposeID == nil)
+        proposeID = [[NSUUID UUID] UUIDString];
+
+    UNMutableNotificationContent* content = [UNMutableNotificationContent new];
+    content.title = contact.contactDisplayName ?: messageNode.fromUser;
+    if(isVideo)
+        content.body = NSLocalizedString(@"Incoming video call", @"");
+    else
+        content.body = NSLocalizedString(@"Incoming audio call", @"");
+    content.sound = [UNNotificationSound defaultSound];
+    content.interruptionLevel = UNNotificationInterruptionLevelActive;      //no time-sensitive/critical: the app has no entitlement for them
+    content.threadIdentifier = messageNode.fromUser;
+    content.userInfo = @{@"isaCloudIncomingCallPayload": payload};          //NOT kIsaCloudPushPlaceholder, that one is removed in killAppex
+
+    NSString* identifier = [NSString stringWithFormat:@"isaCloud-call-%@", proposeID];
+    UNNotificationRequest* request = [UNNotificationRequest requestWithIdentifier:identifier content:content trigger:nil];
+    NSError* error = [HelperTools postUserNotificationRequest:request];
+    if(error)
+        DDLogError(@"isaCloud call fallback: could not post notification %@: %@", identifier, error);
+    else
+        DDLogInfo(@"isaCloud call fallback: local notification %@ posted", identifier);
 }
 
 -(void) disconnectAndFeedAllWaitingHandlers
