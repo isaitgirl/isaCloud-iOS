@@ -124,6 +124,12 @@ static NSMutableDictionary* _pendingCalls;
         [_pendingCalls removeObjectForKey:call.uuid];
     }
     [self didChangeValueForKey:@"activeCalls"];
+    //isaCloud: remove the local "incoming call" notification of this call and its pending repeats (posted by NotificationService
+    //when CallKit refused it)
+    if(call.direction == MLCallDirectionIncoming && call.jmiid != nil)
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            [HelperTools isaCloudRemoveCallNotificationsForJmiid:call.jmiid];
+        });
     //TODO: remove once chatviewcontroller gets removed
     [[MLNotificationQueue currentQueue] postNotificationName:kMonalCallRemoved object:call userInfo:@{@"uuid": call.uuid}];
 }

@@ -836,6 +836,46 @@ typedef NS_ENUM(NSUInteger, MLGracefulTimeoutType) {
 -(void) userNotificationCenter:(UNUserNotificationCenter*) center didReceiveNotificationResponse:(UNNotificationResponse*) response withCompletionHandler:(void (^)(void)) completionHandler
 {
     DDLogVerbose(@"notification action '%@' triggered for %@", response.actionIdentifier, response.notification.request.content.userInfo);
+    //isaCloud: local notification posted by the NotificationServiceExtension when CallKit refused an incoming call: open the call
+    NSString* callPayload = response.notification.request.content.userInfo[@"isaCloudIncomingCallPayload"];
+    if([callPayload isKindOfClass:[NSString class]])
+    {
+        NSDictionary* callInfo = [HelperTools unserializeData:[HelperTools dataWithBase64EncodedString:callPayload]];
+        XMPPMessage* callMessage = callInfo[@"messageNode"];
+        if(callMessage == nil)
+        {
+            DDLogError(@"isaCloud call fallback: no call data in notification, ignoring");
+            if(completionHandler)
+                completionHandler();
+            return;
+        }
+        //use the delay stamp of the propose if there is one, else the time the notification was delivered
+        NSDate* callDate = [callMessage findFirst:@"{urn:xmpp:delay}delay@stamp|datetime"];
+        if(callDate == nil)
+            callDate = response.notification.date;
+        if([[NSDate date] timeIntervalSinceDate:callDate] > 60.0)
+        {
+            DDLogWarn(@"isaCloud call fallback: call too old, ignoring");
+            if(completionHandler)
+                completionHandler();
+            return;
+        }
+
+        DDLogInfo(@"isaCloud call fallback: notification tapped, handing incoming call to MLVoIPProcessor");
+        //the call screen takes over: no more repeats of the notification
+        NSString* tappedJmiid = [callMessage findFirst:@"{urn:xmpp:jingle-message:0}propose@id"];
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            [HelperTools isaCloudRemoveCallNotificationsForJmiid:tappedJmiid];
+        });
+        //same path as a call received in the mainapp: MLVoIPProcessor does the tie breaking and shows the call screen
+        [[MLNotificationQueue currentQueue] postNotificationName:kMonalIncomingVoipCall object:nil userInfo:callInfo];
+        //make sure our accounts connect so the call can be answered
+        [self incomingWakeupWithCompletionHandler:^(UIBackgroundFetchResult result __unused) {
+            completionHandler();
+        }];
+        return;
+    }
+
     if([response.notification.request.content.categoryIdentifier isEqualToString:@"reaction"])
     {
         MLContact* fromContact = [HelperTools unserializeData:response.notification.request.content.userInfo[@"contact"]];

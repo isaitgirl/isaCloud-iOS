@@ -194,6 +194,9 @@ NSDictionary* _Nullable dictionaryComprehension(NSDictionary* _Nullable dict, id
 +(UNMutableNotificationContent*) isaCloudPushPlaceholderContent;
 +(void) removeIsaCloudPushPlaceholdersAfter:(double) delay;
 +(void) removeIsaCloudPushPlaceholdersBeforeExitWithTimeout:(double) timeout;
+//isaCloud: local "incoming call" notification (posted by the appex when CallKit refuses the call) and its scheduled repeats
++(NSArray<NSString*>*) isaCloudCallNotificationIdentifiersForJmiid:(NSString*) jmiid;
++(void) isaCloudRemoveCallNotificationsForJmiid:(NSString*) jmiid;
 +(void) updateSyncErrorsWithDeleteOnly:(BOOL) removeOnly andWaitForCompletion:(BOOL) waitForCompletion;
 
 +(BOOL) isInBackground;

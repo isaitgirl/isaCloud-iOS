@@ -28,6 +28,12 @@ static const DDLogLevel ddLogLevel = LOG_LEVEL_STDOUT;
 #define PMKHangInt(promise)                 (((NSNumber*)PMKHang(promise)).intValue)
 #define PMKHangDouble(promise)              (((NSNumber*)PMKHang(promise)).doubleValue)
 
+//isaCloud: the local "incoming call" notification (CallKit refused the call in the appex) is repeated every
+//kIsaCloudCallRepeatInterval seconds, kIsaCloudCallRepeatCount times, because iOS cuts its sound when a temporary banner goes away
+#define kIsaCloudCallRepeatCount 5
+#define kIsaCloudCallRepeatInterval 8.0
+#define kIsaCloudCallMaxRingSeconds 45.0
+
 //configure app group constants
 #ifdef IS_ALPHA
     #define kAppGroup @"group.monalalpha"

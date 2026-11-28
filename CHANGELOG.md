@@ -2,6 +2,24 @@
 
 Mudanças do fork isaCloud sobre o Monal. A lista do que está feito e do que falta está em [ROADMAP.md](ROADMAP.md).
 
+## Próximo build
+
+### Corrigido
+- **Chamada recebida com o app em segundo plano: aviso local quando o CallKit recusa a chamada.**
+  - **Antes:** `reportNewIncomingVoIPPushPayload` falhava com `Error Domain=com.apple.CallKit.error.notificationserviceextension Code=2` (o app não tem a entitlement de push filtering, ainda não liberada pela Apple). O iPhone não tocava e a pessoa não ficava sabendo da ligação. Diagnóstico de 28/11/2026, com uma chamada de teste do Android para uma conta aberta no Gajim, no Android, no iOS (build 137, produção) e no Monal do macOS: o servidor entregou o convite a todos, o Android tocou e o iOS caiu nesse erro. O mesmo erro aparece no log de 27/11.
+  - **Agora:** `NotificationService` (`handleIncomingVoipCall:`), no erro do completion e antes do `killAppex`, posta uma notificação local `isaCloud-call-<proposeID>` (título com o nome do contato, corpo "Chamada de áudio/vídeo recebida", som padrão, nível `active`, `userInfo` com `isaCloudIncomingCallPayload`). Método `isaCloudPostCallFallbackForMessage:accountID:payload:`; a postagem é síncrona (`postUserNotificationRequest:`, com timeout de 1 s), então sai antes do `killAppex`.
+  - Tocar na notificação (`MonalAppDelegate`, `didReceiveNotificationResponse:`) decodifica o payload, ignora propostas com mais de 60 s (carimbo `delay` ou data da notificação), posta `kMonalIncomingVoipCall` no `MLNotificationQueue` (o `MLVoIPProcessor` faz o desempate e mostra a tela de chamada) e chama `incomingWakeupWithCompletionHandler:`.
+  - Ao remover a chamada recebida (`MLVoIPProcessor removeCall:`), a notificação entregue `isaCloud-call-<jmiid>` é removida.
+  - Textos novos: "Incoming audio call" e "Incoming video call" (pt-BR no override do isaCloud). A extensão lê o texto do bundle do app, porque o merge das traduções do isaCloud só roda no target do app.
+  - **Fura o Não Perturbe:** nível `timeSensitive`, com a entitlement `com.apple.developer.usernotifications.time-sensitive` só no app (`Monal/Monal.ios.entitlements` e `isaCloud/dev-entitlements/Monal.ios.entitlements`). No target da extensão a assinatura recusa a entitlement ("not found and could not be included in profile"), mas o aviso postado pela extensão vale como do app (testado no `.dev` em 28/11: saiu com som com o Não Perturbe ligado).
+  - **Toque de ~28 s no lugar do bip:** `isaCloudCallRingSoundName` gera um sino de duas notas (G5 e E5, a cada 2,5 s) em WAV PCM de 16 bits e o grava uma vez em `<app group>/Library/Sounds/isacloud-ring-v1.wav`, um dos lugares onde o `UNNotificationSound` procura. Sem arquivo de áudio de terceiros e sem mexer no `project.pbxproj`. Se a gravação falhar, usa o som padrão.
+  - **Repetição:** o iOS corta o som quando o banner temporário some (em menos de 10 s no teste), e o app não consegue forçar o estilo "Persistente". Por isso, além do aviso imediato, a extensão agenda `kIsaCloudCallRepeatCount` (5) repetições a cada `kIsaCloudCallRepeatInterval` (8 s), até `kIsaCloudCallMaxRingSeconds` (45 s) contados do `propose` (`MLConstants.h`). Identificadores `isaCloud-call-<id>` e `-r1`…`-r5` (`HelperTools isaCloudCallNotificationIdentifiersForJmiid:`).
+  - **Fim das repetições:** `HelperTools isaCloudRemoveCallNotificationsForJmiid:` apaga as pendentes e as entregues, e espera até 300 ms pela central de notificações. É chamado:
+    - pela extensão, ao receber `retract`, `reject`, `accept`, `proceed` ou `finish` (`MLMessageProcessor`);
+    - pelo app, ao tocar no aviso;
+    - no `MLVoIPProcessor removeCall:`.
+  - **Limite conhecido:** se o fpush descartar o push do `retract` pelo limite de 20 s, o aviso segue tocando até os 45 s.
+
 ## 0.0.1 (build 137) — 27/11/2026
 
 Enviado ao TestFlight às 19:55 e instalado no `.dev` do iPhone (PR 100; testado no `.dev` em 27/11: com OMEMO, sem OMEMO, cancelamento e posição do menu).

@@ -227,7 +227,15 @@ static NSMutableDictionary* _typingNotifications;
         {
             DDLogInfo(@"Got %@ for JMI call %@", [messageNode findFirst:@"{urn:xmpp:jingle-message:0}*$"], [messageNode findFirst:@"{urn:xmpp:jingle-message:0}*@id"]);
             if([HelperTools isAppExtension])
+            {
                 DDLogWarn(@"Ignoring incoming JMI message: we are in the appex which means any outgoing or ongoing call was already terminated");
+                //isaCloud: the call was cancelled, refused or answered (maybe on another device of ours): stop the repeats of the local
+                //"incoming call" notification posted when CallKit refused it (NotificationService isaCloudPostCallFallbackForMessage:)
+                if([messageNode check:@"{urn:xmpp:jingle-message:0}retract"] || [messageNode check:@"{urn:xmpp:jingle-message:0}reject"]
+                    || [messageNode check:@"{urn:xmpp:jingle-message:0}accept"] || [messageNode check:@"{urn:xmpp:jingle-message:0}proceed"]
+                    || [messageNode check:@"{urn:xmpp:jingle-message:0}finish"])
+                    [HelperTools isaCloudRemoveCallNotificationsForJmiid:[messageNode findFirst:@"{urn:xmpp:jingle-message:0}*@id"]];
+            }
             else
             {
                 NSDictionary* callData = @{
